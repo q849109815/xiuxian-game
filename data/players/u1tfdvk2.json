@@ -7,26 +7,26 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789991831716,
-  "lastTick": 1789991831716,
+  "lastSeen": 1789991840420,
+  "lastTick": 1789991840420,
   "realm": 6,
   "stage": 1,
-  "exp": 2087738.2636231482,
+  "exp": 23946016.156743143,
   "stone": 7368,
   "equip": {
     "weapon": {
-      "id": "it_ahi55ti",
+      "id": "it_llxcthx",
       "kind": "equip",
       "slot": "weapon",
       "q": 0,
       "level": 0,
       "temper": 0,
-      "name": "凡品·混元幡",
-      "atk": 81,
-      "def": 13,
-      "hp": 144,
+      "name": "凡品·玄铁刀",
+      "atk": 113,
+      "def": 22,
+      "hp": 197,
       "crit": 0,
-      "mp": 46
+      "mp": 76
     },
     "armor": {
       "id": "it_22qyagn",
@@ -170,18 +170,18 @@
       "id": "i_84yhlqz"
     },
     {
-      "id": "it_llxcthx",
+      "id": "it_ahi55ti",
       "kind": "equip",
       "slot": "weapon",
       "q": 0,
       "level": 0,
       "temper": 0,
-      "name": "凡品·玄铁刀",
-      "atk": 113,
-      "def": 22,
-      "hp": 197,
+      "name": "凡品·混元幡",
+      "atk": 81,
+      "def": 13,
+      "hp": 144,
       "crit": 0,
-      "mp": 76
+      "mp": 46
     }
   ],
   "skills": [],
@@ -203,7 +203,7 @@
         "meditate": 2,
         "dungeon": 13,
         "arena": 1,
-        "exp": 28318,
+        "exp": 29218,
         "kill": 30
       },
       "claimed": []
@@ -213,7 +213,7 @@
         "meditate": 2,
         "dungeon": 13,
         "arena": 1,
-        "exp": 28318,
+        "exp": 29218,
         "kill": 30,
         "火麒麟": 1,
         "b3": 2,
@@ -270,8 +270,8 @@
   "title": "",
   "stats": {
     "kills": 30,
-    "deaths": 0,
-    "battles": 30,
+    "deaths": 1,
+    "battles": 31,
     "breakthrough": 24,
     "offlineMin": 16,
     "meditate": 2,
