@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009863839,
-  "lastTick": 1790009863839,
+  "lastSeen": 1790009872664,
+  "lastTick": 1790009872664,
   "realm": 31,
   "stage": 0,
-  "exp": 205221897179.89627,
-  "stone": 8505051572564.912,
+  "exp": 68407299059.96542,
+  "stone": 8505051575966.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -396,48 +396,6 @@
       "mp": 115
     },
     {
-      "id": "it_t13nrhu",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·云锦袍",
-      "atk": 42,
-      "def": 134,
-      "hp": 862,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_v994mo6",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·混元幡",
-      "atk": 135,
-      "def": 30,
-      "hp": 259,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_s3kzlay",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·云锦袍",
-      "atk": 35,
-      "def": 107,
-      "hp": 662,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "id": "it_idwllwy",
       "kind": "equip",
       "slot": "weapon",
@@ -449,34 +407,6 @@
       "def": 32,
       "hp": 256,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_1bfa406",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·阴阳环",
-      "atk": 75,
-      "def": 36,
-      "hp": 295,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_ckfrsjs",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·灵蛇杖",
-      "atk": 143,
-      "def": 29,
-      "hp": 295,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -1829,8 +1759,8 @@
   },
   "loginAt": 1790009125477,
   "bottle": {
-    "liquid": 5,
-    "acc": 83,
+    "liquid": 6,
+    "acc": 2,
     "level": 13
   },
   "titles": {
