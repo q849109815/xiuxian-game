@@ -1,29 +1,26 @@
 /**
- * Cloudflare Worker —— GitHub API 加速代理（解决 api.github.com 连不上的可选方案）
- * 免费版 10 万次请求/天，远远够用。
+ * 修仙游戏 · GitHub API 加速代理（Cloudflare Worker）
+ * 直接在 Cloudflare 面板粘贴这段代码即可，不需要命令行、不需要新建仓库。
  *
- * 部署：
- *   1) npx wrangler deploy                      （按提示登录 Cloudflare）
- *   2) npx wrangler secret put GH_TOKEN         （粘贴你的 GitHub Token，这样前端就不暴露 Token）
- *   3) 得到 https://xxx.xxx.workers.dev，填进游戏「设置 → 自定义加速地址」
- *
- * 提示：配置了 GH_TOKEN 后，前端可以把 js/api.js 里的 token 留空，Worker 会自动注入。
+ * 作用：把 api.github.com 换成你的 workers.dev 地址，绕过国内直连不通的问题。
  */
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    // 浏览器直接打开时给个说明
     if (url.pathname === '/' || url.pathname === '') {
-      return new Response('GitHub 代理运行中。用法：把 https://api.github.com 换成 https://' + url.hostname,
+      return new Response('✅ 修仙游戏代理运行中。把游戏「设置 → 自定义加速地址」填成 https://' + url.hostname,
         { headers: { 'content-type': 'text/plain; charset=utf-8' } });
     }
 
-    const target = 'https://api.github.com' + url.pathname + url.search;
-    const headers = new Headers();
-
+    // 允许前端自带 Token，也支持用 Cloudflare 里配的 GH_TOKEN 秘密（更安全）
     let auth = request.headers.get('authorization');
-    if ((!auth || auth.replace('Bearer', '').trim() === '') && env.GH_TOKEN) auth = `Bearer ${env.GH_TOKEN}`;
+    if ((!auth || auth.replace('Bearer', '').trim() === '') && env.GH_TOKEN) {
+      auth = 'Bearer ' + env.GH_TOKEN;
+    }
 
+    const headers = new Headers();
     for (const k of ['accept', 'content-type', 'x-github-api-version', 'user-agent']) {
       const v = request.headers.get(k);
       if (v) headers.set(k, v);
@@ -31,25 +28,27 @@ export default {
     if (auth) headers.set('authorization', auth);
 
     const init = { method: request.method, headers };
-    if (request.method !== 'GET' && request.method !== 'HEAD') init.body = await request.arrayBuffer();
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      init.body = await request.arrayBuffer();
+    }
 
     let r;
     try {
-      r = await fetch(target, init);
+      r = await fetch('https://api.github.com' + url.pathname + url.search, init);
     } catch (e) {
-      return new Response(JSON.stringify({ message: 'upstream error: ' + e.message }), { status: 502, headers: cors() });
+      return json({ message: 'upstream error: ' + e.message }, 502);
     }
 
-    const out = cors();
-    out.set('content-type', r.headers.get('content-type') || 'application/json');
+    const out = new Headers(r.headers);
+    out.set('access-control-allow-origin', '*');
+    out.set('access-control-allow-headers', '*');
+    out.set('access-control-allow-methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
     return new Response(r.body, { status: r.status, headers: out });
 
-    function cors() {
-      const h = new Headers();
+    function json(obj, code) {
+      const h = new Headers({ 'content-type': 'application/json' });
       h.set('access-control-allow-origin', '*');
-      h.set('access-control-allow-headers', '*');
-      h.set('access-control-allow-methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-      return h;
+      return new Response(JSON.stringify(obj), { status: code, headers: h });
     }
   },
 };
