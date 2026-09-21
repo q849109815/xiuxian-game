@@ -7,8 +7,8 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789989403736,
-  "lastTick": 1789989403736,
+  "lastSeen": 1789989406988,
+  "lastTick": 1789989406988,
   "realm": 0,
   "stage": 0,
   "exp": 0,
@@ -34,7 +34,7 @@
   "tasks": {
     "mainIdx": 0,
     "daily": {
-      "date": "",
+      "date": "2026-9-21",
       "prog": {},
       "claimed": []
     },
