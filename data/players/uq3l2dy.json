@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989788722,
-  "lastTick": 1789989788722,
+  "lastSeen": 1789989794159,
+  "lastTick": 1789989794159,
   "realm": 2,
   "stage": 2,
-  "exp": 24750.4812,
-  "stone": 3110,
+  "exp": 30735.3392,
+  "stone": 3280,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -42,7 +42,20 @@
       "crit": 0.02,
       "mp": 34
     },
-    "ring": null,
+    "ring": {
+      "id": "it_gouk4pe",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·阴阳环",
+      "atk": 21,
+      "def": 9,
+      "hp": 78,
+      "crit": 0,
+      "mp": 34
+    },
     "talisman": null
   },
   "bag": [
@@ -52,7 +65,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 4,
+      "count": 5,
       "desc": "炼器材料",
       "id": "i_op7cm1h"
     },
@@ -161,20 +174,6 @@
       "mp": 34
     },
     {
-      "id": "it_gouk4pe",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·阴阳环",
-      "atk": 21,
-      "def": 9,
-      "hp": 78,
-      "crit": 0,
-      "mp": 34
-    },
-    {
       "id": "it_rjmltm8",
       "kind": "equip",
       "slot": "armor",
@@ -206,20 +205,20 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 22636,
-        "kill": 16
+        "exp": 24132,
+        "kill": 17
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 22636,
-        "kill": 16,
+        "exp": 24132,
+        "kill": 17,
         "女鬼": 5,
-        "b2": 16,
+        "b2": 17,
         "僵尸": 9,
-        "尸王": 2
+        "尸王": 3
       },
       "claimed": []
     }
@@ -255,9 +254,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 16,
+    "kills": 17,
     "deaths": 0,
-    "battles": 16,
+    "battles": 17,
     "breakthrough": 10,
     "offlineMin": 0,
     "meditate": 1,
