@@ -7,12 +7,12 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789992002886,
-  "lastTick": 1789992002886,
+  "lastSeen": 1789992011170,
+  "lastTick": 1789992011170,
   "realm": 6,
   "stage": 3,
-  "exp": 174757083.82913145,
-  "stone": 9545,
+  "exp": 213819430.33150586,
+  "stone": 7955,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -189,7 +189,7 @@
       "name": "炎晶",
       "icon": "🔶",
       "price": 150,
-      "count": 6,
+      "count": 7,
       "desc": "炼器材料",
       "id": "i_6kk5p5s"
     },
@@ -380,6 +380,20 @@
       "hp": 190,
       "crit": 0,
       "mp": 76
+    },
+    {
+      "id": "it_f97x4up",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 3,
+      "level": 0,
+      "temper": 0,
+      "name": "仙器·锁子金甲",
+      "atk": 22,
+      "def": 85,
+      "hp": 448,
+      "crit": 0.02,
+      "mp": 76
     }
   ],
   "skills": [
@@ -431,6 +445,15 @@
       "exp": 0,
       "stage": 0,
       "apt": 1
+    },
+    {
+      "id": "bs_wyotvuz",
+      "ref": "b_fox",
+      "name": "九尾狐",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
     }
   ],
   "activeBeast": 0,
@@ -455,8 +478,8 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 20,
-        "exp": 138830,
-        "kill": 52
+        "exp": 149328,
+        "kill": 54
       },
       "claimed": [
         "d1",
@@ -469,10 +492,10 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 20,
-        "exp": 138830,
-        "kill": 52,
-        "火麒麟": 12,
-        "b3": 24,
+        "exp": 149328,
+        "kill": 54,
+        "火麒麟": 13,
+        "b3": 26,
         "采药童子": 9,
         "b1": 23,
         "竹叶蛇": 9,
@@ -481,7 +504,7 @@
         "b2": 5,
         "女鬼": 2,
         "僵尸": 2,
-        "熔岩巨人": 4,
+        "熔岩巨人": 5,
         "炎魔": 8
       },
       "claimed": [
@@ -534,9 +557,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 52,
+    "kills": 54,
     "deaths": 2,
-    "battles": 54,
+    "battles": 56,
     "breakthrough": 26,
     "offlineMin": 16,
     "meditate": 2,
