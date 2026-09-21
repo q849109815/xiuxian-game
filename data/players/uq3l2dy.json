@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995491311,
-  "lastTick": 1789995491311,
+  "lastSeen": 1789995491959,
+  "lastTick": 1789995491959,
   "realm": 9,
   "stage": 3,
-  "exp": 0,
-  "stone": 2712172,
+  "exp": 37116072874.19016,
+  "stone": 2720222,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 33,
+      "count": 34,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -157,20 +157,6 @@
       "def": 37,
       "hp": 242,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_k960nwm",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·麒麟铠",
-      "atk": 29,
-      "def": 135,
-      "hp": 919,
-      "crit": 0,
       "mp": 115
     }
   ],
@@ -1270,8 +1256,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 26097572,
-        "kill": 575,
+        "exp": 26157598,
+        "kill": 576,
         "dungeon": 213,
         "arena": 20
       },
@@ -1284,8 +1270,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 26097572,
-        "kill": 575,
+        "exp": 26157598,
+        "kill": 576,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1302,7 +1288,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 132,
         "混沌祖龙": 136,
-        "天兵": 121
+        "天兵": 122
       },
       "claimed": [
         "b2",
@@ -1345,9 +1331,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 575,
+    "kills": 576,
     "deaths": 0,
-    "battles": 575,
+    "battles": 576,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
