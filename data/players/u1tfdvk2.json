@@ -7,12 +7,12 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789992101460,
-  "lastTick": 1789992101460,
+  "lastSeen": 1789992125497,
+  "lastTick": 1789992125497,
   "realm": 8,
-  "stage": 0,
-  "exp": 93342446.07072115,
-  "stone": 4665,
+  "stage": 2,
+  "exp": 69065345.82537079,
+  "stone": 7157,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -75,7 +75,7 @@
       "name": "赤炎莲",
       "icon": "🔥",
       "price": 180,
-      "count": 21,
+      "count": 22,
       "desc": "炼丹材料",
       "id": "i_b41xskg"
     },
@@ -85,7 +85,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 146,
+      "count": 148,
       "desc": "炼器材料",
       "id": "i_9yr1b5o"
     },
@@ -189,7 +189,7 @@
       "name": "炎晶",
       "icon": "🔶",
       "price": 150,
-      "count": 8,
+      "count": 10,
       "desc": "炼器材料",
       "id": "i_6kk5p5s"
     },
@@ -492,6 +492,34 @@
       "hp": 173,
       "crit": 0,
       "mp": 85
+    },
+    {
+      "id": "it_9a1bikb",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·玄铁刀",
+      "atk": 114,
+      "def": 33,
+      "hp": 221,
+      "crit": 0,
+      "mp": 94
+    },
+    {
+      "id": "it_7tyvhc0",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·麒麟铠",
+      "atk": 27,
+      "def": 77,
+      "hp": 777,
+      "crit": 0,
+      "mp": 94
     }
   ],
   "skills": [
@@ -576,8 +604,8 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 20,
-        "exp": 240748,
-        "kill": 71
+        "exp": 262742,
+        "kill": 75
       },
       "claimed": [
         "d1",
@@ -590,10 +618,10 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 20,
-        "exp": 240748,
-        "kill": 71,
-        "火麒麟": 18,
-        "b3": 43,
+        "exp": 262742,
+        "kill": 75,
+        "火麒麟": 20,
+        "b3": 47,
         "采药童子": 9,
         "b1": 23,
         "竹叶蛇": 9,
@@ -602,7 +630,7 @@
         "b2": 5,
         "女鬼": 2,
         "僵尸": 2,
-        "熔岩巨人": 13,
+        "熔岩巨人": 15,
         "炎魔": 12
       },
       "claimed": [
@@ -655,10 +683,10 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 71,
+    "kills": 75,
     "deaths": 2,
-    "battles": 73,
-    "breakthrough": 30,
+    "battles": 77,
+    "breakthrough": 32,
     "offlineMin": 16,
     "meditate": 2,
     "dungeon": 135,
