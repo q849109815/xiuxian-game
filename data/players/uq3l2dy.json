@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789991037831,
-  "lastTick": 1789991037831,
+  "lastSeen": 1789991057944,
+  "lastTick": 1789991057944,
   "realm": 9,
   "stage": 3,
-  "exp": 257712352195.85266,
-  "stone": 119775,
+  "exp": 112048802091.32721,
+  "stone": 138045,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -85,7 +85,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 6,
+      "count": 7,
       "desc": "炼器材料",
       "id": "i_ckq27h0"
     },
@@ -200,6 +200,20 @@
       "hp": 268,
       "crit": 0,
       "mp": 115
+    },
+    {
+      "id": "it_16gjgko",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·灵蛇杖",
+      "atk": 132,
+      "def": 29,
+      "hp": 338,
+      "crit": 0,
+      "mp": 115
     }
   ],
   "skills": [
@@ -266,8 +280,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 4564064,
-        "kill": 241,
+        "exp": 4752200,
+        "kill": 244,
         "dungeon": 5,
         "arena": 20
       },
@@ -280,8 +294,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 4564064,
-        "kill": 241,
+        "exp": 4752200,
+        "kill": 244,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -296,8 +310,8 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 23,
-        "混沌祖龙": 18,
+        "星宿仙君": 24,
+        "混沌祖龙": 20,
         "天兵": 14
       },
       "claimed": [
@@ -337,9 +351,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 241,
+    "kills": 244,
     "deaths": 0,
-    "battles": 241,
+    "battles": 244,
     "breakthrough": 36,
     "offlineMin": 0,
     "meditate": 1,
