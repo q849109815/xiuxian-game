@@ -7,12 +7,12 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789992571742,
-  "lastTick": 1789992571742,
+  "lastSeen": 1789992590585,
+  "lastTick": 1789992590585,
   "realm": 9,
   "stage": 3,
-  "exp": 10089247759.952332,
-  "stone": 466471404,
+  "exp": 111029956924.49988,
+  "stone": 466486396,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -492,6 +492,20 @@
       "hp": 173,
       "crit": 0,
       "mp": 85
+    },
+    {
+      "id": "it_kcdjuum",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·玄铁刀",
+      "atk": 207,
+      "def": 36,
+      "hp": 299,
+      "crit": 0,
+      "mp": 115
     }
   ],
   "skills": [
@@ -576,8 +590,8 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 20,
-        "exp": 312344,
-        "kill": 72
+        "exp": 440212,
+        "kill": 74
       },
       "claimed": [
         "d1",
@@ -590,8 +604,8 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 20,
-        "exp": 312344,
-        "kill": 72,
+        "exp": 440212,
+        "kill": 74,
         "火麒麟": 18,
         "b3": 43,
         "采药童子": 9,
@@ -604,7 +618,9 @@
         "僵尸": 2,
         "熔岩巨人": 13,
         "炎魔": 12,
-        "混沌祖龙": 1
+        "混沌祖龙": 1,
+        "天兵": 1,
+        "星宿仙君": 1
       },
       "claimed": [
         "b1",
@@ -656,9 +672,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 72,
+    "kills": 74,
     "deaths": 2,
-    "battles": 74,
+    "battles": 76,
     "breakthrough": 36,
     "offlineMin": 17,
     "meditate": 2,
