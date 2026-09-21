@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990647787,
-  "lastTick": 1789990647787,
+  "lastSeen": 1789990657844,
+  "lastTick": 1789990657844,
   "realm": 8,
   "stage": 2,
-  "exp": 9887132938.85882,
-  "stone": 102670,
+  "exp": 15636533409.822248,
+  "stone": 108672,
   "equip": {
     "weapon": {
       "id": "it_pion6p0",
@@ -59,16 +59,6 @@
     "talisman": null
   },
   "bag": [
-    {
-      "kind": "ore",
-      "ref": "ore_iron",
-      "name": "玄铁",
-      "icon": "⚙️",
-      "price": 50,
-      "count": 42,
-      "desc": "炼器材料",
-      "id": "i_op7cm1h"
-    },
     {
       "kind": "herb",
       "ref": "herb_green",
@@ -192,10 +182,10 @@
       "id": "bs_n55gsok",
       "ref": "b_dragon",
       "name": "蛟龙",
-      "level": 1,
-      "exp": 0,
+      "level": 5,
+      "exp": 88,
       "stage": 0,
-      "apt": 1
+      "apt": 1.05
     }
   ],
   "activeBeast": 0,
@@ -216,8 +206,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 1235788,
-        "kill": 189,
+        "exp": 1304046,
+        "kill": 190,
         "dungeon": 5,
         "arena": 1
       },
@@ -230,8 +220,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 1235788,
-        "kill": 189,
+        "exp": 1304046,
+        "kill": 190,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -246,7 +236,8 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 3
+        "星宿仙君": 3,
+        "混沌祖龙": 1
       },
       "claimed": [
         "b2",
@@ -285,9 +276,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 189,
+    "kills": 190,
     "deaths": 0,
-    "battles": 189,
+    "battles": 190,
     "breakthrough": 31,
     "offlineMin": 0,
     "meditate": 1,
