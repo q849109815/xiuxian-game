@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009734019,
-  "lastTick": 1790009734019,
+  "lastSeen": 1790009736036,
+  "lastTick": 1790009736036,
   "realm": 31,
   "stage": 0,
-  "exp": 259114808494.7699,
-  "stone": 8505051559557.912,
+  "exp": 289598903611.80164,
+  "stone": 8505051560298.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -760,20 +760,6 @@
       "count": 7,
       "desc": "炼器材料",
       "id": "i_bnqgbex"
-    },
-    {
-      "id": "it_3p0yb11",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·云锦袍",
-      "atk": 41,
-      "def": 142,
-      "hp": 788,
-      "crit": 0,
-      "mp": 115
     },
     {
       "kind": "herb",
@@ -2082,7 +2068,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 4,
-    "acc": 54,
+    "acc": 56,
     "level": 13
   },
   "titles": {
