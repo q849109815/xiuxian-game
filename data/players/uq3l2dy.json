@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995609174,
-  "lastTick": 1789995609174,
+  "lastSeen": 1789995611474,
+  "lastTick": 1789995611474,
   "realm": 9,
   "stage": 3,
-  "exp": 296928414579.5213,
-  "stone": 3377912,
+  "exp": 0,
+  "stone": 3392008,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 88,
+      "count": 87,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -214,6 +214,30 @@
       "hp": 262,
       "crit": 0,
       "mp": 115
+    },
+    {
+      "id": "it_qkbmx3s",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·玄龟甲",
+      "atk": 45,
+      "def": 97,
+      "hp": 873,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "kind": "pill",
+      "ref": "pill_zen",
+      "name": "悟道金丹",
+      "icon": "🌟",
+      "desc": "永久悟性 +5",
+      "price": 5000,
+      "count": 1,
+      "id": "i_h17jrpw"
     }
   ],
   "skills": [
@@ -1321,8 +1345,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 32032816,
-        "kill": 666,
+        "exp": 32157344,
+        "kill": 668,
         "dungeon": 213,
         "arena": 20
       },
@@ -1335,8 +1359,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 32032816,
-        "kill": 666,
+        "exp": 32157344,
+        "kill": 668,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1353,7 +1377,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 155,
         "混沌祖龙": 172,
-        "天兵": 153
+        "天兵": 155
       },
       "claimed": [
         "b2",
@@ -1396,9 +1420,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 666,
+    "kills": 668,
     "deaths": 0,
-    "battles": 666,
+    "battles": 668,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
