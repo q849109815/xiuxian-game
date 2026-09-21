@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995640385,
-  "lastTick": 1789995640385,
+  "lastSeen": 1789995642886,
+  "lastTick": 1789995642886,
   "realm": 9,
   "stage": 3,
-  "exp": 334044567085.7115,
-  "stone": 3556428,
+  "exp": 37116070464.19016,
+  "stone": 3571450,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 90,
+      "count": 91,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -127,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 33,
+      "count": 35,
       "desc": "炼器材料",
       "id": "i_jir574s"
     },
@@ -1527,8 +1527,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 33641388,
-        "kill": 691,
+        "exp": 33768578,
+        "kill": 693,
         "dungeon": 213,
         "arena": 20
       },
@@ -1541,8 +1541,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 33641388,
-        "kill": 691,
+        "exp": 33768578,
+        "kill": 693,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1559,7 +1559,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 162,
         "混沌祖龙": 176,
-        "天兵": 167
+        "天兵": 169
       },
       "claimed": [
         "b2",
@@ -1602,9 +1602,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 691,
+    "kills": 693,
     "deaths": 0,
-    "battles": 691,
+    "battles": 693,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
@@ -1614,5 +1614,5 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 845
+  "bonusWuxing": 890
 }
