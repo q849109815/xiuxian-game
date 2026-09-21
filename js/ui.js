@@ -260,7 +260,7 @@ function renderSkills(p) {
   if (eb) eb.innerHTML = eq.length ? eq.map((id) => {
     const sk = SYS.skillDef(id); if (!sk) return '';
     const own = SYS.ownSkill(p, id);
-    return `<div class="skcell on" data-sk="${id}"><div class="si">${sk.icon}</div><div class="sn">${sk.name}</div><div class="sl">${own ? own.level : 1} 层</div></div>`;
+    return `<div class="skcell on" data-sk="${id}"><div class="si">${(window.ART&&ART.skillOf&&ART.skillOf(sk.name))?'<img src="'+ART.skillOf(sk.name)+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px" onerror="this.outerHTML=\'' + sk.icon + '\'">':sk.icon}</div><div class="sn">${sk.name}</div><div class="sl">${own ? own.level : 1} 层</div></div>`;
   }).join('') : '<div class="small" style="grid-column:1/-1">尚未装备功法</div>';
   $$('#equippedSkills [data-sk]').forEach((el) => el.onclick = () => { SK_SEL = el.dataset.sk; renderSkills(p); });
 
@@ -269,7 +269,7 @@ function renderSkills(p) {
   if (sb) sb.innerHTML = owned.length ? owned.map((o) => {
     const sk = SYS.skillDef(o.id); if (!sk) return '';
     const on = eq.includes(o.id);
-    return `<div class="skcell ${on ? 'on' : ''}" data-sk2="${o.id}"><div class="si">${sk.icon}</div><div class="sn">${sk.name}</div><div class="sl">${o.level}/${sk.maxLevel}层${on ? ' ✔' : ''}</div></div>`;
+    return `<div class="skcell ${on ? 'on' : ''}" data-sk2="${o.id}"><div class="si">${(window.ART&&ART.skillOf&&ART.skillOf(sk.name))?'<img src="'+ART.skillOf(sk.name)+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px" onerror="this.outerHTML=\'' + sk.icon + '\'">':sk.icon}</div><div class="sn">${sk.name}</div><div class="sl">${o.level}/${sk.maxLevel}层${on ? ' ✔' : ''}</div></div>`;
   }).join('') : '<div class="small" style="grid-column:1/-1">尚未习得功法（坊市购买 / 秘境掉落）</div>';
   $$('#skillList [data-sk2]').forEach((el) => el.onclick = () => { SK_SEL = el.dataset.sk2; renderSkills(p); });
 
@@ -748,9 +748,23 @@ function renderStory() {
   if (ST_CUR !== i) { ST_CUR = i; ST_SCENE = 0; }
   const s = STORY[i];
   const sc = s.scenes[ST_SCENE];
+  // CG 过场背景
+  {
+    const bgEl = $('#storyBox');
+    if (bgEl && window.ART && ART.cgOf) {
+      const u = ART.cgOf(s.chapter || s.title || '');
+      if (bgEl.dataset.cg !== u) { bgEl.dataset.cg = u; bgEl.style.backgroundImage = `linear-gradient(rgba(10,12,16,.82),rgba(10,12,16,.9)), url(${u})`; bgEl.style.backgroundSize = 'cover'; bgEl.style.backgroundPosition = 'center'; }
+    }
+  }
   $('#stChapter').textContent = `${s.title}　（${ST_SCENE + 1}/${s.scenes.length}）`;
   $('#stName').textContent = sc.who;
-  $('#stFace').textContent = sc.face;
+  // 立绘：优先真实图片
+  {
+    const fEl = $('#stFace');
+    const u = (window.ART && ART.charOf) ? ART.charOf(sc.who) : null;
+    if (u) fEl.innerHTML = `<img src="${u}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.outerHTML='${sc.face}'">`;
+    else fEl.textContent = sc.face;
+  }
   $('#stText').innerHTML = s.scenes.map((x, k) =>
     `<div class="ln ${k === ST_SCENE ? 'now' : k < ST_SCENE ? 'old' : ''}" style="${k > ST_SCENE ? 'display:none' : ''}"><b>${x.who}</b>：${x.text}</div>`).join('');
   const last = ST_SCENE >= s.scenes.length - 1;
@@ -1432,7 +1446,7 @@ function renderSkins(p) {
       const cost = 500 * Math.pow(3, Math.floor(sk.realm / 4));
       const clsOk = sk.cls === '通用' || sk.cls === (p.faction || '') || !(p.faction);
       return `<div class="compitem ${on ? 'on' : ''} ${sk.owned ? '' : 'lock'}" data-sk="${sk.id}">
-        <div class="cface">${(function(){ const u=(window.ART)?ART.skillOf(sk.name):null; return u? '<img src="'+u+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.outerHTML=\'' + sk.icon + '\'">' : sk.icon; })()}</div>
+        <div class="cface">${(function(){ const u=(window.ART&&ART.skinOf)?ART.skinOf(sk.id):null; return u? '<img src="'+u+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.outerHTML=\'' + sk.icon + '\'">' : sk.icon; })()}</div>
         <div class="cinfo"><div class="cnm">${sk.name} ${on ? '<span style="color:var(--jade)">穿戴中</span>' : ''}</div>
         <div class="csub">${sk.cls}｜${sk.desc}</div>
         <div class="csub" style="color:var(--gold)">${Object.entries(sk.buff || {}).map(([k, v]) =>
