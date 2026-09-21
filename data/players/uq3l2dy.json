@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995472398,
-  "lastTick": 1789995472398,
+  "lastSeen": 1789995473680,
+  "lastTick": 1789995473680,
   "realm": 9,
   "stage": 3,
-  "exp": 37116135018.19016,
-  "stone": 2581193,
+  "exp": 111348232126.5705,
+  "stone": 2590181,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -99,48 +99,6 @@
       "def": 135,
       "hp": 845,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_nmon1zd",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·养魂环",
-      "atk": 58,
-      "def": 31,
-      "hp": 351,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_g3plsni",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·灵蛇杖",
-      "atk": 207,
-      "def": 36,
-      "hp": 301,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_silrx87",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·太极道衣",
-      "atk": 33,
-      "def": 99,
-      "hp": 837,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -341,7 +299,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 8,
+      "count": 9,
       "desc": "炼器材料",
       "id": "i_n9wf73t"
     },
@@ -365,7 +323,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 9,
+      "count": 10,
       "desc": "炼器材料",
       "id": "i_jir574s"
     },
@@ -562,6 +520,20 @@
       "atk": 59,
       "def": 30,
       "hp": 312,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_8x0090i",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·聚灵戒",
+      "atk": 60,
+      "def": 29,
+      "hp": 327,
       "crit": 0,
       "mp": 115
     }
@@ -1662,8 +1634,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 25151810,
-        "kill": 560,
+        "exp": 25223222,
+        "kill": 561,
         "dungeon": 213,
         "arena": 20
       },
@@ -1676,8 +1648,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 25151810,
-        "kill": 560,
+        "exp": 25223222,
+        "kill": 561,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1693,7 +1665,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 128,
-        "混沌祖龙": 127,
+        "混沌祖龙": 128,
         "天兵": 119
       },
       "claimed": [
@@ -1737,14 +1709,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 560,
+    "kills": 561,
     "deaths": 0,
-    "battles": 560,
+    "battles": 561,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 68,
+    "encounters": 69,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
