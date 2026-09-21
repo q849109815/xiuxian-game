@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790012286566,
-  "lastTick": 1790012286566,
+  "lastSeen": 1790012291103,
+  "lastTick": 1790012291103,
   "realm": 31,
   "stage": 0,
-  "exp": 244166265300.3346,
-  "stone": 2827460874321.0703,
+  "exp": 162777514404.88974,
+  "stone": 2827460877975.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -72,16 +72,16 @@
       "fr": true
     },
     "helmet": {
-      "id": "it_bek78n1",
+      "id": "it_bpu32re",
       "kind": "equip",
       "slot": "helmet",
       "q": 4,
-      "level": 12,
-      "temper": 8,
-      "name": "神品·混元盔",
-      "atk": 81,
-      "def": 310,
-      "hp": 1436,
+      "level": 0,
+      "temper": 0,
+      "name": "神品·玄铁盔",
+      "atk": 65,
+      "def": 242,
+      "hp": 1296,
       "crit": 0.02,
       "mp": 337
     },
@@ -129,34 +129,6 @@
     }
   },
   "bag": [
-    {
-      "id": "it_f8v72yx",
-      "kind": "equip",
-      "slot": "necklace",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·破妄链",
-      "atk": 163,
-      "def": 82,
-      "hp": 962,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_hc4qrey",
-      "kind": "equip",
-      "slot": "boots",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·追风靴",
-      "atk": 121,
-      "def": 175,
-      "hp": 1205,
-      "crit": 0,
-      "mp": 337
-    },
     {
       "id": "it_44vtmdr",
       "kind": "equip",
@@ -1005,7 +977,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 16,
+      "count": 20,
       "desc": "炼丹材料",
       "id": "i_64h6svt"
     },
@@ -1102,20 +1074,6 @@
       "def": 74,
       "hp": 936,
       "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_bpu32re",
-      "kind": "equip",
-      "slot": "helmet",
-      "q": 4,
-      "level": 0,
-      "temper": 0,
-      "name": "神品·玄铁盔",
-      "atk": 65,
-      "def": 242,
-      "hp": 1296,
-      "crit": 0.02,
       "mp": 337
     },
     {
@@ -1242,6 +1200,48 @@
       "def": 151,
       "hp": 993,
       "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_c3q8m3w",
+      "kind": "equip",
+      "slot": "boots",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·太极履",
+      "atk": 113,
+      "def": 171,
+      "hp": 952,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_vwwt5ud",
+      "kind": "equip",
+      "slot": "helmet",
+      "q": 3,
+      "level": 0,
+      "temper": 0,
+      "name": "仙器·狻猊盔",
+      "atk": 65,
+      "def": 249,
+      "hp": 1358,
+      "crit": 0.02,
+      "mp": 337
+    },
+    {
+      "id": "it_bek78n1",
+      "kind": "equip",
+      "slot": "helmet",
+      "q": 4,
+      "level": 12,
+      "temper": 8,
+      "name": "神品·混元盔",
+      "atk": 81,
+      "def": 310,
+      "hp": 1436,
+      "crit": 0.02,
       "mp": 337
     }
   ],
@@ -2571,16 +2571,16 @@
         "arena": 20,
         "dungeon": 249,
         "meditate": 1,
-        "exp": 129754565186,
-        "kill": 1509
+        "exp": 129754593750,
+        "kill": 1513
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129853957280,
-        "kill": 3227,
+        "exp": 129853985844,
+        "kill": 3231,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2598,10 +2598,10 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 514,
-        "星斗海妖兽": 492,
+        "禁地守卫": 516,
+        "星斗海妖兽": 493,
         "天星宗弟子": 3,
-        "墨蛟": 500
+        "墨蛟": 501
       },
       "claimed": [
         "b2",
@@ -2645,14 +2645,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3227,
+    "kills": 3231,
     "deaths": 65,
-    "battles": 3292,
+    "battles": 3296,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 462,
-    "encounters": 423,
+    "encounters": 425,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -2681,7 +2681,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 76,
+    "acc": 80,
     "level": 30
   },
   "titles": {
