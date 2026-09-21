@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009504943,
-  "lastTick": 1790009504943,
+  "lastSeen": 1790009506563,
+  "lastTick": 1790009506563,
   "realm": 31,
   "stage": 0,
-  "exp": 63064357495.06353,
-  "stone": 177251402.91263384,
+  "exp": 115335492591.09529,
+  "stone": 1598625826.912634,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -1145,7 +1145,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 262,
+      "count": 277,
       "desc": "炼丹材料",
       "id": "i_dwghtoq"
     },
@@ -1155,7 +1155,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 34,
+      "count": 43,
       "desc": "炼器材料",
       "id": "i_jdu35bw"
     }
@@ -2445,7 +2445,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 2,
-    "acc": 5,
+    "acc": 7,
     "level": 13
   },
   "titles": {
@@ -2496,5 +2496,5 @@
   "sectWh": {
     "items": []
   },
-  "storyIdx": 22
+  "storyIdx": 25
 }
