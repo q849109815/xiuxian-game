@@ -193,9 +193,20 @@ function toggleAuto(btn) {
 }
 
 /* ---------------- 通用交互绑定 ---------------- */
+const HOTKEY = { c: 'role', b: 'bag', t: 'task', s: 'skill', l: 'beast', h: 'cave', g: 'sect', m: 'market', f: 'social', v: 'alchemy', x: 'story', k: 'rank', z: 'set' };
+function bindHotkeys() {
+  document.addEventListener('keydown', (e) => {
+    if (/input|textarea/i.test(e.target.tagName)) return;
+    if (e.key === 'Escape') return UI.closeWin();
+    const k = (e.key || '').toLowerCase();
+    if (HOTKEY[k]) { const w = HOTKEY[k]; UI.CUR_WIN === w ? UI.closeWin() : UI.openWin(w); e.preventDefault(); }
+  });
+}
+
 function bindTabs() {
   UI.renderToolBar();
   UI.bindWinTabs();
+  bindHotkeys();
   // 底部功能栏：点图标开关面板
   document.addEventListener('click', (e) => {
     const t = e.target.closest('#toolbar .tbtn[data-tab]');
