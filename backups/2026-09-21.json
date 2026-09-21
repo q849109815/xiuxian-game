@@ -1,17 +1,17 @@
 {
-  "at": "2026-09-21T10:33:31.968Z",
+  "at": "2026-09-21T10:35:37.296Z",
   "count": 1,
   "players": [
     {
       "uid": "u1tfdvk2",
       "name": "q849109815",
-      "realm": "炼虚1层",
-      "realmIdx": 5,
-      "power": 1004,
+      "realm": "合体9层",
+      "realmIdx": 6,
+      "power": 1270,
       "stone": 196,
       "kills": 8,
-      "battles": 13,
-      "lastSeen": 1789986802795,
+      "battles": 22,
+      "lastSeen": 1789986922796,
       "createdAt": 1789986590023,
       "banned": false
     }
