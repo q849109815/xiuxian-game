@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995637146,
-  "lastTick": 1789995637146,
+  "lastSeen": 1789995638667,
+  "lastTick": 1789995638667,
   "realm": 9,
   "stage": 3,
-  "exp": 185580319414.9508,
-  "stone": 3533172,
+  "exp": 259812412231.33112,
+  "stone": 3541086,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 88,
+      "count": 89,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -117,7 +117,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 32,
+      "count": 33,
       "desc": "炼器材料",
       "id": "i_n9wf73t"
     },
@@ -390,6 +390,20 @@
       "atk": 30,
       "def": 148,
       "hp": 937,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_y4lvgbk",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·诛仙剑",
+      "atk": 168,
+      "def": 40,
+      "hp": 369,
       "crit": 0,
       "mp": 115
     }
@@ -1499,8 +1513,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 33445110,
-        "kill": 688,
+        "exp": 33512230,
+        "kill": 689,
         "dungeon": 213,
         "arena": 20
       },
@@ -1513,8 +1527,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 33445110,
-        "kill": 688,
+        "exp": 33512230,
+        "kill": 689,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1529,7 +1543,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 160,
+        "星宿仙君": 161,
         "混沌祖龙": 176,
         "天兵": 166
       },
@@ -1574,9 +1588,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 688,
+    "kills": 689,
     "deaths": 0,
-    "battles": 688,
+    "battles": 689,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
@@ -1586,5 +1600,5 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 785
+  "bonusWuxing": 815
 }
