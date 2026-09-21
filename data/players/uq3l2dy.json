@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990118895,
-  "lastTick": 1789990118895,
+  "lastSeen": 1789990120413,
+  "lastTick": 1789990120413,
   "realm": 4,
   "stage": 2,
-  "exp": 2086182.7550000006,
-  "stone": 43129,
+  "exp": 2131059.4769000006,
+  "stone": 43655,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -178,12 +178,26 @@
       "hp": 169,
       "crit": 0,
       "mp": 58
+    },
+    {
+      "id": "it_zzft4qi",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·云锦袍",
+      "atk": 19,
+      "def": 58,
+      "hp": 328,
+      "crit": 0,
+      "mp": 58
     }
   ],
   "skills": [
     {
       "id": "sk_art_shield",
-      "level": 2,
+      "level": 3,
       "exp": 0
     }
   ],
@@ -203,8 +217,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 246144,
-        "kill": 72,
+        "exp": 250818,
+        "kill": 73,
         "dungeon": 2
       },
       "claimed": []
@@ -212,16 +226,16 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 246144,
-        "kill": 72,
+        "exp": 250818,
+        "kill": 73,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
         "熔岩巨人": 15,
-        "b3": 38,
+        "b3": 39,
         "火麒麟": 10,
-        "炎魔": 13,
+        "炎魔": 14,
         "dungeon": 2
       },
       "claimed": []
@@ -258,9 +272,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 72,
+    "kills": 73,
     "deaths": 0,
-    "battles": 72,
+    "battles": 73,
     "breakthrough": 18,
     "offlineMin": 0,
     "meditate": 1,
