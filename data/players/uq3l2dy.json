@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009815559,
-  "lastTick": 1790009815559,
+  "lastSeen": 1790009847312,
+  "lastTick": 1790009847312,
   "realm": 31,
   "stage": 0,
-  "exp": 45726142675.547646,
+  "exp": 289598903611.80164,
   "stone": 8505051562605.912,
   "equip": {
     "weapon": {
@@ -2012,7 +2012,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 5,
-    "acc": 16,
+    "acc": 32,
     "level": 13
   },
   "titles": {
