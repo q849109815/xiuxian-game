@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009840432,
-  "lastTick": 1790009840432,
+  "lastSeen": 1790009848304,
+  "lastTick": 1790009848304,
   "realm": 31,
   "stage": 0,
-  "exp": 0,
-  "stone": 8505051563428.912,
+  "exp": 182419464159.9078,
+  "stone": 8505051566481.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -564,48 +564,6 @@
       "mp": 115
     },
     {
-      "id": "it_0914t12",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·聚灵戒",
-      "atk": 65,
-      "def": 33,
-      "hp": 335,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_8uwmten",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·太极道衣",
-      "atk": 33,
-      "def": 141,
-      "hp": 647,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_8pjbqw2",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·锁子金甲",
-      "atk": 45,
-      "def": 123,
-      "hp": 975,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "id": "it_zcb16yv",
       "kind": "equip",
       "slot": "armor",
@@ -644,20 +602,6 @@
       "atk": 42,
       "def": 116,
       "hp": 651,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_da5kzrq",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·玄龟甲",
-      "atk": 35,
-      "def": 142,
-      "hp": 960,
       "crit": 0,
       "mp": 115
     },
@@ -1998,7 +1942,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 5,
-    "acc": 59,
+    "acc": 67,
     "level": 13
   },
   "titles": {
