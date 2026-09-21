@@ -45,6 +45,8 @@ const NAV = [
   { k: 'wallet', i: '💰', n: '货币管理' },
   { k: 'acts', i: '🎯', n: '活动管理' },
   { k: 'give', i: '🎁', n: '内容发放' },
+  { k: 'chat', i: '💬', n: '聊天日志' },
+  { k: 'sect', i: '🏯', n: '宗门管理' },
   { g: '设置' },
   { k: 'config', i: '🎛', n: '数值配置' },
   { k: 'data', i: '🗄', n: '数据维护' },
@@ -54,7 +56,7 @@ function renderNav() {
   A$('#nav').innerHTML = NAV.map((x) => x.g
     ? `<div class="grp">${x.g}</div>`
     : `<button data-pg="${x.k}"><span>${x.i}</span>${x.n}</button>`).join('');
-  A$$('#nav [data-pg]').forEach((b) => b.onclick = () => go(b.dataset.pg));
+  A$$('#nav [data-pg]').forEach((b) => b.onclick = () => { go(b.dataset.pg); closeSide(); });
 }
 function go(pg) {
   A$$('.page').forEach((p) => p.classList.toggle('on', p.dataset.pg === pg));
@@ -67,6 +69,8 @@ function go(pg) {
   if (pg === 'config') loadCfg();
   if (pg === 'data') renderData();
   if (pg === 'sys') renderSys();
+  if (pg === 'chat') renderChat();
+  if (pg === 'sect') renderSectAdmin();
 }
 
 /* ================= 连接检测 ================= */
@@ -228,7 +232,36 @@ function renderTable() {
   }).join('') || '<tr><td colspan="8" class="empty">无数据</td></tr>';
   A$('#pCount').textContent = `共 ${VIEW.length} 位（总数 ${PLAYERS.length}）`;
   A$$('#pBody tr[data-i]').forEach((tr) => tr.onclick = () => selectPlayer(VIEW[+tr.dataset.i].obj));
+  // 手机端卡片视图
+  const pc = A$('#pCards');
+  if (pc) {
+    pc.innerHTML = VIEW.map((x, i) => {
+      const p = x.obj;
+      return `<div class="pcard" data-i="${i}">
+        <div class="r1"><div class="av">${p.avatar || '🧙'}</div>
+          <div class="nm">${p.name || '—'}</div>
+          ${p.banned ? '<span class="tag r">封禁</span>' : '<span class="tag g">正常</span>'}</div>
+        <div class="r2">
+          <span>${realmName(p)}</span><span>战力 ${fmt(power(p))}</span>
+          <span>💎 ${fmt(p.stone || 0)}</span><span>击杀 ${fmt((p.stats || {}).kills || 0)}</span>
+          <span>${(p.sectInfo || {}).name || '无宗门'}</span></div>
+        <div class="r3">${p.uid} · ${ago(p.lastSeen)}</div></div>`;
+    }).join('') || '<div class="empty">无数据</div>';
+    A$$('#pCards .pcard').forEach((c) => c.onclick = () => {
+      selectPlayer(VIEW[+c.dataset.i].obj);
+      closeSide();
+    });
+  }
+  syncSel();
 }
+function syncSel() {
+  const idx = CUR ? VIEW.findIndex((x) => x.obj === CUR) : -1;
+  A$$('#pBody tr').forEach((tr) => tr.classList.toggle('sel', +tr.dataset.i === idx));
+  A$$('#pCards .pcard').forEach((c) => c.classList.toggle('sel', +c.dataset.i === idx));
+}
+function openSide() { A$('#side').classList.add('open'); A$('#mask').classList.add('show'); }
+function closeSide() { A$('#side').classList.remove('open'); A$('#mask').classList.remove('show'); }
+
 function selectPlayer(p) {
   CUR = p;
   A$('#editCard').style.display = '';
@@ -242,9 +275,7 @@ function selectPlayer(p) {
   A$('#fReinc').value = p.reinc || 0;
   A$('#fBan').value = p.banned ? '1' : '0';
   A$('#rawJson').value = JSON.stringify(p, null, 1);
-  A$$('#pBody tr').forEach((tr) => tr.classList.remove('sel'));
-  const idx = VIEW.findIndex((x) => x.obj === p);
-  const tr = A$(`#pBody tr[data-i="${idx}"]`); if (tr) tr.classList.add('sel');
+  syncSel();
   try { A$('#editCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
 }
 async function savePlayer(p, msg) {
@@ -462,9 +493,69 @@ async function renderSys() {
   A$('#sysEp').textContent = `当前通道：${(window.GH && GH.best) || '默认 api.github.com'}`;
 }
 
+
+/* ================= 10. 聊天与日志 ================= */
+async function renderChat(kw) {
+  const d = await readJSON('data/chat.json').catch(() => null);
+  const list = (d && d.list) || [];
+  const q = (kw === undefined) ? (A$('#chatKw') ? A$('#chatKw').value.trim() : '') : kw;
+  const show = q ? list.filter((m) => ((m.text || '') + (m.name || '')).indexOf(q) >= 0) : list;
+  const rows = show.slice().reverse().slice(0, 50);
+  A$('#chatBody').innerHTML = rows.map((m, i) =>
+    `<tr><td class="small">${ago(m.at)}</td><td><b>${m.name || '—'}</b></td>
+     <td>${(m.text || '').replace(/</g, '&lt;')}</td>
+     <td><button class="btn sm d" data-chatdel="${i}">删除</button></td></tr>`).join('')
+    || '<tr><td colspan="4" class="empty">无消息</td></tr>';
+  A$('#chatCount').textContent = `共 ${list.length} 条${q ? '，匹配 ' + show.length : ''}`;
+  A$$('#chatBody [data-chatdel]').forEach((b) => b.onclick = async () => {
+    const real = show.slice().reverse()[+b.dataset.chatdel];
+    const idx = list.indexOf(real);
+    if (idx >= 0) list.splice(idx, 1);
+    await writeJSON('data/chat.json', { list }, 'admin: delete chat');
+    atoast('已删除', 'ok'); renderChat(q);
+  });
+}
+async function broadcast() {
+  const t = (A$('#bcText') || {}).value;
+  if (!t || !t.trim()) return atoast('请输入内容', 'err');
+  const d = await readJSON('data/chat.json').catch(() => null) || { list: [] };
+  d.list = d.list || [];
+  d.list.push({ name: '【系统】', text: '[公告] ' + t.trim(), at: Date.now(), sys: true });
+  if (d.list.length > 200) d.list.shift();
+  await writeJSON('data/chat.json', d, 'admin: broadcast');
+  A$('#bcText').value = '';
+  atoast('已广播', 'ok'); renderChat();
+}
+
+/* ================= 11. 宗门管理 ================= */
+async function renderSectAdmin() {
+  const d = await readJSON('data/sects.json').catch(() => null);
+  const list = (d && d.list) || (d && Array.isArray(d) ? d : []);
+  const kw = (A$('#sectKw') || {}).value ? A$('#sectKw').value.trim() : '';
+  const show = kw ? list.filter((x) => (x.name || '').indexOf(kw) >= 0) : list;
+  const cnt = {};
+  PLAYERS.forEach((x) => { const n = (x.obj.sectInfo || {}).name; if (n) cnt[n] = (cnt[n] || 0) + 1; });
+  A$('#sectBody').innerHTML = show.map((x, i) =>
+    `<tr><td><b>${x.name || '—'}</b></td><td>${cnt[x.name] || x.members || 0}</td>
+     <td>${x.leader || x.owner || '—'}</td><td>${x.level || x.lv || 1}</td>
+     <td><button class="btn sm d" data-sectdel="${i}">解散</button></td></tr>`).join('')
+    || '<tr><td colspan="5" class="empty">无宗门</td></tr>';
+  A$$('#sectBody [data-sectdel]').forEach((b) => b.onclick = async () => {
+    if (!confirm('确定解散该宗门？')) return;
+    const t = show[+b.dataset.sectdel];
+    const idx = list.indexOf(t);
+    if (idx >= 0) list.splice(idx, 1);
+    await writeJSON('data/sects.json', { list }, 'admin: disband sect');
+    atoast('已解散', 'ok'); renderSectAdmin();
+  });
+}
+
 /* ================= 事件绑定 ================= */
 document.addEventListener('DOMContentLoaded', async () => {
   renderNav();
+  const bg = A$('#burger'), mk = A$('#mask');
+  if (bg) bg.onclick = openSide;
+  if (mk) mk.onclick = closeSide;
   await checkConn();
   await loadCfg();
   await loadPlayers(true);
@@ -595,6 +686,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     Object.keys(localStorage).forEach((k) => { if (k.indexOf('xx_') === 0) localStorage.removeItem(k); });
     atoast('本地缓存已清除', 'ok');
   };
+
+  // 聊天
+  if (A$('#btnChatLoad')) A$('#btnChatLoad').onclick = () => renderChat();
+  if (A$('#btnChatClear')) A$('#btnChatClear').onclick = async () => {
+    if (!confirm('确定清空世界聊天？')) return;
+    await writeJSON('data/chat.json', { list: [] }, 'admin: clear chat');
+    atoast('已清空', 'ok'); renderChat();
+  };
+  if (A$('#btnChatSearch')) A$('#btnChatSearch').onclick = () => renderChat();
+  if (A$('#btnBroadcast')) A$('#btnBroadcast').onclick = broadcast;
+  // 宗门
+  if (A$('#btnSectLoad')) A$('#btnSectLoad').onclick = renderSectAdmin;
+  if (A$('#sectKw')) A$('#sectKw').onkeydown = (e) => { if (e.key === 'Enter') renderSectAdmin(); };
 
   // 系统
   A$('#btnSaveEp').onclick = async () => {
