@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996110086,
-  "lastTick": 1789996110086,
+  "lastSeen": 1789996111169,
+  "lastTick": 1789996111169,
   "realm": 9,
   "stage": 3,
-  "exp": 185580432316.9508,
-  "stone": 6110641,
+  "exp": 247440508477.60107,
+  "stone": 6120297,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -157,34 +157,6 @@
       "def": 142,
       "hp": 836,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_4449ccq",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·玄龟甲",
-      "atk": 32,
-      "def": 140,
-      "hp": 677,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_pklwj8o",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·云锦袍",
-      "atk": 36,
-      "def": 121,
-      "hp": 891,
-      "crit": 0,
       "mp": 115
     }
   ],
@@ -1320,8 +1292,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 55891852,
-        "kill": 1038,
+        "exp": 55946376,
+        "kill": 1039,
         "dungeon": 213,
         "arena": 20
       },
@@ -1334,8 +1306,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 55891852,
-        "kill": 1038,
+        "exp": 55946376,
+        "kill": 1039,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1350,7 +1322,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 286,
+        "星宿仙君": 287,
         "混沌祖龙": 294,
         "天兵": 272
       },
@@ -1395,14 +1367,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1038,
+    "kills": 1039,
     "deaths": 0,
-    "battles": 1038,
+    "battles": 1039,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 125,
+    "encounters": 126,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
