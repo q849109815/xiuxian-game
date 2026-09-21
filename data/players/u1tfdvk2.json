@@ -3,12 +3,12 @@
   "name": "q849109815",
   "pwd": "iz2s4w",
   "createdAt": 1789986590023,
-  "lastSeen": 1789986723181,
-  "lastTick": 1789986723181,
+  "lastSeen": 1789986735315,
+  "lastTick": 1789986735315,
   "realm": 4,
   "layer": 7,
-  "exp": 429336.9250000004,
-  "stone": 128,
+  "exp": 497292.11500000034,
+  "stone": 196,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -22,7 +22,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 40,
-      "count": 9
+      "count": 12
     },
     {
       "id": "it_vris4zj",
@@ -35,6 +35,18 @@
       "def": 48,
       "hp": 275,
       "from": 0
+    },
+    {
+      "id": "it_e10buxv",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "name": "宝器·青锋剑",
+      "atk": 77,
+      "def": 12,
+      "hp": 103,
+      "from": 0
     }
   ],
   "buffs": {
@@ -42,10 +54,10 @@
     "pillExpUntil": 0
   },
   "stats": {
-    "kills": 5,
+    "kills": 8,
     "deaths": 0,
     "breakthrough": 43,
-    "battles": 5,
+    "battles": 8,
     "offlineMin": 0
   },
   "codes": [],
