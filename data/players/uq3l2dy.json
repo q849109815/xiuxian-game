@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009201718,
-  "lastTick": 1790009201718,
+  "lastSeen": 1790009213453,
+  "lastTick": 1790009213453,
   "realm": 31,
   "stage": 0,
-  "exp": 150746858014.28424,
-  "stone": 10923391,
+  "exp": 0,
+  "stone": 10924479,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -59,20 +59,6 @@
     "talisman": null
   },
   "bag": [
-    {
-      "id": "it_9pd9sg5",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·青锋剑",
-      "atk": 163,
-      "def": 38,
-      "hp": 248,
-      "crit": 0,
-      "mp": 115
-    },
     {
       "id": "it_5kgyq2q",
       "kind": "equip",
@@ -1166,6 +1152,16 @@
       "hp": 351,
       "crit": 0,
       "mp": 115
+    },
+    {
+      "kind": "herb",
+      "ref": "herb_green",
+      "name": "青灵草",
+      "icon": "🌿",
+      "price": 30,
+      "count": 109,
+      "desc": "炼丹材料",
+      "id": "i_dwghtoq"
     }
   ],
   "skills": [
@@ -2339,7 +2335,7 @@
       "forge": 8
     },
     "array": "f007",
-    "lastHarvest": 1789989635634,
+    "lastHarvest": 1790009213452,
     "store": {}
   },
   "tasks": {
@@ -2451,7 +2447,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 0,
-    "acc": 75,
+    "acc": 87,
     "level": 1
   }
 }
