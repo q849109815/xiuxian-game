@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990667045,
-  "lastTick": 1789990667045,
+  "lastSeen": 1789990668680,
+  "lastTick": 1789990668680,
   "realm": 8,
-  "stage": 2,
-  "exp": 21199264489.55793,
+  "stage": 3,
+  "exp": 485175474.60367966,
   "stone": 108372,
   "equip": {
     "weapon": {
@@ -59,16 +59,6 @@
     "talisman": null
   },
   "bag": [
-    {
-      "kind": "herb",
-      "ref": "herb_fire",
-      "name": "赤炎莲",
-      "icon": "🔥",
-      "price": 180,
-      "count": 61,
-      "desc": "炼丹材料",
-      "id": "i_4dx4axl"
-    },
     {
       "kind": "ore",
       "ref": "ore_fire",
@@ -172,10 +162,10 @@
       "id": "bs_n55gsok",
       "ref": "b_dragon",
       "name": "蛟龙",
-      "level": 5,
-      "exp": 100,
+      "level": 7,
+      "exp": 76,
       "stage": 1,
-      "apt": 1.1
+      "apt": 1.1500000000000001
     }
   ],
   "activeBeast": 0,
@@ -269,7 +259,7 @@
     "kills": 190,
     "deaths": 0,
     "battles": 190,
-    "breakthrough": 31,
+    "breakthrough": 32,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 5,
