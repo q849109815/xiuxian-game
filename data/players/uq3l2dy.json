@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990246148,
-  "lastTick": 1789990246148,
-  "realm": 4,
-  "stage": 3,
-  "exp": 4910229.117100001,
-  "stone": 88848,
+  "lastSeen": 1789990248014,
+  "lastTick": 1789990248014,
+  "realm": 5,
+  "stage": 0,
+  "exp": 24784.666100001894,
+  "stone": 91048,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -378,7 +378,8 @@
         "dungeon": 4
       },
       "claimed": [
-        "b2"
+        "b2",
+        "b3"
       ]
     }
   },
@@ -416,7 +417,7 @@
     "kills": 106,
     "deaths": 0,
     "battles": 106,
-    "breakthrough": 19,
+    "breakthrough": 20,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 4,
