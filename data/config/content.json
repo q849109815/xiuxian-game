@@ -1,110 +1,2866 @@
 {
-  "herbs": [
-    { "id": "herb_green", "name": "青灵草", "icon": "🌿", "price": 30, "tier": 1 },
-    { "id": "herb_soul",  "name": "养魂花", "icon": "🌸", "price": 90, "tier": 2 },
-    { "id": "herb_fire",  "name": "赤炎莲", "icon": "🔥", "price": 180, "tier": 3 },
-    { "id": "herb_dark",  "name": "幽冥草", "icon": "🖤", "price": 340, "tier": 4 },
-    { "id": "herb_immortal", "name": "不死药", "icon": "🌟", "price": 900, "tier": 5 }
-  ],
-  "ores": [
-    { "id": "ore_iron", "name": "玄铁", "icon": "⚙️", "price": 50, "tier": 1 },
-    { "id": "ore_fire", "name": "炎晶", "icon": "🔶", "price": 150, "tier": 2 },
-    { "id": "ore_dark", "name": "冥铁", "icon": "🔷", "price": 380, "tier": 3 },
-    { "id": "ore_star", "name": "星陨铁", "icon": "⭐", "price": 1000, "tier": 4 }
-  ],
-
-  "skills": [
-    { "id": "sk_heart_basic", "name": "长春诀", "icon": "📘", "type": "heart", "root": "any", "maxLevel": 9, "desc": "最基础的心法，稳健扎实",
-      "passive": { "hp": 0.06, "exp": 0.05 }, "price": 0 },
-    { "id": "sk_heart_wood", "name": "青木长生功", "icon": "🌿", "type": "heart", "root": "wood", "maxLevel": 9, "desc": "木灵根专属，生机不绝",
-      "passive": { "hp": 0.14, "exp": 0.12 }, "price": 1200, "conflict": ["sk_heart_fire"] },
-    { "id": "sk_heart_fire", "name": "焚天诀", "icon": "🔥", "type": "heart", "root": "fire", "maxLevel": 9, "desc": "火灵根专属，霸道刚猛",
-      "passive": { "atk": 0.16, "crit": 0.03 }, "price": 1200, "conflict": ["sk_heart_wood", "sk_heart_water"] },
-    { "id": "sk_heart_water", "name": "沧海心经", "icon": "💧", "type": "heart", "root": "water", "maxLevel": 9, "desc": "水灵根专属，绵延不绝",
-      "passive": { "def": 0.15, "hp": 0.08 }, "price": 1200, "conflict": ["sk_heart_fire"] },
-    { "id": "sk_heart_metal", "name": "锐金诀", "icon": "⚔️", "type": "heart", "root": "metal", "maxLevel": 9, "desc": "金灵根专属，锋芒毕露",
-      "passive": { "atk": 0.12, "hit": 0.05 }, "price": 1200 },
-    { "id": "sk_heart_earth", "name": "厚土诀", "icon": "🪨", "type": "heart", "root": "earth", "maxLevel": 9, "desc": "土灵根专属，固若金汤",
-      "passive": { "def": 0.18, "anticrit": 0.04 }, "price": 1200 },
-    { "id": "sk_heart_chaos", "name": "混沌道经", "icon": "✨", "type": "heart", "root": "chaos", "maxLevel": 9, "desc": "道体专属，包罗万象",
-      "passive": { "atk": 0.15, "def": 0.15, "hp": 0.15, "exp": 0.2 }, "price": 5000 },
-
-    { "id": "sk_art_slash", "name": "裂空斩", "icon": "🗡️", "type": "art", "root": "any", "maxLevel": 9, "desc": "主动：造成 180% 攻击伤害",
-      "active": { "mult": 1.8, "mp": 12, "cd": 2 }, "price": 300 },
-    { "id": "sk_art_fire", "name": "三昧真火", "icon": "🔥", "type": "art", "root": "fire", "maxLevel": 9, "desc": "主动：260% 伤害并灼烧",
-      "active": { "mult": 2.6, "mp": 25, "cd": 3, "burn": 0.1 }, "price": 900, "conflict": ["sk_art_ice"] },
-    { "id": "sk_art_ice", "name": "玄冰封印", "icon": "❄️", "type": "art", "root": "water", "maxLevel": 9, "desc": "主动：140% 伤害并减速",
-      "active": { "mult": 1.4, "mp": 20, "cd": 3, "slow": 0.3 }, "price": 900, "conflict": ["sk_art_fire"] },
-    { "id": "sk_art_thunder", "name": "掌心雷", "icon": "⚡", "type": "art", "root": "metal", "maxLevel": 9, "desc": "主动：220% 伤害，必暴击",
-      "active": { "mult": 2.2, "mp": 30, "cd": 4, "mustCrit": true }, "price": 1400 },
-    { "id": "sk_art_shield", "name": "金光护体", "icon": "🛡️", "type": "art", "root": "earth", "maxLevel": 9, "desc": "主动：获得护盾并回血",
-      "active": { "mult": 0.5, "mp": 18, "cd": 4, "shield": 0.35, "heal": 0.15 }, "price": 1000 },
-    { "id": "sk_art_drain", "name": "吸星大法", "icon": "🩸", "type": "art", "root": "any", "maxLevel": 9, "desc": "主动：150% 伤害并吸血 40%",
-      "active": { "mult": 1.5, "mp": 22, "cd": 3, "lifesteal": 0.4 }, "price": 1600 },
-    { "id": "sk_art_chaos", "name": "混沌开天", "icon": "🌌", "type": "art", "root": "chaos", "maxLevel": 9, "desc": "主动：360% 范围伤害",
-      "active": { "mult": 3.6, "mp": 60, "cd": 6, "aoe": true }, "price": 6000 }
-  ],
-  "skillUpCost": { "stoneBase": 100, "stoneGrowth": 1.6, "maxLevel": 9, "perLevel": 0.12 },
-  "skillFit": { "same": 1.0, "any": 0.85, "diff": 0.55, "desc": "功法与灵根的适配度：同属 100%、通用 85%、异属 55%" },
-
-  "alchemy": {
-    "recipes": [
-      { "id": "r_hp",  "name": "回气丹", "icon": "🔴", "pill": "pill_hp",  "cost": { "herb_green": 2 }, "rate": 0.85, "tier": 1, "exp": 20 },
-      { "id": "r_atk", "name": "凝神散", "icon": "🟠", "pill": "pill_atk", "cost": { "herb_green": 3, "herb_soul": 1 }, "rate": 0.75, "tier": 2, "exp": 40 },
-      { "id": "r_exp", "name": "悟道丹", "icon": "🟣", "pill": "pill_exp", "cost": { "herb_soul": 3 }, "rate": 0.7, "tier": 3, "exp": 80 },
-      { "id": "r_break", "name": "渡劫丹", "icon": "💊", "pill": "pill_break", "cost": { "herb_fire": 2, "herb_soul": 3 }, "rate": 0.6, "tier": 4, "exp": 160, "desc": "突破成功率 +25%" },
-      { "id": "r_root", "name": "洗髓丹", "icon": "🧬", "pill": "pill_root", "cost": { "herb_dark": 3, "herb_immortal": 1 }, "rate": 0.45, "tier": 5, "exp": 400, "desc": "可重洗灵根" },
-      { "id": "r_zen", "name": "悟道金丹", "icon": "🌟", "pill": "pill_zen", "cost": { "herb_immortal": 3 }, "rate": 0.4, "tier": 6, "exp": 900, "desc": "永久提升悟性 +5" }
-    ],
-    "failBoom": 0.25,
-    "boomLoss": "cost"
+ "herbs": [
+  {
+   "id": "herb_green",
+   "name": "青灵草",
+   "icon": "🌿",
+   "price": 30,
+   "tier": 1
   },
-
-  "forge": {
-    "recipes": [
-      { "id": "f_weapon1", "name": "青锋剑", "icon": "🗡️", "slot": "weapon", "q": 1, "cost": { "ore_iron": 4 }, "rate": 0.8, "tier": 1, "base": { "atk": 16, "hp": 20 } },
-      { "id": "f_armor1", "name": "玄龟甲", "icon": "🛡️", "slot": "armor", "q": 1, "cost": { "ore_iron": 4 }, "rate": 0.8, "tier": 1, "base": { "def": 12, "hp": 80 } },
-      { "id": "f_ring1", "name": "聚灵戒", "icon": "💍", "slot": "ring", "q": 1, "cost": { "ore_iron": 3 }, "rate": 0.8, "tier": 1, "base": { "atk": 6, "def": 4, "hp": 30 } },
-      { "id": "f_weapon2", "name": "炎阳刀", "icon": "🔥", "slot": "weapon", "q": 2, "cost": { "ore_fire": 5, "ore_iron": 3 }, "rate": 0.62, "tier": 2, "base": { "atk": 46, "crit": 0.04 } },
-      { "id": "f_armor2", "name": "火羽衣", "icon": "🦅", "slot": "armor", "q": 2, "cost": { "ore_fire": 5, "ore_iron": 3 }, "rate": 0.62, "tier": 2, "base": { "def": 34, "hp": 220 } },
-      { "id": "f_weapon3", "name": "冥魂幡", "icon": "🎴", "slot": "weapon", "q": 3, "cost": { "ore_dark": 6, "ore_fire": 4 }, "rate": 0.45, "tier": 3, "base": { "atk": 140, "crit": 0.07 } },
-      { "id": "f_armor3", "name": "幽冥铠", "icon": "🕸️", "slot": "armor", "q": 3, "cost": { "ore_dark": 6, "ore_fire": 4 }, "rate": 0.45, "tier": 3, "base": { "def": 100, "hp": 620 } },
-      { "id": "f_weapon4", "name": "诛仙剑", "icon": "⚔️", "slot": "weapon", "q": 4, "cost": { "ore_star": 8, "ore_dark": 6 }, "rate": 0.3, "tier": 4, "base": { "atk": 420, "crit": 0.1 } }
-    ],
-    "failBoom": 0.3
+  {
+   "id": "herb_soul",
+   "name": "养魂花",
+   "icon": "🌸",
+   "price": 90,
+   "tier": 2
   },
-
-  "talismans": [
-    { "id": "t_atk", "name": "攻击符", "icon": "📕", "effect": "atk", "value": 0.4, "dur": 2, "cost": { "herb_green": 2 }, "desc": "战斗中攻击 +40%，持续 2 回合" },
-    { "id": "t_shield", "name": "护盾符", "icon": "📗", "effect": "shield", "value": 0.5, "dur": 2, "cost": { "herb_green": 2, "ore_iron": 1 }, "desc": "获得 50% 气血护盾" },
-    { "id": "t_heal", "name": "回春符", "icon": "📘", "effect": "heal", "value": 0.5, "dur": 0, "cost": { "herb_soul": 2 }, "desc": "立刻恢复 50% 气血" },
-    { "id": "t_escape", "name": "遁地符", "icon": "📙", "effect": "escape", "value": 1, "dur": 0, "cost": { "herb_soul": 1, "ore_iron": 2 }, "desc": "立刻结束战斗并保留收益" }
-  ],
-
-  "beasts": [
-    { "id": "b_wolf", "name": "青风狼", "icon": "🐺", "tier": 1, "hp": 60, "atk": 12, "def": 5, "speed": 14, "skill": "撕咬", "skillMult": 1.5, "growAtk": 0.9, "growHp": 5 },
-    { "id": "b_crane", "name": "白羽鹤", "icon": "🕊️", "tier": 1, "hp": 50, "atk": 10, "def": 4, "speed": 18, "skill": "羽击", "skillMult": 1.4, "growAtk": 0.7, "growHp": 4, "ride": true },
-    { "id": "b_bear", "name": "玄铁熊", "icon": "🐻", "tier": 2, "hp": 150, "atk": 22, "def": 14, "speed": 8, "skill": "拍击", "skillMult": 1.6, "growAtk": 1.5, "growHp": 12 },
-    { "id": "b_fox", "name": "九尾狐", "icon": "🦊", "tier": 2, "hp": 110, "atk": 26, "def": 8, "speed": 16, "skill": "狐火", "skillMult": 1.8, "growAtk": 1.8, "growHp": 8 },
-    { "id": "b_tiger", "name": "白额虎王", "icon": "🐯", "tier": 3, "hp": 320, "atk": 48, "def": 24, "speed": 13, "skill": "虎啸", "skillMult": 2.0, "growAtk": 3.0, "growHp": 26 },
-    { "id": "b_dragon", "name": "蛟龙", "icon": "🐉", "tier": 4, "hp": 900, "atk": 120, "def": 60, "speed": 15, "skill": "龙息", "skillMult": 2.4, "growAtk": 7.0, "growHp": 70, "ride": true },
-    { "id": "b_phoenix", "name": "青鸾", "icon": "🦅", "tier": 5, "hp": 1400, "atk": 190, "def": 80, "speed": 20, "skill": "涅槃火", "skillMult": 2.8, "growAtk": 11.0, "growHp": 100, "ride": true },
-    { "id": "b_qilin", "name": "麒麟", "icon": "🦌", "tier": 6, "hp": 2600, "atk": 300, "def": 140, "speed": 16, "skill": "雷罚", "skillMult": 3.2, "growAtk": 18.0, "growHp": 180, "ride": true }
-  ],
-  "beast": {
-    "maxLevel": 20,
-    "maxStage": 5,
-    "feedExpPerMat": 10,
-    "feedExpPerHerb": 6,
-    "levelExpBase": 50,
-    "levelExpGrowth": 1.35,
-    "advanceAt": [5, 9, 13, 17, 20],
-    "advanceCost": [300, 1200, 4000, 12000, 40000],
-    "aptBase": 1.0,
-    "aptPerDevour": 0.05,
-    "aptMax": 3.0,
-    "captureRate": 0.55,
-    "inherit": 0.18,
-    "desc": "灵兽出战继承主人部分属性，吞噬材料可提升资质"
+  {
+   "id": "herb_fire",
+   "name": "赤炎莲",
+   "icon": "🔥",
+   "price": 180,
+   "tier": 3
+  },
+  {
+   "id": "herb_dark",
+   "name": "幽冥草",
+   "icon": "🖤",
+   "price": 340,
+   "tier": 4
+  },
+  {
+   "id": "herb_immortal",
+   "name": "不死药",
+   "icon": "🌟",
+   "price": 900,
+   "tier": 5
   }
+ ],
+ "ores": [
+  {
+   "id": "ore_iron",
+   "name": "玄铁",
+   "icon": "⚙️",
+   "price": 50,
+   "tier": 1
+  },
+  {
+   "id": "ore_fire",
+   "name": "炎晶",
+   "icon": "🔶",
+   "price": 150,
+   "tier": 2
+  },
+  {
+   "id": "ore_dark",
+   "name": "冥铁",
+   "icon": "🔷",
+   "price": 380,
+   "tier": 3
+  },
+  {
+   "id": "ore_star",
+   "name": "星陨铁",
+   "icon": "⭐",
+   "price": 1000,
+   "tier": 4
+  }
+ ],
+ "skills": [
+  {
+   "id": "sk001",
+   "name": "长春功",
+   "icon": "📗",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "凡品",
+   "cls": "通用",
+   "desc": "木属性修炼速度+5%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK001",
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk002",
+   "name": "青元剑诀",
+   "icon": "🗡️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "剑伤+15%，剑气层数+1",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK002",
+   "active": {
+    "mult": 2.0,
+    "mp": 16,
+    "cd": 2
+   },
+   "passive": {
+    "atk": 0.15
+   }
+  },
+  {
+   "id": "sk003",
+   "name": "大衍决",
+   "icon": "🧠",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "神识强度+30%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK003",
+   "passive": {
+    "mp": 0.15
+   }
+  },
+  {
+   "id": "sk004",
+   "name": "梵圣真魔功",
+   "icon": "💪",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "cls": "通用",
+   "desc": "气血+20%，防御+15%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK004",
+   "passive": {
+    "hp": 0.2,
+    "def": 0.15
+   }
+  },
+  {
+   "id": "sk005",
+   "name": "惊蛰十二变",
+   "icon": "🐉",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "可化身真灵战斗，全属性+25%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK005",
+   "active": {
+    "mult": 3.2,
+    "mp": 50,
+    "cd": 6,
+    "mustCrit": true
+   },
+   "passive": {
+    "atk": 0.25
+   }
+  },
+  {
+   "id": "sk006",
+   "name": "元磁神光",
+   "icon": "🧲",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "cls": "通用",
+   "desc": "攻防+15%，禁锢对手法宝",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK006",
+   "active": {
+    "mult": 2.1,
+    "mp": 24,
+    "cd": 3,
+    "slow": 0.25
+   },
+   "passive": {
+    "atk": 0.15
+   }
+  },
+  {
+   "id": "sk007",
+   "name": "炼神术",
+   "icon": "👁️",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "神魂强度+40%，抗心魔+20%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK007",
+   "passive": {
+    "mp": 0.2
+   }
+  },
+  {
+   "id": "sk008",
+   "name": "真言化轮经",
+   "icon": "⏳",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "时间法则感悟+20%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK008",
+   "active": {
+    "mult": 2.6,
+    "mp": 36,
+    "cd": 5,
+    "mustCrit": true
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk009",
+   "name": "玄阴经",
+   "icon": "❄️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "通用",
+   "desc": "灵力+15%，冰系伤害+10%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK009",
+   "active": {
+    "mult": 1.9,
+    "mp": 18,
+    "cd": 3,
+    "slow": 0.2
+   },
+   "passive": {
+    "mp": 0.15
+   }
+  },
+  {
+   "id": "sk010",
+   "name": "七鬼噬魂功",
+   "icon": "💀",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "通用",
+   "desc": "毒攻+20%，吸血+10%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK010",
+   "active": {
+    "mult": 1.7,
+    "mp": 18,
+    "cd": 3,
+    "lifesteal": 0.35
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk011",
+   "name": "黑煞爪",
+   "icon": "🐾",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "中品",
+   "cls": "通用",
+   "desc": "近战爪击伤害+25%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK011",
+   "active": {
+    "mult": 1.75,
+    "mp": 12,
+    "cd": 2,
+    "burn": 0.05
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk012",
+   "name": "象甲功",
+   "icon": "🛡️",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "中品",
+   "cls": "通用",
+   "desc": "防御+20%，反伤+15%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK012",
+   "passive": {
+    "def": 0.2
+   }
+  },
+  {
+   "id": "sk013",
+   "name": "千锋聚灵剑",
+   "icon": "⚔️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "cls": "通用",
+   "desc": "飞剑数量+50%，剑伤+10%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK013",
+   "active": {
+    "mult": 2.2,
+    "mp": 20,
+    "cd": 3
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk014",
+   "name": "托天魔功",
+   "icon": "😈",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "通用",
+   "desc": "攻击+30%，流血效果",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK014",
+   "active": {
+    "mult": 2.8,
+    "mp": 38,
+    "cd": 5,
+    "burn": 0.1,
+    "lifesteal": 0.2
+   },
+   "passive": {
+    "atk": 0.3
+   }
+  },
+  {
+   "id": "sk015",
+   "name": "素女轮回功",
+   "icon": "🌸",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "cls": "通用",
+   "desc": "素女属性+25%，轮回之力",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK015",
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk016",
+   "name": "青蟠剑阵",
+   "icon": "🌀",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "cls": "通用",
+   "desc": "青蟠剑阵伤害+30%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK016",
+   "active": {
+    "mult": 2.5,
+    "mp": 28,
+    "cd": 4,
+    "aoe": true
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk017",
+   "name": "春黎剑阵",
+   "icon": "🌿",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "春黎剑阵范围伤害+40%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK017",
+   "active": {
+    "mult": 2.9,
+    "mp": 35,
+    "cd": 4,
+    "aoe": true
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk018",
+   "name": "大庚剑阵",
+   "icon": "⚡",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "大庚剑阵全伤害+50%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK018",
+   "active": {
+    "mult": 2.7,
+    "mp": 32,
+    "cd": 4,
+    "aoe": true
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk019",
+   "name": "天凤涅槃诀",
+   "icon": "🔥",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "死亡后20%概率涅槃重生",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK019",
+   "active": {
+    "mult": 2.4,
+    "mp": 30,
+    "cd": 5,
+    "heal": 0.25
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk020",
+   "name": "鲲鹏破灭诀",
+   "icon": "🐋",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "速度+40%，破灭伤害",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK020",
+   "active": {
+    "mult": 3.0,
+    "mp": 42,
+    "cd": 5,
+    "aoe": true
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "c001_s1",
+   "name": "青元剑诀",
+   "icon": "🗡️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C001",
+   "clsName": "剑修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C001-S1",
+   "kind": "剑修",
+   "active": {
+    "mult": 1.85,
+    "mp": 14,
+    "cd": 2
+   }
+  },
+  {
+   "id": "c001_s2",
+   "name": "大庚剑阵",
+   "icon": "⚔️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C001",
+   "clsName": "剑修",
+   "desc": "大庚剑阵",
+   "price": 1500,
+   "fr": true,
+   "frid": "C001-S2",
+   "kind": "剑修",
+   "active": {
+    "mult": 2.7,
+    "mp": 32,
+    "cd": 4,
+    "aoe": true
+   }
+  },
+  {
+   "id": "c001_s3",
+   "name": "万剑归宗",
+   "icon": "🌠",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C001",
+   "clsName": "剑修",
+   "desc": "春黎剑阵",
+   "price": 1500,
+   "fr": true,
+   "frid": "C001-S3",
+   "kind": "剑修",
+   "active": {
+    "mult": 3.8,
+    "mp": 65,
+    "cd": 6,
+    "aoe": true,
+    "mustCrit": true
+   }
+  },
+  {
+   "id": "c002_s1",
+   "name": "黑煞爪",
+   "icon": "🐾",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C002",
+   "clsName": "体修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C002-S1",
+   "kind": "体修",
+   "active": {
+    "mult": 1.75,
+    "mp": 12,
+    "cd": 2,
+    "burn": 0.05
+   }
+  },
+  {
+   "id": "c002_s2",
+   "name": "象甲功",
+   "icon": "🛡️",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C002",
+   "clsName": "体修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C002-S2",
+   "kind": "体修",
+   "passive": {
+    "def": 0.2,
+    "hp": 0.12
+   }
+  },
+  {
+   "id": "c002_s3",
+   "name": "霸王举鼎",
+   "icon": "🏋️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C002",
+   "clsName": "体修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C002-S3",
+   "kind": "体修",
+   "active": {
+    "mult": 2.4,
+    "mp": 30,
+    "cd": 5,
+    "shield": 0.45,
+    "heal": 0.1
+   }
+  },
+  {
+   "id": "c003_s1",
+   "name": "玄冰刺",
+   "icon": "❄️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C003",
+   "clsName": "法修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C003-S1",
+   "kind": "法修",
+   "active": {
+    "mult": 1.6,
+    "mp": 16,
+    "cd": 2,
+    "slow": 0.3
+   }
+  },
+  {
+   "id": "c003_s2",
+   "name": "天雷落",
+   "icon": "⚡",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C003",
+   "clsName": "法修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C003-S2",
+   "kind": "法修",
+   "active": {
+    "mult": 2.3,
+    "mp": 28,
+    "cd": 3,
+    "mustCrit": true
+   }
+  },
+  {
+   "id": "c003_s3",
+   "name": "冰封万里",
+   "icon": "🧊",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C003",
+   "clsName": "法修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C003-S3",
+   "kind": "法修",
+   "active": {
+    "mult": 3.0,
+    "mp": 45,
+    "cd": 5,
+    "slow": 0.5,
+    "aoe": true
+   }
+  },
+  {
+   "id": "c004_s1",
+   "name": "七鬼噬魂",
+   "icon": "💀",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C004",
+   "clsName": "魔修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C004-S1",
+   "kind": "魔修",
+   "active": {
+    "mult": 1.7,
+    "mp": 18,
+    "cd": 3,
+    "lifesteal": 0.35
+   }
+  },
+  {
+   "id": "c004_s2",
+   "name": "毒雾弥漫",
+   "icon": "☠️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C004",
+   "clsName": "魔修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C004-S2",
+   "kind": "魔修",
+   "active": {
+    "mult": 1.5,
+    "mp": 20,
+    "cd": 3,
+    "burn": 0.15
+   }
+  },
+  {
+   "id": "c004_s3",
+   "name": "托天魔功",
+   "icon": "😈",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C004",
+   "clsName": "魔修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C004-S3",
+   "kind": "魔修",
+   "active": {
+    "mult": 2.8,
+    "mp": 38,
+    "cd": 5,
+    "burn": 0.1,
+    "lifesteal": 0.2
+   }
+  },
+  {
+   "id": "c005_s1",
+   "name": "敛息术",
+   "icon": "🕶️",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C005",
+   "clsName": "通用",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C005-S1",
+   "kind": "通用",
+   "passive": {
+    "speed": 0.1,
+    "dodge": 0.05
+   }
+  },
+  {
+   "id": "c005_s2",
+   "name": "神行术",
+   "icon": "💨",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C005",
+   "clsName": "通用",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C005-S2",
+   "kind": "通用",
+   "active": {
+    "mult": 1.2,
+    "mp": 8,
+    "cd": 3,
+    "slow": 0.2
+   }
+  },
+  {
+   "id": "sk_art_slash",
+   "name": "裂空斩",
+   "icon": "🗡️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "中品",
+   "desc": "基础剑气斩击",
+   "active": {
+    "mult": 1.8,
+    "mp": 12,
+    "cd": 2
+   },
+   "price": 800
+  },
+  {
+   "id": "sk_art_fire",
+   "name": "三昧真火",
+   "icon": "🔥",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "desc": "丹火焚敌，持续灼烧",
+   "active": {
+    "mult": 2.6,
+    "mp": 25,
+    "cd": 3,
+    "burn": 0.1
+   },
+   "price": 2200
+  },
+  {
+   "id": "sk_art_ice",
+   "name": "玄冰封印",
+   "icon": "❄️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "desc": "冰封减速",
+   "active": {
+    "mult": 1.4,
+    "mp": 20,
+    "cd": 3,
+    "slow": 0.3
+   },
+   "price": 2000
+  },
+  {
+   "id": "sk_art_thunder",
+   "name": "掌心雷",
+   "icon": "⚡",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "desc": "雷法必暴",
+   "active": {
+    "mult": 2.2,
+    "mp": 30,
+    "cd": 4,
+    "mustCrit": true
+   },
+   "price": 3600
+  },
+  {
+   "id": "sk_art_shield",
+   "name": "金光护体",
+   "icon": "🛡️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "desc": "护盾并回血",
+   "active": {
+    "mult": 0.5,
+    "mp": 18,
+    "cd": 4,
+    "shield": 0.35,
+    "heal": 0.15
+   },
+   "price": 2400
+  },
+  {
+   "id": "sk_art_drain",
+   "name": "吸星大法",
+   "icon": "🩸",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "desc": "吸取敌人气血",
+   "active": {
+    "mult": 1.5,
+    "mp": 22,
+    "cd": 3,
+    "lifesteal": 0.4
+   },
+   "price": 3200
+  },
+  {
+   "id": "sk_art_chaos",
+   "name": "混沌开天",
+   "icon": "🌌",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "desc": "开天一击，范围绝杀",
+   "active": {
+    "mult": 3.6,
+    "mp": 60,
+    "cd": 6,
+    "aoe": true
+   },
+   "price": 9000
+  }
+ ],
+ "skillUpCost": {
+  "stoneBase": 100,
+  "stoneGrowth": 1.6,
+  "maxLevel": 9,
+  "perLevel": 0.12
+ },
+ "skillFit": {
+  "same": 1.0,
+  "any": 0.85,
+  "diff": 0.55,
+  "desc": "功法与灵根的适配度：同属 100%、通用 85%、异属 55%"
+ },
+ "alchemy": {
+  "recipes": [
+   {
+    "id": "r_hp",
+    "name": "回气丹",
+    "icon": "🔴",
+    "pill": "pill_hp",
+    "cost": {
+     "herb_green": 2
+    },
+    "rate": 0.85,
+    "tier": 1,
+    "exp": 20
+   },
+   {
+    "id": "r_atk",
+    "name": "凝神散",
+    "icon": "🟠",
+    "pill": "pill_atk",
+    "cost": {
+     "herb_green": 3,
+     "herb_soul": 1
+    },
+    "rate": 0.75,
+    "tier": 2,
+    "exp": 40
+   },
+   {
+    "id": "r_exp",
+    "name": "悟道丹",
+    "icon": "🟣",
+    "pill": "pill_exp",
+    "cost": {
+     "herb_soul": 3
+    },
+    "rate": 0.7,
+    "tier": 3,
+    "exp": 80
+   },
+   {
+    "id": "r_break",
+    "name": "渡劫丹",
+    "icon": "💊",
+    "pill": "pill_break",
+    "cost": {
+     "herb_fire": 2,
+     "herb_soul": 3
+    },
+    "rate": 0.6,
+    "tier": 4,
+    "exp": 160,
+    "desc": "突破成功率 +25%"
+   },
+   {
+    "id": "r_root",
+    "name": "洗髓丹",
+    "icon": "🧬",
+    "pill": "pill_root",
+    "cost": {
+     "herb_dark": 3,
+     "herb_immortal": 1
+    },
+    "rate": 0.45,
+    "tier": 5,
+    "exp": 400,
+    "desc": "可重洗灵根"
+   },
+   {
+    "id": "r_zen",
+    "name": "悟道金丹",
+    "icon": "🌟",
+    "pill": "pill_zen",
+    "cost": {
+     "herb_immortal": 3
+    },
+    "rate": 0.4,
+    "tier": 6,
+    "exp": 900,
+    "desc": "永久提升悟性 +5"
+   }
+  ],
+  "failBoom": 0.25,
+  "boomLoss": "cost"
+ },
+ "forge": {
+  "recipes": [
+   {
+    "id": "f_weapon1",
+    "name": "青锋剑",
+    "icon": "🗡️",
+    "slot": "weapon",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4
+    },
+    "rate": 0.8,
+    "tier": 1,
+    "base": {
+     "atk": 16,
+     "hp": 20
+    }
+   },
+   {
+    "id": "f_armor1",
+    "name": "玄龟甲",
+    "icon": "🛡️",
+    "slot": "armor",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4
+    },
+    "rate": 0.8,
+    "tier": 1,
+    "base": {
+     "def": 12,
+     "hp": 80
+    }
+   },
+   {
+    "id": "f_ring1",
+    "name": "聚灵戒",
+    "icon": "💍",
+    "slot": "ring",
+    "q": 1,
+    "cost": {
+     "ore_iron": 3
+    },
+    "rate": 0.8,
+    "tier": 1,
+    "base": {
+     "atk": 6,
+     "def": 4,
+     "hp": 30
+    }
+   },
+   {
+    "id": "f_weapon2",
+    "name": "炎阳刀",
+    "icon": "🔥",
+    "slot": "weapon",
+    "q": 2,
+    "cost": {
+     "ore_fire": 5,
+     "ore_iron": 3
+    },
+    "rate": 0.62,
+    "tier": 2,
+    "base": {
+     "atk": 46,
+     "crit": 0.04
+    }
+   },
+   {
+    "id": "f_armor2",
+    "name": "火羽衣",
+    "icon": "🦅",
+    "slot": "armor",
+    "q": 2,
+    "cost": {
+     "ore_fire": 5,
+     "ore_iron": 3
+    },
+    "rate": 0.62,
+    "tier": 2,
+    "base": {
+     "def": 34,
+     "hp": 220
+    }
+   },
+   {
+    "id": "f_weapon3",
+    "name": "冥魂幡",
+    "icon": "🎴",
+    "slot": "weapon",
+    "q": 3,
+    "cost": {
+     "ore_dark": 6,
+     "ore_fire": 4
+    },
+    "rate": 0.45,
+    "tier": 3,
+    "base": {
+     "atk": 140,
+     "crit": 0.07
+    }
+   },
+   {
+    "id": "f_armor3",
+    "name": "幽冥铠",
+    "icon": "🕸️",
+    "slot": "armor",
+    "q": 3,
+    "cost": {
+     "ore_dark": 6,
+     "ore_fire": 4
+    },
+    "rate": 0.45,
+    "tier": 3,
+    "base": {
+     "def": 100,
+     "hp": 620
+    }
+   },
+   {
+    "id": "f_weapon4",
+    "name": "诛仙剑",
+    "icon": "⚔️",
+    "slot": "weapon",
+    "q": 4,
+    "cost": {
+     "ore_star": 8,
+     "ore_dark": 6
+    },
+    "rate": 0.3,
+    "tier": 4,
+    "base": {
+     "atk": 420,
+     "crit": 0.1
+    }
+   },
+   {
+    "id": "fr_w001",
+    "name": "掌天瓶",
+    "icon": "🏺",
+    "slot": "artifact",
+    "q": 4,
+    "cost": {
+     "ore_iron": 10,
+     "ore_fire": 3,
+     "ore_dark": 2,
+     "ore_star": 1
+    },
+    "rate": 0.33999999999999997,
+    "tier": 5,
+    "base": {
+     "atk": 10
+    },
+    "src": "新手剧情获得",
+    "set": "—",
+    "lore": "时间法则+100%，绿液催熟",
+    "fr": true,
+    "frid": "W001"
+   },
+   {
+    "id": "fr_w002",
+    "name": "青竹蜂云剑",
+    "icon": "🗡️",
+    "slot": "weapon",
+    "q": 4,
+    "cost": {
+     "ore_iron": 10,
+     "ore_fire": 3,
+     "ore_dark": 2,
+     "ore_star": 1
+    },
+    "rate": 0.33999999999999997,
+    "tier": 5,
+    "base": {
+     "atk": 80
+    },
+    "src": "天雷竹炼制(本命法宝)",
+    "set": "大庚剑阵(72口)",
+    "lore": "剑伤+80%，72口成套",
+    "fr": true,
+    "frid": "W002"
+   },
+   {
+    "id": "fr_w003",
+    "name": "虚天鼎",
+    "icon": "🍲",
+    "slot": "artifact",
+    "q": 4,
+    "cost": {
+     "ore_iron": 10,
+     "ore_fire": 3,
+     "ore_dark": 2,
+     "ore_star": 1
+    },
+    "rate": 0.33999999999999997,
+    "tier": 5,
+    "base": {
+     "atk": 10
+    },
+    "src": "虚天殿副本",
+    "set": "—",
+    "lore": "炼丹效果+50%，困敌3秒",
+    "fr": true,
+    "frid": "W003"
+   },
+   {
+    "id": "fr_w004",
+    "name": "玄天斩灵剑",
+    "icon": "⚔️",
+    "slot": "weapon",
+    "q": 4,
+    "cost": {
+     "ore_iron": 10,
+     "ore_fire": 3,
+     "ore_dark": 2,
+     "ore_star": 1
+    },
+    "rate": 0.33999999999999997,
+    "tier": 5,
+    "base": {
+     "atk": 150
+    },
+    "src": "地渊副本获得",
+    "set": "—",
+    "lore": "斩神斩魂，全伤害+150%",
+    "fr": true,
+    "frid": "W004"
+   },
+   {
+    "id": "fr_w005",
+    "name": "风雷翅",
+    "icon": "🪽",
+    "slot": "necklace",
+    "q": 3,
+    "cost": {
+     "ore_iron": 8,
+     "ore_fire": 2,
+     "ore_dark": 1,
+     "ore_star": 0
+    },
+    "rate": 0.47,
+    "tier": 4,
+    "base": {
+     "speed": 25
+    },
+    "src": "乱星海副本/天星双圣掉落",
+    "set": "—",
+    "lore": "速度+50%，闪避+20%",
+    "fr": true,
+    "frid": "W005"
+   },
+   {
+    "id": "fr_w006",
+    "name": "元合五极山",
+    "icon": "⛰️",
+    "slot": "armor",
+    "q": 4,
+    "cost": {
+     "ore_iron": 10,
+     "ore_fire": 3,
+     "ore_dark": 2,
+     "ore_star": 1
+    },
+    "rate": 0.33999999999999997,
+    "tier": 5,
+    "base": {
+     "def": 100
+    },
+    "src": "五极山合成",
+    "set": "元合五行套(5件)",
+    "lore": "防御+100%，五行抗性",
+    "fr": true,
+    "frid": "W006"
+   },
+   {
+    "id": "fr_w007",
+    "name": "玄天葫芦",
+    "icon": "🍶",
+    "slot": "artifact",
+    "q": 3,
+    "cost": {
+     "ore_iron": 8,
+     "ore_fire": 2,
+     "ore_dark": 1,
+     "ore_star": 0
+    },
+    "rate": 0.47,
+    "tier": 4,
+    "base": {
+     "atk": 10
+    },
+    "src": "灵界副本获得",
+    "set": "—",
+    "lore": "收摄神魂、魔气吸收",
+    "fr": true,
+    "frid": "W007"
+   },
+   {
+    "id": "fr_w008",
+    "name": "朱雀环",
+    "icon": "🔥",
+    "slot": "necklace",
+    "q": 3,
+    "cost": {
+     "ore_iron": 8,
+     "ore_fire": 2,
+     "ore_dark": 1,
+     "ore_star": 0
+    },
+    "rate": 0.47,
+    "tier": 4,
+    "base": {
+     "atk": 10
+    },
+    "src": "南宫婉本命/血色禁地",
+    "set": "—",
+    "lore": "火属性+40%，攻速+20%",
+    "fr": true,
+    "frid": "W008"
+   },
+   {
+    "id": "fr_w009",
+    "name": "八灵尺",
+    "icon": "📏",
+    "slot": "artifact",
+    "q": 4,
+    "cost": {
+     "ore_iron": 10,
+     "ore_fire": 3,
+     "ore_dark": 2,
+     "ore_star": 1
+    },
+    "rate": 0.33999999999999997,
+    "tier": 5,
+    "base": {
+     "atk": 30
+    },
+    "src": "昆吾山副本",
+    "set": "—",
+    "lore": "全属性+30%，范围控制",
+    "fr": true,
+    "frid": "W009"
+   },
+   {
+    "id": "fr_e001",
+    "name": "青铜剑",
+    "icon": "🗡️",
+    "slot": "weapon",
+    "q": 0,
+    "cost": {
+     "ore_iron": 2,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.86,
+    "tier": 1,
+    "base": {
+     "atk": 10
+    },
+    "src": "新手商店",
+    "set": "—",
+    "lore": "攻击+10",
+    "fr": true,
+    "frid": "E001"
+   },
+   {
+    "id": "fr_e002",
+    "name": "精钢剑",
+    "icon": "🗡️",
+    "slot": "weapon",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.73,
+    "tier": 2,
+    "base": {
+     "atk": 50
+    },
+    "src": "炼气期副本",
+    "set": "—",
+    "lore": "攻击+50",
+    "fr": true,
+    "frid": "E002"
+   },
+   {
+    "id": "fr_e003",
+    "name": "青锋剑",
+    "icon": "🗡️",
+    "slot": "weapon",
+    "q": 2,
+    "cost": {
+     "ore_iron": 6,
+     "ore_fire": 1,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.6,
+    "tier": 3,
+    "base": {
+     "atk": 150
+    },
+    "src": "筑基期副本",
+    "set": "青锋套(4件)",
+    "lore": "攻击+150",
+    "fr": true,
+    "frid": "E003"
+   },
+   {
+    "id": "fr_e004",
+    "name": "玄铁剑",
+    "icon": "🗡️",
+    "slot": "weapon",
+    "q": 2,
+    "cost": {
+     "ore_iron": 6,
+     "ore_fire": 1,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.6,
+    "tier": 3,
+    "base": {
+     "atk": 150,
+     "def": 30
+    },
+    "src": "筑基期副本",
+    "set": "玄铁套(4件)",
+    "lore": "攻击+150，防御+30",
+    "fr": true,
+    "frid": "E004"
+   },
+   {
+    "id": "fr_e005",
+    "name": "紫郢剑",
+    "icon": "🗡️",
+    "slot": "weapon",
+    "q": 3,
+    "cost": {
+     "ore_iron": 8,
+     "ore_fire": 2,
+     "ore_dark": 1,
+     "ore_star": 0
+    },
+    "rate": 0.47,
+    "tier": 4,
+    "base": {
+     "atk": 125
+    },
+    "src": "结丹期副本",
+    "set": "紫郢套(4件)",
+    "lore": "攻击+500",
+    "fr": true,
+    "frid": "E005"
+   },
+   {
+    "id": "fr_e101",
+    "name": "布衣",
+    "icon": "🥋",
+    "slot": "armor",
+    "q": 0,
+    "cost": {
+     "ore_iron": 2,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.86,
+    "tier": 1,
+    "base": {
+     "def": 5
+    },
+    "src": "新手商店",
+    "set": "—",
+    "lore": "防御+5",
+    "fr": true,
+    "frid": "E101"
+   },
+   {
+    "id": "fr_e102",
+    "name": "皮甲",
+    "icon": "🥋",
+    "slot": "armor",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.73,
+    "tier": 2,
+    "base": {
+     "def": 30,
+     "hp": 800
+    },
+    "src": "炼气期副本",
+    "set": "—",
+    "lore": "防御+30，气血+100",
+    "fr": true,
+    "frid": "E102"
+   },
+   {
+    "id": "fr_e103",
+    "name": "青铜甲",
+    "icon": "🥋",
+    "slot": "armor",
+    "q": 2,
+    "cost": {
+     "ore_iron": 6,
+     "ore_fire": 1,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.6,
+    "tier": 3,
+    "base": {
+     "def": 100,
+     "hp": 4000
+    },
+    "src": "筑基期副本",
+    "set": "青铜套(4件)",
+    "lore": "防御+100，气血+500",
+    "fr": true,
+    "frid": "E103"
+   },
+   {
+    "id": "fr_e104",
+    "name": "玄铁甲",
+    "icon": "🥋",
+    "slot": "armor",
+    "q": 2,
+    "cost": {
+     "ore_iron": 6,
+     "ore_fire": 1,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.6,
+    "tier": 3,
+    "base": {
+     "def": 120,
+     "hp": 4800
+    },
+    "src": "筑基期副本",
+    "set": "玄铁套(4件)",
+    "lore": "防御+120，气血+600",
+    "fr": true,
+    "frid": "E104"
+   },
+   {
+    "id": "fr_e105",
+    "name": "天蚕宝衣",
+    "icon": "🥋",
+    "slot": "armor",
+    "q": 3,
+    "cost": {
+     "ore_iron": 8,
+     "ore_fire": 2,
+     "ore_dark": 1,
+     "ore_star": 0
+    },
+    "rate": 0.47,
+    "tier": 4,
+    "base": {
+     "def": 100,
+     "hp": 4000
+    },
+    "src": "结丹期副本",
+    "set": "天蚕套(4件)",
+    "lore": "防御+400，气血+3000",
+    "fr": true,
+    "frid": "E105"
+   },
+   {
+    "id": "fr_e201",
+    "name": "头盔(各类)",
+    "icon": "🪖",
+    "slot": "helmet",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.73,
+    "tier": 2,
+    "base": {
+     "def": 20
+    },
+    "src": "对应等级副本",
+    "set": "对应套装",
+    "lore": "防御+20%基础",
+    "fr": true,
+    "frid": "E201"
+   },
+   {
+    "id": "fr_e202",
+    "name": "护腕(各类)",
+    "icon": "🧤",
+    "slot": "bracelet",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.73,
+    "tier": 2,
+    "base": {
+     "atk": 15
+    },
+    "src": "对应等级副本",
+    "set": "对应套装",
+    "lore": "攻击+15%基础",
+    "fr": true,
+    "frid": "E202"
+   },
+   {
+    "id": "fr_e203",
+    "name": "腰带(各类)",
+    "icon": "🧤",
+    "slot": "bracelet",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.73,
+    "tier": 2,
+    "base": {
+     "hp": 160
+    },
+    "src": "对应等级副本",
+    "set": "对应套装",
+    "lore": "气血+20%基础",
+    "fr": true,
+    "frid": "E203"
+   },
+   {
+    "id": "fr_e204",
+    "name": "裤子(各类)",
+    "icon": "👢",
+    "slot": "boots",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.73,
+    "tier": 2,
+    "base": {
+     "def": 15
+    },
+    "src": "对应等级副本",
+    "set": "对应套装",
+    "lore": "防御+15%基础",
+    "fr": true,
+    "frid": "E204"
+   },
+   {
+    "id": "fr_e205",
+    "name": "鞋子(各类)",
+    "icon": "👢",
+    "slot": "boots",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.73,
+    "tier": 2,
+    "base": {
+     "speed": 5
+    },
+    "src": "对应等级副本",
+    "set": "对应套装",
+    "lore": "速度+10%，闪避+5%",
+    "fr": true,
+    "frid": "E205"
+   },
+   {
+    "id": "fr_e206",
+    "name": "戒指(各类)",
+    "icon": "📿",
+    "slot": "necklace",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.73,
+    "tier": 2,
+    "base": {
+     "atk": 10
+    },
+    "src": "对应等级副本",
+    "set": "对应套装",
+    "lore": "攻击+10%，暴击+5%",
+    "fr": true,
+    "frid": "E206"
+   },
+   {
+    "id": "fr_e207",
+    "name": "项链(各类)",
+    "icon": "📿",
+    "slot": "necklace",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.73,
+    "tier": 2,
+    "base": {
+     "mp": 15,
+     "hp": 80
+    },
+    "src": "对应等级副本",
+    "set": "对应套装",
+    "lore": "灵力+15%，气血+10%",
+    "fr": true,
+    "frid": "E207"
+   },
+   {
+    "id": "fr_t001",
+    "name": "镇物：玄荒钟",
+    "icon": "🔮",
+    "slot": "artifact",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.73,
+    "tier": 2,
+    "base": {
+     "atk": 10
+    },
+    "src": "玄荒古域掉落",
+    "set": "玄荒套(3件)",
+    "lore": "全属性+10%",
+    "fr": true,
+    "frid": "T001"
+   },
+   {
+    "id": "fr_t002",
+    "name": "镇物：缚灵索",
+    "icon": "🔮",
+    "slot": "artifact",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.73,
+    "tier": 2,
+    "base": {
+     "def": 30
+    },
+    "src": "玄荒古域掉落",
+    "set": "玄荒套(3件)",
+    "lore": "控制抗性+30%",
+    "fr": true,
+    "frid": "T002"
+   },
+   {
+    "id": "fr_t003",
+    "name": "镇物：定界盘",
+    "icon": "🔮",
+    "slot": "artifact",
+    "q": 1,
+    "cost": {
+     "ore_iron": 4,
+     "ore_fire": 0,
+     "ore_dark": 0,
+     "ore_star": 0
+    },
+    "rate": 0.73,
+    "tier": 2,
+    "base": {
+     "atk": 10
+    },
+    "src": "玄荒古域掉落",
+    "set": "玄荒套(3件)",
+    "lore": "领域效果+25%",
+    "fr": true,
+    "frid": "T003"
+   }
+  ],
+  "failBoom": 0.3
+ },
+ "talismans": [
+  {
+   "id": "t001",
+   "name": "敛息符",
+   "fr": true,
+   "frid": "T001",
+   "src": "制符/商店",
+   "dur": "30分钟",
+   "icon": "🕶️",
+   "effect": "dodge",
+   "value": 0.8,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "隐藏气息，降低被发现概率80%"
+  },
+  {
+   "id": "t002",
+   "name": "瞬移符",
+   "fr": true,
+   "frid": "T002",
+   "src": "制符/副本掉落",
+   "dur": "即时",
+   "icon": "💨",
+   "effect": "atk",
+   "value": 0.4,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "瞬间移动50米"
+  },
+  {
+   "id": "t003",
+   "name": "传送符",
+   "fr": true,
+   "frid": "T003",
+   "src": "制符/商店",
+   "dur": "即时",
+   "icon": "🌀",
+   "effect": "flee",
+   "value": 0.4,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "传送回已绑定安全点"
+  },
+  {
+   "id": "t004",
+   "name": "镇魂符",
+   "fr": true,
+   "frid": "T004",
+   "src": "制符/副本",
+   "dur": "10分钟",
+   "icon": "☯️",
+   "effect": "atk",
+   "value": 0.5,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "镇魂压邪，对阴魂伤害+50%"
+  },
+  {
+   "id": "t005",
+   "name": "融灵符",
+   "fr": true,
+   "frid": "T005",
+   "src": "制符/商店",
+   "dur": "1小时",
+   "icon": "🌬️",
+   "effect": "exp",
+   "value": 0.3,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "提升灵气吸收速度+30%"
+  },
+  {
+   "id": "t006",
+   "name": "金刚符",
+   "fr": true,
+   "frid": "T006",
+   "src": "制符/副本",
+   "dur": "5分钟",
+   "icon": "🛡️",
+   "effect": "def",
+   "value": 0.5,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "临时提升防御+50%"
+  },
+  {
+   "id": "t007",
+   "name": "火弹符",
+   "fr": true,
+   "frid": "T007",
+   "src": "制符/商店",
+   "dur": "即时",
+   "icon": "🔥",
+   "effect": "atk",
+   "value": 0.4,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "释放火弹攻击，造成火属性伤害"
+  },
+  {
+   "id": "t008",
+   "name": "冰矛符",
+   "fr": true,
+   "frid": "T008",
+   "src": "制符/副本",
+   "dur": "即时",
+   "icon": "❄️",
+   "effect": "atk",
+   "value": 0.3,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "释放冰矛攻击，减速30%"
+  },
+  {
+   "id": "t009",
+   "name": "护心符",
+   "fr": true,
+   "frid": "T009",
+   "src": "制符/副本",
+   "dur": "即时",
+   "icon": "❤️",
+   "effect": "atk",
+   "value": 0.4,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "抵挡一次致命伤害(上限1000血)"
+  },
+  {
+   "id": "t010",
+   "name": "隐身符",
+   "fr": true,
+   "frid": "T010",
+   "src": "制符/稀有掉落",
+   "dur": "10秒",
+   "icon": "👻",
+   "effect": "dodge",
+   "value": 0.4,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "隐身10秒，移动后显形"
+  },
+  {
+   "id": "t_atk",
+   "name": "攻击符",
+   "icon": "📕",
+   "effect": "atk",
+   "value": 0.4,
+   "dur": 2,
+   "cost": {
+    "herb_green": 2
+   },
+   "desc": "战斗中攻击 +40%，持续 2 回合"
+  },
+  {
+   "id": "t_shield",
+   "name": "护盾符",
+   "icon": "📗",
+   "effect": "shield",
+   "value": 0.5,
+   "dur": 2,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "获得 50% 气血护盾"
+  },
+  {
+   "id": "t_heal",
+   "name": "回春符",
+   "icon": "📘",
+   "effect": "heal",
+   "value": 0.5,
+   "dur": 0,
+   "cost": {
+    "herb_soul": 2
+   },
+   "desc": "立刻恢复 50% 气血"
+  },
+  {
+   "id": "t_escape",
+   "name": "遁地符",
+   "icon": "📙",
+   "effect": "escape",
+   "value": 1,
+   "dur": 0,
+   "cost": {
+    "herb_soul": 1,
+    "ore_iron": 2
+   },
+   "desc": "立刻结束战斗并保留收益"
+  }
+ ],
+ "beasts": [
+  {
+   "id": "b_wolf",
+   "name": "青风狼",
+   "icon": "🐺",
+   "tier": 1,
+   "hp": 60,
+   "atk": 12,
+   "def": 5,
+   "speed": 14,
+   "skill": "撕咬",
+   "skillMult": 1.5,
+   "growAtk": 0.9,
+   "growHp": 5
+  },
+  {
+   "id": "b_crane",
+   "name": "白羽鹤",
+   "icon": "🕊️",
+   "tier": 1,
+   "hp": 50,
+   "atk": 10,
+   "def": 4,
+   "speed": 18,
+   "skill": "羽击",
+   "skillMult": 1.4,
+   "growAtk": 0.7,
+   "growHp": 4,
+   "ride": true
+  },
+  {
+   "id": "b_bear",
+   "name": "玄铁熊",
+   "icon": "🐻",
+   "tier": 2,
+   "hp": 150,
+   "atk": 22,
+   "def": 14,
+   "speed": 8,
+   "skill": "拍击",
+   "skillMult": 1.6,
+   "growAtk": 1.5,
+   "growHp": 12
+  },
+  {
+   "id": "b_fox",
+   "name": "九尾狐",
+   "icon": "🦊",
+   "tier": 2,
+   "hp": 110,
+   "atk": 26,
+   "def": 8,
+   "speed": 16,
+   "skill": "狐火",
+   "skillMult": 1.8,
+   "growAtk": 1.8,
+   "growHp": 8
+  },
+  {
+   "id": "b_tiger",
+   "name": "白额虎王",
+   "icon": "🐯",
+   "tier": 3,
+   "hp": 320,
+   "atk": 48,
+   "def": 24,
+   "speed": 13,
+   "skill": "虎啸",
+   "skillMult": 2.0,
+   "growAtk": 3.0,
+   "growHp": 26
+  },
+  {
+   "id": "b_dragon",
+   "name": "蛟龙",
+   "icon": "🐉",
+   "tier": 4,
+   "hp": 900,
+   "atk": 120,
+   "def": 60,
+   "speed": 15,
+   "skill": "龙息",
+   "skillMult": 2.4,
+   "growAtk": 7.0,
+   "growHp": 70,
+   "ride": true
+  },
+  {
+   "id": "b_phoenix",
+   "name": "青鸾",
+   "icon": "🦅",
+   "tier": 5,
+   "hp": 1400,
+   "atk": 190,
+   "def": 80,
+   "speed": 20,
+   "skill": "涅槃火",
+   "skillMult": 2.8,
+   "growAtk": 11.0,
+   "growHp": 100,
+   "ride": true
+  },
+  {
+   "id": "b_qilin",
+   "name": "麒麟",
+   "icon": "🦌",
+   "tier": 6,
+   "hp": 2600,
+   "atk": 300,
+   "def": 140,
+   "speed": 16,
+   "skill": "雷罚",
+   "skillMult": 3.2,
+   "growAtk": 18.0,
+   "growHp": 180,
+   "ride": true
+  }
+ ],
+ "beast": {
+  "maxLevel": 20,
+  "maxStage": 5,
+  "feedExpPerMat": 10,
+  "feedExpPerHerb": 6,
+  "levelExpBase": 50,
+  "levelExpGrowth": 1.35,
+  "advanceAt": [
+   5,
+   9,
+   13,
+   17,
+   20
+  ],
+  "advanceCost": [
+   300,
+   1200,
+   4000,
+   12000,
+   40000
+  ],
+  "aptBase": 1.0,
+  "aptPerDevour": 0.05,
+  "aptMax": 3.0,
+  "captureRate": 0.55,
+  "inherit": 0.18,
+  "desc": "灵兽出战继承主人部分属性，吞噬材料可提升资质"
+ },
+ "arrays": [
+  {
+   "id": "f001",
+   "name": "聚灵阵",
+   "fr": true,
+   "frid": "F001",
+   "src": "阵法学习/宗门兑换",
+   "dur": "持续生效",
+   "icon": "🌊",
+   "buff": {
+    "exp": 0.5
+   },
+   "effect": "array",
+   "desc": "范围内灵气浓度+50%，修炼加速"
+  },
+  {
+   "id": "f002",
+   "name": "大庚剑阵",
+   "fr": true,
+   "frid": "F002",
+   "src": "剑修本命剑阵",
+   "dur": "战斗中",
+   "icon": "⚔️",
+   "buff": {
+    "atk": 0.5
+   },
+   "effect": "array",
+   "desc": "剑阵攻击，范围伤害+50%"
+  },
+  {
+   "id": "f003",
+   "name": "春黎剑阵",
+   "fr": true,
+   "frid": "F003",
+   "src": "青元剑诀进阶",
+   "dur": "战斗中",
+   "icon": "🌿",
+   "buff": {
+    "atk": 0.5
+   },
+   "effect": "array",
+   "desc": "春黎剑阵，持续范围伤害"
+  },
+  {
+   "id": "f004",
+   "name": "困魔阵",
+   "fr": true,
+   "frid": "F004",
+   "src": "阵法学习/副本",
+   "dur": "持续生效",
+   "icon": "🔒",
+   "buff": {
+    "atk": 0.3
+   },
+   "effect": "array",
+   "desc": "范围内魔物被困，无法移动"
+  },
+  {
+   "id": "f005",
+   "name": "护山大阵",
+   "fr": true,
+   "frid": "F005",
+   "src": "宗门建设",
+   "dur": "持续生效",
+   "icon": "🏯",
+   "buff": {
+    "def": 0.3
+   },
+   "effect": "array",
+   "desc": "宗门/洞府防御大阵"
+  },
+  {
+   "id": "f006",
+   "name": "元磁禁锢阵",
+   "fr": true,
+   "frid": "F006",
+   "src": "元磁神光配套",
+   "dur": "战斗中",
+   "icon": "🧲",
+   "buff": {
+    "atk": 0.3
+   },
+   "effect": "array",
+   "desc": "禁锢对手法宝，使其无法使用"
+  },
+  {
+   "id": "f007",
+   "name": "十方阵",
+   "fr": true,
+   "frid": "F007",
+   "src": "阵法学习/副本",
+   "dur": "持续生效",
+   "icon": "🔯",
+   "buff": {
+    "atk": 0.2,
+    "def": 0.2,
+    "hp": 0.2
+   },
+   "effect": "array",
+   "desc": "十方位叠加，全属性+20%"
+  },
+  {
+   "id": "f008",
+   "name": "两仪微尘阵",
+   "fr": true,
+   "frid": "F008",
+   "src": "灵界高级阵法",
+   "dur": "战斗中",
+   "icon": "☯️",
+   "buff": {
+    "atk": 0.3
+   },
+   "effect": "array",
+   "desc": "小世界阵法，攻防一体"
+  }
+ ],
+ "currencies": [
+  {
+   "id": "c001",
+   "name": "下品灵石",
+   "icon": "💎",
+   "type": "货币",
+   "out": "任务、副本、采集、出售物品",
+   "use": "修炼、购买材料、炼器炼丹",
+   "fr": true
+  },
+  {
+   "id": "c002",
+   "name": "中品灵石",
+   "icon": "💠",
+   "type": "货币",
+   "out": "下品灵石合成、高级副本",
+   "use": "中级修炼、购买中级材料",
+   "fr": true
+  },
+  {
+   "id": "c003",
+   "name": "上品灵石",
+   "icon": "🔷",
+   "type": "货币",
+   "out": "中品灵石合成、高级副本、BOSS掉落",
+   "use": "高级修炼、购买高级材料",
+   "fr": true
+  },
+  {
+   "id": "c004",
+   "name": "极品灵石",
+   "icon": "🔮",
+   "type": "货币",
+   "out": "上品合成、世界BOSS、跨服活动",
+   "use": "顶级修炼、购买顶级材料",
+   "fr": true
+  },
+  {
+   "id": "c005",
+   "name": "宗门贡献",
+   "icon": "🏯",
+   "type": "声望货币",
+   "out": "宗门任务、宗门捐献、宗门BOSS、宗门战",
+   "use": "道藏阁兑换功法、宗门材料、宗门技能",
+   "fr": true
+  },
+  {
+   "id": "c006",
+   "name": "道义币",
+   "icon": "☯️",
+   "type": "声望货币",
+   "out": "联盟战、跨服活动、玄荒古域",
+   "use": "兑换高阶镇物、仙品功法残篇",
+   "fr": true
+  },
+  {
+   "id": "c007",
+   "name": "元宝",
+   "icon": "🪙",
+   "type": "充值货币",
+   "out": "充值、活动奖励、成就",
+   "use": "百炼寻宝、礼包、外观、快速完成",
+   "fr": true
+  },
+  {
+   "id": "c008",
+   "name": "灵玉",
+   "icon": "🟩",
+   "type": "材料货币",
+   "out": "副本掉落、活动、分解装备",
+   "use": "装备镶嵌、属性加成",
+   "fr": true
+  },
+  {
+   "id": "c009",
+   "name": "功法残篇",
+   "icon": "📜",
+   "type": "材料货币",
+   "out": "副本掉落、活动、试炼",
+   "use": "合成高阶功法、功法升级",
+   "fr": true
+  },
+  {
+   "id": "c010",
+   "name": "突破丹碎片",
+   "icon": "🧪",
+   "type": "材料货币",
+   "out": "心魔试炼、副本BOSS",
+   "use": "合成突破丹、境界突破",
+   "fr": true
+  },
+  {
+   "id": "c011",
+   "name": "轮回石",
+   "icon": "♾️",
+   "type": "活动货币",
+   "out": "轮回试炼、限时活动",
+   "use": "轮回商店兑换奖励",
+   "fr": true
+  },
+  {
+   "id": "c012",
+   "name": "通天令",
+   "icon": "🎫",
+   "type": "活动货币",
+   "out": "通天塔、周常任务",
+   "use": "通天商店兑换装备",
+   "fr": true
+  },
+  {
+   "id": "c013",
+   "name": "仙元",
+   "icon": "✨",
+   "type": "仙界货币",
+   "out": "仙界任务、副本、活动",
+   "use": "仙界修炼、购买仙界材料",
+   "fr": true
+  },
+  {
+   "id": "c014",
+   "name": "功勋值",
+   "icon": "🎖️",
+   "type": "声望货币",
+   "out": "天渊城任务、抗魔大战",
+   "use": "天渊城兑换装备、材料",
+   "fr": true
+  },
+  {
+   "id": "c015",
+   "name": "声望(人界)",
+   "icon": "🌟",
+   "type": "声望货币",
+   "out": "主线任务、门派任务",
+   "use": "各门派商店兑换",
+   "fr": true
+  },
+  {
+   "id": "c016",
+   "name": "积分(PVP)",
+   "icon": "🏅",
+   "type": "竞技货币",
+   "out": "比武大会、跨服竞技",
+   "use": "PVP商店兑换称号、装备",
+   "fr": true
+  }
+ ],
+ "equipDrops": [
+  "fr_w001",
+  "fr_w002",
+  "fr_w003",
+  "fr_w004",
+  "fr_w005",
+  "fr_w006",
+  "fr_w007",
+  "fr_w008",
+  "fr_w009",
+  "fr_e001",
+  "fr_e002",
+  "fr_e003",
+  "fr_e004",
+  "fr_e005",
+  "fr_e101",
+  "fr_e102",
+  "fr_e103",
+  "fr_e104",
+  "fr_e105",
+  "fr_e201",
+  "fr_e202",
+  "fr_e203",
+  "fr_e204",
+  "fr_e205",
+  "fr_e206",
+  "fr_e207",
+  "fr_t001",
+  "fr_t002",
+  "fr_t003"
+ ],
+ "monsters": [
+  {
+   "id": "B001",
+   "name": "墨大夫",
+   "icon": "👹",
+   "type": "剧情BOSS",
+   "zone": "七玄门",
+   "lv": "炼气7层",
+   "realm": 0,
+   "skill": "夺舍、毒功、暗器",
+   "drop": "长春功(全本)、墨大夫储物袋",
+   "hp": 120,
+   "atk": 18,
+   "def": 8,
+   "speed": 8,
+   "boss": true
+  },
+  {
+   "id": "B002",
+   "name": "王蝉",
+   "icon": "🐺",
+   "type": "剧情BOSS",
+   "zone": "黄枫谷/天南",
+   "lv": "筑基-结丹",
+   "realm": 8,
+   "skill": "鬼灵门功法、召唤鬼兵",
+   "drop": "鬼灵门功法残篇、魔道材料",
+   "hp": 20380,
+   "atk": 2469,
+   "def": 881,
+   "speed": 10,
+   "boss": true
+  },
+  {
+   "id": "B003",
+   "name": "玄骨上人",
+   "icon": "🦂",
+   "type": "剧情BOSS",
+   "zone": "乱星海-虚天殿",
+   "lv": "结丹期",
+   "realm": 8,
+   "skill": "邪修功法、灵魂攻击",
+   "drop": "邪修功法、虚天殿材料",
+   "hp": 20380,
+   "atk": 2469,
+   "def": 881,
+   "speed": 10,
+   "boss": true
+  },
+  {
+   "id": "B004",
+   "name": "天星双圣",
+   "icon": "🐍",
+   "type": "剧情BOSS",
+   "zone": "乱星海",
+   "lv": "元婴期",
+   "realm": 12,
+   "skill": "双圣合击、天星大阵",
+   "drop": "天星材料、风雷翅线索",
+   "hp": 265597,
+   "atk": 28928,
+   "def": 9254,
+   "speed": 12,
+   "boss": true
+  },
+  {
+   "id": "B005",
+   "name": "慕兰古族首领",
+   "icon": "🦅",
+   "type": "剧情BOSS",
+   "zone": "慕兰草原",
+   "lv": "元婴期",
+   "realm": 12,
+   "skill": "古族战技、兽族召唤",
+   "drop": "军功、古族材料",
+   "hp": 265597,
+   "atk": 28928,
+   "def": 9254,
+   "speed": 12,
+   "boss": true
+  },
+  {
+   "id": "B006",
+   "name": "古魔",
+   "icon": "🐗",
+   "type": "剧情BOSS",
+   "zone": "坠魔谷",
+   "lv": "元婴大圆满",
+   "realm": 12,
+   "skill": "魔气攻击、分身",
+   "drop": "古魔材料、八灵尺碎片",
+   "hp": 265597,
+   "atk": 28928,
+   "def": 9254,
+   "speed": 12,
+   "boss": true
+  },
+  {
+   "id": "B007",
+   "name": "昆吾山魔族",
+   "icon": "🕷️",
+   "type": "剧情BOSS",
+   "zone": "昆吾山",
+   "lv": "元婴大圆满-化神",
+   "realm": 16,
+   "skill": "魔族战技、上古魔法",
+   "drop": "灵宝碎片、界面材料",
+   "hp": 3461296,
+   "atk": 338859,
+   "def": 97151,
+   "speed": 13,
+   "boss": true
+  },
+  {
+   "id": "B008",
+   "name": "魔族圣祖",
+   "icon": "🧟",
+   "type": "剧情BOSS",
+   "zone": "灵界-天渊城",
+   "lv": "炼虚-合体",
+   "realm": 20,
+   "skill": "魔族圣祖技能、领域",
+   "drop": "魔族材料、功勋",
+   "hp": 45107968,
+   "atk": 3969237,
+   "def": 1019858,
+   "speed": 14,
+   "boss": true
+  },
+  {
+   "id": "B009",
+   "name": "螟虫之母",
+   "icon": "👻",
+   "type": "团本BOSS",
+   "zone": "灵界-螟虫巢穴",
+   "lv": "大乘期",
+   "realm": 23,
+   "skill": "虫群召唤、母巢攻击",
+   "drop": "螟虫材料、大乘丹碎片",
+   "hp": 309395553,
+   "atk": 25131722,
+   "def": 5947817,
+   "speed": 15,
+   "boss": true
+  },
+  {
+   "id": "B010",
+   "name": "马良",
+   "icon": "💀",
+   "type": "剧情BOSS",
+   "zone": "灵界",
+   "lv": "大乘期",
+   "realm": 23,
+   "skill": "金仙法术、屠戮收割",
+   "drop": "金仙材料、灵界声望",
+   "hp": 309395553,
+   "atk": 25131722,
+   "def": 5947817,
+   "speed": 15,
+   "boss": true
+  },
+  {
+   "id": "B011",
+   "name": "仙宫神将",
+   "icon": "🦇",
+   "type": "剧情BOSS",
+   "zone": "仙界-北寒",
+   "lv": "真仙-金仙",
+   "realm": 28,
+   "skill": "仙界法术、神将技",
+   "drop": "仙宫材料、仙元",
+   "hp": 7660940207,
+   "atk": 544604092,
+   "def": 112388048,
+   "speed": 17,
+   "boss": true
+  },
+  {
+   "id": "B012",
+   "name": "古或今",
+   "icon": "🐉",
+   "type": "终极BOSS",
+   "zone": "仙界-道域",
+   "lv": "大罗期",
+   "realm": 30,
+   "skill": "时间法则、吞噬万道",
+   "drop": "道果碎片、时间法则材料",
+   "hp": 27655994147,
+   "atk": 1863907505,
+   "def": 364137276,
+   "speed": 18,
+   "boss": true
+  },
+  {
+   "id": "W001",
+   "name": "灵兔",
+   "icon": "😈",
+   "type": "普通怪物",
+   "zone": "人界野外",
+   "lv": "1-10级",
+   "realm": 0,
+   "skill": "逃跑",
+   "drop": "兔毛、兔肉",
+   "hp": 120,
+   "atk": 18,
+   "def": 8,
+   "speed": 8,
+   "boss": false
+  },
+  {
+   "id": "W002",
+   "name": "青纹蛇",
+   "icon": "🐛",
+   "type": "普通怪物",
+   "zone": "人界野外",
+   "lv": "5-20级",
+   "realm": 0,
+   "skill": "撕咬、毒牙",
+   "drop": "蛇皮、蛇胆、毒囊",
+   "hp": 120,
+   "atk": 18,
+   "def": 8,
+   "speed": 8,
+   "boss": false
+  },
+  {
+   "id": "W003",
+   "name": "野狼",
+   "icon": "🦑",
+   "type": "普通怪物",
+   "zone": "人界野外",
+   "lv": "5-15级",
+   "realm": 0,
+   "skill": "扑咬、群体攻击",
+   "drop": "狼皮、狼牙",
+   "hp": 120,
+   "atk": 18,
+   "def": 8,
+   "speed": 8,
+   "boss": false
+  },
+  {
+   "id": "W004",
+   "name": "墨蛟",
+   "icon": "🐢",
+   "type": "精英怪",
+   "zone": "血色禁地",
+   "lv": "20-35级",
+   "realm": 0,
+   "skill": "水属性攻击、缠绕",
+   "drop": "墨蛟内丹、蛟皮",
+   "hp": 120,
+   "atk": 18,
+   "def": 8,
+   "speed": 8,
+   "boss": false
+  },
+  {
+   "id": "W005",
+   "name": "禁地守卫",
+   "icon": "🦅",
+   "type": "精英怪",
+   "zone": "血色禁地",
+   "lv": "20-35级",
+   "realm": 0,
+   "skill": "守卫攻击",
+   "drop": "禁地材料",
+   "hp": 120,
+   "atk": 18,
+   "def": 8,
+   "speed": 8,
+   "boss": false
+  },
+  {
+   "id": "W006",
+   "name": "星斗海妖兽",
+   "icon": "🐲",
+   "type": "普通怪物",
+   "zone": "乱星海",
+   "lv": "40-80级",
+   "realm": 0,
+   "skill": "水中攻击",
+   "drop": "海妖材料、珍珠",
+   "hp": 120,
+   "atk": 18,
+   "def": 8,
+   "speed": 8,
+   "boss": false
+  },
+  {
+   "id": "W007",
+   "name": "天星宗弟子",
+   "icon": "👹",
+   "type": "敌对NPC",
+   "zone": "乱星海",
+   "lv": "60-120级",
+   "realm": 0,
+   "skill": "天星功法",
+   "drop": "天星材料",
+   "hp": 120,
+   "atk": 18,
+   "def": 8,
+   "speed": 8,
+   "boss": false
+  },
+  {
+   "id": "W008",
+   "name": "魔兵",
+   "icon": "🐺",
+   "type": "普通怪物",
+   "zone": "灵界边境",
+   "lv": "炼虚期+",
+   "realm": 17,
+   "skill": "魔族攻击",
+   "drop": "魔魂、魔晶",
+   "hp": 6576464,
+   "atk": 626890,
+   "def": 174872,
+   "speed": 13,
+   "boss": false
+  },
+  {
+   "id": "W009",
+   "name": "傀儡兵",
+   "icon": "🦂",
+   "type": "普通怪物",
+   "zone": "地渊",
+   "lv": "炼虚期",
+   "realm": 17,
+   "skill": "物理攻击、无疲劳",
+   "drop": "傀儡碎片、玄铁",
+   "hp": 6576464,
+   "atk": 626890,
+   "def": 174872,
+   "speed": 13,
+   "boss": false
+  },
+  {
+   "id": "W010",
+   "name": "阴魂",
+   "icon": "🐍",
+   "type": "特殊怪物",
+   "zone": "各处秘境",
+   "lv": "元婴期+",
+   "realm": 12,
+   "skill": "灵魂攻击、穿透",
+   "drop": "魂晶、镇魂材料",
+   "hp": 265597,
+   "atk": 28928,
+   "def": 9254,
+   "speed": 12,
+   "boss": false
+  },
+  {
+   "id": "W011",
+   "name": "妖将",
+   "icon": "🦅",
+   "type": "精英怪",
+   "zone": "灵界百族",
+   "lv": "合体期+",
+   "realm": 20,
+   "skill": "妖族战技",
+   "drop": "妖丹、妖魂",
+   "hp": 45107968,
+   "atk": 3969237,
+   "def": 1019858,
+   "speed": 14,
+   "boss": false
+  },
+  {
+   "id": "W012",
+   "name": "仙兵",
+   "icon": "🐗",
+   "type": "普通怪物",
+   "zone": "仙界",
+   "lv": "真仙期+",
+   "realm": 27,
+   "skill": "仙术攻击",
+   "drop": "仙元、仙界材料",
+   "hp": 4032073793,
+   "atk": 294380590,
+   "def": 62437804,
+   "speed": 17,
+   "boss": false
+  }
+ ]
 }
