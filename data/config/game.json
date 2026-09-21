@@ -1,0 +1,385 @@
+{
+  "version": 1,
+  "tickSeconds": 1,
+  "offlineMaxHours": 12,
+  "realms": [
+    {
+      "name": "炼气",
+      "color": "#7ec8ff",
+      "expBase": 120,
+      "expGrowth": 1.28
+    },
+    {
+      "name": "筑基",
+      "color": "#7ef7c8",
+      "expBase": 120,
+      "expGrowth": 1.28
+    },
+    {
+      "name": "金丹",
+      "color": "#ffd76e",
+      "expBase": 120,
+      "expGrowth": 1.28
+    },
+    {
+      "name": "元婴",
+      "color": "#ff9f6e",
+      "expBase": 120,
+      "expGrowth": 1.28
+    },
+    {
+      "name": "化神",
+      "color": "#c79bff",
+      "expBase": 120,
+      "expGrowth": 1.28
+    },
+    {
+      "name": "炼虚",
+      "color": "#ff8fd0",
+      "expBase": 120,
+      "expGrowth": 1.28
+    },
+    {
+      "name": "合体",
+      "color": "#9bff6e",
+      "expBase": 120,
+      "expGrowth": 1.28
+    },
+    {
+      "name": "大乘",
+      "color": "#6ef0ff",
+      "expBase": 120,
+      "expGrowth": 1.28
+    },
+    {
+      "name": "渡劫",
+      "color": "#ff6e6e",
+      "expBase": 120,
+      "expGrowth": 1.28
+    },
+    {
+      "name": "真仙",
+      "color": "#fff3a0",
+      "expBase": 120,
+      "expGrowth": 1.28
+    }
+  ],
+  "baseAttr": {
+    "hp": 100,
+    "atk": 12,
+    "def": 5,
+    "crit": 0.05,
+    "critDmg": 1.5,
+    "speed": 10
+  },
+  "growthPerRealm": {
+    "hp": 60,
+    "atk": 8,
+    "def": 4,
+    "crit": 0.01,
+    "critDmg": 0.05,
+    "speed": 1
+  },
+  "growthPerLayer": {
+    "hp": 8,
+    "atk": 1.2,
+    "def": 0.6,
+    "crit": 0.002,
+    "critDmg": 0.01,
+    "speed": 0.2
+  },
+  "cultivate": {
+    "basePerSec": 3,
+    "perAtk": 0.06,
+    "perRealm": 5.5
+  },
+  "breakthrough": {
+    "baseRate": 0.85,
+    "failKeepExp": 0.5,
+    "failLoseHp": true
+  },
+  "qualities": [
+    {
+      "name": "凡品",
+      "color": "#b9c4d0",
+      "mul": 1.0
+    },
+    {
+      "name": "灵器",
+      "color": "#7ef7c8",
+      "mul": 1.35
+    },
+    {
+      "name": "宝器",
+      "color": "#7ec8ff",
+      "mul": 1.8
+    },
+    {
+      "name": "仙器",
+      "color": "#ffd76e",
+      "mul": 2.5
+    },
+    {
+      "name": "神品",
+      "color": "#ff8fd0",
+      "mul": 3.6
+    }
+  ],
+  "slots": [
+    {
+      "key": "weapon",
+      "name": "法宝",
+      "icon": "⚔️"
+    },
+    {
+      "key": "armor",
+      "name": "护甲",
+      "icon": "🛡️"
+    },
+    {
+      "key": "ring",
+      "name": "灵戒",
+      "icon": "💍"
+    }
+  ],
+  "maps": [
+    {
+      "id": "bamboo",
+      "name": "后山竹林",
+      "icon": "🎋",
+      "minRealm": 0,
+      "monsters": [
+        {
+          "name": "竹叶蛇",
+          "icon": "🐍",
+          "hp": 60,
+          "atk": 8,
+          "def": 2,
+          "speed": 8
+        },
+        {
+          "name": "野兔精",
+          "icon": "🐇",
+          "hp": 80,
+          "atk": 6,
+          "def": 4,
+          "speed": 12
+        },
+        {
+          "name": "采药童子",
+          "icon": "🧒",
+          "hp": 110,
+          "atk": 10,
+          "def": 3,
+          "speed": 9
+        }
+      ],
+      "exp": 240,
+      "stone": 25,
+      "dropRate": 0.28
+    },
+    {
+      "id": "crypt",
+      "name": "荒郊义庄",
+      "icon": "⚰️",
+      "minRealm": 1,
+      "monsters": [
+        {
+          "name": "僵尸",
+          "icon": "🧟",
+          "hp": 260,
+          "atk": 20,
+          "def": 10,
+          "speed": 6
+        },
+        {
+          "name": "女鬼",
+          "icon": "👻",
+          "hp": 220,
+          "atk": 26,
+          "def": 6,
+          "speed": 13
+        },
+        {
+          "name": "尸王",
+          "icon": "💀",
+          "hp": 420,
+          "atk": 30,
+          "def": 14,
+          "speed": 7
+        }
+      ],
+      "exp": 700,
+      "stone": 90,
+      "dropRate": 0.32
+    },
+    {
+      "id": "volcano",
+      "name": "赤焰火山",
+      "icon": "🌋",
+      "minRealm": 3,
+      "monsters": [
+        {
+          "name": "火麒麟",
+          "icon": "🦁",
+          "hp": 900,
+          "atk": 60,
+          "def": 28,
+          "speed": 11
+        },
+        {
+          "name": "熔岩巨人",
+          "icon": "🗿",
+          "hp": 1200,
+          "atk": 70,
+          "def": 40,
+          "speed": 5
+        },
+        {
+          "name": "炎魔",
+          "icon": "👹",
+          "hp": 800,
+          "atk": 85,
+          "def": 20,
+          "speed": 14
+        }
+      ],
+      "exp": 2600,
+      "stone": 320,
+      "dropRate": 0.36
+    },
+    {
+      "id": "abyss",
+      "name": "九幽深渊",
+      "icon": "🕳️",
+      "minRealm": 5,
+      "monsters": [
+        {
+          "name": "幽魂将",
+          "icon": "🎭",
+          "hp": 2600,
+          "atk": 150,
+          "def": 70,
+          "speed": 10
+        },
+        {
+          "name": "深渊魔蛛",
+          "icon": "🕷️",
+          "hp": 2200,
+          "atk": 180,
+          "def": 55,
+          "speed": 16
+        },
+        {
+          "name": "九幽冥王",
+          "icon": "😈",
+          "hp": 3800,
+          "atk": 210,
+          "def": 90,
+          "speed": 9
+        }
+      ],
+      "exp": 9000,
+      "stone": 1000,
+      "dropRate": 0.4
+    },
+    {
+      "id": "heaven",
+      "name": "天外天",
+      "icon": "🌌",
+      "minRealm": 7,
+      "monsters": [
+        {
+          "name": "天兵",
+          "icon": "🗡️",
+          "hp": 7000,
+          "atk": 420,
+          "def": 180,
+          "speed": 12
+        },
+        {
+          "name": "星宿仙君",
+          "icon": "🌟",
+          "hp": 9000,
+          "atk": 520,
+          "def": 220,
+          "speed": 14
+        },
+        {
+          "name": "混沌祖龙",
+          "icon": "🐉",
+          "hp": 15000,
+          "atk": 650,
+          "def": 300,
+          "speed": 10
+        }
+      ],
+      "exp": 32000,
+      "stone": 3500,
+      "dropRate": 0.45
+    }
+  ],
+  "enhance": {
+    "costBase": 50,
+    "costGrowth": 1.55,
+    "maxLevel": 12,
+    "attrPerLevel": 0.12
+  },
+  "pills": [
+    {
+      "id": "pill_hp",
+      "name": "回气丹",
+      "icon": "🔴",
+      "desc": "战斗中恢复 30% 气血",
+      "heal": 0.3,
+      "price": 80
+    },
+    {
+      "id": "pill_atk",
+      "name": "凝神散",
+      "icon": "🟠",
+      "desc": "本场战斗攻击 +25%",
+      "buffAtk": 0.25,
+      "price": 120
+    },
+    {
+      "id": "pill_exp",
+      "name": "悟道丹",
+      "icon": "🟣",
+      "desc": "修炼速度 +50%，持续 30 分钟",
+      "buffExp": 0.5,
+      "price": 200
+    }
+  ],
+  "mats": [
+    {
+      "id": "mat_iron",
+      "name": "玄铁",
+      "icon": "⚙️",
+      "price": 40
+    },
+    {
+      "id": "mat_soul",
+      "name": "魂晶",
+      "icon": "💠",
+      "price": 150
+    },
+    {
+      "id": "mat_dragon",
+      "name": "龙鳞",
+      "icon": "🐲",
+      "price": 500
+    }
+  ],
+  "giftCodes": {
+    "XIUXIAN2026": {
+      "stone": 500,
+      "desc": "开服礼包：500 灵石"
+    },
+    "TIANDAO": {
+      "stone": 1000,
+      "exp": 2000,
+      "desc": "天道酬勤：1000 灵石 + 2000 修为"
+    }
+  }
+}
