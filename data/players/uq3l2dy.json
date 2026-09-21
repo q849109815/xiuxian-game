@@ -7,8 +7,8 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995858465,
-  "lastTick": 1789995858465,
+  "lastSeen": 1789995858289,
+  "lastTick": 1789995858289,
   "realm": 9,
   "stage": 3,
   "exp": 69400,
@@ -1758,5 +1758,5 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 2400
+  "bonusWuxing": 2395
 }
