@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790010186566,
-  "lastTick": 1790010186566,
+  "lastSeen": 1790010211242,
+  "lastTick": 1790010211242,
   "realm": 31,
   "stage": 0,
-  "exp": 277432299057.9336,
+  "exp": 226986214487.40024,
   "stone": 8505051751054.912,
   "equip": {
     "weapon": {
@@ -56,7 +56,21 @@
       "crit": 0.02,
       "mp": 115
     },
-    "talisman": null
+    "talisman": null,
+    "artifact": {
+      "id": "fr_fr_w003",
+      "name": "虚天鼎",
+      "icon": "🍲",
+      "kind": "equip",
+      "q": 4,
+      "slot": "artifact",
+      "base": {
+        "atk": 10
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
+    }
   },
   "bag": [
     {
@@ -234,20 +248,6 @@
       "hp": 827,
       "crit": 0,
       "mp": 325
-    },
-    {
-      "id": "fr_fr_w003",
-      "name": "虚天鼎",
-      "icon": "🍲",
-      "kind": "equip",
-      "q": 4,
-      "slot": "artifact",
-      "base": {
-        "atk": 10
-      },
-      "enh": 0,
-      "temp": 0,
-      "fr": true
     },
     {
       "id": "it_uvz9ytc",
@@ -1460,7 +1460,7 @@
         "arena": 20,
         "dungeon": 92,
         "meditate": 1,
-        "exp": 129734572974,
+        "exp": 129735482286,
         "kill": 16
       },
       "claimed": []
@@ -1468,7 +1468,7 @@
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129833965068,
+        "exp": 129834874380,
         "kill": 1734,
         "女鬼": 13,
         "b2": 34,
@@ -1534,8 +1534,8 @@
   "title": "",
   "stats": {
     "kills": 1734,
-    "deaths": 19,
-    "battles": 1753,
+    "deaths": 23,
+    "battles": 1757,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
@@ -1569,7 +1569,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 9,
-    "acc": 46,
+    "acc": 70,
     "level": 13
   },
   "titles": {
