@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990145669,
-  "lastTick": 1789990145669,
+  "lastSeen": 1789990156575,
+  "lastTick": 1789990156575,
   "realm": 4,
   "stage": 3,
-  "exp": 368908.6671000044,
-  "stone": 15675,
+  "exp": 798159.4121000047,
+  "stone": 19527,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -65,7 +65,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 22,
+      "count": 23,
       "desc": "炼器材料",
       "id": "i_op7cm1h"
     },
@@ -192,6 +192,34 @@
       "hp": 328,
       "crit": 0,
       "mp": 58
+    },
+    {
+      "id": "it_e16kmmh",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·诛仙剑",
+      "atk": 72,
+      "def": 15,
+      "hp": 172,
+      "crit": 0,
+      "mp": 58
+    },
+    {
+      "id": "it_0izla2n",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·阴阳环",
+      "atk": 33,
+      "def": 20,
+      "hp": 158,
+      "crit": 0,
+      "mp": 58
     }
   ],
   "skills": [
@@ -203,6 +231,11 @@
     {
       "id": "sk_art_thunder",
       "level": 9,
+      "exp": 0
+    },
+    {
+      "id": "sk_art_drain",
+      "level": 1,
       "exp": 0
     }
   ],
@@ -225,26 +258,26 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 272288,
-        "kill": 77,
-        "dungeon": 3
+        "exp": 283396,
+        "kill": 79,
+        "dungeon": 4
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 272288,
-        "kill": 77,
+        "exp": 283396,
+        "kill": 79,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
-        "熔岩巨人": 16,
-        "b3": 43,
+        "熔岩巨人": 18,
+        "b3": 45,
         "火麒麟": 10,
         "炎魔": 17,
-        "dungeon": 3
+        "dungeon": 4
       },
       "claimed": []
     }
@@ -280,13 +313,13 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 77,
+    "kills": 79,
     "deaths": 0,
-    "battles": 77,
+    "battles": 79,
     "breakthrough": 19,
     "offlineMin": 0,
     "meditate": 1,
-    "dungeon": 3,
+    "dungeon": 4,
     "encounters": 7,
     "rob": 0
   },
