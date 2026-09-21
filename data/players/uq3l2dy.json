@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996108052,
-  "lastTick": 1789996108052,
+  "lastSeen": 1789996109502,
+  "lastTick": 1789996109502,
   "realm": 9,
   "stage": 3,
-  "exp": 123720289707.30054,
-  "stone": 6093763,
+  "exp": 185580375402.9508,
+  "stone": 6102245,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -157,34 +157,6 @@
       "def": 142,
       "hp": 836,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_mpmk3qi",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·破妄戒",
-      "atk": 56,
-      "def": 39,
-      "hp": 282,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_r03oxym",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·太极道衣",
-      "atk": 37,
-      "def": 140,
-      "hp": 722,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -1362,8 +1334,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 55770656,
-        "kill": 1036,
+        "exp": 55834938,
+        "kill": 1037,
         "dungeon": 213,
         "arena": 20
       },
@@ -1376,8 +1348,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 55770656,
-        "kill": 1036,
+        "exp": 55834938,
+        "kill": 1037,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1393,7 +1365,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 286,
-        "混沌祖龙": 292,
+        "混沌祖龙": 293,
         "天兵": 272
       },
       "claimed": [
@@ -1437,9 +1409,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1036,
+    "kills": 1037,
     "deaths": 0,
-    "battles": 1036,
+    "battles": 1037,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
