@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989784216,
-  "lastTick": 1789989784216,
+  "lastSeen": 1789989785306,
+  "lastTick": 1789989785306,
   "realm": 2,
   "stage": 2,
-  "exp": 17582.5088,
-  "stone": 2710,
+  "exp": 20631.1664,
+  "stone": 2910,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -29,18 +29,18 @@
       "mp": 34
     },
     "armor": {
-      "id": "it_rjmltm8",
+      "id": "it_gzth2ve",
       "kind": "equip",
       "slot": "armor",
-      "q": 2,
+      "q": 3,
       "level": 0,
       "temper": 0,
-      "name": "宝器·云锦袍",
-      "atk": 7,
-      "def": 20,
-      "hp": 206,
-      "crit": 0,
-      "mp": 25
+      "name": "仙器·太极道衣",
+      "atk": 8,
+      "def": 39,
+      "hp": 290,
+      "crit": 0.02,
+      "mp": 34
     },
     "ring": null,
     "talisman": null
@@ -62,7 +62,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 2,
+      "count": 3,
       "desc": "炼丹材料",
       "id": "i_xzh1o2k"
     },
@@ -161,18 +161,32 @@
       "mp": 34
     },
     {
-      "id": "it_gzth2ve",
+      "id": "it_gouk4pe",
       "kind": "equip",
-      "slot": "armor",
-      "q": 3,
+      "slot": "ring",
+      "q": 2,
       "level": 0,
       "temper": 0,
-      "name": "仙器·太极道衣",
-      "atk": 8,
-      "def": 39,
-      "hp": 290,
-      "crit": 0.02,
+      "name": "宝器·阴阳环",
+      "atk": 21,
+      "def": 9,
+      "hp": 78,
+      "crit": 0,
       "mp": 34
+    },
+    {
+      "id": "it_rjmltm8",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·云锦袍",
+      "atk": 7,
+      "def": 20,
+      "hp": 206,
+      "crit": 0,
+      "mp": 25
     }
   ],
   "skills": [],
@@ -192,18 +206,18 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 19902,
-        "kill": 14
+        "exp": 21210,
+        "kill": 15
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 19902,
-        "kill": 14,
-        "女鬼": 4,
-        "b2": 14,
+        "exp": 21210,
+        "kill": 15,
+        "女鬼": 5,
+        "b2": 15,
         "僵尸": 8,
         "尸王": 2
       },
@@ -241,9 +255,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 14,
+    "kills": 15,
     "deaths": 0,
-    "battles": 14,
+    "battles": 15,
     "breakthrough": 10,
     "offlineMin": 0,
     "meditate": 1,
