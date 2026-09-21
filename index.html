@@ -118,8 +118,12 @@
 
       <!-- 剧情 -->
       <div id="storyBox">
-        <div class="story-who"><div class="face" id="stFace">🧓</div><div><div class="nm" id="stName">引路人</div><div class="small" id="stChapter">第一章 · 初入仙途</div></div></div>
-        <div class="story-text" id="stText"></div>
+        <div class="story-npc">
+          <div class="portrait" id="stFace">🧓</div>
+          <div><div class="plate" id="stName">引路人</div></div>
+        </div>
+        <div class="small" id="stChapter" style="margin-bottom:8px">第一章 · 初入仙途</div>
+        <div class="dialog" id="stText"></div>
         <div class="story-btns" id="stBtns"></div>
       </div>
 
@@ -128,15 +132,25 @@
       <div class="win" data-page="role">
         <div class="win-hd"><span class="tt">👤 角 色</span><button class="x" data-close>×</button></div>
         <div class="wtabs">
-          <button class="on" data-wt="r1">修炼洞天</button><button data-wt="r2">属性</button><button data-wt="r3">道途</button>
+          <button class="on" data-wt="r1">装备</button><button data-wt="r2">属性</button><button data-wt="r3">洞天</button><button data-wt="r4">道途</button>
         </div>
         <div class="win-bd">
           <div data-wc="r1">
+            <div class="dollwrap">
+              <div class="doll" id="dollBox"></div>
+              <div class="dollside"><div class="card" style="margin:0"><h3>战力</h3>
+                <div style="font-size:26px;color:var(--gold);font-weight:700;text-align:center" id="dollPow">0</div>
+                <div class="grid2 mt8" id="dollAttr"></div>
+              </div></div>
+            </div>
+            <div class="card eqdetail" id="equipDetail"></div>
+          </div>
+          <div data-wc="r2" style="display:none"><div class="card"><h3>道体属性</h3><div class="grid2" id="attrBox"></div></div></div>
+          <div data-wc="r3" style="display:none">
             <div class="card"><h3>修炼地点<span class="small">（灵脉越好，进境越快）</span></h3><div id="spotList"></div></div>
             <div class="card" id="reincCard" style="display:none"><h3>转世重修</h3><div class="small" id="reincTip"></div><button class="ghost mt8" id="btnReinc">♻️ 转世重修</button></div>
           </div>
-          <div data-wc="r2" style="display:none"><div class="card"><h3>道体属性</h3><div class="grid2" id="attrBox"></div></div></div>
-          <div data-wc="r3" style="display:none"><div class="card"><h3>道途统计</h3><div id="statBox"></div></div></div>
+          <div data-wc="r4" style="display:none"><div class="card"><h3>道途统计</h3><div id="statBox"></div></div></div>
           <div class="card"><div class="small" id="cultTip"></div></div>
         </div>
       </div>
@@ -145,7 +159,6 @@
       <div class="win" data-page="bag">
         <div class="win-hd"><span class="tt">🎒 储 物 袋</span><button class="x" data-close>×</button></div>
         <div class="win-bd">
-          <div class="card"><h3>已装备<span class="small">（强化 / 淬灵 / 炼化）</span></h3><div id="equipBox"></div></div>
           <div class="card">
             <h3>背包 <span class="small" id="bagCount"></span></h3>
             <div class="row mt8" style="flex-wrap:wrap">
@@ -156,13 +169,9 @@
               <button class="mini" data-filter="pill">丹药</button>
               <button class="mini" data-filter="talisman">符箓</button>
             </div>
-            <div class="mt8" id="bagList"></div>
+            <div class="baggrid mt8" id="bagList"></div>
           </div>
-          <div class="card" id="devourCard" style="display:none">
-            <h3>炼化喂养 <span class="small" id="devourWho"></span></h3>
-            <div class="small">选择一件装备/材料喂给选中法宝，提升强化等级：</div>
-            <div class="mt8" id="devourList"></div>
-          </div>
+          <div class="card" id="bagDetail"><div class="small">点击物品查看详情</div></div>
         </div>
       </div>
 
@@ -196,8 +205,9 @@
       <div class="win" data-page="skill">
         <div class="win-hd"><span class="tt">📜 功 法</span><button class="x" data-close>×</button></div>
         <div class="win-bd">
-          <div class="card"><h3>已装备<span class="small">（心法 2 / 功法 3）</span></h3><div id="equippedSkills"></div></div>
-          <div class="card"><h3>已习得</h3><div id="skillList"></div></div>
+          <div class="card"><h3>已装备<span class="small">（点击卸下）</span></h3><div class="skgrid" id="equippedSkills"></div></div>
+          <div class="card"><h3>已习得<span class="small">（点击装备）</span></h3><div class="skgrid" id="skillList"></div></div>
+          <div class="card" id="skillDetail"><div class="small">点击功法查看详情</div></div>
         </div>
       </div>
 
@@ -267,9 +277,24 @@
           <button class="on" data-wt="t1">主线</button><button data-wt="t2">每日</button><button data-wt="t3">悬赏</button>
         </div>
         <div class="win-bd">
-          <div data-wc="t1"><div class="card"><h3>主线剧情</h3><div id="mainTask"></div></div></div>
-          <div data-wc="t2" style="display:none"><div class="card"><h3>每日 <span class="small" id="dailyDate"></span></h3><div id="dailyTasks"></div></div></div>
-          <div data-wc="t3" style="display:none"><div class="card"><h3>悬赏</h3><div id="bountyTasks"></div></div></div>
+          <div data-wc="t1">
+            <div class="taskwrap">
+              <div class="tasklist" id="taskList"></div>
+              <div class="taskdetail card" id="taskDetail"></div>
+            </div>
+          </div>
+          <div data-wc="t2" style="display:none">
+            <div class="taskwrap">
+              <div class="tasklist" id="taskList2"></div>
+              <div class="taskdetail card" id="taskDetail2"></div>
+            </div>
+          </div>
+          <div data-wc="t3" style="display:none">
+            <div class="taskwrap">
+              <div class="tasklist" id="taskList3"></div>
+              <div class="taskdetail card" id="taskDetail3"></div>
+            </div>
+          </div>
         </div>
       </div>
 
