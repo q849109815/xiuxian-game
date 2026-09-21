@@ -235,20 +235,29 @@
       <!-- 灵兽 -->
       <div class="win" data-page="beast">
         <div class="win-hd"><span class="tt">🐾 灵 兽</span><button class="x" data-close>×</button></div>
+        <div class="wtabs">
+          <button class="on" data-wt="be1">灵兽</button><button data-wt="be2">灵虫</button>
+        </div>
         <div class="win-bd">
-          <div class="card"><h3>我的灵兽 <span class="small" id="beastCount"></span></h3><div id="beastList"></div></div>
-          <div class="card" id="beastDetail" style="display:none">
-            <h3>培养 <span class="small" id="beastWho"></span></h3>
-            <div id="beastInfo"></div>
-            <div class="row mt8" style="flex-wrap:wrap">
-              <button class="mini" id="btnBeastActive">出战</button>
-              <button class="mini" id="btnBeastAdvance">进阶</button>
-              <button class="mini" id="btnBeastRide">骑乘</button>
-              <button class="mini" id="btnBeastRelease">放归</button>
+          <div data-wc="be1">
+            <div class="card"><h3>我的灵兽 <span class="small" id="beastCount"></span></h3><div id="beastList"></div></div>
+            <div class="card" id="beastDetail" style="display:none">
+              <h3>培养 <span class="small" id="beastWho"></span></h3>
+              <div id="beastInfo"></div>
+              <div class="row mt8" style="flex-wrap:wrap">
+                <button class="mini" id="btnBeastActive">出战</button>
+                <button class="mini" id="btnBeastAdvance">进阶</button>
+                <button class="mini" id="btnBeastRide">骑乘</button>
+                <button class="mini" id="btnBeastRelease">放归</button>
+              </div>
+              <hr class="sep">
+              <div class="small">吞噬材料提升等级与资质：</div>
+              <div class="mt8" id="beastFood"></div>
             </div>
-            <hr class="sep">
-            <div class="small">吞噬材料提升等级与资质：</div>
-            <div class="mt8" id="beastFood"></div>
+          </div>
+          <div data-wc="be2" style="display:none">
+            <div class="card"><h3>灵虫（噬金虫 · 血玉蜘蛛 · 啼魂兽）</h3><div id="wormList"></div></div>
+            <div class="card"><h3>当前出战</h3><div id="wormCur"></div></div>
           </div>
         </div>
       </div>
@@ -341,13 +350,20 @@
       <div class="win" data-page="market">
         <div class="win-hd"><span class="tt">💰 坊 市</span><button class="x" data-close>×</button></div>
         <div class="wtabs">
-          <button class="on" data-wt="m1">商城</button><button data-wt="m2">寄售行</button>
+          <button class="on" data-wt="m1">商城</button><button data-wt="m2">寄售行</button><button data-wt="m3">拍卖行</button>
         </div>
         <div class="win-bd">
           <div data-wc="m1"><div class="card"><h3>商城</h3><div id="shopList"></div></div></div>
           <div data-wc="m2" style="display:none"><div class="card"><h3>寄售行</h3>
             <div class="row mt8"><button class="mini" data-mk="all">全部</button><button class="mini" data-mk="mine">我的挂单</button></div>
             <div class="mt8" id="marketList"><div class="small">加载中…</div></div>
+          </div></div>
+          <div data-wc="m3" style="display:none"><div class="card"><h3>仙市拍卖行</h3>
+            <div class="small">上架收取 5% 手续费，成交后物品进入背包。</div>
+            <div class="row mt8"><select class="txt" id="aucItem"></select>
+              <input class="txt" id="aucPrice" type="number" placeholder="售价" style="max-width:120px">
+              <button class="mini" id="btnAucSell" style="flex:0 0 auto">上架</button></div>
+            <div class="mt8" id="aucList"><div class="small">加载中…</div></div>
           </div></div>
         </div>
       </div>
@@ -357,6 +373,7 @@
         <div class="win-hd"><span class="tt">💬 交 游</span><button class="x" data-close>×</button></div>
         <div class="wtabs">
           <button class="on" data-wt="s1">邮件</button><button data-wt="s2">道侣师徒</button><button data-wt="s3">世界</button>
+          <button data-wt="s4">好友</button><button data-wt="s5">组队</button><button data-wt="s6">私聊</button>
         </div>
         <div class="win-bd">
           <div data-wc="s1"><div class="card"><h3>邮件 <span class="small" id="mailCount"></span></h3><div id="mailList"></div></div></div>
@@ -367,6 +384,18 @@
           <div data-wc="s3" style="display:none"><div class="card"><h3>世界频道 <span class="small" id="chatCd"></span></h3>
             <div class="row"><input class="txt" id="chatInput" placeholder="说点什么（60字内）" maxlength="60"><button class="mini" id="btnChat" style="flex:0 0 auto">发送</button></div>
             <div class="logbox mt8" id="chatBox" style="height:220px"><p class="sys">加载中…</p></div>
+          </div></div>
+          <div data-wc="s4" style="display:none"><div class="card"><h3>好友 <span class="small" id="friendCount"></span></h3>
+            <div class="row"><input class="txt" id="friendUid" placeholder="输入对方道号"><button class="mini" id="btnAddFriend" style="flex:0 0 auto">添加</button></div>
+            <div class="mt8" id="friendList"></div>
+          </div></div>
+          <div data-wc="s5" style="display:none"><div class="card"><h3>队伍</h3>
+            <div id="teamBox"></div>
+            <div class="row mt8"><button class="mini" id="btnCreateTeam">创建队伍</button><button class="mini" id="btnInviteMate">邀请道友</button><button class="mini" id="btnLeaveTeam">解散</button></div>
+          </div></div>
+          <div data-wc="s6" style="display:none"><div class="card"><h3>私聊</h3>
+            <div class="row"><input class="txt" id="dmTo" placeholder="对方道号"><input class="txt" id="dmText" placeholder="内容" maxlength="60"><button class="mini" id="btnSendDM" style="flex:0 0 auto">发送</button></div>
+            <div class="logbox mt8" id="dmBox" style="height:180px"><p class="sys">暂无消息</p></div>
           </div></div>
         </div>
       </div>
@@ -434,6 +463,22 @@
         <div class="win-bd">
           <div class="card"><h3>已获称号 <span class="small" id="titleCount"></span></h3><div id="titleList"></div></div>
           <div class="card"><h3>当前佩戴</h3><div id="titleCur"></div></div>
+        </div>
+      </div>
+
+      <!-- 时装外观 -->
+      <div class="win" data-page="skin">
+        <div class="win-hd"><span class="tt">👗 时 装</span><button class="x" data-close>×</button></div>
+        <div class="wtabs">
+          <button class="on" data-wt="k1">时装</button><button data-wt="k2">翅膀</button><button data-wt="k3">坐骑</button><button data-wt="k4">环身</button><button data-wt="k5">已穿戴</button>
+        </div>
+        <div class="win-bd">
+          <div data-wc="k1"><div class="card"><h3>时装</h3><div id="skinShizhuang"></div></div></div>
+          <div data-wc="k2" style="display:none"><div class="card"><h3>翅膀</h3><div id="skinWing"></div></div></div>
+          <div data-wc="k3" style="display:none"><div class="card"><h3>坐骑</h3><div id="skinMount"></div></div></div>
+          <div data-wc="k4" style="display:none"><div class="card"><h3>环身特效</h3><div id="skinAura"></div></div></div>
+          <div data-wc="k5" style="display:none"><div class="card"><h3>当前形象</h3><div id="skinWearing"></div></div>
+            <div class="card"><h3>加成汇总</h3><div id="skinBuff"></div></div></div>
         </div>
       </div>
 
