@@ -7,8 +7,8 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989758722,
-  "lastTick": 1789989758722,
+  "lastSeen": 1789989758948,
+  "lastTick": 1789989758948,
   "realm": 2,
   "stage": 1,
   "exp": 4172.866000000005,
@@ -29,18 +29,18 @@
       "mp": 34
     },
     "armor": {
-      "id": "it_bsddf3r",
+      "id": "it_rjmltm8",
       "kind": "equip",
       "slot": "armor",
-      "q": 1,
+      "q": 2,
       "level": 0,
       "temper": 0,
-      "name": "灵器·玄龟甲",
-      "atk": 10,
-      "def": 36,
-      "hp": 304,
+      "name": "宝器·云锦袍",
+      "atk": 7,
+      "def": 20,
+      "hp": 206,
       "crit": 0,
-      "mp": 34
+      "mp": 25
     },
     "ring": null,
     "talisman": null
@@ -105,20 +105,6 @@
       "mp": 25
     },
     {
-      "id": "it_rjmltm8",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·云锦袍",
-      "atk": 7,
-      "def": 20,
-      "hp": 206,
-      "crit": 0,
-      "mp": 25
-    },
-    {
       "id": "it_betgddq",
       "kind": "equip",
       "slot": "armor",
@@ -128,6 +114,20 @@
       "name": "灵器·锁子金甲",
       "atk": 9,
       "def": 31,
+      "hp": 304,
+      "crit": 0,
+      "mp": 34
+    },
+    {
+      "id": "it_bsddf3r",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·玄龟甲",
+      "atk": 10,
+      "def": 36,
       "hp": 304,
       "crit": 0,
       "mp": 34
