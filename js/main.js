@@ -22,7 +22,15 @@ window.addEventListener('load', async () => {
   try { window.NOTICE = await readStatic('data/config/notice.json') || { notice: '', events: {} }; } catch (e) { window.NOTICE = { notice: '', events: {} }; }
   if (!window.GAME_CONFIG) { UI.toast('配置加载失败，请检查文件是否上传完整', 'err'); return; }
 
+  // ② 载入《凡人修仙传》真实资料（32境界 / 4派系 / 37章主线 / 19地图 / 26副本 / 20功法）
+  try {
+    const ok = await FRXX.load();
+    if (ok) window.STORY = FRXX.storyList();
+    else UI.toast('资料加载失败，回退默认配置', 'err');
+  } catch (e) { console.warn('FRXX', e); }
+
   $('#btnLogin').onclick = doLogin;
+  setInterval(() => { if (window.P && ENGINE.sanitizeSkills) ENGINE.sanitizeSkills(window.P); }, 20000);
   $('#lgPwd').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
 
   // ② 后台探云端并拉最新配置
@@ -35,6 +43,12 @@ window.addEventListener('load', async () => {
         if (g2) window.GAME_CONFIG = g2;
         if (c2) window.GAME_CONTENT = c2;
         if (s2) window.GAME_SOCIAL = s2;
+        // 云端配置回来后重新并入真实资料
+        try {
+          const gp = await fetch('data/frxx/game_patch.json', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).catch(() => null);
+          const cp = await fetch('data/frxx/content_patch.json', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null).catch(() => null);
+          if (gp) FRXX.applyPatch(gp, cp);
+        } catch (e) { /* 忽略 */ }
         const n = await readJSON('data/config/notice.json').catch(() => null);
         if (n) window.NOTICE = n;
         UI.renderNet();
@@ -99,6 +113,16 @@ function bindCreate() {
   $('#btnCreate').onclick = async () => {
     const nw = window.__NEW; if (!nw) return;
     const p = ENGINE.newPlayer(nw.name, nw.uid, { gender: UI.CR.gender, avatar: UI.CR.avatar, root: UI.CR.root, sect: UI.CR.sect });
+    if (window.FRXX && FRXX.loaded) {
+      p.faction = UI.CR.faction; p.trait = UI.CR.trait;
+      p.bottle = { liquid: 0, acc: 0, level: 1 };
+      p.partners = {}; p.mapsSeen = []; p.dungeonCleared = [];
+      // 派系初始功法
+      const f = FRXX.faction(p.faction);
+      const pool = window.GAME_CONTENT.skills || [];
+      const sk = pool.find((x) => x.name === f.core) || pool.find((x) => x.name.indexOf('长春') >= 0) || pool[0];
+      if (sk) { p.skills = [{ id: sk.id, level: 1 }]; p.equipped = [sk.id]; }
+    }
     p.pwd = hashPwd(nw.pwd);
     if (UI.CR.sect) p.sectInfo = { id: UI.CR.sect, rankIdx: 0, contrib: 0, joinedAt: Date.now() };
     P = p; window.P = P; PPATH = playerPath(nw.uid);
@@ -163,8 +187,14 @@ function tick() {
     UI.toast(`修为圆满，突破至 ${ENGINE.realmName(P)}！`);
     UI.flashBreakthrough(); UI.renderAttrs(P); UI.renderMaps(P); UI.renderSpots(P); save();
   }
+  // 掌天瓶产液
+  if (window.FRXX && FRXX.loaded) {
+    const made = FRXX.bottleTick(P, 1);
+    if (made > 0 && UI.CUR_WIN === 'bottle') UI.renderBottle(P);
+  }
   if (UI.CUR_WIN === 'role') UI.renderAttrs(P);
   if (UI.CUR_WIN === 'cave') UI.renderCave(P);
+  if (UI.CUR_WIN === 'bottle') UI.renderBottle(P);
 }
 
 /* ---------------- 存档 ---------------- */
@@ -193,7 +223,7 @@ function toggleAuto(btn) {
 }
 
 /* ---------------- 通用交互绑定 ---------------- */
-const HOTKEY = { c: 'role', b: 'bag', t: 'task', s: 'skill', l: 'beast', h: 'cave', g: 'sect', m: 'market', f: 'social', v: 'alchemy', x: 'story', k: 'rank', z: 'set' };
+const HOTKEY = { c: 'role', b: 'bag', t: 'task', s: 'skill', l: 'beast', h: 'cave', g: 'sect', m: 'market', f: 'social', v: 'alchemy', x: 'story', k: 'rank', z: 'set', o: 'bottle', p: 'partner', j: 'codex' };
 function bindHotkeys() {
   document.addEventListener('keydown', (e) => {
     if (/input|textarea/i.test(e.target.tagName)) return;
