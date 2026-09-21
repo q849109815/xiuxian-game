@@ -168,8 +168,9 @@ async function readJSON(path, { useCache = true, cacheTTL = 0 } = {}) {
   try {
     const url = `/repos/${GH.owner}/${GH.repo}/contents/${path}?ref=${GH.dataBranch}&t=${Date.now()}`;
     const r = await ghRequest(url);
+    if (!r || !r.content) return null;
     SHA_MAP[path] = r.sha;
-    const obj = JSON.parse(fromB64(r.content.replace(/\n/g, '')));
+  const obj = JSON.parse(fromB64(String(r.content).replace(/\n/g, '')));
     localStorage.setItem(ck, JSON.stringify({ t: Date.now(), obj }));
     return obj;
   } catch (e) {
