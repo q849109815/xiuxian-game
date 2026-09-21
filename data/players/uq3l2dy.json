@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790011653460,
-  "lastTick": 1790011653460,
+  "lastSeen": 1790011652613,
+  "lastTick": 1790011652613,
   "realm": 31,
   "stage": 0,
-  "exp": 46904192887.8712,
-  "stone": 2827447530975.0703,
+  "exp": 46902490862.8712,
+  "stone": 2827447063110.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -179,7 +179,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 135,
+      "count": 120,
       "desc": "炼丹材料",
       "id": "i_e5kvmuj"
     },
@@ -2544,7 +2544,7 @@
       "date": "2026-9-22",
       "prog": {
         "arena": 20,
-        "dungeon": 106,
+        "dungeon": 101,
         "meditate": 1,
         "exp": 129750513904,
         "kill": 978
@@ -2564,7 +2564,7 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 319,
+        "dungeon": 314,
         "arena": 40,
         "九幽冥王": 7,
         "b4": 16,
@@ -2626,7 +2626,7 @@
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
-    "dungeon": 319,
+    "dungeon": 314,
     "encounters": 366,
     "rob": 0
   },
