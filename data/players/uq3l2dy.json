@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990287747,
-  "lastTick": 1789990287747,
+  "lastSeen": 1789990309439,
+  "lastTick": 1789990309439,
   "realm": 5,
   "stage": 1,
-  "exp": 427412.8890499994,
-  "stone": 97468,
+  "exp": 5644298.409150001,
+  "stone": 101342,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -85,7 +85,7 @@
       "name": "赤炎莲",
       "icon": "🔥",
       "price": 180,
-      "count": 35,
+      "count": 39,
       "desc": "炼丹材料",
       "id": "i_4dx4axl"
     },
@@ -95,7 +95,7 @@
       "name": "炎晶",
       "icon": "🔶",
       "price": 150,
-      "count": 9,
+      "count": 11,
       "desc": "炼器材料",
       "id": "i_qg53eix"
     },
@@ -378,6 +378,20 @@
       "hp": 155,
       "crit": 0,
       "mp": 67
+    },
+    {
+      "id": "it_qmieqx4",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·太虚戒",
+      "atk": 34,
+      "def": 23,
+      "hp": 184,
+      "crit": 0,
+      "mp": 67
     }
   ],
   "skills": [
@@ -398,6 +412,11 @@
     },
     {
       "id": "sk_art_slash",
+      "level": 1,
+      "exp": 0
+    },
+    {
+      "id": "sk_heart_basic",
       "level": 1,
       "exp": 0
     }
@@ -422,8 +441,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 474026,
-        "kill": 116,
+        "exp": 510690,
+        "kill": 123,
         "dungeon": 4,
         "arena": 1
       },
@@ -436,16 +455,16 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 474026,
-        "kill": 116,
+        "exp": 510690,
+        "kill": 123,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
-        "熔岩巨人": 34,
-        "b3": 82,
+        "熔岩巨人": 37,
+        "b3": 89,
         "火麒麟": 17,
-        "炎魔": 31,
+        "炎魔": 35,
         "dungeon": 4,
         "arena": 1
       },
@@ -486,15 +505,16 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 116,
+    "kills": 123,
     "deaths": 0,
-    "battles": 116,
+    "battles": 123,
     "breakthrough": 21,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 4,
-    "encounters": 11,
+    "encounters": 12,
     "rob": 0
   },
-  "meditateUntil": 1789989945650
+  "meditateUntil": 1789989945650,
+  "lastChatAt": 1789990296808
 }
