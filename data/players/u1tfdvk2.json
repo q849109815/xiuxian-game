@@ -7,11 +7,11 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789990249472,
-  "lastTick": 1789990249472,
+  "lastSeen": 1789990252611,
+  "lastTick": 1789990252611,
   "realm": 1,
   "stage": 3,
-  "exp": 1408.609600000006,
+  "exp": 1621.4992000000057,
   "stone": 200,
   "equip": {
     "weapon": null,
@@ -63,7 +63,7 @@
     "apprentices": []
   },
   "reinc": 0,
-  "spot": "valley",
+  "spot": "vein",
   "buffs": {
     "pillAtk": 0,
     "pillExpUntil": 0,
