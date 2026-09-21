@@ -7,8 +7,8 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989635634,
-  "lastTick": 1789989635634,
+  "lastSeen": 1789989638724,
+  "lastTick": 1789989638724,
   "realm": 0,
   "stage": 0,
   "exp": 0,
@@ -34,7 +34,7 @@
   "tasks": {
     "mainIdx": 0,
     "daily": {
-      "date": "",
+      "date": "2026-9-21",
       "prog": {},
       "claimed": []
     },
