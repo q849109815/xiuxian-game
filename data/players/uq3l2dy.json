@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996631784,
-  "lastTick": 1789996631784,
+  "lastSeen": 1789996633859,
+  "lastTick": 1789996633859,
   "realm": 9,
   "stage": 3,
-  "exp": 279030590173.9567,
-  "stone": 9068067,
+  "exp": 348788261232.19586,
+  "stone": 9087988,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -79,7 +79,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 228,
+      "count": 229,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -99,7 +99,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 98,
+      "count": 99,
       "desc": "炼器材料",
       "id": "i_bkbhegu"
     },
@@ -125,76 +125,6 @@
       "def": 43,
       "hp": 242,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_j1zoovu",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·太极道衣",
-      "atk": 35,
-      "def": 101,
-      "hp": 824,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_j4ddgyh",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·阴阳环",
-      "atk": 63,
-      "def": 44,
-      "hp": 239,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_xxibkcn",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·麒麟铠",
-      "atk": 44,
-      "def": 136,
-      "hp": 763,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_r1zhts5",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 4,
-      "level": 0,
-      "temper": 0,
-      "name": "神品·混元幡",
-      "atk": 186,
-      "def": 29,
-      "hp": 359,
-      "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_au6lmcs",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·聚灵戒",
-      "atk": 77,
-      "def": 43,
-      "hp": 294,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -1763,8 +1693,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 82869970,
-        "kill": 1459,
+        "exp": 83011362,
+        "kill": 1461,
         "dungeon": 213,
         "arena": 20
       },
@@ -1778,8 +1708,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 82869970,
-        "kill": 1459,
+        "exp": 83011362,
+        "kill": 1461,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1794,9 +1724,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 445,
+        "星宿仙君": 446,
         "混沌祖龙": 423,
-        "天兵": 405
+        "天兵": 406
       },
       "claimed": [
         "b2",
@@ -1840,9 +1770,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1459,
+    "kills": 1461,
     "deaths": 0,
-    "battles": 1459,
+    "battles": 1461,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
