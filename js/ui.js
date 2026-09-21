@@ -144,6 +144,8 @@ function renderHUD(p) {
   $('#cultBarTxt').textContent = `${fmt(p.exp)} / ${fmt(need)}　（${ENGINE.realmName(p)}）`;
   $('#cultRate').textContent = '+' + fmt(ENGINE.expPerSec(p)) + ' /秒';
   $('#cultAvatar').textContent = p.avatar || '🧘';
+  const yb = $('#hYuanbao'); if (yb && window.WALLET) yb.textContent = fmt(WALLET.get(p, 'C007'));
+  const mt = $('#hMerit'); if (mt && window.WALLET) mt.textContent = fmt(WALLET.get(p, 'C014'));
 }
 function renderMeditate(p) {
   const btn = $('#btnMeditate'); if (!btn) return;
@@ -646,7 +648,6 @@ async function renderChat() {
 const TOOLS = [
   { k: 'story', i: '📖', n: '剧情' },
   { k: 'bottle', i: '🏺', n: '掌天瓶' },
-  { k: 'bottle', i: '🏺', n: '掌天瓶' },
   { k: 'role', i: '👤', n: '角色' },
   { k: 'bag', i: '🎒', n: '背包' },
   { k: 'fight', i: '⚔️', n: '历练' },
@@ -661,8 +662,8 @@ const TOOLS = [
   { k: 'market', i: '💰', n: '坊市' },
   { k: 'partner', i: '🌸', n: '仙缘' },
   { k: 'codex', i: '📚', n: '图鉴' },
-  { k: 'partner', i: '🌸', n: '仙缘' },
-  { k: 'codex', i: '📚', n: '图鉴' },
+  { k: 'act', i: '🎯', n: '活动' },
+  { k: 'title', i: '🎖️', n: '称号' },
   { k: 'social', i: '💬', n: '交游' },
   { k: 'set', i: '⚙️', n: '系统' },
 ];
@@ -695,6 +696,9 @@ function openWin(k) {
   if (k === 'bottle') UI.renderBottle(window.P);
   if (k === 'partner') UI.renderPartners(window.P);
   if (k === 'codex') UI.renderCodex(window.P);
+  if (k === 'act') UI.renderActs(window.P);
+  if (k === 'title') UI.renderTitles(window.P);
+  if (k === 'sect') UI.renderSectEx(window.P);
   return k;
 }
 function closeWin() {
@@ -1170,11 +1174,20 @@ function renderCodex(p) {
   const box = $('#codexList');
   if (box) box.innerHTML = list.map((c) => {
     const pct = c.max ? Math.round(c.now / c.max * 100) : 0;
-    return `<div class="item" style="margin-bottom:7px"><div class="ic">${c.icon}</div>
+    const items = (c.list || []).slice(0, 60);
+    return `<div class="item" style="margin-bottom:7px;cursor:pointer" data-cdx="${c.id}">
+      <div class="ic">${c.icon}</div>
       <div class="info"><div class="nm">${c.name}</div>
       <div class="sub">收录 ${c.now}/${c.max}　<span class="q1">${pct}%</span></div>
-      <div class="bar" style="height:9px;margin-top:3px"><i style="width:${pct}%"></i><span style="font-size:9px">${pct}%</span></div></div></div>`;
+      <div class="bar" style="height:9px;margin-top:3px"><i style="width:${pct}%"></i><span style="font-size:9px">${pct}%</span></div></div>
+      <button class="mini">查看</button></div>
+      <div class="cdxgrid" id="cdx_${c.id}" style="display:none">${items.map((x) =>
+        `<span class="cdxitem ${x.got ? 'got' : ''}" title="${x.n}">${x.got ? x.n : '？？？'}</span>`).join('')}</div>`;
   }).join('');
+  $$('#codexList [data-cdx]').forEach((el) => el.onclick = () => {
+    const g = $('#cdx_' + el.dataset.cdx);
+    if (g) g.style.display = g.style.display === 'none' ? 'block' : 'none';
+  });
   const mb = $('#codexMaps');
   const maps = (F.data && F.data.maps) || [];
   if (mb) mb.innerHTML = maps.map((m) => {
@@ -1219,6 +1232,178 @@ function setScene(mapName) {
   }
 }
 
+
+/* ================= 玩法扩展面板 ================= */
+const fmtN = (n) => {
+  n = Math.round(n || 0);
+  if (n >= 1e8) return (n / 1e8).toFixed(2) + '亿';
+  if (n >= 1e4) return (n / 1e4).toFixed(1) + '万';
+  return String(n);
+};
+
+/* ---------- 活动 ---------- */
+function renderActs(p) {
+  if (!p) return;
+  if (!window.ACTSYS) return;
+  ACTSYS.init(p); WALLET.init(p);
+  const A = ACTSYS;
+
+  // 签到
+  const sb = $('#signBox');
+  if (sb) {
+    const can = A.canSign(p);
+    const streak = p.act.sign.streak || 0;
+    const list = (GAME_SOCIAL.signRewards) || [];
+    sb.innerHTML = `<div class="small">已连续签到 <b style="color:var(--gold)">${streak}</b> 天　累计 ${p.act.sign.days || 0} 天</div>
+      <div class="row mt8" style="flex-wrap:wrap">
+        ${list.map((r, i) => `<div class="bslot ${((streak % 7) === i && !can) ? 'sel' : ''}" style="width:52px;height:52px;font-size:18px" title="${A.grant(p, {}), ''}">
+          <span>${i + 1}</span></div>`).join('')}
+      </div>
+      <button class="act mt8" id="btnSign" ${can ? '' : 'disabled'}>${can ? '📅 今日签到' : '✔ 今日已签'}</button>
+      <div class="small mt8">连续 7 天额外奖励元宝×5</div>`;
+    const b = $('#btnSign');
+    if (b && can) b.onclick = () => { const r = A.sign(p); toast(r.msg, r.ok ? 'ok' : 'err'); renderActs(p); renderHUD(p); save(); };
+  }
+  // 七日修行
+  const seven = $('#sevenBox');
+  if (seven) seven.innerHTML = A.sevenList().map((x) => {
+    const done = !!p.act.seven[x.id];
+    return `<div class="item" style="margin-bottom:6px"><div class="ic">${done ? '✔️' : '🗓️'}</div>
+      <div class="info"><div class="nm">第 ${x.day} 天：${x.name}</div>
+      <div class="sub">灵石${fmtN(x.reward.stone)}·修为${fmtN(x.reward.exp)}${x.reward.yuanbao ? '·元宝' + x.reward.yuanbao : ''}</div></div>
+      <button class="mini" data-s7="${x.id}" ${done ? 'disabled' : ''}>${done ? '已领' : '领取'}</button></div>`;
+  }).join('');
+  $$('#sevenBox [data-s7]').forEach((b) => b.onclick = () => {
+    const r = A.sevenDone(p, b.dataset.s7); toast(r.msg, r.ok ? 'ok' : 'err'); renderActs(p); renderHUD(p); save();
+  });
+  // 成长之路
+  const gb = $('#growthBox');
+  if (gb) {
+    const list = A.growthCheck(p);
+    gb.innerHTML = list.map((g) => `<div class="item" style="margin-bottom:6px">
+      <div class="ic">${g.claimed ? '🎁' : g.ok ? '✨' : '🔒'}</div>
+      <div class="info"><div class="nm">${g.name}</div><div class="sub">${g.need}${g.ok ? '·已达成' : '·未达成'}</div></div>
+      <button class="mini" data-gr="${g.id}" ${(!g.ok || g.claimed) ? 'disabled' : ''}>${g.claimed ? '已领' : '领取'}</button></div>`).join('');
+    $$('#growthBox [data-gr]').forEach((b) => b.onclick = () => {
+      const r = A.growthClaim(p, b.dataset.gr); toast(r.msg, r.ok ? 'ok' : 'err'); renderActs(p); renderHUD(p); save();
+    });
+  }
+  // 在线奖励
+  const ob = $('#onlineBox');
+  if (ob) {
+    const min = A.onlineMin(p);
+    ob.innerHTML = `<div class="small">本次在线 <b style="color:var(--gold)">${min}</b> 分钟</div>` +
+      A.onlineList().map((x) => {
+        const can = min >= x.min && p.act.online.claimed < x.min;
+        const got = p.act.online.claimed >= x.min;
+        return `<div class="item" style="margin-bottom:6px"><div class="ic">${got ? '✔️' : can ? '⏱️' : '🔒'}</div>
+          <div class="info"><div class="nm">在线 ${x.min} 分钟</div>
+          <div class="sub">灵石${fmtN(x.stone || 0)}·修为${fmtN(x.exp || 0)}${x.yuanbao ? '·元宝' + x.yuanbao : ''}</div></div>
+          <button class="mini" data-on="${x.min}" ${(!can) ? 'disabled' : ''}>${got ? '已领' : '领取'}</button></div>`;
+      }).join('');
+    $$('#onlineBox [data-on]').forEach((b) => b.onclick = () => {
+      const r = A.onlineClaim(p, +b.dataset.on); toast(r.msg, r.ok ? 'ok' : 'err'); renderActs(p); renderHUD(p); save();
+    });
+  }
+  // 等级礼包
+  const lg = $('#levelGiftBox');
+  if (lg) lg.innerHTML = A.giftList().map((g) => {
+    const nm = window.FRXX ? FRXX.realm(g.realm).name : '境' + g.realm;
+    const ok = p.realm >= g.realm, bought = !!p.act.gifts[g.id];
+    return `<div class="item" style="margin-bottom:6px"><div class="ic">🎁</div>
+      <div class="info"><div class="nm">${nm} 礼包</div>
+      <div class="sub">灵石${fmtN(g.reward.stone)}·修为${fmtN(g.reward.exp)}·元宝${g.reward.yuanbao}</div></div>
+      <button class="mini" data-gf="${g.id}" ${(!ok || bought) ? 'disabled' : ''}>${bought ? '已购' : fmtN(g.price) + '💎'}</button></div>`;
+  }).join('');
+  $$('#levelGiftBox [data-gf]').forEach((b) => b.onclick = () => {
+    const r = A.giftBuy(p, b.dataset.gf); toast(r.msg, r.ok ? 'ok' : 'err'); renderActs(p); renderHUD(p); save();
+  });
+  // 限时活动一览
+  const la = $('#limitActs');
+  if (la) la.innerHTML = (A.all() || []).map((a) => `<div class="item" style="margin-bottom:6px">
+    <div class="ic">${a.icon}</div><div class="info"><div class="nm">${a.name}
+    <span class="sub">${a.type}</span></div><div class="sub">${a.content}</div>
+    <div class="sub" style="color:var(--jade)">${a.reward}</div></div></div>`).join('');
+}
+
+/* ---------- 称号 ---------- */
+function renderTitles(p) {
+  if (!p || !window.TITLE) return;
+  const list = TITLE.check(p);
+  const box = $('#titleList');
+  const got = list.filter((x) => x.owned).length;
+  const c = $('#titleCount'); if (c) c.textContent = `（${got}/${list.length}）`;
+  if (box) box.innerHTML = list.map((t) => {
+    const on = p.titles.cur === t.id;
+    return `<div class="compitem ${on ? 'on' : ''} ${t.owned ? '' : 'lock'}" data-tid="${t.id}">
+      <div class="cface">${t.icon}</div>
+      <div class="cinfo"><div class="cnm">${t.name} ${on ? '<span style="color:var(--jade)">佩戴中</span>' : ''}</div>
+      <div class="csub">${t.desc}　${t.owned ? '' : '（' + t.need + '）'}</div>
+      <div class="csub" style="color:var(--gold)">${Object.entries(t.buff || {}).map(([k, v]) => ({ atk: '攻', hp: '气血', exp: '修为', stone: '灵石' }[k] || k) + '+' + Math.round(v * 100) + '%').join(' ') || '无加成'}</div>
+    </div></div>`;
+  }).join('');
+  $$('#titleList [data-tid]').forEach((el) => el.onclick = () => {
+    const r = TITLE.wear(p, el.dataset.tid); toast(r.msg, r.ok ? 'ok' : 'err'); renderTitles(p); renderMini(p); save();
+  });
+  const cur = $('#titleCur');
+  if (cur) {
+    const n = TITLE.curName(p);
+    cur.innerHTML = n ? `<div class="nm" style="color:var(--gold)">${n}</div>` : '<div class="small">未佩戴称号</div>';
+  }
+}
+
+/* ---------- 宗门扩展 ---------- */
+function renderSectEx(p) {
+  if (!p || !window.SECTEX) return;
+  // 仓库
+  const wh = SECTEX.warehouse(p);
+  const wc = $('#whCount'); if (wc) wc.textContent = `（${wh.items.length}/60）`;
+  const wt = $('#whTip');
+  if (wt) wt.textContent = p.sectInfo ? '存入后宗门成员可按权限取用' : '加入宗门后可使用';
+  const wl = $('#whList');
+  if (wl) wl.innerHTML = wh.items.length ? wh.items.slice(0, 24).map((it, i) =>
+    `<div class="item"><div class="ic">${it.kind === 'herb' ? '🌿' : it.kind === 'ore' ? '⛏️' : '📦'}</div>
+      <div class="info"><div class="nm">${it.id} ×${it.count}</div><div class="sub">${it.by} 存入</div></div>
+      <button class="mini" data-wht="${i}">取出</button></div>`).join('') : '<div class="small">仓库为空</div>';
+  $$('#whList [data-wht]').forEach((b) => b.onclick = () => {
+    const r = SECTEX.whTake(p, +b.dataset.wht); toast(r.msg, r.ok ? 'ok' : 'err'); renderSectEx(p); renderBag(p); save();
+  });
+  const d1 = $('#btnWhDeposit');
+  if (d1) d1.onclick = () => {
+    const n = Math.min(5, p.mats && p.mats.herb ? p.mats.herb : 0);
+    if (!n) return toast('没有可存入的灵草', 'err');
+    p.mats.herb -= n;
+    const r = SECTEX.whDeposit(p, 'herb', 'herb_green', n);
+    toast(r.msg, r.ok ? 'ok' : 'err'); renderSectEx(p); save();
+  };
+  // BOSS
+  const bl = $('#sectBossList');
+  if (bl) bl.innerHTML = SECTEX.bossList().map((b) =>
+    `<div class="item" style="margin-bottom:7px"><div class="ic">${b.icon}</div>
+      <div class="info"><div class="nm">${b.name}</div>
+      <div class="sub">气血${fmtN(b.hp)} 攻${fmtN(b.atk)}｜${b.cost} 灵石开启</div>
+      <div class="sub" style="color:var(--jade)">贡献${b.reward.contrib}·灵石${fmtN(b.reward.stone)}</div></div>
+      <button class="mini" data-sb="${b.id}">讨伐</button></div>`).join('');
+  $$('#sectBossList [data-sb]').forEach((b) => b.onclick = () => {
+    const r = SECTEX.fightBoss(p, b.dataset.sb);
+    toast(r.msg, r.ok ? 'ok' : 'err'); renderSectEx(p); renderHUD(p); save();
+  });
+  // 联盟
+  const ab = $('#allyBox');
+  if (ab) {
+    const a = SECTEX.ally(p);
+    ab.innerHTML = a ? `<div class="nm" style="color:var(--gold)">${a.name}</div>
+      <div class="small">盟主：${a.leader}　成员宗门 ${a.sects.length}</div>`
+      : '<div class="small">尚未创建或加入联盟。联盟可共探玄荒古域、交换镇物。</div>';
+  }
+  const ca = $('#btnCreateAlly');
+  if (ca) ca.onclick = () => {
+    const n = (prompt('联盟名称', '') || '').trim();
+    if (!n) return;
+    const r = SECTEX.createAlly(p, n); toast(r.msg, r.ok ? 'ok' : 'err'); renderSectEx(p); renderHUD(p); save();
+  };
+}
+
 window.UI = {
   initBackground, toast, fmt, timeAgo, startQi, flashBreakthrough,
   renderHUD, renderMeditate, renderAttrs, renderSpots, renderMaps, renderDungeons,
@@ -1228,7 +1413,7 @@ window.UI = {
   renderTracker, renderToolBar, openWin, closeWin, bindWinTabs, renderStory, renderMini, TOOLS,
   renderEquipDetail, renderBagDetail, renderSkillDetail, slotDef,
   renderBottle, renderPartners, renderCodex, renderCreateFaction, renderTraitDesc,
-  setScene,
+  setScene, renderActs, renderTitles, renderSectEx,
   get CUR_WIN() { return CUR_WIN; },
   setFighters, floatNum, boom, shake, hitAnim, hpBar, pushLog, clearLog,
   get curMap() { return CUR_MAP; }, set curMap(v) { CUR_MAP = v; },
