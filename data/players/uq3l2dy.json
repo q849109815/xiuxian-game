@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996789140,
-  "lastTick": 1789996789140,
+  "lastSeen": 1789996820758,
+  "lastTick": 1789996820758,
   "realm": 9,
   "stage": 3,
-  "exp": 174394019759.59796,
-  "stone": 9729298,
+  "exp": 313909200844.0763,
+  "stone": 9777024,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -79,7 +79,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 265,
+      "count": 271,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -89,7 +89,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 98,
+      "count": 99,
       "desc": "炼器材料",
       "id": "i_1c42jnp"
     },
@@ -99,7 +99,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 113,
+      "count": 114,
       "desc": "炼器材料",
       "id": "i_bkbhegu"
     },
@@ -503,6 +503,20 @@
       "def": 31,
       "hp": 317,
       "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_iz283e0",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 3,
+      "level": 0,
+      "temper": 0,
+      "name": "仙器·玄龟甲",
+      "atk": 30,
+      "def": 141,
+      "hp": 697,
+      "crit": 0.02,
       "mp": 115
     }
   ],
@@ -1674,8 +1688,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 88677778,
-        "kill": 1549,
+        "exp": 89123126,
+        "kill": 1556,
         "dungeon": 213,
         "arena": 20
       },
@@ -1689,8 +1703,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 88677778,
-        "kill": 1549,
+        "exp": 89123126,
+        "kill": 1556,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1705,9 +1719,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 472,
-        "混沌祖龙": 454,
-        "天兵": 437
+        "星宿仙君": 475,
+        "混沌祖龙": 455,
+        "天兵": 440
       },
       "claimed": [
         "b2",
@@ -1751,14 +1765,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1549,
+    "kills": 1556,
     "deaths": 0,
-    "battles": 1549,
+    "battles": 1556,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 207,
+    "encounters": 208,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
