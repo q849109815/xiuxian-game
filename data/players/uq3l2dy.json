@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790011680403,
-  "lastTick": 1790011680403,
+  "lastSeen": 1790011670566,
+  "lastTick": 1790011670566,
   "realm": 31,
   "stage": 0,
-  "exp": 1028441,
-  "stone": 2827459902804.0703,
+  "exp": 187608952682.4848,
+  "stone": 2827455590815.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -131,6 +131,58 @@
     }
   },
   "bag": [
+    {
+      "kind": "ore",
+      "ref": "ore_iron",
+      "name": "玄铁",
+      "icon": "⚙️",
+      "price": 50,
+      "count": 76,
+      "desc": "炼器材料",
+      "id": "i_e3yde46"
+    },
+    {
+      "id": "it_mw9awuh",
+      "kind": "equip",
+      "slot": "bracelet",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·太极腕",
+      "atk": 184,
+      "def": 108,
+      "hp": 880,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_qb6dy3x",
+      "kind": "equip",
+      "slot": "bracelet",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·太极腕",
+      "atk": 218,
+      "def": 109,
+      "hp": 703,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "fr_fr_w003",
+      "name": "虚天鼎",
+      "icon": "🍲",
+      "kind": "equip",
+      "q": 4,
+      "slot": "artifact",
+      "base": {
+        "atk": 10
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
+    },
     {
       "id": "it_kif14t9",
       "kind": "equip",
@@ -1190,61 +1242,9 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 144,
+      "count": 3,
       "desc": "炼丹材料",
       "id": "i_qsfteum"
-    },
-    {
-      "id": "it_q2ho673",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·锁子金甲",
-      "atk": 78,
-      "def": 373,
-      "hp": 2983,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "kind": "ore",
-      "ref": "ore_iron",
-      "name": "玄铁",
-      "icon": "⚙️",
-      "price": 50,
-      "count": 2,
-      "desc": "炼器材料",
-      "id": "i_nn3fjek"
-    },
-    {
-      "id": "fr_fr_t001",
-      "name": "镇物：玄荒钟",
-      "icon": "🔮",
-      "kind": "equip",
-      "q": 1,
-      "slot": "artifact",
-      "base": {
-        "atk": 10
-      },
-      "enh": 0,
-      "temp": 0,
-      "fr": true
-    },
-    {
-      "id": "it_xov4m2c",
-      "kind": "equip",
-      "slot": "boots",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·玄铁靴",
-      "atk": 83,
-      "def": 171,
-      "hp": 1371,
-      "crit": 0,
-      "mp": 337
     }
   ],
   "skills": [
@@ -2544,18 +2544,18 @@
       "date": "2026-9-22",
       "prog": {
         "arena": 20,
-        "dungeon": 238,
+        "dungeon": 192,
         "meditate": 1,
-        "exp": 129750689428,
-        "kill": 1001
+        "exp": 129750629062,
+        "kill": 993
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129850081522,
-        "kill": 2719,
+        "exp": 129850021156,
+        "kill": 2711,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2564,7 +2564,7 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 451,
+        "dungeon": 405,
         "arena": 40,
         "九幽冥王": 7,
         "b4": 16,
@@ -2574,9 +2574,9 @@
         "混沌祖龙": 508,
         "天兵": 506,
         "禁地守卫": 338,
-        "星斗海妖兽": 315,
+        "星斗海妖兽": 309,
         "天星宗弟子": 3,
-        "墨蛟": 345
+        "墨蛟": 343
       },
       "claimed": [
         "b2",
@@ -2620,14 +2620,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 2719,
+    "kills": 2711,
     "deaths": 65,
-    "battles": 2784,
+    "battles": 2776,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
-    "dungeon": 451,
-    "encounters": 369,
+    "dungeon": 405,
+    "encounters": 367,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -2655,8 +2655,8 @@
   },
   "loginAt": 1790009125477,
   "bottle": {
-    "liquid": 25,
-    "acc": 9,
+    "liquid": 24,
+    "acc": 89,
     "level": 30
   },
   "titles": {
