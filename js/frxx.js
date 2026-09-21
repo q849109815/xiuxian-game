@@ -335,6 +335,34 @@ const ART = {
     def: 'icon/attr_def.jpg',
     hp: 'icon/attr_hp.jpg',
   },
+  /** 时装预览图（22_外观时装） */
+  skin: {
+    'SK-001': 'skin/qingshan.jpg',      // 青衫剑侠
+    'SK-002': 'skin/xuantian.jpg',      // 玄天剑尊
+    'SK-003': 'skin/zixiao.jpg',        // 紫霄剑神
+    'SK-004': 'skin/jinzhuang.jpg',     // 劲装武夫
+    'SK-005': 'skin/fansheng.jpg',      // 梵圣战魔
+    'SK-006': 'skin/daopao.jpg',        // 道袍书生
+    'SK-007': 'skin/xuanbing.jpg',      // 玄冰法仙
+    'SK-008': 'skin/modao.jpg',         // 魔道凶衣
+    'SK-009': 'skin/wanmo.jpg',         // 万魔之祖
+    'SK-010': 'skin/wing_fenglei.jpg',  // 风雷翅
+    'SK-011': 'skin/wing_tianfeng.jpg', // 天凤之翼
+    'SK-012': 'skin/wing_kunpeng.jpg',  // 鲲鹏之翼
+    'SK-013': 'skin/mount_qingniu.jpg', // 青牛坐骑
+    'SK-015': 'skin/mount_xianhe.jpg',  // 仙鹤坐骑
+    'SK-017': 'skin/mount_jinlong.jpg', // 金龙坐骑
+  },
+  /** CG 过场图（24_CG加载过场） */
+  cg: {
+    '七玄门篇': 'cg/cg01_qixuanmen.jpg',
+    '黄枫谷篇': 'cg/cg03_xuese.jpg',
+    '乱星海篇': 'cg/cg04_xutiandian.jpg',
+    '落云宗篇': 'cg/cg01_qixuanmen.jpg',
+    '灵界篇': 'cg/cg04_xutiandian.jpg',
+    '仙界篇': 'cg/cg03_xuese.jpg',
+    'default': 'cg/cg01_qixuanmen.jpg',
+  },
   /** 灵宠头像 */
   pet: {
     '噬金虫': 'icon/pet_shijin.jpg',
@@ -393,6 +421,20 @@ const ART = {
     if (!name) return null;
     for (const k in this.cls) if (name.indexOf(k) >= 0) return this.base + this.cls[k];
     return null;
+  },
+  /** CG 过场图 */
+  cgOf(chapter) {
+    if (!chapter) return this.base + this.cg.default;
+    for (const k in this.cg) {
+      if (k === 'default') continue;
+      if (chapter.indexOf(k) >= 0) return this.base + this.cg[k];
+    }
+    return this.base + this.cg.default;
+  },
+  /** 时装预览图 */
+  skinOf(id) {
+    const v = this.skin[id];
+    return v ? this.base + v : null;
   },
   /** 灵宠头像 */
   petOf(name) {
