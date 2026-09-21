@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990687453,
-  "lastTick": 1789990687453,
+  "lastSeen": 1789990695081,
+  "lastTick": 1789990695081,
   "realm": 8,
   "stage": 3,
-  "exp": 12751116171.670092,
-  "stone": 58285,
+  "exp": 19036285836.33641,
+  "stone": 64403,
   "equip": {
     "weapon": {
       "id": "it_pion6p0",
@@ -65,7 +65,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 4,
+      "count": 5,
       "desc": "炼丹材料",
       "id": "i_fhce2n2"
     },
@@ -80,6 +80,20 @@
       "atk": 26,
       "def": 134,
       "hp": 663,
+      "crit": 0,
+      "mp": 106
+    },
+    {
+      "id": "it_b6yq6yt",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·养魂环",
+      "atk": 67,
+      "def": 31,
+      "hp": 303,
       "crit": 0,
       "mp": 106
     }
@@ -136,7 +150,7 @@
       "array": 8,
       "garden": 3
     },
-    "array": "none",
+    "array": "spirit",
     "lastHarvest": 1789989635634,
     "store": {}
   },
@@ -146,8 +160,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 1433704,
-        "kill": 192,
+        "exp": 1494430,
+        "kill": 193,
         "dungeon": 5,
         "arena": 1
       },
@@ -160,8 +174,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 1433704,
-        "kill": 192,
+        "exp": 1494430,
+        "kill": 193,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -176,7 +190,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 4,
+        "星宿仙君": 5,
         "混沌祖龙": 2
       },
       "claimed": [
@@ -216,9 +230,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 192,
+    "kills": 193,
     "deaths": 0,
-    "battles": 192,
+    "battles": 193,
     "breakthrough": 32,
     "offlineMin": 0,
     "meditate": 1,
