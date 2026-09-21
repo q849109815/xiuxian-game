@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990237991,
-  "lastTick": 1789990237991,
+  "lastSeen": 1789990239307,
+  "lastTick": 1789990239307,
   "realm": 4,
   "stage": 3,
-  "exp": 4306608.921099999,
-  "stone": 30260,
+  "exp": 4359523.195599999,
+  "stone": 34060,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -325,6 +325,11 @@
       "id": "sk_art_drain",
       "level": 9,
       "exp": 0
+    },
+    {
+      "id": "sk_art_slash",
+      "level": 1,
+      "exp": 0
     }
   ],
   "equipped": [
@@ -342,7 +347,7 @@
     "store": {}
   },
   "tasks": {
-    "mainIdx": 1,
+    "mainIdx": 3,
     "daily": {
       "date": "2026-9-21",
       "prog": {
