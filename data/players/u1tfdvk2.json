@@ -7,12 +7,12 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789991861210,
-  "lastTick": 1789991861210,
+  "lastSeen": 1789991872713,
+  "lastTick": 1789991872713,
   "realm": 6,
   "stage": 1,
-  "exp": 87327343.64586316,
-  "stone": 7954,
+  "exp": 111475848.40362321,
+  "stone": 8662,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -85,7 +85,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 14,
+      "count": 15,
       "desc": "炼器材料",
       "id": "i_9yr1b5o"
     },
@@ -203,8 +203,8 @@
         "meditate": 2,
         "dungeon": 13,
         "arena": 1,
-        "exp": 34864,
-        "kill": 31
+        "exp": 40252,
+        "kill": 32
       },
       "claimed": []
     },
@@ -213,10 +213,10 @@
         "meditate": 2,
         "dungeon": 13,
         "arena": 1,
-        "exp": 34864,
-        "kill": 31,
+        "exp": 40252,
+        "kill": 32,
         "火麒麟": 1,
-        "b3": 3,
+        "b3": 4,
         "采药童子": 9,
         "b1": 23,
         "竹叶蛇": 9,
@@ -226,7 +226,7 @@
         "女鬼": 2,
         "僵尸": 2,
         "熔岩巨人": 1,
-        "炎魔": 1
+        "炎魔": 2
       },
       "claimed": []
     }
@@ -270,9 +270,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 31,
+    "kills": 32,
     "deaths": 2,
-    "battles": 33,
+    "battles": 34,
     "breakthrough": 24,
     "offlineMin": 16,
     "meditate": 2,
