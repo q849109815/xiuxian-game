@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996443767,
-  "lastTick": 1789996443767,
+  "lastSeen": 1789996445702,
+  "lastTick": 1789996445702,
   "realm": 9,
   "stage": 3,
-  "exp": 91236900840.20107,
-  "stone": 8482895,
+  "exp": 152061433273.00177,
+  "stone": 8490176,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -478,20 +478,6 @@
       "atk": 31,
       "def": 132,
       "hp": 822,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_sxifqew",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·太极道衣",
-      "atk": 28,
-      "def": 126,
-      "hp": 717,
       "crit": 0,
       "mp": 115
     },
@@ -1759,8 +1745,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 72921846,
-        "kill": 1305,
+        "exp": 72985100,
+        "kill": 1306,
         "dungeon": 213,
         "arena": 20
       },
@@ -1774,8 +1760,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 72921846,
-        "kill": 1305,
+        "exp": 72985100,
+        "kill": 1306,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1792,7 +1778,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 385,
         "混沌祖龙": 376,
-        "天兵": 358
+        "天兵": 359
       },
       "claimed": [
         "b2",
@@ -1836,9 +1822,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1305,
+    "kills": 1306,
     "deaths": 0,
-    "battles": 1305,
+    "battles": 1306,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
