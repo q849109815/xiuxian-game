@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790011331391,
-  "lastTick": 1790011331391,
+  "lastSeen": 1790011362622,
+  "lastTick": 1790011362622,
   "realm": 31,
   "stage": 0,
-  "exp": 187600431187.4848,
-  "stone": 8505051243303.912,
+  "exp": 46900108357.8712,
+  "stone": 8505051246591.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -131,119 +131,6 @@
     }
   },
   "bag": [
-    {
-      "id": "it_oh8abqw",
-      "kind": "equip",
-      "slot": "bracelet",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·玄铁护腕",
-      "atk": 159,
-      "def": 170,
-      "hp": 886,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_vl4csuq",
-      "kind": "equip",
-      "slot": "bracelet",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·麒麟腕",
-      "atk": 178,
-      "def": 122,
-      "hp": 701,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "fr_fr_e102",
-      "name": "皮甲",
-      "icon": "🥋",
-      "kind": "equip",
-      "q": 1,
-      "slot": "armor",
-      "base": {
-        "def": 30,
-        "hp": 800
-      },
-      "enh": 0,
-      "temp": 0,
-      "fr": true
-    },
-    {
-      "id": "it_o48cztw",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·麒麟铠",
-      "atk": 87,
-      "def": 490,
-      "hp": 3245,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_3fa1f8x",
-      "kind": "equip",
-      "slot": "boots",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·玄铁靴",
-      "atk": 105,
-      "def": 151,
-      "hp": 1044,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_cq3tg7m",
-      "kind": "equip",
-      "slot": "necklace",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·聚灵珠",
-      "atk": 115,
-      "def": 72,
-      "hp": 728,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_y4sixfh",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·云锦袍",
-      "atk": 74,
-      "def": 429,
-      "hp": 2554,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_0qgwkvd",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·聚灵戒",
-      "atk": 188,
-      "def": 79,
-      "hp": 580,
-      "crit": 0,
-      "mp": 337
-    },
     {
       "id": "it_432bzxr",
       "kind": "equip",
@@ -1246,9 +1133,117 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 1,
+      "count": 13,
       "desc": "炼丹材料",
       "id": "i_e5kvmuj"
+    },
+    {
+      "id": "it_2rh4wf7",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·云锦袍",
+      "atk": 62,
+      "def": 326,
+      "hp": 3297,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "kind": "ore",
+      "ref": "ore_iron",
+      "name": "玄铁",
+      "icon": "⚙️",
+      "price": 50,
+      "count": 12,
+      "desc": "炼器材料",
+      "id": "i_e3yde46"
+    },
+    {
+      "id": "it_mw9awuh",
+      "kind": "equip",
+      "slot": "bracelet",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·太极腕",
+      "atk": 184,
+      "def": 108,
+      "hp": 880,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_qb6dy3x",
+      "kind": "equip",
+      "slot": "bracelet",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·太极腕",
+      "atk": 218,
+      "def": 109,
+      "hp": 703,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "fr_fr_w003",
+      "name": "虚天鼎",
+      "icon": "🍲",
+      "kind": "equip",
+      "q": 4,
+      "slot": "artifact",
+      "base": {
+        "atk": 10
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
+    },
+    {
+      "id": "it_kif14t9",
+      "kind": "equip",
+      "slot": "helmet",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·玄铁盔",
+      "atk": 85,
+      "def": 219,
+      "hp": 1660,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_r7lisd4",
+      "kind": "equip",
+      "slot": "boots",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·踏云靴",
+      "atk": 104,
+      "def": 203,
+      "hp": 988,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_8xe8rcg",
+      "kind": "equip",
+      "slot": "boots",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·麒麟靴",
+      "atk": 106,
+      "def": 201,
+      "hp": 1143,
+      "crit": 0,
+      "mp": 337
     }
   ],
   "skills": [
@@ -2532,16 +2527,16 @@
         "arena": 20,
         "dungeon": 92,
         "meditate": 1,
-        "exp": 129742374788,
-        "kill": 776
+        "exp": 129742567478,
+        "kill": 802
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129841766882,
-        "kill": 2494,
+        "exp": 129841959572,
+        "kill": 2520,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2559,10 +2554,10 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 273,
-        "星斗海妖兽": 241,
+        "禁地守卫": 280,
+        "星斗海妖兽": 247,
         "天星宗弟子": 3,
-        "墨蛟": 259
+        "墨蛟": 272
       },
       "claimed": [
         "b2",
@@ -2606,14 +2601,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 2494,
+    "kills": 2520,
     "deaths": 59,
-    "battles": 2553,
+    "battles": 2579,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 305,
-    "encounters": 343,
+    "encounters": 345,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -2642,7 +2637,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 22,
-    "acc": 20,
+    "acc": 52,
     "level": 13
   },
   "titles": {
@@ -2747,7 +2742,23 @@
       "active": false
     },
     "P005": {
-      "favor": 70,
+      "favor": 100,
+      "active": false
+    },
+    "P006": {
+      "favor": 100,
+      "active": false
+    },
+    "L001": {
+      "favor": 100,
+      "active": false
+    },
+    "L002": {
+      "favor": 100,
+      "active": false
+    },
+    "L003": {
+      "favor": 100,
       "active": false
     }
   },
