@@ -7,11 +7,11 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790007143791,
-  "lastTick": 1790007143791,
+  "lastSeen": 1790007203792,
+  "lastTick": 1790007203792,
   "realm": 4,
   "stage": 0,
-  "exp": 29400.660264166454,
+  "exp": 29497.548686566453,
   "stone": 500,
   "equip": {
     "weapon": null,
@@ -111,7 +111,7 @@
   "trait": "P003",
   "bottle": {
     "liquid": 6,
-    "acc": 130,
+    "acc": 131,
     "level": 1
   },
   "partners": {},
