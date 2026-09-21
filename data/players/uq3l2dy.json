@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990502348,
-  "lastTick": 1789990502348,
-  "realm": 6,
-  "stage": 3,
-  "exp": 1521329.8424841762,
-  "stone": 44274,
+  "lastSeen": 1789990509212,
+  "lastTick": 1789990509212,
+  "realm": 7,
+  "stage": 0,
+  "exp": 0,
+  "stone": 46036,
   "equip": {
     "weapon": {
       "id": "it_pion6p0",
@@ -108,6 +108,16 @@
       "count": 2,
       "desc": "炼器材料",
       "id": "i_21cevzi"
+    },
+    {
+      "kind": "herb",
+      "ref": "herb_dark",
+      "name": "幽冥草",
+      "icon": "🖤",
+      "price": 340,
+      "count": 1,
+      "desc": "炼丹材料",
+      "id": "i_gw7a1cy"
     }
   ],
   "skills": [
@@ -162,8 +172,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 808740,
-        "kill": 173,
+        "exp": 825106,
+        "kill": 174,
         "dungeon": 4,
         "arena": 1
       },
@@ -176,8 +186,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 808740,
-        "kill": 173,
+        "exp": 825106,
+        "kill": 174,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -188,8 +198,8 @@
         "炎魔": 53,
         "dungeon": 4,
         "arena": 1,
-        "九幽冥王": 2,
-        "b4": 3,
+        "九幽冥王": 3,
+        "b4": 4,
         "幽魂将": 1
       },
       "claimed": [
@@ -229,9 +239,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 173,
+    "kills": 174,
     "deaths": 0,
-    "battles": 173,
+    "battles": 174,
     "breakthrough": 26,
     "offlineMin": 0,
     "meditate": 1,
