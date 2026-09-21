@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995486817,
-  "lastTick": 1789995486817,
+  "lastSeen": 1789995488109,
+  "lastTick": 1789995488109,
   "realm": 9,
   "stage": 3,
-  "exp": 222696428585.14096,
-  "stone": 2685926,
+  "exp": 259812511447.33112,
+  "stone": 2694588,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 30,
+      "count": 31,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -127,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 11,
+      "count": 12,
       "desc": "炼器材料",
       "id": "i_jir574s"
     },
@@ -143,48 +143,6 @@
       "def": 31,
       "hp": 327,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_nml9pyg",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·玄铁刀",
-      "atk": 133,
-      "def": 36,
-      "hp": 242,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_u53wosq",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·太极道衣",
-      "atk": 35,
-      "def": 111,
-      "hp": 679,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_7tfc0qy",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·聚灵戒",
-      "atk": 59,
-      "def": 30,
-      "hp": 312,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -1382,8 +1340,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 25890360,
-        "kill": 572,
+        "exp": 25960374,
+        "kill": 573,
         "dungeon": 213,
         "arena": 20
       },
@@ -1396,8 +1354,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 25890360,
-        "kill": 572,
+        "exp": 25960374,
+        "kill": 573,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1414,7 +1372,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 132,
         "混沌祖龙": 134,
-        "天兵": 120
+        "天兵": 121
       },
       "claimed": [
         "b2",
@@ -1457,9 +1415,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 572,
+    "kills": 573,
     "deaths": 0,
-    "battles": 572,
+    "battles": 573,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
