@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790011736565,
-  "lastTick": 1790011736565,
+  "lastSeen": 1790011741951,
+  "lastTick": 1790011741951,
   "realm": 31,
   "stage": 0,
-  "exp": 46900107375.8712,
-  "stone": 2827460319326.0703,
+  "exp": 281400638521.22723,
+  "stone": 2827460322794.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -952,7 +952,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 178,
+      "count": 179,
       "desc": "炼丹材料",
       "id": "i_qsfteum"
     },
@@ -976,7 +976,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 20,
+      "count": 22,
       "desc": "炼器材料",
       "id": "i_nn3fjek"
     },
@@ -2546,16 +2546,16 @@
         "arena": 20,
         "dungeon": 242,
         "meditate": 1,
-        "exp": 129751046956,
-        "kill": 1048
+        "exp": 129751075562,
+        "kill": 1052
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129850439050,
-        "kill": 2766,
+        "exp": 129850467656,
+        "kill": 2770,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2573,10 +2573,10 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 366,
-        "星斗海妖兽": 325,
+        "禁地守卫": 367,
+        "星斗海妖兽": 326,
         "天星宗弟子": 3,
-        "墨蛟": 354
+        "墨蛟": 356
       },
       "claimed": [
         "b2",
@@ -2620,9 +2620,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 2766,
+    "kills": 2770,
     "deaths": 65,
-    "battles": 2831,
+    "battles": 2835,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
@@ -2656,7 +2656,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 25,
-    "acc": 66,
+    "acc": 71,
     "level": 30
   },
   "titles": {
@@ -2790,7 +2790,7 @@
     },
     "L004": {
       "favor": 100,
-      "active": true
+      "active": false
     },
     "L101": {
       "favor": 100,
@@ -2806,7 +2806,7 @@
     },
     "L104": {
       "favor": 100,
-      "active": false
+      "active": true
     }
   },
   "sectWh": {
