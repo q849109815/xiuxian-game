@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995458603,
-  "lastTick": 1789995458603,
+  "lastSeen": 1789995461728,
+  "lastTick": 1789995461728,
   "realm": 9,
   "stage": 3,
-  "exp": 296928503081.5213,
-  "stone": 2472007,
+  "exp": 37116079192.19016,
+  "stone": 2497145,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -88,76 +88,6 @@
       "mp": 115
     },
     {
-      "id": "it_vbxbwvw",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·云锦袍",
-      "atk": 38,
-      "def": 133,
-      "hp": 852,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_wvfscxe",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·灵蛇杖",
-      "atk": 131,
-      "def": 38,
-      "hp": 308,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_fosiwdz",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·玄铁刀",
-      "atk": 194,
-      "def": 45,
-      "hp": 234,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_fwsmesy",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·混元幡",
-      "atk": 130,
-      "def": 43,
-      "hp": 324,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_d3rt12z",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·养魂环",
-      "atk": 73,
-      "def": 28,
-      "hp": 315,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "id": "it_u7pfbpk",
       "kind": "equip",
       "slot": "armor",
@@ -169,20 +99,6 @@
       "def": 135,
       "hp": 845,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_6ot5dlq",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·诛仙剑",
-      "atk": 188,
-      "def": 31,
-      "hp": 306,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -723,7 +639,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 12,
+      "count": 14,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -757,7 +673,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 6,
+      "count": 7,
       "desc": "炼器材料",
       "id": "i_jir574s"
     },
@@ -856,6 +772,34 @@
       "atk": 68,
       "def": 40,
       "hp": 332,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_5sxda6f",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·玄龟甲",
+      "atk": 40,
+      "def": 148,
+      "hp": 728,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_6zbe2td",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·玄铁刀",
+      "atk": 186,
+      "def": 28,
+      "hp": 352,
       "crit": 0,
       "mp": 115
     }
@@ -1956,8 +1900,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 24354748,
-        "kill": 548,
+        "exp": 24556792,
+        "kill": 551,
         "dungeon": 213,
         "arena": 20
       },
@@ -1970,8 +1914,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 24354748,
-        "kill": 548,
+        "exp": 24556792,
+        "kill": 551,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1986,9 +1930,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 122,
-        "混沌祖龙": 123,
-        "天兵": 117
+        "星宿仙君": 123,
+        "混沌祖龙": 124,
+        "天兵": 118
       },
       "claimed": [
         "b2",
@@ -2031,9 +1975,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 548,
+    "kills": 551,
     "deaths": 0,
-    "battles": 548,
+    "battles": 551,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
