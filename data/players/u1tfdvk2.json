@@ -7,8 +7,8 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790005525524,
-  "lastTick": 1790005525524,
+  "lastSeen": 1790005525347,
+  "lastTick": 1790005525347,
   "realm": 4,
   "stage": 0,
   "exp": 32572.884101964853,
@@ -64,13 +64,13 @@
     "daily": {
       "date": "2026-9-21",
       "prog": {
-        "arena": 10
+        "arena": 9
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
-        "arena": 10
+        "arena": 9
       },
       "claimed": []
     }
@@ -79,9 +79,9 @@
   "arena": {
     "score": 0,
     "wins": 0,
-    "losses": 10,
+    "losses": 9,
     "dayDate": "2026-9-21",
-    "fights": 10
+    "fights": 9
   },
   "mail": [],
   "karma": 0,
