@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789993835046,
-  "lastTick": 1789993835046,
+  "lastSeen": 1789993857209,
+  "lastTick": 1789993857209,
   "realm": 9,
   "stage": 3,
-  "exp": 192651548890.82385,
-  "stone": 338359,
+  "exp": 210165328062.71692,
+  "stone": 339359,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -250,7 +250,8 @@
     "rename": 0
   },
   "codes": [
-    "XIUXIAN2026"
+    "XIUXIAN2026",
+    "TIANDAO"
   ],
   "banned": false,
   "title": "",
