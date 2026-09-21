@@ -1,0 +1,99 @@
+{
+  "uid": "u1tfdvk2",
+  "name": "q849109815",
+  "pwd": "iz2s4w",
+  "gender": "m",
+  "avatar": "🧙",
+  "root": "metal",
+  "sect": null,
+  "createdAt": 1790003121304,
+  "lastSeen": 1790003121304,
+  "lastTick": 1790003121304,
+  "realm": 0,
+  "stage": 0,
+  "exp": 0,
+  "stone": 200,
+  "equip": {
+    "weapon": null,
+    "armor": null,
+    "ring": null,
+    "talisman": null
+  },
+  "bag": [],
+  "skills": [
+    {
+      "id": "sk002",
+      "level": 1
+    }
+  ],
+  "equipped": [
+    "sk002"
+  ],
+  "beasts": [],
+  "activeBeast": -1,
+  "riding": false,
+  "cave": {
+    "lv": {},
+    "array": "none",
+    "lastHarvest": 1790003121304,
+    "store": {}
+  },
+  "tasks": {
+    "mainIdx": 0,
+    "daily": {
+      "date": "",
+      "prog": {},
+      "claimed": []
+    },
+    "bounty": {
+      "prog": {},
+      "claimed": []
+    }
+  },
+  "sectInfo": null,
+  "arena": {
+    "score": 0,
+    "wins": 0,
+    "losses": 0,
+    "dayDate": "",
+    "fights": 0
+  },
+  "mail": [],
+  "karma": 0,
+  "dao": {
+    "partner": null,
+    "master": null,
+    "apprentices": []
+  },
+  "reinc": 0,
+  "spot": "valley",
+  "buffs": {
+    "pillAtk": 0,
+    "pillExpUntil": 0,
+    "rename": 0
+  },
+  "codes": [],
+  "banned": false,
+  "title": "",
+  "stats": {
+    "kills": 0,
+    "deaths": 0,
+    "battles": 0,
+    "breakthrough": 0,
+    "offlineMin": 0,
+    "meditate": 0,
+    "dungeon": 0,
+    "encounters": 0,
+    "rob": 0
+  },
+  "faction": "C001",
+  "trait": "P003",
+  "bottle": {
+    "liquid": 0,
+    "acc": 0,
+    "level": 1
+  },
+  "partners": {},
+  "mapsSeen": [],
+  "dungeonCleared": []
+}
