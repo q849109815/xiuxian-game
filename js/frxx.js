@@ -1,0 +1,232 @@
+/* =========================================================
+ * frxx.js —— 凡人修仙传 · 内容层
+ * 载入真实配置（32境界 / 4派系 / 37章主线 / 26副本 / 20功法 /
+ *               30法宝 / 24伙伴灵宠 / 19地图 / 12势力）
+ * 并提供：掌天瓶绿液、仙缘伙伴、派系、图鉴
+ * ========================================================= */
+
+const FRXX = {
+  data: null,       // frxx.json 原始资料
+  story: [],        // 37 章主线
+  loaded: false,
+
+  async load() {
+    if (this.loaded) return true;
+    const get = async (p) => {
+      try {
+        const r = await fetch('data/frxx/' + p, { cache: 'no-store' });
+        return r.ok ? await r.json() : null;
+      } catch (e) { return null; }
+    };
+    const [d, s, gp, cp] = await Promise.all([
+      get('frxx.json'), get('story.json'), get('game_patch.json'), get('content_patch.json'),
+    ]);
+    if (!d || !gp) return false;
+    this.data = d;
+    this.story = s || [];
+    this.applyPatch(gp, cp);
+    this.loaded = true;
+    return true;
+  },
+
+  /* ---------- 把真实数据并入引擎配置 ---------- */
+  applyPatch(gp, cp) {
+    const C = window.GAME_CONFIG;
+    // 32 真实境界（扁平：一层一突破）
+    C.realms = gp.realms;
+    C.stages = gp.stages;
+    // 成长曲线适配 32 层
+    const g = C.growthPerRealm || {};
+    for (const k in g) g[k] = g[k] * 0.42;
+    C.growthPerStage = C.growthPerStage || {};
+    for (const k in C.growthPerStage) C.growthPerStage[k] = 0;
+    // 真实地图 / 副本 / 势力
+    C.maps = gp.maps;
+    C.dungeons = gp.dungeons;
+    C.powers = gp.powers || [];
+    // 修炼速率：32 层重新标定（炼气约 17 分/层，道祖约 132 分/层）
+    C.cultivate = Object.assign({}, C.cultivate, { perRealm: 1.6 });
+    // 真实功法
+    if (cp && cp.skills && window.GAME_CONTENT) {
+      window.GAME_CONTENT.skills = cp.skills;
+    }
+  },
+
+  /* ---------- 派系 ---------- */
+  factions() { return (this.data && this.data.factions) || []; },
+  faction(id) { return this.factions().find((f) => f.id === id) || this.factions()[0]; },
+  traits() { return (this.data && this.data.traits) || []; },
+  trait(id) { return this.traits().find((t) => t.id === id) || null; },
+  factionSkills(cls) { return ((this.data && this.data.fskills) || []).filter((s) => s.cls === cls); },
+
+  /* ---------- 境界 ---------- */
+  realms() { return (this.data && this.data.realms) || []; },
+  realm(i) { const r = this.realms(); return r[Math.max(0, Math.min(r.length - 1, i | 0))] || { name: '凡人' }; },
+  realmName(p) { return this.realm(p.realm).name; },
+  bigName(p) { return this.realm(p.realm).big || '凡人'; },
+  /** 突破所需丹药（真实配置） */
+  breakPill(p) {
+    const rs = this.realms(), nx = rs[(p.realm | 0) + 1];
+    if (!nx) return null;
+    const d = nx.pill || nx.needPill;
+    if (!d) return null;
+    return { name: d.item, n: d.n, key: this._pillKey(d.item), trial: !!nx.trial };
+  },
+  _pillKey(name) { return 'pill_' + name; },
+  /** 是否备齐突破丹药（仅大境界关卡校验） */
+  hasBreakPill(p) {
+    const bp = this.breakPill(p);
+    if (!bp || !bp.trial) return { ok: true, need: null };
+    const bag = p.bag || [];
+    const own = bag.filter((x) => (x.name || '').indexOf(bp.name) >= 0)
+                   .reduce((a, b) => a + (b.count || 1), 0);
+    return { ok: own >= bp.n, need: bp, own };
+  },
+  /** 按名称消耗丹药 */
+  consumePillByName(p, name, n) {
+    let left = n;
+    p.bag = p.bag || [];
+    for (let i = 0; i < p.bag.length && left > 0; i++) {
+      const it = p.bag[i];
+      if ((it.name || '').indexOf(name) < 0) continue;
+      const c = it.count || 1;
+      if (c <= left) { p.bag.splice(i, 1); i--; left -= c; }
+      else { it.count = c - left; left = 0; }
+    }
+    return left === 0;
+  },
+
+  /* ---------- 掌天瓶（韩立核心外挂） ---------- */
+  bottleCap(p) { return 3 + Math.floor((p.realm || 0) * 0.8); },
+  /** 每 tick 积累绿液 */
+  bottleTick(p, sec) {
+    if (!p.bottle) p.bottle = { liquid: 0, acc: 0, level: 1 };
+    const every = Math.max(90, 300 - p.bottle.level * 18);   // 产液间隔（秒）
+    p.bottle.acc = (p.bottle.acc || 0) + sec;
+    let made = 0;
+    while (p.bottle.acc >= every) {
+      p.bottle.acc -= every;
+      if ((p.bottle.liquid || 0) < this.bottleCap(p)) { p.bottle.liquid = (p.bottle.liquid || 0) + 1; made++; }
+    }
+    return made;
+  },
+  /** 用绿液催熟灵草 */
+  useLiquidHerb(p, n) {
+    n = n || 1;
+    if (!p.bottle || (p.bottle.liquid || 0) < n) return { ok: false, msg: '绿液不足' };
+    p.bottle.liquid -= n;
+    const got = n * 3;
+    p.mats = p.mats || {};
+    p.mats.herb = (p.mats.herb || 0) + got;
+    if (window.SYS && SYS.addLog) SYS.addLog(p, `掌天瓶催熟灵草 ×${got}`);
+    return { ok: true, msg: `绿液催熟：获得灵草 ×${got}` };
+  },
+  /** 用绿液催熟修为（一次性大量修为） */
+  useLiquidExp(p, n) {
+    n = n || 1;
+    if (!p.bottle || (p.bottle.liquid || 0) < n) return { ok: false, msg: '绿液不足' };
+    const need = window.ENGINE ? ENGINE.expNeed(p) : 1000;
+    const gain = Math.round(need * 0.35 * n * (1 + (p.bottle.level - 1) * 0.15));
+    p.bottle.liquid -= n;
+    p.exp = (p.exp || 0) + gain;
+    return { ok: true, msg: `绿液炼化：修为 +${gain}`, gain };
+  },
+  /** 升级掌天瓶 */
+  upgradeBottle(p) {
+    if (!p.bottle) p.bottle = { liquid: 0, acc: 0, level: 1 };
+    const cost = 800 * Math.pow(2.2, p.bottle.level - 1);
+    if ((p.stone || 0) < cost) return { ok: false, msg: `灵石不足（需 ${Math.round(cost)}）` };
+    p.stone -= cost; p.bottle.level++;
+    return { ok: true, msg: `掌天瓶升至 ${p.bottle.level} 阶，产液更快` };
+  },
+
+  /* ---------- 仙缘伙伴 / 灵宠 ---------- */
+  partners() { return (this.data && this.data.partners) || []; },
+  pets() { return (this.data && this.data.pets) || []; },
+  allCompanions() { return this.partners().concat(this.pets()); },
+  companion(id) { return this.allCompanions().find((c) => c.id === id) || null; },
+  /** 伙伴列表（含好感状态） */
+  companionState(p) {
+    p.partners = p.partners || {};
+    return this.allCompanions().map((c) => {
+      const st = p.partners[c.id] || { favor: 0, active: false };
+      return Object.assign({}, c, { favor: st.favor || 0, active: !!st.active,
+        unlocked: this._unlocked(c, p), bonus: this._bonus(c, st.favor || 0) });
+    });
+  },
+  _unlocked(c, p) {
+    // 按获取途径粗略判断：主线伙伴随剧情解锁
+    const src = c.src || '';
+    if (src.includes('七玄门')) return (p.storyIdx || 0) >= 1;
+    if (src.includes('血色禁地')) return (p.storyIdx || 0) >= 8;
+    if (src.includes('黄枫谷')) return (p.storyIdx || 0) >= 6;
+    if (src.includes('乱星海')) return (p.storyIdx || 0) >= 13;
+    if (src.includes('虚天殿')) return (p.storyIdx || 0) >= 14;
+    if (src.includes('落云宗')) return (p.storyIdx || 0) >= 19;
+    if (src.includes('灵界') || src.includes('地渊')) return (p.storyIdx || 0) >= 25;
+    return (p.storyIdx || 0) >= 3;
+  },
+  _bonus(c, favor) {
+    const lv = favor >= 80 ? 3 : favor >= 50 ? 2 : favor >= 20 ? 1 : 0;
+    return { lv, atk: lv * 0.06, hp: lv * 0.08, desc: ['—', '初识', '相知', '莫逆'][lv] };
+  },
+  /** 提升好感 */
+  gainFavor(p, id, n) {
+    const c = this.companion(id);
+    if (!c) return { ok: false, msg: '无此人' };
+    p.partners = p.partners || {};
+    const st = p.partners[id] = p.partners[id] || { favor: 0, active: false };
+    const old = st.favor || 0;
+    st.favor = Math.min(100, old + n);
+    let msg = `${c.name} 好感 +${n}（${st.favor}/100）`;
+    const ob = this._bonus(c, old).lv, nb = this._bonus(c, st.favor).lv;
+    if (nb > ob) msg += `　关系提升：${this._bonus(c, st.favor).desc}`;
+    return { ok: true, msg, favor: st.favor };
+  },
+  /** 出战 / 撤回 */
+  toggleCompanion(p, id) {
+    p.partners = p.partners || {};
+    const c = this.companion(id);
+    if (!c) return { ok: false, msg: '无此人' };
+    const st = p.partners[id] = p.partners[id] || { favor: 0, active: false };
+    if (!this._unlocked(c, p)) return { ok: false, msg: `${c.name} 尚未结缘` };
+    const isPet = !id.startsWith('P0');
+    if (isPet) {
+      // 灵宠单出战
+      this.pets().forEach((x) => { if (x.id !== id && p.partners[x.id]) p.partners[x.id].active = false; });
+    }
+    st.active = !st.active;
+    return { ok: true, msg: `${c.name} ${st.active ? '出战' : '撤回'}`, active: st.active };
+  },
+  /** 出战伙伴提供的总加成 */
+  activeBonus(p) {
+    let atk = 0, hp = 0, names = [];
+    this.companionState(p).forEach((c) => {
+      if (c.active) { atk += c.bonus.atk; hp += c.bonus.hp; names.push(c.name); }
+    });
+    return { atk, hp, names };
+  },
+
+  /* ---------- 图鉴 ---------- */
+  codex(p) {
+    const realmsSeen = (p.realm || 0) + 1;
+    const skillsOwned = (p.skills || []).length;
+    const equipsSeen = new Set();
+    for (const k in (p.equip || {})) if (p.equip[k]) equipsSeen.add(k);
+    const compsMet = this.companionState(p).filter((c) => c.unlocked).length;
+    return [
+      { id: 'realm', name: '境界图鉴', icon: '☯️', now: realmsSeen, max: this.realms().length },
+      { id: 'skill', name: '功法图鉴', icon: '📜', now: skillsOwned, max: (this.data.skills || []).length },
+      { id: 'equip', name: '法宝图鉴', icon: '🔮', now: equipsSeen.size, max: 8 },
+      { id: 'partner', name: '仙缘图鉴', icon: '🌸', now: compsMet, max: this.allCompanions().length },
+      { id: 'dungeon', name: '秘境图鉴', icon: '🌀', now: (p.dungeonCleared || []).length, max: (this.data.dungeons || []).length },
+      { id: 'map', name: '山河图鉴', icon: '🗺️', now: (p.mapsSeen || []).length, max: (this.data.maps || []).length },
+    ];
+  },
+
+  /* ---------- 主线剧情 ---------- */
+  storyList() { return this.story; },
+  storyChapter(i) { return this.story[i] || null; },
+};
+
+window.FRXX = FRXX;
