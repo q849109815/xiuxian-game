@@ -226,24 +226,44 @@
   ],
   "slots": [
     {
+      "key": "helmet",
+      "name": "头盔",
+      "icon": "🪖"
+    },
+    {
+      "key": "necklace",
+      "name": "项链",
+      "icon": "📿"
+    },
+    {
+      "key": "bracelet",
+      "name": "护腕",
+      "icon": "🧤"
+    },
+    {
       "key": "weapon",
-      "name": "法宝",
+      "name": "兵器",
       "icon": "⚔️"
     },
     {
       "key": "armor",
-      "name": "护甲",
-      "icon": "🛡️"
+      "name": "衣甲",
+      "icon": "🥋"
+    },
+    {
+      "key": "artifact",
+      "name": "法宝",
+      "icon": "🔮"
+    },
+    {
+      "key": "boots",
+      "name": "靴子",
+      "icon": "👢"
     },
     {
       "key": "ring",
-      "name": "灵戒",
+      "name": "戒指",
       "icon": "💍"
-    },
-    {
-      "key": "talisman",
-      "name": "符箓",
-      "icon": "📜"
     }
   ],
   "qualities": [
