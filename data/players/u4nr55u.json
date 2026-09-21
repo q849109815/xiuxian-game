@@ -7,8 +7,8 @@
   "root": "metal",
   "sect": "s_wuji",
   "createdAt": 1789991679171,
-  "lastSeen": 1789991679171,
-  "lastTick": 1789991679171,
+  "lastSeen": 1789991684071,
+  "lastTick": 1789991684071,
   "realm": 0,
   "stage": 0,
   "exp": 0,
@@ -34,7 +34,7 @@
   "tasks": {
     "mainIdx": 0,
     "daily": {
-      "date": "",
+      "date": "2026-9-21",
       "prog": {},
       "claimed": []
     },
