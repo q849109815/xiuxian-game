@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790011645284,
-  "lastTick": 1790011645284,
+  "lastSeen": 1790011648247,
+  "lastTick": 1790011648247,
   "realm": 31,
   "stage": 0,
-  "exp": 340405,
-  "stone": 2827446308078.0703,
+  "exp": 140700666908.6136,
+  "stone": 2827446310960.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -132,20 +132,6 @@
   },
   "bag": [
     {
-      "id": "it_vz69y9k",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·云锦袍",
-      "atk": 79,
-      "def": 345,
-      "hp": 2571,
-      "crit": 0,
-      "mp": 337
-    },
-    {
       "id": "it_g47j956",
       "kind": "equip",
       "slot": "weapon",
@@ -193,7 +179,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 92,
+      "count": 93,
       "desc": "炼丹材料",
       "id": "i_e5kvmuj"
     },
@@ -217,7 +203,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 72,
+      "count": 73,
       "desc": "炼器材料",
       "id": "i_e3yde46"
     },
@@ -1243,6 +1229,20 @@
       "atk": 64,
       "def": 425,
       "hp": 2793,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_7ecj4w9",
+      "kind": "equip",
+      "slot": "helmet",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·玄铁盔",
+      "atk": 82,
+      "def": 286,
+      "hp": 1301,
       "crit": 0,
       "mp": 337
     }
@@ -2546,16 +2546,16 @@
         "arena": 20,
         "dungeon": 93,
         "meditate": 1,
-        "exp": 129750458138,
-        "kill": 971
+        "exp": 129750483118,
+        "kill": 974
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129849850232,
-        "kill": 2689,
+        "exp": 129849875212,
+        "kill": 2692,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2574,9 +2574,9 @@
         "混沌祖龙": 508,
         "天兵": 506,
         "禁地守卫": 331,
-        "星斗海妖兽": 302,
+        "星斗海妖兽": 303,
         "天星宗弟子": 3,
-        "墨蛟": 335
+        "墨蛟": 337
       },
       "claimed": [
         "b2",
@@ -2620,9 +2620,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 2689,
+    "kills": 2692,
     "deaths": 65,
-    "battles": 2754,
+    "battles": 2757,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
@@ -2656,7 +2656,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 24,
-    "acc": 64,
+    "acc": 67,
     "level": 30
   },
   "titles": {
