@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990192097,
-  "lastTick": 1789990192097,
+  "lastSeen": 1789990193143,
+  "lastTick": 1789990193143,
   "realm": 4,
   "stage": 3,
-  "exp": 2321966.2941000056,
-  "stone": 11689,
+  "exp": 2368508.5686000055,
+  "stone": 12535,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -81,21 +81,11 @@
     },
     {
       "kind": "herb",
-      "ref": "herb_soul",
-      "name": "养魂花",
-      "icon": "🌸",
-      "price": 90,
-      "count": 3,
-      "desc": "炼丹材料",
-      "id": "i_q0unirj"
-    },
-    {
-      "kind": "herb",
       "ref": "herb_fire",
       "name": "赤炎莲",
       "icon": "🔥",
       "price": 180,
-      "count": 28,
+      "count": 26,
       "desc": "炼丹材料",
       "id": "i_4dx4axl"
     },
@@ -301,8 +291,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 331150,
-        "kill": 88,
+        "exp": 335978,
+        "kill": 89,
         "dungeon": 4
       },
       "claimed": []
@@ -310,16 +300,16 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 331150,
-        "kill": 88,
+        "exp": 335978,
+        "kill": 89,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
         "熔岩巨人": 23,
-        "b3": 54,
+        "b3": 55,
         "火麒麟": 11,
-        "炎魔": 20,
+        "炎魔": 21,
         "dungeon": 4
       },
       "claimed": []
@@ -328,7 +318,7 @@
   "sectInfo": {
     "id": "s_qingyun",
     "rankIdx": 0,
-    "contrib": 190,
+    "contrib": 240,
     "joinedAt": 1789989635634
   },
   "arena": {
@@ -356,9 +346,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 88,
+    "kills": 89,
     "deaths": 0,
-    "battles": 88,
+    "battles": 89,
     "breakthrough": 19,
     "offlineMin": 0,
     "meditate": 1,
