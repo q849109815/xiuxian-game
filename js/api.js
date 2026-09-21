@@ -230,6 +230,29 @@ async function flushQueue() {
 }
 function queueSize() { return WRITE_QUEUE.length; }
 
+/* ---------------- 共享文件的事务性修改（宗门/市场/聊天等多人写同一文件） ----------------
+ * 读 → 改 → 写，遇到 409 冲突就重读重试，最多 3 次。
+ * fn(obj) 返回新的对象；返回 undefined 表示放弃写入。
+ */
+async function mutateShared(path, fn, message, tries = 3) {
+  for (let i = 0; i < tries; i++) {
+    let obj = null;
+    try { obj = await readJSON(path, { useCache: false }); } catch (e) { if (e.code !== 404) throw e; }
+    obj = obj || null;
+    const next = fn(obj);
+    if (next === undefined) return obj;
+    delete SHA_MAP[path]; // 强制写前重新取 sha，避免用旧 sha 冲突
+    try {
+      await writeJSON(path, next, message);
+      return next;
+    } catch (e) {
+      if (e.code === 409) { await sleep(600 * (i + 1)); continue; }
+      throw e;
+    }
+  }
+  throw new Error('CONFLICT_RETRY_EXHAUSTED');
+}
+
 /* ---------------- 目录列举（admin 用） ---------------- */
 async function listDir(path) {
   const r = await ghRequest(`/repos/${GH.owner}/${GH.repo}/contents/${path}?ref=${GH.dataBranch}`);
@@ -263,5 +286,5 @@ const Net = {
 GH.extraEndpoints = JSON.parse(localStorage.getItem('xx_extra_ep') || '[]');
 
 window.GH = GH; window.Net = Net;
-window.readJSON = readJSON; window.writeJSON = writeJSON; window.listDir = listDir;
+window.readJSON = readJSON; window.writeJSON = writeJSON; window.listDir = listDir; window.mutateShared = mutateShared;
 window.playerPath = playerPath; window.hashUid = hashUid; window.hashPwd = hashPwd;
