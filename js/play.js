@@ -339,3 +339,246 @@ window.ACTSYS = ACTSYS;
 window.REALQ = REALQ;
 window.SECTEX = SECTEX;
 window.TITLE = TITLE;
+
+
+/* ============ 六、时装 / 外观（22_外观时装 20 套） ============ */
+const SKIN = {
+  S: () => window.GAME_SOCIAL || {},
+  list() { return this.S().skins || []; },
+  init(p) { p.skin = p.skin || { owned: [], wear: {} }; return p.skin; },
+  /** 已解锁的外观 */
+  check(p) {
+    this.init(p);
+    const cls = p.faction || p.cls || '';
+    const out = [];
+    for (const sk of this.list()) {
+      const clsOk = sk.cls === '通用' || sk.cls === cls || !cls;
+      const realmOk = (p.realm || 0) >= sk.realm;
+      const ok = clsOk && realmOk;
+      const owned = p.skin.owned.indexOf(sk.id) >= 0;
+      if (ok && !owned && sk.realm === 0) p.skin.owned.push(sk.id);  // 初始外观直接送
+      out.push({ ...sk, clsOk, realmOk, ok, owned: owned || sk.realm === 0 });
+    }
+    return out;
+  },
+  /** 解锁（消耗灵石） */
+  unlock(p, id) {
+    this.init(p);
+    const sk = this.list().find((x) => x.id === id);
+    if (!sk) return { ok: false, msg: '无此外观' };
+    if (p.skin.owned.indexOf(id) >= 0) return { ok: false, msg: '已拥有' };
+    const cost = 500 * Math.pow(3, Math.floor(sk.realm / 4));
+    if ((p.stone || 0) < cost) return { ok: false, msg: `灵石不足（需 ${cost}）` };
+    p.stone -= cost;
+    if (window.WALLET) WALLET.init(p), p.wallet.C001 = p.stone;
+    p.skin.owned.push(id);
+    return { ok: true, msg: `解锁【${sk.name}】`, cost };
+  },
+  /** 穿戴 / 卸下 */
+  wear(p, id) {
+    this.init(p);
+    const sk = this.list().find((x) => x.id === id);
+    if (!sk || p.skin.owned.indexOf(id) < 0) return { ok: false, msg: '尚未拥有' };
+    const cur = p.skin.wear[sk.type];
+    p.skin.wear[sk.type] = (cur === id) ? null : id;
+    return { ok: true, msg: p.skin.wear[sk.type] ? `已穿戴【${sk.name}】` : '已卸下', type: sk.type };
+  },
+  /** 汇总加成 */
+  buff(p) {
+    this.init(p);
+    const out = {};
+    for (const t in p.skin.wear) {
+      const id = p.skin.wear[t];
+      if (!id) continue;
+      const sk = this.list().find((x) => x.id === id);
+      if (!sk) continue;
+      for (const k in (sk.buff || {})) out[k] = (out[k] || 0) + sk.buff[k];
+    }
+    return out;
+  },
+  /** 当前穿戴概览 */
+  wearing(p) {
+    this.init(p);
+    return ['时装', '翅膀', '坐骑', '环身特效'].map((t) => {
+      const id = p.skin.wear[t];
+      const sk = id ? this.list().find((x) => x.id === id) : null;
+      return { type: t, name: sk ? sk.name : '未穿戴', icon: sk ? sk.icon : '➖' };
+    });
+  },
+};
+
+/* ============ 七、灵虫（08_伙伴灵宠 L001~L004） ============ */
+const WORM = {
+  S: () => window.GAME_SOCIAL || {},
+  list() { return this.S().worms || []; },
+  init(p) { p.worm = p.worm || { own: [], cur: null, feed: {} }; return p.worm; },
+  /** 拥有数量 */
+  count(p, id) { this.init(p); return p.worm.own.filter((x) => x === id).length; },
+  /** 获得一只 */
+  gain(p, id, n = 1) {
+    this.init(p);
+    const w = this.list().find((x) => x.id === id);
+    if (!w) return { ok: false, msg: '无此灵虫' };
+    for (let i = 0; i < n; i++) if (p.worm.own.length < 999) p.worm.own.push(id);
+    return { ok: true, msg: `获得 ${w.name} ×${n}` };
+  },
+  /** 出战 */
+  set(p, id) {
+    this.init(p);
+    if (p.worm.own.indexOf(id) < 0) return { ok: false, msg: '未拥有' };
+    p.worm.cur = (p.worm.cur === id) ? null : id;
+    const w = this.list().find((x) => x.id === id);
+    return { ok: true, msg: p.worm.cur ? `${w.name} 出战` : '已收回' };
+  },
+  /** 进化（噬金虫 → 噬金虫王） */
+  evolve(p, id) {
+    this.init(p);
+    const w = this.list().find((x) => x.id === id);
+    if (!w || !w.evolve) return { ok: false, msg: '该灵虫无法进化' };
+    const need = w.needCount || 30;
+    if (this.count(p, id) < need) return { ok: false, msg: `需要 ${need} 只（当前 ${this.count(p, id)}）` };
+    p.worm.own = p.worm.own.filter((x) => x !== id);
+    p.worm.own.push(w.evolve);
+    const nw = this.list().find((x) => x.id === w.evolve);
+    if (p.worm.cur === id) p.worm.cur = w.evolve;
+    return { ok: true, msg: `【${w.name}】进化为【${nw.name}】！` };
+  },
+  buff(p) {
+    this.init(p);
+    if (!p.worm.cur) return {};
+    const w = this.list().find((x) => x.id === p.worm.cur);
+    if (!w) return {};
+    const n = this.count(p, p.worm.cur);
+    const mul = 1 + Math.min(1.5, Math.log10(1 + n) * 0.9);   // 数量越多越强
+    const out = {};
+    for (const k in (w.buff || {})) out[k] = w.buff[k] * mul;
+    return out;
+  },
+};
+
+/* ============ 八、好友 / 组队 / 私聊（18_社交宗门） ============ */
+const SOCIALX = {
+  S: () => window.GAME_SOCIAL || {},
+  init(p) {
+    p.social = p.social || { friends: [], team: null, dm: [] };
+    return p.social;
+  },
+  /* 好友 */
+  maxFriend() { return (this.S().friend || {}).max || 50; },
+  addFriend(p, uid, name) {
+    this.init(p);
+    if (!uid || uid === p.uid) return { ok: false, msg: '无法添加' };
+    if (p.social.friends.length >= this.maxFriend()) return { ok: false, msg: '好友已达上限' };
+    if (p.social.friends.some((f) => f.uid === uid)) return { ok: false, msg: '已在好友列表' };
+    p.social.friends.push({ uid, name: name || uid, at: Date.now() });
+    return { ok: true, msg: `已添加道友【${name || uid}】` };
+  },
+  delFriend(p, uid) {
+    this.init(p);
+    p.social.friends = p.social.friends.filter((f) => f.uid !== uid);
+    return { ok: true, msg: '已删除' };
+  },
+  friendBuff(p) {
+    this.init(p);
+    const n = Math.min(p.social.friends.length, 20);
+    return { atk: n * ((this.S().friend || {}).buffPerFriend || 0.005) };
+  },
+  /* 组队 */
+  maxTeam() { return (this.S().team || {}).max || 5; },
+  createTeam(p) {
+    this.init(p);
+    p.social.team = { lead: p.name, members: [{ uid: p.uid, name: p.name, power: (window.ENGINE && ENGINE.power(p)) || 0 }] };
+    return { ok: true, msg: '队伍已创建' };
+  },
+  joinTeam(p, name, power) {
+    this.init(p);
+    if (!p.social.team) p.social.team = { lead: name, members: [] };
+    if (p.social.team.members.length >= this.maxTeam()) return { ok: false, msg: '队伍已满' };
+    p.social.team.members.push({ uid: 'ai_' + Date.now(), name, power: power || 100 });
+    return { ok: true, msg: `【${name}】加入队伍` };
+  },
+  teamBuff(p) {
+    this.init(p);
+    if (!p.social.team) return {};
+    const n = Math.max(0, p.social.team.members.length - 1);
+    const per = (this.S().team || {}).bonusPerMate || 0.06;
+    return { atk: n * per, hp: n * per };
+  },
+  /* 私聊 */
+  sendDM(p, to, text) {
+    this.init(p);
+    p.social.dm.push({ to, from: p.name, text, at: Date.now() });
+    if (p.social.dm.length > 50) p.social.dm.shift();
+    return { ok: true, msg: '已发送' };
+  },
+};
+
+/* ============ 九、仙市拍卖行（18_社交宗门 A001） ============ */
+const AUCTION = {
+  S: () => window.GAME_SOCIAL || {},
+  fee() { return (this.S().auction || {}).fee || 0.05; },
+  /** 上架（存入全服拍卖数据） */
+  sell(p, item, price) {
+    const min = (this.S().auction || {}).minPrice || 100;
+    if (price < min) return { ok: false, msg: `最低 ${min} 灵石` };
+    const fee = Math.round(price * this.fee());
+    if ((p.stone || 0) < fee) return { ok: false, msg: `手续费不足（需 ${fee}）` };
+    p.stone -= fee;
+    if (window.WALLET) { WALLET.init(p); p.wallet.C001 = p.stone; }
+    const idx = (p.bag || []).findIndex((x) => x.id === item.id);
+    if (idx >= 0) p.bag.splice(idx, 1);
+    p.auction = p.auction || [];
+    p.auction.push({ item, price, at: Date.now(), id: 'a_' + Date.now() });
+    return { ok: true, msg: `已上架【${item.name}】，售价 ${price}（手续费 ${fee}）` };
+  },
+  /** 购买（从全服列表） */
+  buy(p, entry) {
+    if ((p.stone || 0) < entry.price) return { ok: false, msg: '灵石不足' };
+    p.stone -= entry.price;
+    if (window.WALLET) { WALLET.init(p); p.wallet.C001 = p.stone; }
+    p.bag = p.bag || [];
+    p.bag.push(entry.item);
+    return { ok: true, msg: `购得【${entry.item.name}】` };
+  },
+  /** 全服货架（本地模拟：自己的 + 系统寄售） */
+  board(p) {
+    const mine = p.auction || [];
+    const sys = ((window.GAME_SOCIAL || {}).sectShop || []).slice(0, 4).map((x, i) => ({
+      id: 'sys_' + i, item: { id: 'sys' + i, name: x.name, icon: x.icon, kind: 'mat' },
+      price: 500 * (i + 1), at: Date.now(), sys: true,
+    }));
+    return mine.concat(sys);
+  },
+};
+
+/* ============ 十、宗门技能（18_社交宗门 S009） ============ */
+const SECTSKILL = {
+  list() { return (window.GAME_SOCIAL || {}).sectSkills || []; },
+  init(p) { p.sectSkill = p.sectSkill || []; return p.sectSkill; },
+  learn(p, id) {
+    this.init(p);
+    const sk = this.list().find((x) => x.id === id);
+    if (!sk) return { ok: false, msg: '无此技能' };
+    if (p.sectSkill.indexOf(id) >= 0) return { ok: false, msg: '已学习' };
+    if (!window.WALLET || WALLET.get(p, 'C005') < sk.cost) return { ok: false, msg: `贡献不足（需 ${sk.cost}）` };
+    WALLET.add(p, 'C005', -sk.cost);
+    p.sectSkill.push(id);
+    return { ok: true, msg: `习得【${sk.name}】` };
+  },
+  buff(p) {
+    this.init(p);
+    const out = {};
+    for (const id of p.sectSkill) {
+      const sk = this.list().find((x) => x.id === id);
+      if (sk) for (const k in (sk.buff || {})) out[k] = (out[k] || 0) + sk.buff[k];
+    }
+    return out;
+  },
+};
+
+window.SKIN = SKIN;
+window.WORM = WORM;
+window.SOCIALX = SOCIALX;
+window.AUCTION = AUCTION;
+window.SECTSKILL = SECTSKILL;
+
