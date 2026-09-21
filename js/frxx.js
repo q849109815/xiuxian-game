@@ -207,22 +207,34 @@ const FRXX = {
     return { atk, hp, names };
   },
 
-  /* ---------- 图鉴 ---------- */
+  /* ---------- 图鉴（25_图鉴系统 8 类） ---------- */
   codex(p) {
-    const realmsSeen = (p.realm || 0) + 1;
-    const skillsOwned = (p.skills || []).length;
-    const equipsSeen = new Set();
-    for (const k in (p.equip || {})) if (p.equip[k]) equipsSeen.add(k);
-    const compsMet = this.companionState(p).filter((c) => c.unlocked).length;
+    p.codexSeen = p.codexSeen || {};
+    const seen = (k) => (p.codexSeen[k] || []);
+    const R = this.realms().length;
+    const allMons = ((window.GAME_CONTENT && GAME_CONTENT.monsters) || []);
     return [
-      { id: 'realm', name: '境界图鉴', icon: '☯️', now: realmsSeen, max: this.realms().length },
-      { id: 'skill', name: '功法图鉴', icon: '📜', now: skillsOwned, max: (this.data.skills || []).length },
-      { id: 'equip', name: '法宝图鉴', icon: '🔮', now: equipsSeen.size, max: 8 },
-      { id: 'partner', name: '仙缘图鉴', icon: '🌸', now: compsMet, max: this.allCompanions().length },
-      { id: 'dungeon', name: '秘境图鉴', icon: '🌀', now: (p.dungeonCleared || []).length, max: (this.data.dungeons || []).length },
-      { id: 'map', name: '山河图鉴', icon: '🗺️', now: (p.mapsSeen || []).length, max: (this.data.maps || []).length },
+      { id: 'realm', name: '境界图鉴', icon: '☯️', now: Math.min(R, (p.realm || 0) + 1), max: R, list: this.realms().map((r, i) => ({ n: r.name, got: (p.realm || 0) >= i })) },
+      { id: 'skill', name: '功法图鉴', icon: '📜', now: (p.skills || []).length, max: (this.data.skills || []).length + 14,
+        list: ((window.GAME_CONTENT && GAME_CONTENT.skills) || []).map((x) => ({ n: x.name, got: (p.skills || []).some((y) => y.id === x.id) })) },
+      { id: 'equip', name: '法宝图鉴', icon: '🔮', now: Object.keys(p.equip || {}).filter((k) => p.equip[k]).length + (p.bag || []).filter((x) => x.fr).length,
+        max: (this.data.equips || []).length,
+        list: (this.data.equips || []).map((e) => ({ n: e.name, got: (p.bag || []).some((x) => (x.name || '') === e.name) || Object.values(p.equip || {}).some((x) => x && x.name === e.name) })) },
+      { id: 'partner', name: '仙缘图鉴', icon: '🌸', now: this.companionState(p).filter((c) => c.unlocked).length, max: this.allCompanions().length,
+        list: this.allCompanions().map((c) => ({ n: c.name, got: this._unlocked(c, p) })) },
+      { id: 'dungeon', name: '秘境图鉴', icon: '🌀', now: (p.dungeonCleared || []).length, max: ((window.GAME_CONFIG && GAME_CONFIG.dungeons) || []).length,
+        list: ((window.GAME_CONFIG && GAME_CONFIG.dungeons) || []).map((d) => ({ n: d.name, got: (p.dungeonCleared || []).indexOf(d.id) >= 0 })) },
+      { id: 'map', name: '山河图鉴', icon: '🗺️', now: ((window.GAME_CONFIG && GAME_CONFIG.maps) || []).filter((m) => (p.realm || 0) >= (m.minRealm || 0)).length, max: ((window.GAME_CONFIG && GAME_CONFIG.maps) || []).length,
+        list: ((window.GAME_CONFIG && GAME_CONFIG.maps) || []).map((m) => ({ n: m.name, got: (p.realm || 0) >= (m.minRealm || 0) })) },
+      { id: 'monster', name: '妖兽图鉴', icon: '👹', now: new Set((p.killed || [])).size, max: Math.max(1, allMons.length),
+        list: allMons.map((m) => ({ n: m.name, got: (p.killed || []).indexOf(m.name) >= 0 })) },
+      { id: 'pill', name: '丹药图鉴', icon: '💊', now: new Set((p.pillsUsed || [])).size, max: (this.data.pills || []).length,
+        list: (this.data.pills || []).map((x) => ({ n: x.name, got: (p.pillsUsed || []).indexOf(x.name) >= 0 })) },
     ];
   },
+  /** 记录击杀 / 用药，供图鉴使用 */
+  markKill(p, name) { p.killed = p.killed || []; if (name && p.killed.indexOf(name) < 0 && p.killed.length < 400) p.killed.push(name); },
+  markPill(p, name) { p.pillsUsed = p.pillsUsed || []; if (name && p.pillsUsed.indexOf(name) < 0) p.pillsUsed.push(name); },
 
   /* ---------- 主线剧情 ---------- */
   storyList() { return this.story; },
