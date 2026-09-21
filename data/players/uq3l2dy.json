@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996044095,
-  "lastTick": 1789996044095,
+  "lastSeen": 1789996047522,
+  "lastTick": 1789996047522,
   "realm": 9,
   "stage": 3,
-  "exp": 154650295266.12567,
-  "stone": 5798447,
+  "exp": 247440539714.60107,
+  "stone": 5823984,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -116,34 +116,6 @@
       "mp": 115
     },
     {
-      "id": "it_a23qnfr",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·阴阳环",
-      "atk": 68,
-      "def": 41,
-      "hp": 238,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_wadwgex",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·诛仙剑",
-      "atk": 167,
-      "def": 34,
-      "hp": 300,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "id": "it_9uy22ot",
       "kind": "equip",
       "slot": "weapon",
@@ -155,76 +127,6 @@
       "def": 43,
       "hp": 281,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_xqnbeu2",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·诛仙剑",
-      "atk": 208,
-      "def": 31,
-      "hp": 236,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_w2pjgjh",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·云锦袍",
-      "atk": 35,
-      "def": 119,
-      "hp": 928,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_dae78dy",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·麒麟铠",
-      "atk": 39,
-      "def": 95,
-      "hp": 1016,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_7a77obe",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·破妄戒",
-      "atk": 69,
-      "def": 32,
-      "hp": 318,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_7747ons",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·太虚戒",
-      "atk": 86,
-      "def": 33,
-      "hp": 263,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -481,7 +383,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 6,
+      "count": 7,
       "desc": "炼器材料",
       "id": "i_1c42jnp"
     },
@@ -646,6 +548,34 @@
       "atk": 41,
       "def": 148,
       "hp": 651,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_yv3w094",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·青锋剑",
+      "atk": 184,
+      "def": 37,
+      "hp": 252,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_zk4ohyb",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·诛仙剑",
+      "atk": 136,
+      "def": 38,
+      "hp": 246,
       "crit": 0,
       "mp": 115
     }
@@ -1773,8 +1703,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 53307504,
-        "kill": 998,
+        "exp": 53519832,
+        "kill": 1001,
         "dungeon": 213,
         "arena": 20
       },
@@ -1787,8 +1717,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 53307504,
-        "kill": 998,
+        "exp": 53519832,
+        "kill": 1001,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1804,8 +1734,8 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 273,
-        "混沌祖龙": 277,
-        "天兵": 262
+        "混沌祖龙": 279,
+        "天兵": 263
       },
       "claimed": [
         "b2",
@@ -1848,9 +1778,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 998,
+    "kills": 1001,
     "deaths": 0,
-    "battles": 998,
+    "battles": 1001,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
