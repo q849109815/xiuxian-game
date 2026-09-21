@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995781949,
-  "lastTick": 1789995781949,
+  "lastSeen": 1789995783391,
+  "lastTick": 1789995783391,
   "realm": 9,
   "stage": 3,
-  "exp": 247440461864.60107,
-  "stone": 4305617,
+  "exp": 278370544581.4262,
+  "stone": 4314997,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 135,
+      "count": 136,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -170,30 +170,16 @@
       "mp": 115
     },
     {
-      "id": "it_f0srlps",
+      "id": "it_eoleush",
       "kind": "equip",
-      "slot": "armor",
-      "q": 0,
+      "slot": "weapon",
+      "q": 1,
       "level": 0,
       "temper": 0,
-      "name": "凡品·太极道衣",
-      "atk": 35,
-      "def": 124,
-      "hp": 964,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_eyeazni",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·阴阳环",
-      "atk": 80,
-      "def": 37,
-      "hp": 237,
+      "name": "灵器·灵蛇杖",
+      "atk": 205,
+      "def": 36,
+      "hp": 370,
       "crit": 0,
       "mp": 115
     }
@@ -1312,8 +1298,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 40037138,
-        "kill": 791,
+        "exp": 40109148,
+        "kill": 792,
         "dungeon": 213,
         "arena": 20
       },
@@ -1326,8 +1312,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 40037138,
-        "kill": 791,
+        "exp": 40109148,
+        "kill": 792,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1344,7 +1330,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 191,
         "混沌祖龙": 217,
-        "天兵": 197
+        "天兵": 198
       },
       "claimed": [
         "b2",
@@ -1387,9 +1373,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 791,
+    "kills": 792,
     "deaths": 0,
-    "battles": 791,
+    "battles": 792,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
