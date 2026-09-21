@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995902816,
-  "lastTick": 1789995902816,
+  "lastSeen": 1789995905023,
+  "lastTick": 1789995905023,
   "realm": 9,
   "stage": 3,
-  "exp": 247440393638.60107,
-  "stone": 4986055,
+  "exp": 309300544128.25134,
+  "stone": 5000765,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 177,
+      "count": 178,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -117,7 +117,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 65,
+      "count": 67,
       "desc": "炼器材料",
       "id": "i_n9wf73t"
     },
@@ -127,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 76,
+      "count": 77,
       "desc": "炼器材料",
       "id": "i_jir574s"
     },
@@ -712,6 +712,20 @@
       "atk": 33,
       "def": 149,
       "hp": 1040,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_97px1mi",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·养魂环",
+      "atk": 87,
+      "def": 38,
+      "hp": 361,
       "crit": 0,
       "mp": 115
     }
@@ -1839,8 +1853,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 46318810,
-        "kill": 888,
+        "exp": 46447886,
+        "kill": 890,
         "dungeon": 213,
         "arena": 20
       },
@@ -1853,8 +1867,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 46318810,
-        "kill": 888,
+        "exp": 46447886,
+        "kill": 890,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1869,7 +1883,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 228,
+        "星宿仙君": 230,
         "混沌祖龙": 245,
         "天兵": 229
       },
@@ -1914,17 +1928,17 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 888,
+    "kills": 890,
     "deaths": 0,
-    "battles": 888,
+    "battles": 890,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 100,
+    "encounters": 101,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 3195
+  "bonusWuxing": 3240
 }
