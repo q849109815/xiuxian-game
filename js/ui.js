@@ -222,8 +222,10 @@ function renderMaps(p) {
   $$('#mapList [data-map]').forEach((el) => el.onclick = () => {
     const i = +el.dataset.map;
     if (p.realm < GAME_CONFIG.maps[i].minRealm) return toast('修为不足，无法进入', 'err');
-    CUR_MAP = i; renderMaps(p);
+    CUR_MAP = i; renderMaps(p); setScene(GAME_CONFIG.maps[i].name);
   });
+  // 初次进入时按当前所选地图铺场景
+  setScene((cfg.maps[CUR_MAP] || {}).name);
 }
 function renderDungeons(p) {
   const list = GAME_CONFIG.dungeons || [];
@@ -971,7 +973,15 @@ function renderStory() {
   const sc = s.scenes[ST_SCENE];
   const c1 = $('#stChapter'); if (c1) c1.textContent = `${s.title}　（${ST_SCENE + 1}/${s.scenes.length}）`;
   const n1 = $('#stName'); if (n1) n1.textContent = sc.who;
-  const f1 = $('#stFace'); if (f1) f1.textContent = sc.face;
+  const fe = $('#stFaceEmoji'); const pImg = $('#stPortraitImg');
+  const src = (window.ART && ART.charOf) ? ART.charOf(sc.who) : null;
+  if (pImg && src) {
+    pImg.src = src; pImg.style.display = 'block';
+    if (fe) { fe.style.display = 'none'; fe.textContent = ''; }
+  } else {
+    if (pImg) { pImg.style.display = 'none'; pImg.removeAttribute('src'); }
+    if (fe) { fe.style.display = ''; fe.textContent = sc.face || '🧓'; }
+  }
   const t1 = $('#stText');
   if (t1) t1.innerHTML = s.scenes.map((x, k) =>
     `<div class="ln ${k === ST_SCENE ? 'now' : k < ST_SCENE ? 'old' : ''}" style="${k > ST_SCENE ? 'display:none' : ''}"><b>${x.who}</b>：${x.text}</div>`).join('');
@@ -1068,7 +1078,12 @@ function renderBottle(p) {
   const cap = F.bottleCap(p);
   const lv = p.bottle.level || 1;
   const every = Math.max(90, 300 - lv * 18);
-  const art = $('#bottleArt'); if (art) art.textContent = '🏺';
+  const art = $('#bottleArt');
+  if (art) {
+    const src = (window.ART && ART.itemOf) ? ART.itemOf('掌天瓶') : null;
+    if (src) { art.innerHTML = `<img src="${src}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`; }
+    else art.textContent = '🏺';
+  }
   const l = $('#bottleLv'); if (l) l.textContent = lv;
   const r = $('#bottleRate'); if (r) r.textContent = `产液间隔 ${every} 秒　上限 ${cap} 滴`;
   const bar = $('#bottleBar');
@@ -1191,6 +1206,19 @@ function renderTraitDesc() {
   return t ? `<div class="small" style="color:var(--jade)">${t.name}：${t.desc}</div>` : '';
 }
 
+function setScene(mapName) {
+  const el = document.getElementById('sceneImg');
+  if (!el || !window.ART) return;
+  const src = ART.sceneOf(mapName);
+  if (el.getAttribute('src') === src) return;
+  el.src = src; el.style.display = 'block';
+  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+  // 切曲
+  if (window.AUDIO_SCENE && window.AUDIO) {
+    AUDIO.play(AUDIO_SCENE.trackFor(UI.CUR_WIN || CUR_WIN, mapName));
+  }
+}
+
 window.UI = {
   initBackground, toast, fmt, timeAgo, startQi, flashBreakthrough,
   renderHUD, renderMeditate, renderAttrs, renderSpots, renderMaps, renderDungeons,
@@ -1200,6 +1228,7 @@ window.UI = {
   renderTracker, renderToolBar, openWin, closeWin, bindWinTabs, renderStory, renderMini, TOOLS,
   renderEquipDetail, renderBagDetail, renderSkillDetail, slotDef,
   renderBottle, renderPartners, renderCodex, renderCreateFaction, renderTraitDesc,
+  setScene,
   get CUR_WIN() { return CUR_WIN; },
   setFighters, floatNum, boom, shake, hitAnim, hpBar, pushLog, clearLog,
   get curMap() { return CUR_MAP; }, set curMap(v) { CUR_MAP = v; },
