@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009957720,
-  "lastTick": 1790009957720,
+  "lastSeen": 1790009960440,
+  "lastTick": 1790009960440,
   "realm": 31,
   "stage": 0,
-  "exp": 296431629259.85016,
+  "exp": 0,
   "stone": 8505051551897.912,
   "equip": {
     "weapon": {
@@ -1452,7 +1452,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 6,
-    "acc": 87,
+    "acc": 89,
     "level": 13
   },
   "titles": {
@@ -1516,7 +1516,7 @@
       "SK-009"
     ],
     "wear": {
-      "时装": "SK-004"
+      "时装": "SK-009"
     }
   },
   "worm": {
