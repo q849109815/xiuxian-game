@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995589938,
-  "lastTick": 1789995589938,
+  "lastSeen": 1789995592291,
+  "lastTick": 1789995592291,
   "realm": 9,
   "stage": 3,
-  "exp": 296928556699.5213,
-  "stone": 3272944,
+  "exp": 37116081590.19016,
+  "stone": 3280297,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 76,
+      "count": 77,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -185,34 +185,6 @@
       "def": 34,
       "hp": 306,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_72g1muh",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·灵蛇杖",
-      "atk": 138,
-      "def": 35,
-      "hp": 285,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_932nycp",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·灵蛇杖",
-      "atk": 146,
-      "def": 32,
-      "hp": 333,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -1391,8 +1363,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 31149684,
-        "kill": 652,
+        "exp": 31218426,
+        "kill": 653,
         "dungeon": 213,
         "arena": 20
       },
@@ -1405,8 +1377,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 31149684,
-        "kill": 652,
+        "exp": 31218426,
+        "kill": 653,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1422,7 +1394,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 151,
-        "混沌祖龙": 167,
+        "混沌祖龙": 168,
         "天兵": 148
       },
       "claimed": [
@@ -1466,9 +1438,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 652,
+    "kills": 653,
     "deaths": 0,
-    "battles": 652,
+    "battles": 653,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
