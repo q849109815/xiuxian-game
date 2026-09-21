@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789991548241,
-  "lastTick": 1789991548241,
+  "lastSeen": 1789991551025,
+  "lastTick": 1789991551025,
   "realm": 9,
   "stage": 3,
-  "exp": 22633188960.60029,
-  "stone": 443099,
+  "exp": 56583038113.50072,
+  "stone": 450675,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -65,7 +65,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 48,
+      "count": 49,
       "desc": "炼丹材料",
       "id": "i_fhce2n2"
     },
@@ -326,6 +326,20 @@
       "hp": 332,
       "crit": 0,
       "mp": 115
+    },
+    {
+      "id": "it_f53xrz7",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·太极道衣",
+      "atk": 38,
+      "def": 109,
+      "hp": 818,
+      "crit": 0,
+      "mp": 115
     }
   ],
   "skills": [
@@ -392,8 +406,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 7798650,
-        "kill": 291,
+        "exp": 7864362,
+        "kill": 292,
         "dungeon": 5,
         "arena": 20
       },
@@ -406,8 +420,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 7798650,
-        "kill": 291,
+        "exp": 7864362,
+        "kill": 292,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -423,7 +437,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 39,
-        "混沌祖龙": 35,
+        "混沌祖龙": 36,
         "天兵": 31
       },
       "claimed": [
@@ -463,9 +477,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 291,
+    "kills": 292,
     "deaths": 0,
-    "battles": 291,
+    "battles": 292,
     "breakthrough": 36,
     "offlineMin": 0,
     "meditate": 1,
