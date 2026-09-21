@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996649995,
-  "lastTick": 1789996649995,
+  "lastSeen": 1789996660007,
+  "lastTick": 1789996660007,
   "realm": 9,
   "stage": 3,
-  "exp": 139515300716.47836,
-  "stone": 9203599,
+  "exp": 104636491399.35876,
+  "stone": 9264166,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -79,7 +79,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 235,
+      "count": 239,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -89,7 +89,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 87,
+      "count": 88,
       "desc": "炼器材料",
       "id": "i_1c42jnp"
     },
@@ -125,6 +125,34 @@
       "def": 43,
       "hp": 242,
       "crit": 0.02,
+      "mp": 115
+    },
+    {
+      "id": "it_eli1fhj",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·诛仙剑",
+      "atk": 194,
+      "def": 42,
+      "hp": 234,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_f2d604t",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·青锋剑",
+      "atk": 152,
+      "def": 44,
+      "hp": 267,
+      "crit": 0,
       "mp": 115
     }
   ],
@@ -1287,8 +1315,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 83843510,
-        "kill": 1474,
+        "exp": 84416674,
+        "kill": 1483,
         "dungeon": 213,
         "arena": 20
       },
@@ -1302,8 +1330,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 83843510,
-        "kill": 1474,
+        "exp": 84416674,
+        "kill": 1483,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1318,9 +1346,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 449,
-        "混沌祖龙": 430,
-        "天兵": 409
+        "星宿仙君": 452,
+        "混沌祖龙": 431,
+        "天兵": 414
       },
       "claimed": [
         "b2",
@@ -1364,14 +1392,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1474,
+    "kills": 1483,
     "deaths": 0,
-    "battles": 1474,
+    "battles": 1483,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 196,
+    "encounters": 197,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
