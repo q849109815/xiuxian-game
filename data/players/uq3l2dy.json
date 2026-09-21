@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995443358,
-  "lastTick": 1789995443358,
+  "lastSeen": 1789995444270,
+  "lastTick": 1789995444270,
   "realm": 9,
   "stage": 3,
-  "exp": 74232201088.38033,
-  "stone": 2367828,
+  "exp": 111348213936.5705,
+  "stone": 2368656,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -59,20 +59,6 @@
     "talisman": null
   },
   "bag": [
-    {
-      "id": "it_1fdspxy",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·混元幡",
-      "atk": 176,
-      "def": 34,
-      "hp": 333,
-      "crit": 0,
-      "mp": 115
-    },
     {
       "id": "it_qmlkndb",
       "kind": "equip",
