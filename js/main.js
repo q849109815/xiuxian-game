@@ -37,6 +37,13 @@ window.addEventListener('load', async () => {
         UI.renderNotice(); UI.renderNet();
       } catch (e) { /* 忽略：本地配置已经能用 */ }
     }
+    // 不管有没有连上 API，公告都从静态文件兜底读一次（后台改了马上能看到）
+    try {
+      const n2 = await readStatic('data/config/notice.json');
+      if (n2 && n2.updatedAt && (!window.NOTICE || !window.NOTICE.updatedAt || n2.updatedAt > window.NOTICE.updatedAt)) {
+        window.NOTICE = n2; UI.renderNotice();
+      }
+    } catch (e) { /* 忽略 */ }
   });
 
   // 恢复上次登录
@@ -294,11 +301,21 @@ function bindTabs() {
   });
 }
 
-async function loadRank() {
+/** 读仓库里的静态 JSON（走网页托管，不依赖 GitHub API，国内也能拿到） */
+async function readStatic(path) {
   try {
-    const d = await readJSON('data/leaderboard.json');
-    UI.renderRank(d && d.list);
-  } catch (e) { UI.renderRank(null); }
+    const r = await fetch(path + '?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) { return null; }
+}
+
+async function loadRank() {
+  let d = null;
+  try { d = await readJSON('data/leaderboard.json'); } catch (e) { d = null; }
+  // 云端 API 不通时，直接读网页托管上的静态榜单文件（由 Actions 生成）
+  if (!d) d = await readStatic('data/leaderboard.json');
+  UI.renderRank(d && d.list);
 }
 
 function bindSettings() {
