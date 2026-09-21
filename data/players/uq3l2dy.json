@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995611474,
-  "lastTick": 1789995611474,
+  "lastSeen": 1789995617247,
+  "lastTick": 1789995617247,
   "realm": 9,
   "stage": 3,
-  "exp": 0,
-  "stone": 3392008,
+  "exp": 222696389597.14096,
+  "stone": 3427298,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -117,7 +117,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 28,
+      "count": 30,
       "desc": "炼器材料",
       "id": "i_n9wf73t"
     },
@@ -127,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 28,
+      "count": 30,
       "desc": "炼器材料",
       "id": "i_jir574s"
     },
@@ -238,6 +238,48 @@
       "price": 5000,
       "count": 1,
       "id": "i_h17jrpw"
+    },
+    {
+      "id": "it_bah4tzq",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·混元幡",
+      "atk": 198,
+      "def": 43,
+      "hp": 231,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_ff821im",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 3,
+      "level": 0,
+      "temper": 0,
+      "name": "仙器·锁子金甲",
+      "atk": 44,
+      "def": 142,
+      "hp": 871,
+      "crit": 0.02,
+      "mp": 115
+    },
+    {
+      "id": "it_vaxlosb",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·破妄戒",
+      "atk": 88,
+      "def": 28,
+      "hp": 294,
+      "crit": 0,
+      "mp": 115
     }
   ],
   "skills": [
@@ -1345,8 +1387,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 32157344,
-        "kill": 668,
+        "exp": 32469852,
+        "kill": 673,
         "dungeon": 213,
         "arena": 20
       },
@@ -1359,8 +1401,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 32157344,
-        "kill": 668,
+        "exp": 32469852,
+        "kill": 673,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1375,8 +1417,8 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 155,
-        "混沌祖龙": 172,
+        "星宿仙君": 158,
+        "混沌祖龙": 174,
         "天兵": 155
       },
       "claimed": [
@@ -1420,17 +1462,17 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 668,
+    "kills": 673,
     "deaths": 0,
-    "battles": 668,
+    "battles": 673,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 77,
+    "encounters": 78,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 430
+  "bonusWuxing": 435
 }
