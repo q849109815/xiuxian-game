@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009902056,
-  "lastTick": 1790009902056,
+  "lastSeen": 1790009904079,
+  "lastTick": 1790009904079,
   "realm": 31,
   "stage": 0,
-  "exp": 45604866039.97695,
-  "stone": 8505051581821.912,
+  "exp": 91209732079.9539,
+  "stone": 8505051582391.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -267,20 +267,6 @@
       "def": 35,
       "hp": 370,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_1a5lk0j",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·诛仙剑",
-      "atk": 157,
-      "def": 40,
-      "hp": 291,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -1648,7 +1634,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 6,
-    "acc": 31,
+    "acc": 33,
     "level": 13
   },
   "titles": {
