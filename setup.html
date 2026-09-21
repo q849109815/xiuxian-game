@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>修仙游戏 · 一键配置向导</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body { background: #070b14; }
+  #wrap { max-width: 620px; margin: 0 auto; padding: 20px 14px 80px; position: relative; z-index: 1; }
+  h1 { font-size: 22px; text-align: center; margin: 8px 0 4px; background: linear-gradient(90deg,#ffd76e,#7ef7c8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .step { counter-increment: s; margin-bottom: 14px; }
+  label.f { display: block; font-size: 13px; color: var(--dim); margin: 10px 0 4px; }
+  .hint { font-size: 12px; color: var(--dim); margin-top: 4px; line-height: 1.5; }
+  pre.out {
+    background: rgba(0,0,0,.45); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+    font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all;
+    max-height: 260px; overflow: auto; color: var(--jade);
+  }
+  .ok { color: #7ef7c8; } .bad { color: #ff8a8a; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+</style>
+</head>
+<body>
+<canvas id="bg" style="position:fixed;inset:0;z-index:0"></canvas>
+<div id="wrap">
+  <h1>⚙️ 一键配置向导</h1>
+  <div class="small center" style="margin-bottom:16px">填好下面几项 → 自动生成配置 → 粘回仓库的 <code>js/api.js</code></div>
+
+  <div class="card">
+    <h3>第 1 步 · 填你的信息</h3>
+    <label class="f">GitHub 用户名（例如 zhangsan2026）</label>
+    <input class="txt" id="fOwner" placeholder="你的 GitHub 用户名">
+
+    <label class="f">仓库名（默认 xiuxian-game）</label>
+    <input class="txt" id="fRepo" value="xiuxian-game">
+
+    <div class="row2">
+      <div>
+        <label class="f">页面分支</label>
+        <input class="txt" id="fBranch" value="main">
+      </div>
+      <div>
+        <label class="f">数据分支</label>
+        <input class="txt" id="fDataBranch" value="main">
+      </div>
+    </div>
+    <div class="hint">两个都填 <code>main</code> 就行。玩家多了想分开，看教程「进阶」一节。</div>
+
+    <label class="f">Token（github_pat_ 开头那串钥匙）</label>
+    <input class="txt" id="fToken" placeholder="github_pat_xxxxxxxxxxxx">
+
+    <label class="f">加速地址（可留空，一行一个）</label>
+    <textarea class="txt" id="fEps" rows="2" placeholder="https://xxx.xxx.workers.dev"></textarea>
+    <div class="hint">做完教程第 8 步（自建 Cloudflare 代理）后再回来填。填了能大幅解决连不上的问题。</div>
+
+    <button class="act mt12" id="btnGen">生成配置</button>
+    <div class="row mt8">
+      <button class="ghost" id="btnCopy">📋 复制配置</button>
+      <button class="ghost" id="btnDl">⬇️ 下载完整 api.js</button>
+      <button class="ghost" id="btnTest">🔌 测试连接</button>
+    </div>
+    <div class="hint mt8" id="testMsg"></div>
+  </div>
+
+  <div class="card">
+    <h3>第 2 步 · 生成结果</h3>
+    <pre class="out" id="out">点上面的「生成配置」按钮…</pre>
+  </div>
+
+  <div class="card">
+    <h3>第 3 步 · 粘回仓库</h3>
+    <div class="small" style="line-height:1.9">
+      1. 打开你的仓库，进入 <code>js</code> 文件夹，点开 <code>api.js</code><br>
+      2. 点右上角铅笔 ✏️ 进入编辑<br>
+      3. 找到文件最开头这段（大约前 25 行）：<br>
+      <code>const GH = { ... };</code><br>
+      4. <b>整段删除</b>，粘贴上面「生成结果」里的全部内容<br>
+      5. 点绿色 <b>Commit changes</b><br>
+      <br>
+      💡 更简单：点「⬇️ 下载完整 api.js」，把下载的文件<b>直接拖进</b>仓库的 <code>js/</code> 目录覆盖原文件。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>第 4 步 · 验证</h3>
+    <div class="small" style="line-height:1.9">
+      打开游戏 → 注册一个道号 → 进游戏后看底部状态栏：<br>
+      <span class="ok">● 绿点「云端已连接」</span> = 成功，去仓库 <code>data/players/</code> 应该能看到新生成的 .json 文件<br>
+      <span class="bad">● 红点「离线模式」</span> = 网络不通，去做教程第 8 步（自建代理）
+    </div>
+  </div>
+</div>
+<div id="toasts"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+
+/* 简易星空背景 */
+(function(){
+  const cv = $('#bg'), ctx = cv.getContext('2d');
+  let W,H,stars=[];
+  function rs(){ W=cv.width=innerWidth*devicePixelRatio; H=cv.height=innerHeight*devicePixelRatio;
+    cv.style.width=innerWidth+'px'; cv.style.height=innerHeight+'px';
+    stars=Array.from({length:Math.round(innerWidth/8)},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.5*devicePixelRatio,a:Math.random()}));}
+  rs(); addEventListener('resize',rs);
+  (function loop(){ ctx.clearRect(0,0,W,H);
+    const g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#080c18'); g.addColorStop(1,'#12102a');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    for(const s of stars){ s.a+=0.02; ctx.globalAlpha=0.25+0.35*Math.sin(s.a); ctx.fillStyle='#cfe0ff';
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,6.3); ctx.fill(); }
+    ctx.globalAlpha=1; requestAnimationFrame(loop); })();
+})();
+
+function toast(m,t=''){ const d=document.createElement('div'); d.className='toast '+t; d.textContent=m; $('#toasts').appendChild(d); setTimeout(()=>d.remove(),2600); }
+
+function genBlock(){
+  const owner = $('#fOwner').value.trim() || '你的用户名';
+  const repo  = $('#fRepo').value.trim() || 'xiuxian-game';
+  const br    = $('#fBranch').value.trim() || 'main';
+  const dbr   = $('#fDataBranch').value.trim() || 'main';
+  const token = $('#fToken').value.trim() || 'github_pat_你的Token';
+  const eps   = $('#fEps').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const epsStr = eps.length ? '\n' + eps.map(e=>`  '${e}',`).join('\n') : '';
+
+  return `const GH = {
+  // ======== 已由配置向导自动生成 ========
+  owner: '${owner}',
+  repo: '${repo}',
+  branch: '${br}',          // 页面/代码所在分支
+  dataBranch: '${dbr}',     // 存档数据所在分支（玩家多时改成独立分支）
+  token: '${token}',
+  extraEndpoints: [${epsStr}${eps.length?'\n':''}],
+};`;
+}
+
+$('#btnGen').onclick = () => { $('#out').textContent = genBlock(); toast('已生成，复制粘贴回 js/api.js'); };
+
+$('#btnCopy').onclick = async () => {
+  const t = genBlock(); $('#out').textContent = t;
+  try { await navigator.clipboard.writeText(t); toast('已复制到剪贴板', 'ok'); }
+  catch(e){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('已复制到剪贴板','ok'); }
+};
+
+$('#btnDl').onclick = async () => {
+  const block = genBlock();
+  let src = null;
+  try { const r = await fetch('js/api.js'); if (r.ok) src = await r.text(); } catch(e) { src = null; }
+  if (!src) { toast('无法读取原文件（本地打开限制），请改用「复制配置」', 'err'); $('#out').textContent = block; return; }
+  const re = /\nconst GH = \{[\s\S]*?\n\};/;
+  if (!re.test(src)) { toast('原文件格式异常，请改用「复制配置」', 'err'); return; }
+  const out = src.replace(re, '\n' + block);
+  const blob = new Blob([out], { type: 'text/javascript;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'api.js'; a.click();
+  toast('已下载 api.js，拖进仓库 js/ 覆盖即可', 'ok');
+};
+
+$('#btnTest').onclick = async () => {
+  const owner = $('#fOwner').value.trim(), repo = $('#fRepo').value.trim(), token = $('#fToken').value.trim();
+  const msg = $('#testMsg');
+  if (!owner || !token) { msg.innerHTML = '<span class="bad">请先填用户名和 Token</span>'; return; }
+  msg.innerHTML = '测试中…（如果长时间没反应，说明直连 GitHub 不通，属正常，去做教程第 8 步）';
+  const eps = ['https://api.github.com', ...$('#fEps').value.split('\n').map(s=>s.trim()).filter(Boolean)];
+  for (const ep of eps) {
+    try {
+      const r = await fetch(`${ep}/repos/${owner}/${repo}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' },
+      });
+      if (r.status === 200) {
+        const j = await r.json();
+        msg.innerHTML = `<span class="ok">✔ 连接成功：仓库「${j.full_name}」可访问（通道 ${ep.replace('https://','')}）</span>`;
+        return;
+      }
+      if (r.status === 404) { msg.innerHTML = `<span class="bad">✘ 仓库不存在或 Token 无权访问这个仓库（${ep.replace('https://','')}）</span>`; return; }
+      if (r.status === 401) { msg.innerHTML = `<span class="bad">✘ Token 无效或已过期</span>`; return; }
+      msg.innerHTML = `<span class="bad">✘ 返回 ${r.status}</span>`; return;
+    } catch (e) { /* 换下一个端点 */ }
+  }
+  msg.innerHTML = '<span class="bad">✘ 所有通道都连不上 GitHub。这不代表配置错——去做教程第 8 步自建代理后再测。</span>';
+};
+</script>
+</body>
+</html>
