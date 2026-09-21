@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009922439,
-  "lastTick": 1790009922439,
+  "lastSeen": 1790009926978,
+  "lastTick": 1790009926978,
   "realm": 31,
   "stage": 0,
-  "exp": 159617031139.91934,
-  "stone": 8505051588912.912,
+  "exp": 273629196239.86166,
+  "stone": 8505051589298.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -112,20 +112,6 @@
       "atk": 36,
       "def": 111,
       "hp": 897,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_i0xcxpx",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·阴阳环",
-      "atk": 66,
-      "def": 39,
-      "hp": 290,
       "crit": 0,
       "mp": 115
     },
@@ -1522,7 +1508,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 6,
-    "acc": 51,
+    "acc": 56,
     "level": 13
   },
   "titles": {
