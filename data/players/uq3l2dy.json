@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990206325,
-  "lastTick": 1789990206325,
+  "lastSeen": 1789990215861,
+  "lastTick": 1789990215861,
   "realm": 4,
   "stage": 3,
-  "exp": 2924574.137100003,
-  "stone": 17821,
+  "exp": 3308198.6076000016,
+  "stone": 19935,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -65,7 +65,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 24,
+      "count": 25,
       "desc": "炼器材料",
       "id": "i_op7cm1h"
     },
@@ -85,7 +85,7 @@
       "name": "赤炎莲",
       "icon": "🔥",
       "price": 180,
-      "count": 23,
+      "count": 25,
       "desc": "炼丹材料",
       "id": "i_4dx4axl"
     },
@@ -266,6 +266,20 @@
       "hp": 136,
       "crit": 0,
       "mp": 58
+    },
+    {
+      "id": "it_k3giscb",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·锁子金甲",
+      "atk": 19,
+      "def": 73,
+      "hp": 455,
+      "crit": 0,
+      "mp": 58
     }
   ],
   "skills": [
@@ -305,8 +319,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 350458,
-        "kill": 92,
+        "exp": 365554,
+        "kill": 95,
         "dungeon": 4
       },
       "claimed": []
@@ -314,16 +328,16 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 350458,
-        "kill": 92,
+        "exp": 365554,
+        "kill": 95,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
         "熔岩巨人": 25,
-        "b3": 58,
-        "火麒麟": 11,
-        "炎魔": 22,
+        "b3": 61,
+        "火麒麟": 12,
+        "炎魔": 24,
         "dungeon": 4
       },
       "claimed": []
@@ -332,7 +346,7 @@
   "sectInfo": {
     "id": "s_qingyun",
     "rankIdx": 0,
-    "contrib": 925,
+    "contrib": 945,
     "joinedAt": 1789989635634
   },
   "arena": {
@@ -360,14 +374,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 92,
+    "kills": 95,
     "deaths": 0,
-    "battles": 92,
+    "battles": 95,
     "breakthrough": 19,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 4,
-    "encounters": 9,
+    "encounters": 10,
     "rob": 0
   },
   "meditateUntil": 1789989945650
