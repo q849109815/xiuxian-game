@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996548565,
-  "lastTick": 1789996548565,
+  "lastSeen": 1789996549806,
+  "lastTick": 1789996549806,
   "realm": 9,
   "stage": 3,
-  "exp": 70719310704.31378,
-  "stone": 8713671,
+  "exp": 99822942477.54163,
+  "stone": 8681351,
   "equip": {
     "weapon": {
       "id": "it_4s7eib2",
@@ -20,7 +20,7 @@
       "slot": "weapon",
       "q": 4,
       "level": 12,
-      "temper": 3,
+      "temper": 6,
       "name": "神品·诛仙剑",
       "atk": 130,
       "def": 43,
@@ -1600,8 +1600,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 78379666,
-        "kill": 1389,
+        "exp": 78441762,
+        "kill": 1390,
         "dungeon": 213,
         "arena": 20
       },
@@ -1615,8 +1615,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 78379666,
-        "kill": 1389,
+        "exp": 78441762,
+        "kill": 1390,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1632,7 +1632,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 423,
-        "混沌祖龙": 399,
+        "混沌祖龙": 400,
         "天兵": 381
       },
       "claimed": [
@@ -1677,9 +1677,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1389,
+    "kills": 1390,
     "deaths": 0,
-    "battles": 1389,
+    "battles": 1390,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
