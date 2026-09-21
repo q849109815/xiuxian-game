@@ -7,12 +7,12 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790005551584,
-  "lastTick": 1790005551584,
+  "lastSeen": 1790005559133,
+  "lastTick": 1790005559133,
   "realm": 4,
   "stage": 0,
-  "exp": 35188.87150676484,
-  "stone": 500,
+  "exp": 36305.09046356483,
+  "stone": 560,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -39,6 +39,20 @@
       "count": 1,
       "desc": "炼器材料",
       "id": "i_ddvwuer"
+    },
+    {
+      "id": "it_ah0lca7",
+      "kind": "equip",
+      "slot": "necklace",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·养魂链",
+      "atk": 20,
+      "def": 10,
+      "hp": 121,
+      "crit": 0,
+      "mp": 46
     }
   ],
   "skills": [
@@ -64,13 +78,18 @@
     "daily": {
       "date": "2026-9-21",
       "prog": {
-        "arena": 20
+        "arena": 20,
+        "exp": 438,
+        "kill": 1
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
-        "arena": 20
+        "arena": 20,
+        "exp": 438,
+        "kill": 1,
+        "青牛镇五里沟妖兽3": 1
       },
       "claimed": []
     }
@@ -101,9 +120,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 0,
+    "kills": 1,
     "deaths": 0,
-    "battles": 0,
+    "battles": 1,
     "breakthrough": 4,
     "offlineMin": 1,
     "meditate": 0,
@@ -115,7 +134,7 @@
   "trait": "P003",
   "bottle": {
     "liquid": 6,
-    "acc": 162,
+    "acc": 169,
     "level": 1
   },
   "partners": {},
