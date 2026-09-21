@@ -5,14 +5,14 @@
   "gender": "m",
   "avatar": "🥷",
   "root": "fire",
-  "sect": "s_qingyun",
+  "sect": null,
   "createdAt": 1789989635634,
-  "lastSeen": 1789996245385,
-  "lastTick": 1789996245385,
+  "lastSeen": 1789996253409,
+  "lastTick": 1789996253409,
   "realm": 9,
   "stage": 3,
-  "exp": 278370590291.4262,
-  "stone": 6885551,
+  "exp": 154354488817.02582,
+  "stone": 6930895,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 90,
+      "count": 93,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -117,7 +117,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 36,
+      "count": 38,
       "desc": "炼器材料",
       "id": "i_1c42jnp"
     },
@@ -127,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 37,
+      "count": 38,
       "desc": "炼器材料",
       "id": "i_bkbhegu"
     },
@@ -464,6 +464,20 @@
       "atk": 176,
       "def": 31,
       "hp": 313,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_44sovih",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·玄龟甲",
+      "atk": 31,
+      "def": 132,
+      "hp": 822,
       "crit": 0,
       "mp": 115
     }
@@ -1609,8 +1623,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 62753700,
-        "kill": 1146,
+        "exp": 63185786,
+        "kill": 1153,
         "dungeon": 213,
         "arena": 20
       },
@@ -1623,8 +1637,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 62753700,
-        "kill": 1146,
+        "exp": 63185786,
+        "kill": 1153,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1639,9 +1653,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 325,
-        "混沌祖龙": 328,
-        "天兵": 307
+        "星宿仙君": 327,
+        "混沌祖龙": 329,
+        "天兵": 311
       },
       "claimed": [
         "b2",
@@ -1649,12 +1663,7 @@
       ]
     }
   },
-  "sectInfo": {
-    "id": "s_qingyun",
-    "rankIdx": 0,
-    "contrib": 1625,
-    "joinedAt": 1789989635634
-  },
+  "sectInfo": null,
   "arena": {
     "score": 400,
     "wins": 20,
@@ -1684,9 +1693,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1146,
+    "kills": 1153,
     "deaths": 0,
-    "battles": 1146,
+    "battles": 1153,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
