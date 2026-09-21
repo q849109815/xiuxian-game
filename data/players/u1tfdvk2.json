@@ -7,12 +7,12 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789991995170,
-  "lastTick": 1789991995170,
+  "lastSeen": 1789991994730,
+  "lastTick": 1789991994730,
   "realm": 6,
   "stage": 3,
-  "exp": 136203044.8109299,
-  "stone": 6595,
+  "exp": 136194044.8109299,
+  "stone": 4395,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -461,8 +461,7 @@
         "炎魔": 8
       },
       "claimed": [
-        "b1",
-        "b3"
+        "b1"
       ]
     }
   },
