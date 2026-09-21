@@ -313,16 +313,27 @@ function randItem(mapIndex, realmIdx) {
   const qRoll = Math.random();
   let q = 0;
   if (qRoll > 0.985) q = 4; else if (qRoll > 0.93) q = 3; else if (qRoll > 0.75) q = 2; else if (qRoll > 0.45) q = 1;
-  const slot = cfg.slots[Math.floor(Math.random() * 3)];
+  const pool = cfg.slots.filter((s) => s.key !== 'artifact');
+  const slot = pool[Math.floor(Math.random() * pool.length)];
   const scale = 1 + realmIdx * 0.9 + mapIndex * 0.6;
-  const names = { weapon: ['青锋剑', '玄铁刀', '灵蛇杖', '诛仙剑', '混元幡'], armor: ['玄龟甲', '云锦袍', '锁子金甲', '太极道衣', '麒麟铠'], ring: ['聚灵戒', '养魂环', '破妄戒', '阴阳环', '太虚戒'] };
-  const nm = names[slot.key][Math.floor(Math.random() * names[slot.key].length)];
+  const names = {
+    weapon: ['青锋剑', '玄铁刀', '灵蛇杖', '诛仙剑', '混元幡'],
+    armor: ['玄龟甲', '云锦袍', '锁子金甲', '太极道衣', '麒麟铠'],
+    helmet: ['紫金冠', '玄铁盔', '玉清冠', '狻猊盔', '混元盔'],
+    necklace: ['养魂链', '聚灵珠', '破妄链', '阴阳环', '太虚锁'],
+    bracelet: ['玄铁护腕', '云锦护腕', '锁金腕', '太极腕', '麒麟腕'],
+    boots: ['踏云靴', '玄铁靴', '追风靴', '太极履', '麒麟靴'],
+    ring: ['聚灵戒', '养魂环', '破妄戒', '阴阳环', '太虚戒'],
+    artifact: ['混元幡', '山河印', '定海珠', '焚天塔', '太极图'],
+  };
+  const nmArr = names[slot.key] || names.weapon;
+  const nm = nmArr[Math.floor(Math.random() * nmArr.length)];
   return {
     id: 'it_' + Math.random().toString(36).slice(2, 9), kind: 'equip', slot: slot.key, q, level: 0, temper: 0,
     name: `${cfg.qualities[q].name}·${nm}`,
-    atk: Math.round((slot.key === 'weapon' ? 14 : slot.key === 'ring' ? 6 : 3) * scale * (0.8 + Math.random() * 0.5)),
-    def: Math.round((slot.key === 'armor' ? 10 : 3) * scale * (0.8 + Math.random() * 0.5)),
-    hp: Math.round((slot.key === 'armor' ? 70 : 25) * scale * (0.8 + Math.random() * 0.5)),
+    atk: Math.round(({ weapon: 16, artifact: 12, ring: 6, bracelet: 5, helmet: 2, armor: 2, boots: 3, necklace: 4 }[slot.key] || 3) * scale * (0.8 + Math.random() * 0.5)),
+    def: Math.round(({ armor: 12, helmet: 8, boots: 5, bracelet: 4, weapon: 2, artifact: 3, ring: 2, necklace: 2 }[slot.key] || 3) * scale * (0.8 + Math.random() * 0.5)),
+    hp: Math.round(({ armor: 80, helmet: 45, boots: 35, bracelet: 25, weapon: 15, artifact: 30, ring: 20, necklace: 25 }[slot.key] || 25) * scale * (0.8 + Math.random() * 0.5)),
     crit: q >= 3 ? 0.02 : 0, mp: Math.round(10 * scale),
   };
 }
