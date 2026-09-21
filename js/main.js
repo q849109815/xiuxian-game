@@ -109,7 +109,7 @@ function enterGame() {
     if (off.ups > 0) { UI.flashBreakthrough(); UI.toast(`闭关有所领悟，连破 ${off.ups} 层！`); }
   }
   P.lastSeen = Date.now();
-  UI.renderHUD(P); UI.renderAttrs(P); UI.renderMaps(P); UI.renderBag(P); UI.renderNet();
+  UI.renderHUD(P); UI.renderAttrs(P); UI.renderMaps(P); UI.renderBag(P); UI.renderNet(); UI.renderMeditate(P);
   UI.startQi();
   loadRank();
   setInterval(tick, 1000);
@@ -135,6 +135,7 @@ function tick() {
     UI.renderAttrs(P); UI.renderMaps(P);
     save();
   }
+  UI.renderMeditate(P);
   if (document.querySelector('[data-page="cult"]').style.display !== 'none') UI.renderAttrs(P);
 }
 
@@ -157,10 +158,11 @@ async function save(sync = false) {
 /* ---------------- 修炼 / 突破 ---------------- */
 $('#btnMeditate') && (document.addEventListener('click', (e) => {
   if (e.target.id === 'btnMeditate') {
-    const s = ENGINE.expPerSec(P);
-    ENGINE.gainExp(P, s * 60);
-    UI.toast('入定一小时，+' + fmt(s * 60) + ' 修为');
-    UI.renderHUD(P); UI.renderAttrs(P);
+    const r = ENGINE.meditate(P);
+    if (!r.ok) { UI.toast(r.msg, 'err'); UI.renderMeditate(P); return; }
+    UI.toast(`闭关得 ${fmt(r.gain)} 修为（冷却 ${Math.round(r.cd / 60)} 分钟）`);
+    if (r.ups > 0) { UI.flashBreakthrough(); UI.toast(`闭关顿悟，连破 ${r.ups} 层！`); UI.renderMaps(P); }
+    UI.renderHUD(P); UI.renderAttrs(P); UI.renderMeditate(P);
     save();
   }
   if (e.target.id === 'btnBreak') {
