@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995488109,
-  "lastTick": 1789995488109,
+  "lastSeen": 1789995488966,
+  "lastTick": 1789995488966,
   "realm": 9,
   "stage": 3,
-  "exp": 259812511447.33112,
-  "stone": 2694588,
+  "exp": 296928524295.5213,
+  "stone": 2696437,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -143,34 +143,6 @@
       "def": 31,
       "hp": 327,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_8x0090i",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·聚灵戒",
-      "atk": 60,
-      "def": 29,
-      "hp": 327,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_984kdv4",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·麒麟铠",
-      "atk": 30,
-      "def": 112,
-      "hp": 1017,
-      "crit": 0,
       "mp": 115
     },
     {
