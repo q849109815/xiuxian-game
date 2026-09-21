@@ -1,19 +1,21 @@
 {
-  "at": "2026-09-21T10:35:37.296Z",
+  "at": "2026-09-21T11:10:36.995Z",
   "count": 1,
   "players": [
     {
       "uid": "u1tfdvk2",
       "name": "q849109815",
-      "realm": "合体9层",
-      "realmIdx": 6,
-      "power": 1270,
+      "avatar": "",
+      "realm": "真仙",
+      "realmIdx": 9,
+      "power": null,
       "stone": 196,
       "kills": 8,
-      "battles": 22,
-      "lastSeen": 1789986922796,
+      "arena": 0,
+      "sect": null,
+      "lastSeen": 1789987629055,
       "createdAt": 1789986590023,
-      "banned": false
+      "reinc": 0
     }
   ]
 }
