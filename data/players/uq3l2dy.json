@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009664518,
-  "lastTick": 1790009664518,
+  "lastSeen": 1790009667156,
+  "lastTick": 1790009667156,
   "realm": 31,
   "stage": 0,
-  "exp": 198146618260.70642,
-  "stone": 8505051543258.912,
+  "exp": 243872760936.25403,
+  "stone": 8505051543885.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -59,20 +59,6 @@
     "talisman": null
   },
   "bag": [
-    {
-      "id": "it_2mk13se",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·诛仙剑",
-      "atk": 189,
-      "def": 31,
-      "hp": 317,
-      "crit": 0,
-      "mp": 115
-    },
     {
       "id": "it_iz283e0",
       "kind": "equip",
@@ -2404,7 +2390,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 3,
-    "acc": 74,
+    "acc": 77,
     "level": 13
   },
   "titles": {
