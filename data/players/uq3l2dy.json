@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996277705,
-  "lastTick": 1789996277705,
+  "lastSeen": 1789996278929,
+  "lastTick": 1789996278929,
   "realm": 9,
   "stage": 3,
-  "exp": 153910632260.376,
-  "stone": 7057556,
+  "exp": 215474839458.92642,
+  "stone": 7063230,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 98,
+      "count": 99,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -1665,8 +1665,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 64399090,
-        "kill": 1172,
+        "exp": 64456942,
+        "kill": 1173,
         "dungeon": 213,
         "arena": 20
       },
@@ -1679,8 +1679,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 64399090,
-        "kill": 1172,
+        "exp": 64456942,
+        "kill": 1173,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1696,7 +1696,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 333,
-        "混沌祖龙": 337,
+        "混沌祖龙": 338,
         "天兵": 316
       },
       "claimed": [
@@ -1708,7 +1708,7 @@
   "sectInfo": {
     "id": "s_06ixz2",
     "rankIdx": 4,
-    "contrib": 900,
+    "contrib": 1060,
     "joinedAt": 1789996255530
   },
   "arena": {
@@ -1740,9 +1740,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1172,
+    "kills": 1173,
     "deaths": 0,
-    "battles": 1172,
+    "battles": 1173,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
