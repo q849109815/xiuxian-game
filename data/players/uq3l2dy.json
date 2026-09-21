@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790012216696,
-  "lastTick": 1790012216696,
+  "lastSeen": 1790012218814,
+  "lastTick": 1790012218814,
   "realm": 31,
   "stage": 0,
-  "exp": 308782478518.36237,
-  "stone": 2827461297471.0703,
+  "exp": 63840027764.375786,
+  "stone": 2827461271108.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -90,7 +90,7 @@
       "kind": "equip",
       "slot": "necklace",
       "q": 4,
-      "level": 1,
+      "level": 8,
       "temper": 0,
       "name": "神品·养魂链",
       "atk": 118,
@@ -257,7 +257,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 91,
+      "count": 92,
       "desc": "炼器材料",
       "id": "i_p2tat4a"
     },
@@ -2570,16 +2570,16 @@
         "arena": 20,
         "dungeon": 249,
         "meditate": 1,
-        "exp": 129754121444,
-        "kill": 1451
+        "exp": 129754128244,
+        "kill": 1452
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129853513538,
-        "kill": 3169,
+        "exp": 129853520338,
+        "kill": 3170,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2600,7 +2600,7 @@
         "禁地守卫": 502,
         "星斗海妖兽": 467,
         "天星宗弟子": 3,
-        "墨蛟": 479
+        "墨蛟": 480
       },
       "claimed": [
         "b2",
@@ -2644,9 +2644,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3169,
+    "kills": 3170,
     "deaths": 65,
-    "battles": 3234,
+    "battles": 3235,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
@@ -2680,7 +2680,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 6,
+    "acc": 8,
     "level": 30
   },
   "titles": {
