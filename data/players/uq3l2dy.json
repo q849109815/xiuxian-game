@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995444270,
-  "lastTick": 1789995444270,
+  "lastSeen": 1789995447143,
+  "lastTick": 1789995447143,
   "realm": 9,
   "stage": 3,
-  "exp": 111348213936.5705,
-  "stone": 2368656,
+  "exp": 222696455231.14096,
+  "stone": 2393508,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -59,62 +59,6 @@
     "talisman": null
   },
   "bag": [
-    {
-      "id": "it_qmlkndb",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·锁子金甲",
-      "atk": 33,
-      "def": 116,
-      "hp": 919,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_a5weq4b",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·聚灵戒",
-      "atk": 79,
-      "def": 40,
-      "hp": 359,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_y59m2mo",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·太极道衣",
-      "atk": 31,
-      "def": 110,
-      "hp": 648,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_mqdtcvw",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·阴阳环",
-      "atk": 60,
-      "def": 45,
-      "hp": 231,
-      "crit": 0,
-      "mp": 115
-    },
     {
       "id": "it_zgeqpel",
       "kind": "equip",
@@ -1136,6 +1080,34 @@
       "atk": 186,
       "def": 41,
       "hp": 248,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_ug8zadq",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 3,
+      "level": 0,
+      "temper": 0,
+      "name": "仙器·太虚戒",
+      "atk": 77,
+      "def": 31,
+      "hp": 327,
+      "crit": 0.02,
+      "mp": 115
+    },
+    {
+      "id": "it_1zbn0yw",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·锁子金甲",
+      "atk": 39,
+      "def": 146,
+      "hp": 887,
       "crit": 0,
       "mp": 115
     }
@@ -2236,8 +2208,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 23544042,
-        "kill": 536,
+        "exp": 23746792,
+        "kill": 539,
         "dungeon": 213,
         "arena": 20
       },
@@ -2250,8 +2222,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 23544042,
-        "kill": 536,
+        "exp": 23746792,
+        "kill": 539,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2266,9 +2238,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 120,
+        "星宿仙君": 121,
         "混沌祖龙": 118,
-        "天兵": 112
+        "天兵": 114
       },
       "claimed": [
         "b2",
@@ -2311,9 +2283,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 536,
+    "kills": 539,
     "deaths": 0,
-    "battles": 536,
+    "battles": 539,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
