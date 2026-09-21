@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996134699,
-  "lastTick": 1789996134699,
+  "lastSeen": 1789996135974,
+  "lastTick": 1789996135974,
   "realm": 9,
   "stage": 3,
-  "exp": 216510400847.77594,
-  "stone": 6245706,
+  "exp": 247440469926.60107,
+  "stone": 6254812,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -121,7 +121,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 45,
+      "count": 46,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -157,34 +157,6 @@
       "def": 142,
       "hp": 836,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_gd6yt6m",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·玄铁刀",
-      "atk": 143,
-      "def": 35,
-      "hp": 296,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_muo38tz",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·太虚戒",
-      "atk": 86,
-      "def": 42,
-      "hp": 247,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -1334,8 +1306,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 57092960,
-        "kill": 1057,
+        "exp": 57151332,
+        "kill": 1058,
         "dungeon": 213,
         "arena": 20
       },
@@ -1348,8 +1320,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 57092960,
-        "kill": 1057,
+        "exp": 57151332,
+        "kill": 1058,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1364,7 +1336,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 296,
+        "星宿仙君": 297,
         "混沌祖龙": 298,
         "天兵": 277
       },
@@ -1409,9 +1381,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1057,
+    "kills": 1058,
     "deaths": 0,
-    "battles": 1057,
+    "battles": 1058,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
