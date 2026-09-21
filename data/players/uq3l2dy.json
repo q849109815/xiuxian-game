@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996642977,
-  "lastTick": 1789996642977,
+  "lastSeen": 1789996643569,
+  "lastTick": 1789996643569,
   "realm": 9,
   "stage": 3,
-  "exp": 279030583448.9567,
-  "stone": 9158497,
+  "exp": 313909403098.0763,
+  "stone": 9165889,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -79,7 +79,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 231,
+      "count": 232,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -128,16 +128,16 @@
       "mp": 115
     },
     {
-      "id": "it_rxpcelc",
+      "id": "it_9iygbhi",
       "kind": "equip",
       "slot": "ring",
-      "q": 2,
+      "q": 1,
       "level": 0,
       "temper": 0,
-      "name": "宝器·太虚戒",
-      "atk": 86,
-      "def": 34,
-      "hp": 322,
+      "name": "灵器·养魂环",
+      "atk": 65,
+      "def": 28,
+      "hp": 278,
       "crit": 0,
       "mp": 115
     }
@@ -1301,8 +1301,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 83476146,
-        "kill": 1468,
+        "exp": 83530962,
+        "kill": 1469,
         "dungeon": 213,
         "arena": 20
       },
@@ -1316,8 +1316,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 83476146,
-        "kill": 1468,
+        "exp": 83530962,
+        "kill": 1469,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1334,7 +1334,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 447,
         "混沌祖龙": 428,
-        "天兵": 407
+        "天兵": 408
       },
       "claimed": [
         "b2",
@@ -1378,9 +1378,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1468,
+    "kills": 1469,
     "deaths": 0,
-    "battles": 1468,
+    "battles": 1469,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
