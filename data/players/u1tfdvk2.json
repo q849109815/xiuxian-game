@@ -3,12 +3,12 @@
   "name": "q849109815",
   "pwd": "iz2s4w",
   "createdAt": 1789986590023,
-  "lastSeen": 1789986712704,
-  "lastTick": 1789986712704,
+  "lastSeen": 1789986723181,
+  "lastTick": 1789986723181,
   "realm": 4,
   "layer": 7,
-  "exp": 372605.10000000044,
-  "stone": 49,
+  "exp": 429336.9250000004,
+  "stone": 128,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -22,7 +22,19 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 40,
-      "count": 4
+      "count": 9
+    },
+    {
+      "id": "it_vris4zj",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 4,
+      "level": 0,
+      "name": "神品·云锦袍",
+      "atk": 17,
+      "def": 48,
+      "hp": 275,
+      "from": 0
     }
   ],
   "buffs": {
@@ -30,10 +42,10 @@
     "pillExpUntil": 0
   },
   "stats": {
-    "kills": 2,
+    "kills": 5,
     "deaths": 0,
     "breakthrough": 43,
-    "battles": 2,
+    "battles": 5,
     "offlineMin": 0
   },
   "codes": [],
