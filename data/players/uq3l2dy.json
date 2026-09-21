@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990129548,
-  "lastTick": 1789990129548,
+  "lastSeen": 1789990136938,
+  "lastTick": 1789990136938,
   "realm": 4,
   "stage": 2,
-  "exp": 2538312.6959000025,
-  "stone": 22514,
+  "exp": 2833873.749200004,
+  "stone": 25788,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -199,6 +199,11 @@
       "id": "sk_art_shield",
       "level": 9,
       "exp": 0
+    },
+    {
+      "id": "sk_art_thunder",
+      "level": 1,
+      "exp": 0
     }
   ],
   "equipped": [
@@ -219,26 +224,26 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 256044,
-        "kill": 74,
-        "dungeon": 2
+        "exp": 261186,
+        "kill": 75,
+        "dungeon": 3
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 256044,
-        "kill": 74,
+        "exp": 261186,
+        "kill": 75,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
-        "熔岩巨人": 15,
-        "b3": 40,
+        "熔岩巨人": 16,
+        "b3": 41,
         "火麒麟": 10,
         "炎魔": 15,
-        "dungeon": 2
+        "dungeon": 3
       },
       "claimed": []
     }
@@ -274,13 +279,13 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 74,
+    "kills": 75,
     "deaths": 0,
-    "battles": 74,
+    "battles": 75,
     "breakthrough": 18,
     "offlineMin": 0,
     "meditate": 1,
-    "dungeon": 2,
+    "dungeon": 3,
     "encounters": 7,
     "rob": 0
   },
