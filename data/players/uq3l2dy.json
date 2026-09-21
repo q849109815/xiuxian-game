@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995419092,
-  "lastTick": 1789995419092,
+  "lastSeen": 1789995421485,
+  "lastTick": 1789995421485,
   "realm": 9,
   "stage": 3,
-  "exp": 341084051659.71075,
-  "stone": 2329521,
+  "exp": 53222902471.311676,
+  "stone": 2341700,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -20,7 +20,7 @@
       "slot": "weapon",
       "q": 4,
       "level": 12,
-      "temper": 0,
+      "temper": 3,
       "name": "神品·混元幡",
       "atk": 139,
       "def": 39,
@@ -75,7 +75,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 66,
+      "count": 67,
       "desc": "炼器材料",
       "id": "i_frp5ygh"
     },
@@ -1142,6 +1142,20 @@
       "atk": 35,
       "def": 143,
       "hp": 849,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_aqbi9ni",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·破妄戒",
+      "atk": 70,
+      "def": 42,
+      "hp": 242,
       "crit": 0,
       "mp": 115
     }
@@ -2242,8 +2256,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 22279980,
-        "kill": 516,
+        "exp": 22410016,
+        "kill": 518,
         "dungeon": 213,
         "arena": 20
       },
@@ -2256,8 +2270,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 22279980,
-        "kill": 516,
+        "exp": 22410016,
+        "kill": 518,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2272,9 +2286,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 115,
+        "星宿仙君": 116,
         "混沌祖龙": 111,
-        "天兵": 104
+        "天兵": 105
       },
       "claimed": [
         "b2",
@@ -2317,14 +2331,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 516,
+    "kills": 518,
     "deaths": 0,
-    "battles": 516,
+    "battles": 518,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 63,
+    "encounters": 64,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
