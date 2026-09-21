@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990812225,
-  "lastTick": 1789990812225,
+  "lastSeen": 1789990821510,
+  "lastTick": 1789990821510,
   "realm": 9,
   "stage": 3,
-  "exp": 84788883360.02933,
-  "stone": 152060,
+  "exp": 141314736918.7156,
+  "stone": 159172,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -176,6 +176,16 @@
       "hp": 368,
       "crit": 0.02,
       "mp": 115
+    },
+    {
+      "kind": "ore",
+      "ref": "ore_star",
+      "name": "星陨铁",
+      "icon": "⭐",
+      "price": 1000,
+      "count": 1,
+      "desc": "炼器材料",
+      "id": "i_ckq27h0"
     }
   ],
   "skills": [
@@ -240,10 +250,10 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 2266112,
-        "kill": 205,
+        "exp": 2329836,
+        "kill": 206,
         "dungeon": 5,
-        "arena": 2
+        "arena": 3
       },
       "claimed": [
         "d1",
@@ -254,8 +264,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 2266112,
-        "kill": 205,
+        "exp": 2329836,
+        "kill": 206,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -265,14 +275,14 @@
         "火麒麟": 31,
         "炎魔": 53,
         "dungeon": 5,
-        "arena": 2,
+        "arena": 3,
         "九幽冥王": 7,
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 6,
         "混沌祖龙": 8,
-        "天兵": 5
+        "天兵": 6
       },
       "claimed": [
         "b2",
@@ -287,11 +297,11 @@
     "joinedAt": 1789989635634
   },
   "arena": {
-    "score": 40,
-    "wins": 2,
+    "score": 60,
+    "wins": 3,
     "losses": 0,
     "dayDate": "2026-9-21",
-    "fights": 2
+    "fights": 3
   },
   "mail": [],
   "karma": 0,
@@ -311,9 +321,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 205,
+    "kills": 206,
     "deaths": 0,
-    "battles": 205,
+    "battles": 206,
     "breakthrough": 36,
     "offlineMin": 0,
     "meditate": 1,
