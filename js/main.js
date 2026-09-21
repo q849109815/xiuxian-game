@@ -135,7 +135,7 @@ async function enterGame() {
   setInterval(() => save(), 30000);
   setInterval(() => { Net.flushQueue().then((n) => { if (n) { UI.renderNet(); UI.toast('已补传 ' + n + ' 份存档'); } }); }, 20000);
   setInterval(() => { readJSON('data/config/notice.json').then((n) => { if (n) { window.NOTICE = n; UI.renderNotice(); } }).catch(() => {}); }, 120000);
-  setInterval(() => { if (document.querySelector('[data-page="social"]').style.display !== 'none') UI.renderChat(); }, 30000);
+  setInterval(() => { if (UI.CUR_WIN === 'social') UI.renderChat(); }, 30000);
   window.addEventListener('beforeunload', () => save(true));
   document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
   save();
@@ -147,6 +147,7 @@ function renderAll() {
   UI.renderSkills(P); UI.renderAlchemy(P); UI.renderBeasts(P); UI.bindBeastButtons(P);
   UI.renderCave(P); UI.renderSect(P); UI.renderTasks(P); UI.renderArena(P);
   UI.renderMarket(P); UI.renderSocial(P); UI.renderNet(); UI.renderNotice();
+  UI.renderTracker(P); UI.renderMini(P);
   $('#setRoot').textContent = ENGINE.rootInfo(P).name;
   $('#setKarma').textContent = P.karma || 0;
   $('#setReinc').textContent = `第 ${P.reinc || 0} 世`;
@@ -162,8 +163,8 @@ function tick() {
     UI.toast(`修为圆满，突破至 ${ENGINE.realmName(P)}！`);
     UI.flashBreakthrough(); UI.renderAttrs(P); UI.renderMaps(P); UI.renderSpots(P); save();
   }
-  const page = document.querySelector('#pages section:not([style*="display: none"])');
-  if (page && page.dataset.page === 'cult') UI.renderAttrs(P);
+  if (UI.CUR_WIN === 'role') UI.renderAttrs(P);
+  if (UI.CUR_WIN === 'cave') UI.renderCave(P);
 }
 
 /* ---------------- 存档 ---------------- */
@@ -182,24 +183,30 @@ async function save(sync = false) {
   }
 }
 
+function toggleAuto(btn) {
+  autoFight = !autoFight;
+  const set = (el, on) => { if (!el) return; el.textContent = on ? '⏹ 停' : '🤖 挂机'; el.classList.toggle('on', on); };
+  set(btn, autoFight);
+  const b2 = $('#btnAuto'); if (b2) { b2.textContent = autoFight ? '⏹ 停止挂机' : '🤖 自动挂机'; b2.className = autoFight ? 'act' : 'ghost'; }
+  $('#autoTag').classList.toggle('on', autoFight);
+  if (autoFight) { UI.closeWin(); runBattle(); }
+}
+
 /* ---------------- 通用交互绑定 ---------------- */
 function bindTabs() {
-  $$('.tabs button').forEach((b) => b.onclick = () => {
-    $$('.tabs button').forEach((x) => x.classList.remove('on')); b.classList.add('on');
-    $$('#pages section').forEach((s) => s.style.display = s.dataset.page === b.dataset.tab ? '' : 'none');
-    const t = b.dataset.tab;
-    if (t === 'rank') loadRank();
-    if (t === 'bag') { UI.renderEquip(P); UI.renderBag(P); }
-    if (t === 'skill') UI.renderSkills(P);
-    if (t === 'alchemy') UI.renderAlchemy(P);
-    if (t === 'beast') UI.renderBeasts(P);
-    if (t === 'cave') UI.renderCave(P);
-    if (t === 'sect') UI.renderSect(P);
-    if (t === 'task') UI.renderTasks(P);
-    if (t === 'market') UI.renderMarket(P);
-    if (t === 'social') { UI.renderSocial(P); UI.renderChat(); }
-    if (t === 'cult') { UI.renderAttrs(P); UI.renderSpots(P); }
+  UI.renderToolBar();
+  UI.bindWinTabs();
+  // 底部功能栏：点图标开关面板
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('#toolbar .tbtn[data-tab]');
+    if (!t) return;
+    const k = t.dataset.tab;
+    if (UI.CUR_WIN === k) UI.closeWin(); else UI.openWin(k);
   });
+  // 顶部设置按钮
+  const ts = $('#btnTopSet'); if (ts) ts.onclick = () => { UI.CUR_WIN === 'set' ? UI.closeWin() : UI.openWin('set'); };
+  // 关闭按钮（窗口头部 ×）
+  $$('.win-hd .x').forEach((b) => b.onclick = () => UI.closeWin());
 }
 
 function bindGlobal() {
@@ -227,6 +234,7 @@ function bindGlobal() {
       UI.toast(r.msg); UI.flashBreakthrough(); renderAll(); save();
     }
     if (t.id === 'btnFight') runBattle();
+    if (t.id === 'tAuto') toggleAuto(document.getElementById('tAuto'));
     if (t.id === 'btnAuto') {
       autoFight = !autoFight;
       t.textContent = autoFight ? '⏹ 停止挂机' : '🤖 自动挂机';
@@ -364,8 +372,13 @@ async function runBattle() {
 
   renderAll();
   fighting = false;
-  if (autoFight) setTimeout(() => runBattle(), 700);
-  else if (P.stats.battles % 5 === 0) save();
+  if (autoFight) {
+    $('#autoTag').classList.add('on');
+    setTimeout(() => runBattle(), 700);
+  } else {
+    $('#autoTag').classList.remove('on');
+    if (P.stats.battles % 5 === 0) save();
+  }
 }
 
 
@@ -449,6 +462,11 @@ function bindSettings() {
   bind('#btnReset', () => { Net.reset(); UI.toast('通道已重置'); Net.probe().then(UI.renderNet); });
   bind('#btnSave', () => { save(); UI.toast('已保存到云端'); });
   bind('#btnLogout', () => { localStorage.removeItem('xx_session'); location.reload(); });
+  bind('#btnChatQuick', async () => {
+    const el = $('#chatQuick'); const r = await SYS.chatSend(P, el.value);
+    UI.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { el.value = ''; UI.renderChat(); }
+  });
+  const cq = $('#chatQuick'); if (cq) cq.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btnChatQuick').click(); });
   bind('#btnSaveEp', () => {
     const list = $('#epsInput').value.split('\n').map((s) => s.trim()).filter(Boolean);
     Net.setExtra(list); UI.toast('已保存 ' + list.length + ' 个加速地址'); Net.probe().then(UI.renderNet);
