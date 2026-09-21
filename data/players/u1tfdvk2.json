@@ -7,8 +7,8 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789992030735,
-  "lastTick": 1789992030735,
+  "lastSeen": 1789992031668,
+  "lastTick": 1789992031668,
   "realm": 7,
   "stage": 0,
   "exp": 110337100.4093824,
@@ -547,7 +547,7 @@
     "apprentices": []
   },
   "reinc": 0,
-  "spot": "secret",
+  "spot": "immortal",
   "buffs": {
     "pillAtk": 0,
     "pillExpUntil": 0,
