@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990390988,
-  "lastTick": 1789990390988,
+  "lastSeen": 1789990391421,
+  "lastTick": 1789990391421,
   "realm": 5,
   "stage": 2,
   "exp": 14261220.285252584,
-  "stone": 19931,
+  "stone": 20301,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -98,20 +98,6 @@
       "count": 15,
       "desc": "炼器材料",
       "id": "i_qg53eix"
-    },
-    {
-      "id": "it_4uukezz",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·麒麟铠",
-      "atk": 18,
-      "def": 54,
-      "hp": 414,
-      "crit": 0,
-      "mp": 67
     }
   ],
   "skills": [
