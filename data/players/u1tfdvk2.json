@@ -7,12 +7,12 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789991497267,
-  "lastTick": 1789991497267,
+  "lastSeen": 1789991499512,
+  "lastTick": 1789991499512,
   "realm": 4,
   "stage": 1,
-  "exp": 812388.852800001,
-  "stone": 1090,
+  "exp": 900356.9705600011,
+  "stone": 1290,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -26,7 +26,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 2,
+      "count": 4,
       "desc": "炼丹材料",
       "id": "i_kjgsvit"
     },
@@ -58,7 +58,7 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "dungeon": 1,
+        "dungeon": 2,
         "arena": 1,
         "exp": 5350,
         "kill": 1
@@ -68,7 +68,7 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "dungeon": 1,
+        "dungeon": 2,
         "arena": 1,
         "exp": 5350,
         "kill": 1,
@@ -122,7 +122,7 @@
     "breakthrough": 16,
     "offlineMin": 13,
     "meditate": 1,
-    "dungeon": 1,
+    "dungeon": 2,
     "encounters": 0,
     "rob": 0
   },
