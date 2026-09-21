@@ -72,6 +72,8 @@
     <div class="tb-res">
       <span class="chip">修为 <b id="hExp">0</b></span>
       <span class="chip">💎 <b id="hStone">0</b></span>
+      <span class="chip">🪙 <b id="hYuanbao">0</b></span>
+      <span class="chip">🎖️ <b id="hMerit">0</b></span>
     </div>
     <div class="tb-notice"><div class="roll" id="noticeTxt">仙门公告加载中…</div></div>
     <div class="tb-right">
@@ -263,16 +265,35 @@
 
       <!-- 宗门 -->
       <div class="win" data-page="sect">
+        <div class="wtabs">
+          <button class="on" data-wt="s1">宗门</button><button data-wt="s2">仓库</button><button data-wt="s3">宗门BOSS</button><button data-wt="s4">联盟</button>
+        </div>
         <div class="win-hd"><span class="tt">🏯 宗 门</span><button class="x" data-close>×</button></div>
         <div class="win-bd">
-          <div class="card"><h3>我的宗门</h3><div id="mySect"></div></div>
-          <div class="card"><h3>宗门列表</h3><div id="sectList"></div></div>
-          <div class="card"><h3>开宗立派</h3>
-            <div class="row"><input class="txt" id="sectName" placeholder="宗门名（2-8字）" maxlength="8"><button class="mini" id="btnCreateSect" style="flex:0 0 auto">创建</button></div>
-            <div class="small mt8" id="sectCostTip"></div>
+          <div data-wc="s1">
+            <div class="card"><h3>我的宗门</h3><div id="mySect"></div></div>
+            <div class="card"><h3>宗门列表</h3><div id="sectList"></div></div>
+            <div class="card"><h3>开宗立派</h3>
+              <div class="row"><input class="txt" id="sectName" placeholder="宗门名（2-8字）" maxlength="8"><button class="mini" id="btnCreateSect" style="flex:0 0 auto">创建</button></div>
+              <div class="small mt8" id="sectCostTip"></div>
+            </div>
+            <div class="card" id="sectTaskCard" style="display:none"><h3>宗门任务</h3><div id="sectTasks"></div></div>
+            <div class="card" id="sectShopCard" style="display:none"><h3>宗门商店</h3><div id="sectShop"></div></div>
           </div>
-          <div class="card" id="sectTaskCard" style="display:none"><h3>宗门任务</h3><div id="sectTasks"></div></div>
-          <div class="card" id="sectShopCard" style="display:none"><h3>宗门商店</h3><div id="sectShop"></div></div>
+          <div data-wc="s2" style="display:none">
+            <div class="card"><h3>宗门仓库 <span class="small" id="whCount"></span></h3>
+              <div class="small" id="whTip"></div><div id="whList"></div>
+              <div class="row mt8"><button class="mini" id="btnWhDeposit">存入材料</button><button class="mini" id="btnWhTake">取出</button></div>
+            </div>
+          </div>
+          <div data-wc="s3" style="display:none">
+            <div class="card"><h3>宗门BOSS</h3><div id="sectBossList"></div></div>
+          </div>
+          <div data-wc="s4" style="display:none">
+            <div class="card"><h3>联盟</h3><div id="allyBox"></div>
+              <div class="row mt8"><button class="mini" id="btnCreateAlly">创建联盟（20000灵石）</button></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -388,6 +409,34 @@
         </div>
       </div>
 
+      <!-- 活动 -->
+      <div class="win" data-page="act">
+        <div class="win-hd"><span class="tt">🎯 活 动</span><button class="x" data-close>×</button></div>
+        <div class="wtabs">
+          <button class="on" data-wt="a1">常驻活动</button><button data-wt="a2">限时活动</button><button data-wt="a3">每日签到</button>
+        </div>
+        <div class="win-bd">
+          <div data-wc="a1">
+            <div class="card"><h3>📅 每日签到</h3><div id="signBox"></div></div>
+            <div class="card"><h3>🗓️ 七日修行</h3><div id="sevenBox"></div></div>
+            <div class="card"><h3>📈 成长之路</h3><div id="growthBox"></div></div>
+            <div class="card"><h3>⏱️ 在线奖励</h3><div id="onlineBox"></div></div>
+            <div class="card"><h3>🎁 等级礼包</h3><div id="levelGiftBox"></div></div>
+          </div>
+          <div data-wc="a2" style="display:none"><div class="card"><h3>限时活动一览</h3><div id="limitActs"></div></div></div>
+          <div data-wc="a3" style="display:none"><div class="card"><h3>签到日历</h3><div id="signCal"></div></div></div>
+        </div>
+      </div>
+
+      <!-- 称号 -->
+      <div class="win" data-page="title">
+        <div class="win-hd"><span class="tt">🎖️ 称 号</span><button class="x" data-close>×</button></div>
+        <div class="win-bd">
+          <div class="card"><h3>已获称号 <span class="small" id="titleCount"></span></h3><div id="titleList"></div></div>
+          <div class="card"><h3>当前佩戴</h3><div id="titleCur"></div></div>
+        </div>
+      </div>
+
       <!-- 图鉴 -->
       <div class="win" data-page="codex">
         <div class="win-hd"><span class="tt">📚 图 鉴</span><button class="x" data-close>×</button></div>
@@ -492,6 +541,7 @@
 <script src="js/engine.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/frxx.js"></script>
+<script src="js/play.js"></script>
 <script src="js/systems.js"></script>
 <script src="js/story.js"></script>
 <script src="js/ui.js"></script>
