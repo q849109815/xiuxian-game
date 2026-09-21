@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990388321,
-  "lastTick": 1789990388321,
+  "lastSeen": 1789990388887,
+  "lastTick": 1789990388887,
   "realm": 5,
   "stage": 2,
-  "exp": 13249878.704396335,
-  "stone": 17458,
+  "exp": 13586992.564681752,
+  "stone": 18225,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -98,34 +98,6 @@
       "count": 15,
       "desc": "炼器材料",
       "id": "i_qg53eix"
-    },
-    {
-      "id": "it_98wajjw",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·破妄戒",
-      "atk": 51,
-      "def": 25,
-      "hp": 176,
-      "crit": 0,
-      "mp": 67
-    },
-    {
-      "id": "it_yk1v5qo",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·玄铁刀",
-      "atk": 99,
-      "def": 16,
-      "hp": 174,
-      "crit": 0,
-      "mp": 67
     },
     {
       "id": "it_7e8rmxm",
