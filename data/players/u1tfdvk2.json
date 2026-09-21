@@ -7,24 +7,24 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789991654279,
-  "lastTick": 1789991654279,
+  "lastSeen": 1789991672559,
+  "lastTick": 1789991672559,
   "realm": 4,
   "stage": 3,
-  "exp": 2228764.7773875166,
-  "stone": 5422,
+  "exp": 2642544.873707517,
+  "stone": 5584,
   "equip": {
     "weapon": {
-      "id": "it_a2ldwkg",
+      "id": "it_vzsn2ay",
       "kind": "equip",
       "slot": "weapon",
-      "q": 1,
+      "q": 2,
       "level": 0,
       "temper": 0,
-      "name": "灵器·青锋剑",
-      "atk": 73,
-      "def": 18,
-      "hp": 123,
+      "name": "宝器·诛仙剑",
+      "atk": 59,
+      "def": 13,
+      "hp": 125,
       "crit": 0,
       "mp": 46
     },
@@ -52,7 +52,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 1033,
+      "count": 1034,
       "desc": "炼丹材料",
       "id": "i_kjgsvit"
     },
@@ -72,7 +72,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 6,
+      "count": 7,
       "desc": "炼器材料",
       "id": "i_9yr1b5o"
     },
@@ -117,6 +117,20 @@
       "hp": 359,
       "crit": 0,
       "mp": 46
+    },
+    {
+      "id": "it_a2ldwkg",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·青锋剑",
+      "atk": 73,
+      "def": 18,
+      "hp": 123,
+      "crit": 0,
+      "mp": 46
     }
   ],
   "skills": [],
@@ -138,8 +152,8 @@
         "meditate": 1,
         "dungeon": 13,
         "arena": 1,
-        "exp": 12050,
-        "kill": 15
+        "exp": 13488,
+        "kill": 18
       },
       "claimed": []
     },
@@ -148,14 +162,14 @@
         "meditate": 1,
         "dungeon": 13,
         "arena": 1,
-        "exp": 12050,
-        "kill": 15,
+        "exp": 13488,
+        "kill": 18,
         "火麒麟": 1,
         "b3": 1,
-        "采药童子": 6,
-        "b1": 14,
-        "竹叶蛇": 5,
-        "野兔精": 3
+        "采药童子": 7,
+        "b1": 17,
+        "竹叶蛇": 6,
+        "野兔精": 4
       },
       "claimed": []
     }
@@ -199,9 +213,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 15,
+    "kills": 18,
     "deaths": 0,
-    "battles": 15,
+    "battles": 18,
     "breakthrough": 18,
     "offlineMin": 14,
     "meditate": 1,
