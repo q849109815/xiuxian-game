@@ -7,12 +7,12 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789991883715,
-  "lastTick": 1789991883715,
+  "lastSeen": 1789991892153,
+  "lastTick": 1789991892153,
   "realm": 6,
   "stage": 2,
-  "exp": 1749268.9455432594,
-  "stone": 10096,
+  "exp": 26180503.061383255,
+  "stone": 10796,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -85,7 +85,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 15,
+      "count": 17,
       "desc": "炼器材料",
       "id": "i_9yr1b5o"
     },
@@ -211,7 +211,7 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 2,
-        "dungeon": 13,
+        "dungeon": 14,
         "arena": 1,
         "exp": 49670,
         "kill": 34
@@ -221,7 +221,7 @@
     "bounty": {
       "prog": {
         "meditate": 2,
-        "dungeon": 13,
+        "dungeon": 14,
         "arena": 1,
         "exp": 49670,
         "kill": 34,
@@ -286,7 +286,7 @@
     "breakthrough": 25,
     "offlineMin": 16,
     "meditate": 2,
-    "dungeon": 13,
+    "dungeon": 14,
     "encounters": 6,
     "rob": 0
   },
