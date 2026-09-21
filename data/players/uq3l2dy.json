@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995307572,
-  "lastTick": 1789995307572,
+  "lastSeen": 1789995308631,
+  "lastTick": 1789995308631,
   "realm": 9,
   "stage": 3,
-  "exp": 90980974553.21082,
-  "stone": 2244662,
+  "exp": 109177133679.85298,
+  "stone": 2250593,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -912,7 +912,7 @@
     },
     {
       "id": "sk_art_slash",
-      "level": 4,
+      "level": 5,
       "exp": 0
     },
     {
@@ -922,7 +922,7 @@
     },
     {
       "id": "sk_art_ice",
-      "level": 6,
+      "level": 7,
       "exp": 0
     },
     {
@@ -932,7 +932,7 @@
     },
     {
       "id": "sk_art_fire",
-      "level": 4,
+      "level": 5,
       "exp": 0
     }
   ],
@@ -1992,7 +1992,7 @@
         "meditate": 1,
         "exp": 19880800,
         "kill": 479,
-        "dungeon": 152,
+        "dungeon": 155,
         "arena": 20
       },
       "claimed": [
@@ -2014,7 +2014,7 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 152,
+        "dungeon": 155,
         "arena": 20,
         "九幽冥王": 7,
         "b4": 16,
@@ -2071,7 +2071,7 @@
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
-    "dungeon": 152,
+    "dungeon": 155,
     "encounters": 63,
     "rob": 0
   },
