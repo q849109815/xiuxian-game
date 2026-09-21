@@ -7,12 +7,12 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789991994730,
-  "lastTick": 1789991994730,
+  "lastSeen": 1789992000412,
+  "lastTick": 1789992000412,
   "realm": 6,
   "stage": 3,
-  "exp": 136194044.8109299,
-  "stone": 4395,
+  "exp": 160107040.64074105,
+  "stone": 7865,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -366,6 +366,20 @@
       "hp": 680,
       "crit": 0,
       "mp": 76
+    },
+    {
+      "id": "it_ga10ic0",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·太虚戒",
+      "atk": 37,
+      "def": 29,
+      "hp": 190,
+      "crit": 0,
+      "mp": 76
     }
   ],
   "skills": [
@@ -408,8 +422,18 @@
   "equipped": [
     "sk_art_ice"
   ],
-  "beasts": [],
-  "activeBeast": -1,
+  "beasts": [
+    {
+      "id": "bs_xhbyvl9",
+      "ref": "b_bear",
+      "name": "玄铁熊",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    }
+  ],
+  "activeBeast": 0,
   "riding": false,
   "cave": {
     "lv": {
@@ -430,9 +454,9 @@
       "prog": {
         "meditate": 2,
         "dungeon": 135,
-        "arena": 1,
-        "exp": 134234,
-        "kill": 51
+        "arena": 6,
+        "exp": 138830,
+        "kill": 52
       },
       "claimed": [
         "d1",
@@ -444,11 +468,11 @@
       "prog": {
         "meditate": 2,
         "dungeon": 135,
-        "arena": 1,
-        "exp": 134234,
-        "kill": 51,
-        "火麒麟": 11,
-        "b3": 23,
+        "arena": 6,
+        "exp": 138830,
+        "kill": 52,
+        "火麒麟": 12,
+        "b3": 24,
         "采药童子": 9,
         "b1": 23,
         "竹叶蛇": 9,
@@ -461,7 +485,8 @@
         "炎魔": 8
       },
       "claimed": [
-        "b1"
+        "b1",
+        "b3"
       ]
     }
   },
@@ -472,11 +497,11 @@
     "joinedAt": 1789991987340
   },
   "arena": {
-    "score": 20,
-    "wins": 1,
+    "score": 120,
+    "wins": 6,
     "losses": 0,
     "dayDate": "2026-9-21",
-    "fights": 1
+    "fights": 6
   },
   "mail": [
     {
@@ -509,14 +534,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 51,
+    "kills": 52,
     "deaths": 2,
-    "battles": 53,
+    "battles": 54,
     "breakthrough": 26,
     "offlineMin": 16,
     "meditate": 2,
     "dungeon": 135,
-    "encounters": 9,
+    "encounters": 10,
     "rob": 0
   },
   "meditateUntil": 1789992087208,
