@@ -1,0 +1,24 @@
+name: 定时汇总排行榜与统计
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'     # 每 10 分钟跑一次（UTC）
+  workflow_dispatch:            # 允许手动触发
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 汇总玩家数据
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          BRANCH: ${{ vars.DATA_BRANCH || 'main' }}
+        run: node scripts/aggregate.mjs
