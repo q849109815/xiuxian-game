@@ -1,0 +1,99 @@
+{
+  "sects": [
+    { "id": "s_qingyun", "name": "青云宗", "icon": "🏔️", "root": "metal", "desc": "剑修圣地，攻伐第一", "buff": { "atk": 0.1 }, "levelReq": 0 },
+    { "id": "s_bihai", "name": "碧海宫", "icon": "🌊", "root": "water", "desc": "水修正宗，攻守兼备", "buff": { "def": 0.1, "hp": 0.08 }, "levelReq": 0 },
+    { "id": "s_yaowang", "name": "药王谷", "icon": "🌿", "root": "wood", "desc": "丹道传承，炼丹加成", "buff": { "alchemyRate": 0.12, "hp": 0.1 }, "levelReq": 0 },
+    { "id": "s_liehuo", "name": "烈火殿", "icon": "🔥", "root": "fire", "desc": "烈焰焚天，暴击加成", "buff": { "crit": 0.06, "atk": 0.08 }, "levelReq": 0 },
+    { "id": "s_houtu", "name": "厚土门", "icon": "🪨", "root": "earth", "desc": "固若金汤，防御无双", "buff": { "def": 0.15, "anticrit": 0.05 }, "levelReq": 0 },
+    { "id": "s_wuji", "name": "无极魔宗", "icon": "🕳️", "root": "any", "desc": "魔道巨擘，掠夺有加成", "buff": { "atk": 0.12, "rob": 0.2 }, "levelReq": 2 }
+  ],
+  "sectRanks": ["外门弟子", "内门弟子", "真传弟子", "长老", "副宗主", "宗主"],
+  "sectContribPerTask": 20,
+  "sectCreateCost": 3000,
+  "sectTaskRewards": [
+    { "id": "st1", "name": "巡山除妖", "desc": "击杀 5 只妖兽", "type": "kill", "need": 5, "contrib": 20, "stone": 120, "exp": 300 },
+    { "id": "st2", "name": "采集灵药", "desc": "提交 3 株灵草", "type": "herb", "need": 3, "contrib": 25, "stone": 150, "exp": 400 },
+    { "id": "st3", "name": "捐献灵石", "desc": "捐献 500 灵石", "type": "stone", "need": 500, "contrib": 40, "stone": 0, "exp": 0 }
+  ],
+  "sectShop": [
+    { "id": "ss1", "name": "宗门丹药包", "icon": "💊", "contrib": 80, "give": { "pill": "pill_hp", "count": 3 } },
+    { "id": "ss2", "name": "宗门灵草", "icon": "🌿", "contrib": 60, "give": { "herb": "herb_soul", "count": 2 } },
+    { "id": "ss3", "name": "宗门矿石", "icon": "⛏️", "contrib": 70, "give": { "ore": "ore_iron", "count": 4 } },
+    { "id": "ss4", "name": "功法残卷", "icon": "📜", "contrib": 300, "give": { "skill": "sk_art_slash" } }
+  ],
+
+  "tasks": {
+    "main": [
+      { "id": "m1", "name": "初入仙途", "desc": "修为达到炼气中期", "type": "realm", "realm": 0, "stage": 1, "reward": { "stone": 200, "exp": 300 } },
+      { "id": "m2", "name": "筑基之志", "desc": "突破至筑基期", "type": "realm", "realm": 1, "stage": 0, "reward": { "stone": 800, "exp": 2000 } },
+      { "id": "m3", "name": "金丹大道", "desc": "突破至金丹期", "type": "realm", "realm": 2, "stage": 0, "reward": { "stone": 3000, "exp": 10000, "skill": "sk_art_slash" } },
+      { "id": "m4", "name": "元婴显化", "desc": "突破至元婴期", "type": "realm", "realm": 3, "stage": 0, "reward": { "stone": 12000, "exp": 50000 } },
+      { "id": "m5", "name": "化神问道", "desc": "突破至化神期", "type": "realm", "realm": 4, "stage": 0, "reward": { "stone": 40000, "exp": 200000, "skill": "sk_art_thunder" } },
+      { "id": "m6", "name": "陆地神仙", "desc": "突破至真仙", "type": "realm", "realm": 9, "stage": 0, "reward": { "stone": 500000, "exp": 2000000 } }
+    ],
+    "daily": [
+      { "id": "d1", "name": "日常修炼", "desc": "累计获得 5000 修为", "type": "exp", "need": 5000, "reward": { "stone": 150, "exp": 500 } },
+      { "id": "d2", "name": "斩妖除魔", "desc": "击杀 10 只妖兽", "type": "kill", "need": 10, "reward": { "stone": 200, "exp": 800 } },
+      { "id": "d3", "name": "闭关悟道", "desc": "闭关 3 次", "type": "meditate", "need": 3, "reward": { "stone": 180, "herb": 2 } },
+      { "id": "d4", "name": "秘境探秘", "desc": "通关 1 次秘境", "type": "dungeon", "need": 1, "reward": { "stone": 400, "ore": 2 } },
+      { "id": "d5", "name": "论道切磋", "desc": "论道台挑战 3 次", "type": "arena", "need": 3, "reward": { "stone": 260, "exp": 1200 } }
+    ],
+    "bounty": [
+      { "id": "b1", "name": "悬赏：竹叶蛇", "desc": "击杀 8 只后山竹林妖兽", "map": "bamboo", "need": 8, "reward": { "stone": 260, "exp": 900 } },
+      { "id": "b2", "name": "悬赏：僵尸", "desc": "击杀 8 只荒郊义庄妖兽", "map": "crypt", "need": 8, "reward": { "stone": 700, "exp": 2600 } },
+      { "id": "b3", "name": "悬赏：炎魔", "desc": "击杀 8 只赤焰火山妖兽", "map": "volcano", "need": 8, "reward": { "stone": 2200, "exp": 9000 } },
+      { "id": "b4", "name": "悬赏：深渊魔蛛", "desc": "击杀 8 只九幽深渊妖兽", "map": "abyss", "need": 8, "reward": { "stone": 8000, "exp": 33000 } }
+    ]
+  },
+
+  "shop": [
+    { "id": "sp1", "name": "灵草礼包", "icon": "🌿", "price": 300, "give": { "herb": "herb_green", "count": 5 } },
+    { "id": "sp2", "name": "矿石礼包", "icon": "⛏️", "price": 400, "give": { "ore": "ore_iron", "count": 5 } },
+    { "id": "sp3", "name": "洗髓丹", "icon": "🧬", "price": 2000, "give": { "pill": "pill_root" } },
+    { "id": "sp4", "name": "悟道金丹", "icon": "🌟", "price": 5000, "give": { "pill": "pill_zen" } },
+    { "id": "sp5", "name": "心法·长春诀", "icon": "📘", "price": 500, "give": { "skill": "sk_heart_basic" } },
+    { "id": "sp6", "name": "功法·裂空斩", "icon": "🗡️", "price": 800, "give": { "skill": "sk_art_slash" } },
+    { "id": "sp7", "name": "兽笼（随机灵兽）", "icon": "🥚", "price": 3000, "give": { "beast": "random" } },
+    { "id": "sp8", "name": "改名帖", "icon": "📝", "price": 1000, "give": { "rename": 1 } }
+  ],
+
+  "arena": {
+    "costPerFight": 0,
+    "maxPerDay": 20,
+    "winScore": 20,
+    "loseScore": -8,
+    "winStone": 120,
+    "winExp": 400,
+    "tiers": [
+      { "min": 0, "name": "凡尘", "icon": "🪨", "daily": { "stone": 100, "exp": 300 } },
+      { "min": 200, "name": "灵海", "icon": "🌊", "daily": { "stone": 300, "exp": 900 } },
+      { "min": 600, "name": "星河", "icon": "⭐", "daily": { "stone": 800, "exp": 2400 } },
+      { "min": 1400, "name": "天河", "icon": "🌌", "daily": { "stone": 2000, "exp": 6000 } },
+      { "min": 3000, "name": "道域", "icon": "☯️", "daily": { "stone": 6000, "exp": 20000 } }
+    ]
+  },
+
+  "market": {
+    "tax": 0.05,
+    "maxList": 8,
+    "expireHours": 72,
+    "desc": "寄售行：挂单出售道具，系统每 10 分钟清理过期订单"
+  },
+
+  "chat": {
+    "maxMessages": 60,
+    "cooldownSeconds": 15,
+    "desc": "世界频道：消息写入 GitHub，Actions 定时裁剪"
+  },
+
+  "relations": {
+    "daoLvBonus": { "exp": 0.15, "desc": "道侣：双方修炼速度 +15%" },
+    "masterBonus": { "exp": 0.1, "desc": "师徒：徒弟额外 +10% 修为" },
+    "desc": "结为道侣 / 拜师收徒需要在同一服且双方在线过"
+  },
+
+  "mail": {
+    "maxKeep": 30,
+    "desc": "邮件系统：系统与 GM 发放奖励"
+  }
+}
