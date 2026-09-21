@@ -7,26 +7,26 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990715868,
-  "lastTick": 1789990715868,
+  "lastSeen": 1789990719760,
+  "lastTick": 1789990719760,
   "realm": 9,
   "stage": 0,
-  "exp": 329822083.13529205,
-  "stone": 71141,
+  "exp": 16093942646.2165,
+  "stone": 79119,
   "equip": {
     "weapon": {
-      "id": "it_pion6p0",
+      "id": "it_xqx6woj",
       "kind": "equip",
       "slot": "weapon",
       "q": 1,
       "level": 0,
       "temper": 0,
-      "name": "灵器·青锋剑",
-      "atk": 119,
-      "def": 24,
-      "hp": 176,
+      "name": "灵器·灵蛇杖",
+      "atk": 154,
+      "def": 32,
+      "hp": 294,
       "crit": 0,
-      "mp": 67
+      "mp": 106
     },
     "armor": {
       "id": "it_2pke8pq",
@@ -98,18 +98,18 @@
       "mp": 106
     },
     {
-      "id": "it_xqx6woj",
+      "id": "it_pion6p0",
       "kind": "equip",
       "slot": "weapon",
       "q": 1,
       "level": 0,
       "temper": 0,
-      "name": "灵器·灵蛇杖",
-      "atk": 154,
-      "def": 32,
-      "hp": 294,
+      "name": "灵器·青锋剑",
+      "atk": 119,
+      "def": 24,
+      "hp": 176,
       "crit": 0,
-      "mp": 106
+      "mp": 67
     }
   ],
   "skills": [
@@ -174,8 +174,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 1567126,
-        "kill": 194,
+        "exp": 1623954,
+        "kill": 195,
         "dungeon": 5,
         "arena": 1
       },
@@ -188,8 +188,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 1567126,
-        "kill": 194,
+        "exp": 1623954,
+        "kill": 195,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -205,7 +205,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 5,
-        "混沌祖龙": 3
+        "混沌祖龙": 4
       },
       "claimed": [
         "b2",
@@ -244,9 +244,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 194,
+    "kills": 195,
     "deaths": 0,
-    "battles": 194,
+    "battles": 195,
     "breakthrough": 33,
     "offlineMin": 0,
     "meditate": 1,
