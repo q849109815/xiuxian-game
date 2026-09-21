@@ -34,6 +34,78 @@
    "icon": "🌟",
    "price": 900,
    "tier": 5
+  },
+  {
+   "id": "mat_g001",
+   "name": "紫河车草",
+   "icon": "🌿",
+   "price": 320,
+   "tier": 2,
+   "fr": true,
+   "desc": "炼丹材料"
+  },
+  {
+   "id": "mat_g002",
+   "name": "千年灵芝",
+   "icon": "🌿",
+   "price": 720,
+   "tier": 3,
+   "fr": true,
+   "desc": "筑基丹主材料"
+  },
+  {
+   "id": "mat_g003",
+   "name": "玄冰花",
+   "icon": "🌿",
+   "price": 720,
+   "tier": 3,
+   "fr": true,
+   "desc": "冰系丹药材料"
+  },
+  {
+   "id": "mat_g004",
+   "name": "天雷竹",
+   "icon": "🌿",
+   "price": 1280,
+   "tier": 4,
+   "fr": true,
+   "desc": "青竹蜂云剑炼制材料"
+  },
+  {
+   "id": "mat_g005",
+   "name": "庚精",
+   "icon": "🌿",
+   "price": 720,
+   "tier": 3,
+   "fr": true,
+   "desc": "装备强化材料"
+  },
+  {
+   "id": "mat_g006",
+   "name": "妖兽内丹(低阶)",
+   "icon": "🌿",
+   "price": 320,
+   "tier": 2,
+   "fr": true,
+   "desc": "炼丹/炼器材料"
+  },
+  {
+   "id": "mat_g007",
+   "name": "妖兽内丹(高阶)",
+   "icon": "🌿",
+   "price": 1280,
+   "tier": 4,
+   "fr": true,
+   "desc": "高阶丹药材料"
+  },
+  {
+   "id": "mat_g008",
+   "name": "妖魂",
+   "icon": "🌿",
+   "price": 720,
+   "tier": 3,
+   "fr": true,
+   "desc": "魔修功法/镇魂材料"
   }
  ],
  "ores": [
@@ -1009,10 +1081,386 @@
     "tier": 6,
     "exp": 900,
     "desc": "永久提升悟性 +5"
+   },
+   {
+    "id": "pill_m001",
+    "name": "聚气丹",
+    "icon": "🔵",
+    "q": 1,
+    "kind": "exp",
+    "value": 1000,
+    "tier": 1,
+    "cost": {
+     "herb_green": 1,
+     "herb_soul": 0,
+     "herb_fire": 0,
+     "herb_dark": 0
+    },
+    "rate": 0.78,
+    "desc": "炼气期修为+1000",
+    "fr": true
+   },
+   {
+    "id": "pill_m002",
+    "name": "筑基丹",
+    "icon": "🟤",
+    "q": 3,
+    "kind": "break",
+    "value": 0,
+    "tier": 3,
+    "cost": {
+     "herb_green": 3,
+     "herb_soul": 2,
+     "herb_fire": 1,
+     "herb_dark": 0
+    },
+    "rate": 0.6399999999999999,
+    "desc": "突破筑基期必备",
+    "fr": true
+   },
+   {
+    "id": "pill_m003",
+    "name": "凝婴丹",
+    "icon": "🟡",
+    "q": 4,
+    "kind": "break",
+    "value": 0,
+    "tier": 4,
+    "cost": {
+     "herb_green": 4,
+     "herb_soul": 3,
+     "herb_fire": 2,
+     "herb_dark": 1
+    },
+    "rate": 0.57,
+    "desc": "突破元婴期必备",
+    "fr": true
+   },
+   {
+    "id": "pill_m004",
+    "name": "定灵丹",
+    "icon": "💠",
+    "q": 3,
+    "kind": "exp",
+    "value": 3000,
+    "tier": 3,
+    "cost": {
+     "herb_green": 3,
+     "herb_soul": 2,
+     "herb_fire": 1,
+     "herb_dark": 0
+    },
+    "rate": 0.6399999999999999,
+    "desc": "稳固元婴，防走火入魔",
+    "fr": true
+   },
+   {
+    "id": "pill_m005",
+    "name": "增元丹",
+    "icon": "🔷",
+    "q": 2,
+    "kind": "exp",
+    "value": 5000,
+    "tier": 2,
+    "cost": {
+     "herb_green": 2,
+     "herb_soul": 1,
+     "herb_fire": 0,
+     "herb_dark": 0
+    },
+    "rate": 0.71,
+    "desc": "结丹期修为+5000",
+    "fr": true
+   },
+   {
+    "id": "pill_m006",
+    "name": "昊元丹",
+    "icon": "🔶",
+    "q": 3,
+    "kind": "exp",
+    "value": 20000,
+    "tier": 3,
+    "cost": {
+     "herb_green": 3,
+     "herb_soul": 2,
+     "herb_fire": 1,
+     "herb_dark": 0
+    },
+    "rate": 0.6399999999999999,
+    "desc": "结丹期修为+20000",
+    "fr": true
+   },
+   {
+    "id": "pill_m007",
+    "name": "绎云丹",
+    "icon": "🟣",
+    "q": 3,
+    "kind": "exp",
+    "value": 50000,
+    "tier": 3,
+    "cost": {
+     "herb_green": 3,
+     "herb_soul": 2,
+     "herb_fire": 1,
+     "herb_dark": 0
+    },
+    "rate": 0.6399999999999999,
+    "desc": "元婴中期修为+50000",
+    "fr": true
+   },
+   {
+    "id": "pill_m008",
+    "name": "血气丹",
+    "icon": "🔴",
+    "q": 4,
+    "kind": "life",
+    "value": 0,
+    "tier": 4,
+    "cost": {
+     "herb_green": 4,
+     "herb_soul": 3,
+     "herb_fire": 2,
+     "herb_dark": 1
+    },
+    "rate": 0.57,
+    "desc": "化神期延寿100年",
+    "fr": true
+   },
+   {
+    "id": "pill_m009",
+    "name": "万年灵乳",
+    "icon": "🥛",
+    "q": 5,
+    "kind": "heal",
+    "value": 0,
+    "tier": 5,
+    "cost": {
+     "herb_green": 5,
+     "herb_soul": 4,
+     "herb_fire": 3,
+     "herb_dark": 2
+    },
+    "rate": 0.49999999999999994,
+    "desc": "修复真元，巩固根基",
+    "fr": true
+   },
+   {
+    "id": "pill_m010",
+    "name": "化神丹",
+    "icon": "⚡",
+    "q": 5,
+    "kind": "break",
+    "value": 0,
+    "tier": 5,
+    "cost": {
+     "herb_green": 5,
+     "herb_soul": 4,
+     "herb_fire": 3,
+     "herb_dark": 2
+    },
+    "rate": 0.49999999999999994,
+    "desc": "突破化神期必备",
+    "fr": true
+   },
+   {
+    "id": "pill_m011",
+    "name": "炼虚丹",
+    "icon": "🌌",
+    "q": 5,
+    "kind": "break",
+    "value": 0,
+    "tier": 5,
+    "cost": {
+     "herb_green": 5,
+     "herb_soul": 4,
+     "herb_fire": 3,
+     "herb_dark": 2
+    },
+    "rate": 0.49999999999999994,
+    "desc": "突破炼虚期必备",
+    "fr": true
+   },
+   {
+    "id": "pill_m012",
+    "name": "合体丹",
+    "icon": "🔮",
+    "q": 5,
+    "kind": "break",
+    "value": 0,
+    "tier": 5,
+    "cost": {
+     "herb_green": 5,
+     "herb_soul": 4,
+     "herb_fire": 3,
+     "herb_dark": 2
+    },
+    "rate": 0.49999999999999994,
+    "desc": "突破合体期必备",
+    "fr": true
+   },
+   {
+    "id": "pill_m014",
+    "name": "仙元丹",
+    "icon": "✨",
+    "q": 5,
+    "kind": "exp",
+    "value": 100000,
+    "tier": 5,
+    "cost": {
+     "herb_green": 5,
+     "herb_soul": 4,
+     "herb_fire": 3,
+     "herb_dark": 2
+    },
+    "rate": 0.49999999999999994,
+    "desc": "真仙期修为+100000",
+    "fr": true
+   },
+   {
+    "id": "pill_m015",
+    "name": "金仙丹",
+    "icon": "🌟",
+    "q": 6,
+    "kind": "break",
+    "value": 0,
+    "tier": 5,
+    "cost": {
+     "herb_green": 6,
+     "herb_soul": 5,
+     "herb_fire": 4,
+     "herb_dark": 3
+    },
+    "rate": 0.42999999999999994,
+    "desc": "突破金仙境必备",
+    "fr": true
+   },
+   {
+    "id": "pill_m016",
+    "name": "太乙丹",
+    "icon": "☀️",
+    "q": 6,
+    "kind": "break",
+    "value": 0,
+    "tier": 5,
+    "cost": {
+     "herb_green": 6,
+     "herb_soul": 5,
+     "herb_fire": 4,
+     "herb_dark": 3
+    },
+    "rate": 0.42999999999999994,
+    "desc": "突破太乙境必备",
+    "fr": true
+   },
+   {
+    "id": "pill_m017",
+    "name": "大罗丹",
+    "icon": "🌠",
+    "q": 6,
+    "kind": "break",
+    "value": 0,
+    "tier": 5,
+    "cost": {
+     "herb_green": 6,
+     "herb_soul": 5,
+     "herb_fire": 4,
+     "herb_dark": 3
+    },
+    "rate": 0.42999999999999994,
+    "desc": "突破大罗境必备",
+    "fr": true
+   },
+   {
+    "id": "pill_m018",
+    "name": "蕴灵丹",
+    "icon": "🌱",
+    "q": 3,
+    "kind": "root",
+    "value": 0,
+    "tier": 3,
+    "cost": {
+     "herb_green": 3,
+     "herb_soul": 2,
+     "herb_fire": 1,
+     "herb_dark": 0
+    },
+    "rate": 0.6399999999999999,
+    "desc": "灵根提升材料",
+    "fr": true
+   },
+   {
+    "id": "pill_m019",
+    "name": "补天丹",
+    "icon": "🌈",
+    "q": 4,
+    "kind": "root",
+    "value": 0,
+    "tier": 4,
+    "cost": {
+     "herb_green": 4,
+     "herb_soul": 3,
+     "herb_fire": 2,
+     "herb_dark": 1
+    },
+    "rate": 0.57,
+    "desc": "修复灵根缺陷",
+    "fr": true
+   },
+   {
+    "id": "pill_m020",
+    "name": "肃煞丹",
+    "icon": "❄️",
+    "q": 5,
+    "kind": "exp",
+    "value": 500000,
+    "tier": 5,
+    "cost": {
+     "herb_green": 5,
+     "herb_soul": 4,
+     "herb_fire": 3,
+     "herb_dark": 2
+    },
+    "rate": 0.49999999999999994,
+    "desc": "金仙期修为+500000",
+    "fr": true
+   },
+   {
+    "id": "pill_m021",
+    "name": "雪魄丹",
+    "icon": "💎",
+    "q": 5,
+    "kind": "exp",
+    "value": 2000000,
+    "tier": 5,
+    "cost": {
+     "herb_green": 5,
+     "herb_soul": 4,
+     "herb_fire": 3,
+     "herb_dark": 2
+    },
+    "rate": 0.49999999999999994,
+    "desc": "太乙期修为+2000000",
+    "fr": true
+   },
+   {
+    "id": "pill_m022",
+    "name": "玉清丹",
+    "icon": "🪷",
+    "q": 6,
+    "kind": "exp",
+    "value": 10000000,
+    "tier": 5,
+    "cost": {
+     "herb_green": 6,
+     "herb_soul": 5,
+     "herb_fire": 4,
+     "herb_dark": 3
+    },
+    "rate": 0.42999999999999994,
+    "desc": "大罗期修为+10000000",
+    "fr": true
    }
-  ],
-  "failBoom": 0.25,
-  "boomLoss": "cost"
+  ]
  },
  "forge": {
   "recipes": [
