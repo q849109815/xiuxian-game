@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995312073,
-  "lastTick": 1789995312073,
+  "lastSeen": 1789995313185,
+  "lastTick": 1789995313185,
   "realm": 9,
   "stage": 3,
-  "exp": 181961838912.4216,
-  "stone": 2278697,
+  "exp": 200158080411.06375,
+  "stone": 2291251,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -65,7 +65,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 142,
+      "count": 143,
       "desc": "炼丹材料",
       "id": "i_fhce2n2"
     },
@@ -922,7 +922,7 @@
     },
     {
       "id": "sk_art_ice",
-      "level": 7,
+      "level": 9,
       "exp": 0
     },
     {
@@ -1990,9 +1990,9 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 19940526,
-        "kill": 480,
-        "dungeon": 168,
+        "exp": 20013898,
+        "kill": 481,
+        "dungeon": 172,
         "arena": 20
       },
       "claimed": [
@@ -2004,8 +2004,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 19940526,
-        "kill": 480,
+        "exp": 20013898,
+        "kill": 481,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2014,13 +2014,13 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 168,
+        "dungeon": 172,
         "arena": 20,
         "九幽冥王": 7,
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 105,
+        "星宿仙君": 106,
         "混沌祖龙": 95,
         "天兵": 94
       },
@@ -2065,13 +2065,13 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 480,
+    "kills": 481,
     "deaths": 0,
-    "battles": 480,
+    "battles": 481,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
-    "dungeon": 168,
+    "dungeon": 172,
     "encounters": 63,
     "rob": 0
   },
