@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996406609,
-  "lastTick": 1789996406609,
+  "lastSeen": 1789996407153,
+  "lastTick": 1789996407153,
   "realm": 9,
   "stage": 3,
   "exp": 61564268756.55041,
-  "stone": 8232068,
+  "stone": 8232706,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -507,20 +507,6 @@
       "def": 43,
       "hp": 242,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_tk6rbkf",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·灵蛇杖",
-      "atk": 187,
-      "def": 38,
-      "hp": 321,
-      "crit": 0,
       "mp": 115
     },
     {
