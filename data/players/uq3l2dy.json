@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995669181,
-  "lastTick": 1789995669181,
+  "lastSeen": 1789995684258,
+  "lastTick": 1789995684258,
   "realm": 9,
   "stage": 3,
-  "exp": 259812454483.33112,
-  "stone": 3733516,
+  "exp": 74232151806.38033,
+  "stone": 3820048,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 101,
+      "count": 104,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -117,7 +117,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 36,
+      "count": 37,
       "desc": "炼器材料",
       "id": "i_n9wf73t"
     },
@@ -127,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 41,
+      "count": 44,
       "desc": "炼器材料",
       "id": "i_jir574s"
     },
@@ -558,6 +558,90 @@
       "atk": 132,
       "def": 40,
       "hp": 328,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_m5iky5h",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·阴阳环",
+      "atk": 64,
+      "def": 39,
+      "hp": 315,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_eohsxt9",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·养魂环",
+      "atk": 65,
+      "def": 32,
+      "hp": 320,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_ef381q2",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·麒麟铠",
+      "atk": 32,
+      "def": 122,
+      "hp": 949,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_2t6helm",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 4,
+      "level": 0,
+      "temper": 0,
+      "name": "神品·破妄戒",
+      "atk": 88,
+      "def": 35,
+      "hp": 335,
+      "crit": 0.02,
+      "mp": 115
+    },
+    {
+      "id": "it_hpbohgj",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·太虚戒",
+      "atk": 87,
+      "def": 45,
+      "hp": 307,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_gqpsvin",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·太极道衣",
+      "atk": 45,
+      "def": 103,
+      "hp": 880,
       "crit": 0,
       "mp": 115
     }
@@ -1657,7 +1741,7 @@
       "alchemy": 8,
       "forge": 8
     },
-    "array": "spirit",
+    "array": "swift",
     "lastHarvest": 1789989635634,
     "store": {}
   },
@@ -1667,8 +1751,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 35172722,
-        "kill": 715,
+        "exp": 35939686,
+        "kill": 727,
         "dungeon": 213,
         "arena": 20
       },
@@ -1681,8 +1765,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 35172722,
-        "kill": 715,
+        "exp": 35939686,
+        "kill": 727,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1697,9 +1781,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 169,
-        "混沌祖龙": 184,
-        "天兵": 176
+        "星宿仙君": 173,
+        "混沌祖龙": 187,
+        "天兵": 181
       },
       "claimed": [
         "b2",
@@ -1742,14 +1826,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 715,
+    "kills": 727,
     "deaths": 0,
-    "battles": 715,
+    "battles": 727,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 79,
+    "encounters": 80,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
