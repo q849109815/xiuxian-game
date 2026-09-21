@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990201125,
-  "lastTick": 1789990201125,
+  "lastSeen": 1789990203274,
+  "lastTick": 1789990203274,
   "realm": 4,
   "stage": 3,
-  "exp": 2710064.764600004,
-  "stone": 15359,
+  "exp": 2793693.3136000037,
+  "stone": 16079,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -318,7 +318,7 @@
   "sectInfo": {
     "id": "s_qingyun",
     "rankIdx": 0,
-    "contrib": 625,
+    "contrib": 745,
     "joinedAt": 1789989635634
   },
   "arena": {
