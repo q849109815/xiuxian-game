@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790010536565,
-  "lastTick": 1790010536566,
+  "lastSeen": 1790010546566,
+  "lastTick": 1790010546566,
   "realm": 31,
   "stage": 0,
-  "exp": 64422157253.11476,
-  "stone": 8505051246112.912,
+  "exp": 32211082341.55738,
+  "stone": 8505051253944.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -195,7 +195,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 524,
+      "count": 530,
       "desc": "炼丹材料",
       "id": "i_dwghtoq"
     },
@@ -205,7 +205,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 151,
+      "count": 154,
       "desc": "炼器材料",
       "id": "i_jdu35bw"
     },
@@ -852,6 +852,76 @@
       "def": 58,
       "hp": 731,
       "crit": 0.02,
+      "mp": 337
+    },
+    {
+      "id": "it_jmrmone",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·破妄戒",
+      "atk": 252,
+      "def": 64,
+      "hp": 807,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "fr_fr_e001",
+      "name": "青铜剑",
+      "icon": "🗡️",
+      "kind": "equip",
+      "q": 0,
+      "slot": "weapon",
+      "base": {
+        "atk": 10
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
+    },
+    {
+      "id": "it_o0fozvl",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·青锋剑",
+      "atk": 440,
+      "def": 73,
+      "hp": 638,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_ulpivdr",
+      "kind": "equip",
+      "slot": "bracelet",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·麒麟腕",
+      "atk": 218,
+      "def": 130,
+      "hp": 970,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_k3njo6v",
+      "kind": "equip",
+      "slot": "bracelet",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·太极腕",
+      "atk": 150,
+      "def": 159,
+      "hp": 807,
+      "crit": 0,
       "mp": 337
     }
   ],
@@ -2046,16 +2116,16 @@
         "arena": 20,
         "dungeon": 92,
         "meditate": 1,
-        "exp": 129736934678,
-        "kill": 161
+        "exp": 129737005610,
+        "kill": 170
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129836326772,
-        "kill": 1879,
+        "exp": 129836397704,
+        "kill": 1888,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2073,10 +2143,10 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 57,
-        "星斗海妖兽": 46,
+        "禁地守卫": 61,
+        "星斗海妖兽": 47,
         "天星宗弟子": 3,
-        "墨蛟": 55
+        "墨蛟": 59
       },
       "claimed": [
         "b2",
@@ -2120,14 +2190,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1879,
+    "kills": 1888,
     "deaths": 51,
-    "battles": 1930,
+    "battles": 1939,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 305,
-    "encounters": 265,
+    "encounters": 266,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -2156,7 +2226,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 13,
-    "acc": 36,
+    "acc": 46,
     "level": 13
   },
   "titles": {
