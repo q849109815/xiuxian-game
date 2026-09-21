@@ -2,65 +2,81 @@
   "uid": "u1tfdvk2",
   "name": "q849109815",
   "pwd": "iz2s4w",
-  "createdAt": 1789986590023,
-  "lastSeen": 1789987629055,
-  "lastTick": 1789987629055,
-  "realm": 9,
-  "layer": 4,
-  "exp": 47808295111,
-  "stone": 196,
+  "gender": "m",
+  "avatar": "🧝‍♂️",
+  "root": "water",
+  "sect": null,
+  "createdAt": 1789989403736,
+  "lastSeen": 1789989403736,
+  "lastTick": 1789989403736,
+  "realm": 0,
+  "stage": 0,
+  "exp": 0,
+  "stone": 200,
   "equip": {
     "weapon": null,
     "armor": null,
-    "ring": null
+    "ring": null,
+    "talisman": null
   },
-  "bag": [
-    {
-      "id": "mt_juxoogn",
-      "kind": "mat",
-      "ref": "mat_iron",
-      "name": "玄铁",
-      "icon": "⚙️",
-      "price": 40,
-      "count": 12
+  "bag": [],
+  "skills": [],
+  "equipped": [],
+  "beasts": [],
+  "activeBeast": -1,
+  "riding": false,
+  "cave": {
+    "lv": {},
+    "array": "none",
+    "lastHarvest": 1789989403736,
+    "store": {}
+  },
+  "tasks": {
+    "mainIdx": 0,
+    "daily": {
+      "date": "",
+      "prog": {},
+      "claimed": []
     },
-    {
-      "id": "it_vris4zj",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 4,
-      "level": 0,
-      "name": "神品·云锦袍",
-      "atk": 17,
-      "def": 48,
-      "hp": 275,
-      "from": 0
-    },
-    {
-      "id": "it_e10buxv",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 2,
-      "level": 0,
-      "name": "宝器·青锋剑",
-      "atk": 77,
-      "def": 12,
-      "hp": 103,
-      "from": 0
+    "bounty": {
+      "prog": {},
+      "claimed": []
     }
-  ],
+  },
+  "sectInfo": null,
+  "arena": {
+    "score": 0,
+    "wins": 0,
+    "losses": 0,
+    "dayDate": "",
+    "fights": 0
+  },
+  "mail": [],
+  "karma": 0,
+  "dao": {
+    "partner": null,
+    "master": null,
+    "apprentices": []
+  },
+  "reinc": 0,
+  "spot": "valley",
   "buffs": {
     "pillAtk": 0,
-    "pillExpUntil": 0
-  },
-  "stats": {
-    "kills": 8,
-    "deaths": 30,
-    "breakthrough": 84,
-    "battles": 38,
-    "offlineMin": 0
+    "pillExpUntil": 0,
+    "rename": 0
   },
   "codes": [],
   "banned": false,
-  "title": ""
+  "title": "",
+  "stats": {
+    "kills": 0,
+    "deaths": 0,
+    "battles": 0,
+    "breakthrough": 0,
+    "offlineMin": 0,
+    "meditate": 0,
+    "dungeon": 0,
+    "encounters": 0,
+    "rob": 0
+  }
 }
