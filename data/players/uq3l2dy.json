@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990707794,
-  "lastTick": 1789990707794,
+  "lastSeen": 1789990711050,
+  "lastTick": 1789990711050,
   "realm": 8,
   "stage": 3,
-  "exp": 30349554621.93576,
+  "exp": 34120619985.135544,
   "stone": 71141,
   "equip": {
     "weapon": {
@@ -157,7 +157,7 @@
     }
   ],
   "activeBeast": 0,
-  "riding": false,
+  "riding": true,
   "cave": {
     "lv": {
       "farm": 10,
