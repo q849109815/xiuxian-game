@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990674813,
-  "lastTick": 1789990674813,
+  "lastSeen": 1789990676113,
+  "lastTick": 1789990676113,
   "realm": 8,
   "stage": 3,
-  "exp": 4434058915.612774,
-  "stone": 108372,
+  "exp": 5098162149.297147,
+  "stone": 116356,
   "equip": {
     "weapon": {
       "id": "it_pion6p0",
@@ -70,16 +70,6 @@
       "id": "i_qg53eix"
     },
     {
-      "kind": "ore",
-      "ref": "ore_dark",
-      "name": "冥铁",
-      "icon": "🔷",
-      "price": 380,
-      "count": 4,
-      "desc": "炼器材料",
-      "id": "i_21cevzi"
-    },
-    {
       "kind": "herb",
       "ref": "herb_soul",
       "name": "养魂花",
@@ -95,7 +85,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 2,
+      "count": 3,
       "desc": "炼丹材料",
       "id": "i_fhce2n2"
     },
@@ -153,9 +143,9 @@
       "ref": "b_dragon",
       "name": "蛟龙",
       "level": 7,
-      "exp": 100,
+      "exp": 140,
       "stage": 1,
-      "apt": 1.2000000000000002
+      "apt": 1.2500000000000002
     }
   ],
   "activeBeast": 0,
@@ -176,8 +166,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 1304046,
-        "kill": 190,
+        "exp": 1376220,
+        "kill": 191,
         "dungeon": 5,
         "arena": 1
       },
@@ -190,8 +180,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 1304046,
-        "kill": 190,
+        "exp": 1376220,
+        "kill": 191,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -207,7 +197,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 3,
-        "混沌祖龙": 1
+        "混沌祖龙": 2
       },
       "claimed": [
         "b2",
@@ -246,9 +236,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 190,
+    "kills": 191,
     "deaths": 0,
-    "battles": 190,
+    "battles": 191,
     "breakthrough": 32,
     "offlineMin": 0,
     "meditate": 1,
