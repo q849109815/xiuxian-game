@@ -1,1 +1,854 @@
-{"skills": [{"id": "sk001", "name": "长春功", "icon": "📗", "type": "heart", "root": "any", "maxLevel": 9, "q": "凡品", "cls": "通用", "desc": "木属性修炼速度+5%", "grow": "每级+1%", "src": "新手教程(墨大夫传授)", "array": "—", "passive": {"atk": 0.1}, "price": 1500}, {"id": "sk002", "name": "青元剑诀", "icon": "🗡️", "type": "art", "root": "any", "maxLevel": 9, "q": "仙品", "cls": "剑修", "desc": "剑伤+15%，剑气层数+1", "grow": "每级+2%", "src": "李化元传授/青元子传承", "array": "大庚剑阵", "passive": {"atk": 0.15}, "price": 7500}, {"id": "sk003", "name": "大衍决", "icon": "🧠", "type": "heart", "root": "any", "maxLevel": 9, "q": "仙品", "cls": "通用", "desc": "神识强度+30%", "grow": "每级+3%", "src": "虚天殿大衍神君传承", "array": "—", "passive": {"mp": 0.15}, "price": 7500}, {"id": "sk004", "name": "梵圣真魔功", "icon": "💪", "type": "heart", "root": "any", "maxLevel": 9, "q": "极品", "cls": "体修", "desc": "气血+20%，防御+15%", "grow": "每级+2%", "src": "明王决+梵圣妖功+托天魔功合成", "array": "—", "passive": {"hp": 0.2, "def": 0.15}, "price": 6000}, {"id": "sk005", "name": "惊蛰十二变", "icon": "🐉", "type": "art", "root": "any", "maxLevel": 9, "q": "仙品", "cls": "通用", "desc": "可化身真灵战斗，全属性+25%", "grow": "每级+2%", "src": "广寒界副本获得", "array": "真灵变身", "passive": {"atk": 0.25}, "price": 7500}, {"id": "sk006", "name": "元磁神光", "icon": "🧲", "type": "art", "root": "any", "maxLevel": 9, "q": "极品", "cls": "法修", "desc": "攻防+15%，禁锢对手法宝", "grow": "每级+2%", "src": "元磁神山习得", "array": "元磁禁锢", "passive": {"atk": 0.15}, "price": 6000}, {"id": "sk007", "name": "炼神术", "icon": "👁️", "type": "heart", "root": "any", "maxLevel": 9, "q": "仙品", "cls": "通用", "desc": "神魂强度+40%，抗心魔+20%", "grow": "每级+3%", "src": "地渊副本/禁忌功法", "array": "—", "passive": {"mp": 0.2}, "price": 7500}, {"id": "sk008", "name": "真言化轮经", "icon": "⏳", "type": "heart", "root": "any", "maxLevel": 9, "q": "仙品", "cls": "通用", "desc": "时间法则感悟+20%", "grow": "每级+2%", "src": "仙界获得/时间道祖秘境", "array": "时间加速", "passive": {"atk": 0.1}, "price": 7500}, {"id": "sk009", "name": "玄阴经", "icon": "❄️", "type": "heart", "root": "any", "maxLevel": 9, "q": "上品", "cls": "法修", "desc": "灵力+15%，冰系伤害+10%", "grow": "每级+1.5%", "src": "黄枫谷藏经阁兑换", "array": "—", "passive": {"mp": 0.15}, "price": 4500}, {"id": "sk010", "name": "七鬼噬魂功", "icon": "💀", "type": "art", "root": "any", "maxLevel": 9, "q": "上品", "cls": "魔修", "desc": "毒攻+20%，吸血+10%", "grow": "每级+2%", "src": "鬼灵门功法/魔道兑换", "array": "七鬼噬魂", "passive": {"atk": 0.1}, "price": 4500}, {"id": "sk011", "name": "黑煞爪", "icon": "🐾", "type": "art", "root": "any", "maxLevel": 9, "q": "中品", "cls": "体修", "desc": "近战爪击伤害+25%", "grow": "每级+3%", "src": "七玄门/怪物掉落", "array": "破甲效果", "passive": {"atk": 0.1}, "price": 3000}, {"id": "sk012", "name": "象甲功", "icon": "🛡️", "type": "heart", "root": "any", "maxLevel": 9, "q": "中品", "cls": "体修", "desc": "防御+20%，反伤+15%", "grow": "每级+2%", "src": "七玄门/怪物掉落", "array": "反伤", "passive": {"def": 0.2}, "price": 3000}, {"id": "sk013", "name": "千锋聚灵剑", "icon": "⚔️", "type": "art", "root": "any", "maxLevel": 9, "q": "极品", "cls": "剑修", "desc": "飞剑数量+50%，剑伤+10%", "grow": "每级+1.5%", "src": "琅琊阁兑换/副本掉落", "array": "千锋剑阵", "passive": {"atk": 0.1}, "price": 6000}, {"id": "sk014", "name": "托天魔功", "icon": "😈", "type": "art", "root": "any", "maxLevel": 9, "q": "上品", "cls": "魔修", "desc": "攻击+30%，流血效果", "grow": "每级+3%", "src": "魔族兑换/魔修传承", "array": "天魔解体", "passive": {"atk": 0.3}, "price": 4500}, {"id": "sk015", "name": "素女轮回功", "icon": "🌸", "type": "heart", "root": "any", "maxLevel": 9, "q": "极品", "cls": "南宫婉专属", "desc": "素女属性+25%，轮回之力", "grow": "每级+2%", "src": "掩月宗传承/南宫婉仙缘", "array": "轮回转生", "passive": {"atk": 0.1}, "price": 6000}, {"id": "sk016", "name": "青蟠剑阵", "icon": "🌀", "type": "art", "root": "any", "maxLevel": 9, "q": "极品", "cls": "剑修", "desc": "青蟠剑阵伤害+30%", "grow": "每级+3%", "src": "青元剑诀进阶", "array": "青蟠剑阵", "passive": {"atk": 0.1}, "price": 6000}, {"id": "sk017", "name": "春黎剑阵", "icon": "🌿", "type": "art", "root": "any", "maxLevel": 9, "q": "仙品", "cls": "剑修", "desc": "春黎剑阵范围伤害+40%", "grow": "每级+4%", "src": "青元剑诀大成", "array": "春黎剑阵", "passive": {"atk": 0.1}, "price": 7500}, {"id": "sk018", "name": "大庚剑阵", "icon": "⚡", "type": "art", "root": "any", "maxLevel": 9, "q": "仙品", "cls": "剑修", "desc": "大庚剑阵全伤害+50%", "grow": "每级+5%", "src": "72口青竹蜂云剑集齐", "array": "大庚剑阵(终极)", "passive": {"atk": 0.1}, "price": 7500}, {"id": "sk019", "name": "天凤涅槃诀", "icon": "🔥", "type": "art", "root": "any", "maxLevel": 9, "q": "仙品", "cls": "凤族/通用", "desc": "死亡后20%概率涅槃重生", "grow": "每级+2%", "src": "凤族传承/灵界凤族", "array": "天凤涅槃", "passive": {"atk": 0.1}, "price": 7500}, {"id": "sk020", "name": "鲲鹏破灭诀", "icon": "🐋", "type": "art", "root": "any", "maxLevel": 9, "q": "仙品", "cls": "飞灵族/通用", "desc": "速度+40%，破灭伤害", "grow": "每级+3%", "src": "鲲鹏传承/灵界秘境", "array": "鲲鹏变", "passive": {"atk": 0.1}, "price": 7500}]}
+{
+ "skills": [
+  {
+   "id": "sk001",
+   "name": "长春功",
+   "icon": "📗",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "凡品",
+   "cls": "通用",
+   "desc": "木属性修炼速度+5%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK001",
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk002",
+   "name": "青元剑诀",
+   "icon": "🗡️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "剑伤+15%，剑气层数+1",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK002",
+   "active": {
+    "mult": 2.0,
+    "mp": 16,
+    "cd": 2
+   },
+   "passive": {
+    "atk": 0.15
+   }
+  },
+  {
+   "id": "sk003",
+   "name": "大衍决",
+   "icon": "🧠",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "神识强度+30%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK003",
+   "passive": {
+    "mp": 0.15
+   }
+  },
+  {
+   "id": "sk004",
+   "name": "梵圣真魔功",
+   "icon": "💪",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "cls": "通用",
+   "desc": "气血+20%，防御+15%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK004",
+   "passive": {
+    "hp": 0.2,
+    "def": 0.15
+   }
+  },
+  {
+   "id": "sk005",
+   "name": "惊蛰十二变",
+   "icon": "🐉",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "可化身真灵战斗，全属性+25%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK005",
+   "active": {
+    "mult": 3.2,
+    "mp": 50,
+    "cd": 6,
+    "mustCrit": true
+   },
+   "passive": {
+    "atk": 0.25
+   }
+  },
+  {
+   "id": "sk006",
+   "name": "元磁神光",
+   "icon": "🧲",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "cls": "通用",
+   "desc": "攻防+15%，禁锢对手法宝",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK006",
+   "active": {
+    "mult": 2.1,
+    "mp": 24,
+    "cd": 3,
+    "slow": 0.25
+   },
+   "passive": {
+    "atk": 0.15
+   }
+  },
+  {
+   "id": "sk007",
+   "name": "炼神术",
+   "icon": "👁️",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "神魂强度+40%，抗心魔+20%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK007",
+   "passive": {
+    "mp": 0.2
+   }
+  },
+  {
+   "id": "sk008",
+   "name": "真言化轮经",
+   "icon": "⏳",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "时间法则感悟+20%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK008",
+   "active": {
+    "mult": 2.6,
+    "mp": 36,
+    "cd": 5,
+    "mustCrit": true
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk009",
+   "name": "玄阴经",
+   "icon": "❄️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "通用",
+   "desc": "灵力+15%，冰系伤害+10%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK009",
+   "active": {
+    "mult": 1.9,
+    "mp": 18,
+    "cd": 3,
+    "slow": 0.2
+   },
+   "passive": {
+    "mp": 0.15
+   }
+  },
+  {
+   "id": "sk010",
+   "name": "七鬼噬魂功",
+   "icon": "💀",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "通用",
+   "desc": "毒攻+20%，吸血+10%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK010",
+   "active": {
+    "mult": 1.7,
+    "mp": 18,
+    "cd": 3,
+    "lifesteal": 0.35
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk011",
+   "name": "黑煞爪",
+   "icon": "🐾",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "中品",
+   "cls": "通用",
+   "desc": "近战爪击伤害+25%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK011",
+   "active": {
+    "mult": 1.75,
+    "mp": 12,
+    "cd": 2,
+    "burn": 0.05
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk012",
+   "name": "象甲功",
+   "icon": "🛡️",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "中品",
+   "cls": "通用",
+   "desc": "防御+20%，反伤+15%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK012",
+   "passive": {
+    "def": 0.2
+   }
+  },
+  {
+   "id": "sk013",
+   "name": "千锋聚灵剑",
+   "icon": "⚔️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "cls": "通用",
+   "desc": "飞剑数量+50%，剑伤+10%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK013",
+   "active": {
+    "mult": 2.2,
+    "mp": 20,
+    "cd": 3
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk014",
+   "name": "托天魔功",
+   "icon": "😈",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "通用",
+   "desc": "攻击+30%，流血效果",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK014",
+   "active": {
+    "mult": 2.8,
+    "mp": 38,
+    "cd": 5,
+    "burn": 0.1,
+    "lifesteal": 0.2
+   },
+   "passive": {
+    "atk": 0.3
+   }
+  },
+  {
+   "id": "sk015",
+   "name": "素女轮回功",
+   "icon": "🌸",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "cls": "通用",
+   "desc": "素女属性+25%，轮回之力",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK015",
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk016",
+   "name": "青蟠剑阵",
+   "icon": "🌀",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "cls": "通用",
+   "desc": "青蟠剑阵伤害+30%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK016",
+   "active": {
+    "mult": 2.5,
+    "mp": 28,
+    "cd": 4,
+    "aoe": true
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk017",
+   "name": "春黎剑阵",
+   "icon": "🌿",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "春黎剑阵范围伤害+40%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK017",
+   "active": {
+    "mult": 2.9,
+    "mp": 35,
+    "cd": 4,
+    "aoe": true
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk018",
+   "name": "大庚剑阵",
+   "icon": "⚡",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "大庚剑阵全伤害+50%",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK018",
+   "active": {
+    "mult": 2.7,
+    "mp": 32,
+    "cd": 4,
+    "aoe": true
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk019",
+   "name": "天凤涅槃诀",
+   "icon": "🔥",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "死亡后20%概率涅槃重生",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK019",
+   "active": {
+    "mult": 2.4,
+    "mp": 30,
+    "cd": 5,
+    "heal": 0.25
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "sk020",
+   "name": "鲲鹏破灭诀",
+   "icon": "🐋",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "cls": "通用",
+   "desc": "速度+40%，破灭伤害",
+   "price": 1500,
+   "fr": true,
+   "frid": "SK020",
+   "active": {
+    "mult": 3.0,
+    "mp": 42,
+    "cd": 5,
+    "aoe": true
+   },
+   "passive": {
+    "atk": 0.1
+   }
+  },
+  {
+   "id": "c001_s1",
+   "name": "青元剑诀",
+   "icon": "🗡️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C001",
+   "clsName": "剑修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C001-S1",
+   "kind": "剑修",
+   "active": {
+    "mult": 1.85,
+    "mp": 14,
+    "cd": 2
+   }
+  },
+  {
+   "id": "c001_s2",
+   "name": "大庚剑阵",
+   "icon": "⚔️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C001",
+   "clsName": "剑修",
+   "desc": "大庚剑阵",
+   "price": 1500,
+   "fr": true,
+   "frid": "C001-S2",
+   "kind": "剑修",
+   "active": {
+    "mult": 2.7,
+    "mp": 32,
+    "cd": 4,
+    "aoe": true
+   }
+  },
+  {
+   "id": "c001_s3",
+   "name": "万剑归宗",
+   "icon": "🌠",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C001",
+   "clsName": "剑修",
+   "desc": "春黎剑阵",
+   "price": 1500,
+   "fr": true,
+   "frid": "C001-S3",
+   "kind": "剑修",
+   "active": {
+    "mult": 3.8,
+    "mp": 65,
+    "cd": 6,
+    "aoe": true,
+    "mustCrit": true
+   }
+  },
+  {
+   "id": "c002_s1",
+   "name": "黑煞爪",
+   "icon": "🐾",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C002",
+   "clsName": "体修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C002-S1",
+   "kind": "体修",
+   "active": {
+    "mult": 1.75,
+    "mp": 12,
+    "cd": 2,
+    "burn": 0.05
+   }
+  },
+  {
+   "id": "c002_s2",
+   "name": "象甲功",
+   "icon": "🛡️",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C002",
+   "clsName": "体修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C002-S2",
+   "kind": "体修",
+   "passive": {
+    "def": 0.2,
+    "hp": 0.12
+   }
+  },
+  {
+   "id": "c002_s3",
+   "name": "霸王举鼎",
+   "icon": "🏋️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C002",
+   "clsName": "体修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C002-S3",
+   "kind": "体修",
+   "active": {
+    "mult": 2.4,
+    "mp": 30,
+    "cd": 5,
+    "shield": 0.45,
+    "heal": 0.1
+   }
+  },
+  {
+   "id": "c003_s1",
+   "name": "玄冰刺",
+   "icon": "❄️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C003",
+   "clsName": "法修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C003-S1",
+   "kind": "法修",
+   "active": {
+    "mult": 1.6,
+    "mp": 16,
+    "cd": 2,
+    "slow": 0.3
+   }
+  },
+  {
+   "id": "c003_s2",
+   "name": "天雷落",
+   "icon": "⚡",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C003",
+   "clsName": "法修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C003-S2",
+   "kind": "法修",
+   "active": {
+    "mult": 2.3,
+    "mp": 28,
+    "cd": 3,
+    "mustCrit": true
+   }
+  },
+  {
+   "id": "c003_s3",
+   "name": "冰封万里",
+   "icon": "🧊",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C003",
+   "clsName": "法修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C003-S3",
+   "kind": "法修",
+   "active": {
+    "mult": 3.0,
+    "mp": 45,
+    "cd": 5,
+    "slow": 0.5,
+    "aoe": true
+   }
+  },
+  {
+   "id": "c004_s1",
+   "name": "七鬼噬魂",
+   "icon": "💀",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C004",
+   "clsName": "魔修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C004-S1",
+   "kind": "魔修",
+   "active": {
+    "mult": 1.7,
+    "mp": 18,
+    "cd": 3,
+    "lifesteal": 0.35
+   }
+  },
+  {
+   "id": "c004_s2",
+   "name": "毒雾弥漫",
+   "icon": "☠️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C004",
+   "clsName": "魔修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C004-S2",
+   "kind": "魔修",
+   "active": {
+    "mult": 1.5,
+    "mp": 20,
+    "cd": 3,
+    "burn": 0.15
+   }
+  },
+  {
+   "id": "c004_s3",
+   "name": "托天魔功",
+   "icon": "😈",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C004",
+   "clsName": "魔修",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C004-S3",
+   "kind": "魔修",
+   "active": {
+    "mult": 2.8,
+    "mp": 38,
+    "cd": 5,
+    "burn": 0.1,
+    "lifesteal": 0.2
+   }
+  },
+  {
+   "id": "c005_s1",
+   "name": "敛息术",
+   "icon": "🕶️",
+   "type": "heart",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C005",
+   "clsName": "通用",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C005-S1",
+   "kind": "通用",
+   "passive": {
+    "speed": 0.1,
+    "dodge": 0.05
+   }
+  },
+  {
+   "id": "c005_s2",
+   "name": "神行术",
+   "icon": "💨",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "cls": "C005",
+   "clsName": "通用",
+   "desc": "—",
+   "price": 1500,
+   "fr": true,
+   "frid": "C005-S2",
+   "kind": "通用",
+   "active": {
+    "mult": 1.2,
+    "mp": 8,
+    "cd": 3,
+    "slow": 0.2
+   }
+  },
+  {
+   "id": "sk_art_slash",
+   "name": "裂空斩",
+   "icon": "🗡️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "中品",
+   "desc": "基础剑气斩击",
+   "active": {
+    "mult": 1.8,
+    "mp": 12,
+    "cd": 2
+   },
+   "price": 800
+  },
+  {
+   "id": "sk_art_fire",
+   "name": "三昧真火",
+   "icon": "🔥",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "desc": "丹火焚敌，持续灼烧",
+   "active": {
+    "mult": 2.6,
+    "mp": 25,
+    "cd": 3,
+    "burn": 0.1
+   },
+   "price": 2200
+  },
+  {
+   "id": "sk_art_ice",
+   "name": "玄冰封印",
+   "icon": "❄️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "desc": "冰封减速",
+   "active": {
+    "mult": 1.4,
+    "mp": 20,
+    "cd": 3,
+    "slow": 0.3
+   },
+   "price": 2000
+  },
+  {
+   "id": "sk_art_thunder",
+   "name": "掌心雷",
+   "icon": "⚡",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "desc": "雷法必暴",
+   "active": {
+    "mult": 2.2,
+    "mp": 30,
+    "cd": 4,
+    "mustCrit": true
+   },
+   "price": 3600
+  },
+  {
+   "id": "sk_art_shield",
+   "name": "金光护体",
+   "icon": "🛡️",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "上品",
+   "desc": "护盾并回血",
+   "active": {
+    "mult": 0.5,
+    "mp": 18,
+    "cd": 4,
+    "shield": 0.35,
+    "heal": 0.15
+   },
+   "price": 2400
+  },
+  {
+   "id": "sk_art_drain",
+   "name": "吸星大法",
+   "icon": "🩸",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "极品",
+   "desc": "吸取敌人气血",
+   "active": {
+    "mult": 1.5,
+    "mp": 22,
+    "cd": 3,
+    "lifesteal": 0.4
+   },
+   "price": 3200
+  },
+  {
+   "id": "sk_art_chaos",
+   "name": "混沌开天",
+   "icon": "🌌",
+   "type": "art",
+   "root": "any",
+   "maxLevel": 9,
+   "q": "仙品",
+   "desc": "开天一击，范围绝杀",
+   "active": {
+    "mult": 3.6,
+    "mp": 60,
+    "cd": 6,
+    "aoe": true
+   },
+   "price": 9000
+  }
+ ]
+}
