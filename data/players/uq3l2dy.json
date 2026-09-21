@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009607363,
-  "lastTick": 1790009607363,
+  "lastSeen": 1790009634514,
+  "lastTick": 1790009634514,
   "realm": 31,
   "stage": 0,
-  "exp": 0,
+  "exp": 91452285351.09529,
   "stone": 8505051541052.912,
   "equip": {
     "weapon": {
@@ -2421,7 +2421,7 @@
     "rob": 0
   },
   "meditateUntil": 1790009904285,
-  "lastChatAt": 1789993785456,
+  "lastChatAt": 1790009623482,
   "bonusWuxing": 3670,
   "wallet": {
     "c001": 0,
@@ -2446,7 +2446,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 3,
-    "acc": 17,
+    "acc": 45,
     "level": 13
   },
   "titles": {
