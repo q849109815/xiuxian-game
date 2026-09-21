@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790010410591,
-  "lastTick": 1790010410591,
+  "lastSeen": 1790010413367,
+  "lastTick": 1790010413367,
   "realm": 31,
   "stage": 0,
-  "exp": 25220689133.266693,
-  "stone": 8505051575479.912,
+  "exp": 75662089995.80008,
+  "stone": 8505051578947.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -167,7 +167,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 474,
+      "count": 475,
       "desc": "炼丹材料",
       "id": "i_dwghtoq"
     },
@@ -180,20 +180,6 @@
       "count": 118,
       "desc": "炼器材料",
       "id": "i_jdu35bw"
-    },
-    {
-      "id": "it_jjmchzg",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·破妄戒",
-      "atk": 225,
-      "def": 71,
-      "hp": 700,
-      "crit": 0,
-      "mp": 325
     },
     {
       "id": "it_a4u7ou3",
@@ -1630,16 +1616,16 @@
         "arena": 20,
         "dungeon": 92,
         "meditate": 1,
-        "exp": 129736123924,
-        "kill": 55
+        "exp": 129736146520,
+        "kill": 58
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129835516018,
-        "kill": 1773,
+        "exp": 129835538614,
+        "kill": 1776,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1657,10 +1643,10 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 19,
+        "禁地守卫": 21,
         "星斗海妖兽": 19,
         "天星宗弟子": 3,
-        "墨蛟": 14
+        "墨蛟": 15
       },
       "claimed": [
         "b2",
@@ -1704,9 +1690,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1773,
+    "kills": 1776,
     "deaths": 51,
-    "battles": 1824,
+    "battles": 1827,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
@@ -1740,7 +1726,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 12,
-    "acc": 0,
+    "acc": 2,
     "level": 13
   },
   "titles": {
