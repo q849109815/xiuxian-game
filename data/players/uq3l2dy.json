@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790012266750,
-  "lastTick": 1790012266750,
+  "lastSeen": 1790012268271,
+  "lastTick": 1790012268271,
   "realm": 31,
   "stage": 0,
-  "exp": 200053107551.87634,
-  "stone": 2827460956449.0703,
+  "exp": 268882456777.62756,
+  "stone": 2827460957355.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -1099,7 +1099,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 6,
+      "count": 7,
       "desc": "炼器材料",
       "id": "i_fpil8ni"
     },
@@ -2571,16 +2571,16 @@
         "arena": 20,
         "dungeon": 249,
         "meditate": 1,
-        "exp": 129754440406,
-        "kill": 1493
+        "exp": 129754447880,
+        "kill": 1494
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129853832500,
-        "kill": 3211,
+        "exp": 129853839974,
+        "kill": 3212,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2601,7 +2601,7 @@
         "禁地守卫": 508,
         "星斗海妖兽": 486,
         "天星宗弟子": 3,
-        "墨蛟": 496
+        "墨蛟": 497
       },
       "claimed": [
         "b2",
@@ -2645,9 +2645,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3211,
+    "kills": 3212,
     "deaths": 65,
-    "battles": 3276,
+    "battles": 3277,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
@@ -2681,7 +2681,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 56,
+    "acc": 57,
     "level": 30
   },
   "titles": {
