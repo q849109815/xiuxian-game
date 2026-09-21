@@ -7,12 +7,12 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789992272510,
-  "lastTick": 1789992272510,
+  "lastSeen": 1789992278455,
+  "lastTick": 1789992278455,
   "realm": 9,
   "stage": 1,
-  "exp": 71497917436.48117,
-  "stone": 466483488,
+  "exp": 101749228559.69489,
+  "stone": 466464670,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -560,7 +560,7 @@
     "lv": {
       "farm": 5,
       "garden": 6,
-      "array": 6,
+      "array": 7,
       "alchemy": 8,
       "forge": 8
     },
