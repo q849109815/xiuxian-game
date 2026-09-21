@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989816754,
-  "lastTick": 1789989816754,
+  "lastSeen": 1789989827274,
+  "lastTick": 1789989827274,
   "realm": 2,
   "stage": 3,
-  "exp": 17290.971999999994,
-  "stone": 4166,
+  "exp": 34448.80879999999,
+  "stone": 5251,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -65,7 +65,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 7,
+      "count": 8,
       "desc": "炼器材料",
       "id": "i_op7cm1h"
     },
@@ -75,7 +75,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 4,
+      "count": 5,
       "desc": "炼丹材料",
       "id": "i_xzh1o2k"
     },
@@ -85,23 +85,9 @@
       "name": "养魂花",
       "icon": "🌸",
       "price": 90,
-      "count": 2,
+      "count": 3,
       "desc": "炼丹材料",
       "id": "i_q0unirj"
-    },
-    {
-      "id": "it_5lg2fle",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·玄铁刀",
-      "atk": 60,
-      "def": 13,
-      "hp": 84,
-      "crit": 0,
-      "mp": 34
     },
     {
       "id": "it_o3i53gq",
@@ -172,6 +158,48 @@
       "hp": 75,
       "crit": 0,
       "mp": 34
+    },
+    {
+      "id": "it_u0yfm3j",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·阴阳环",
+      "atk": 22,
+      "def": 13,
+      "hp": 101,
+      "crit": 0,
+      "mp": 34
+    },
+    {
+      "id": "it_3vymxuu",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·太极道衣",
+      "atk": 9,
+      "def": 40,
+      "hp": 306,
+      "crit": 0,
+      "mp": 34
+    },
+    {
+      "id": "it_jeutfgp",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·麒麟铠",
+      "atk": 11,
+      "def": 34,
+      "hp": 294,
+      "crit": 0,
+      "mp": 34
     }
   ],
   "skills": [],
@@ -191,20 +219,20 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 31324,
-        "kill": 22
+        "exp": 36752,
+        "kill": 26
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 31324,
-        "kill": 22,
-        "女鬼": 8,
-        "b2": 22,
-        "僵尸": 11,
-        "尸王": 3
+        "exp": 36752,
+        "kill": 26,
+        "女鬼": 10,
+        "b2": 26,
+        "僵尸": 12,
+        "尸王": 4
       },
       "claimed": []
     }
@@ -240,9 +268,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 22,
+    "kills": 26,
     "deaths": 0,
-    "battles": 22,
+    "battles": 26,
     "breakthrough": 11,
     "offlineMin": 0,
     "meditate": 1,
