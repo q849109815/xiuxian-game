@@ -7,12 +7,12 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789992071593,
-  "lastTick": 1789992071593,
-  "realm": 7,
-  "stage": 2,
-  "exp": 2271201734.9193707,
-  "stone": 27,
+  "lastSeen": 1789992101460,
+  "lastTick": 1789992101460,
+  "realm": 8,
+  "stage": 0,
+  "exp": 93342446.07072115,
+  "stone": 4665,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -75,7 +75,7 @@
       "name": "赤炎莲",
       "icon": "🔥",
       "price": 180,
-      "count": 18,
+      "count": 21,
       "desc": "炼丹材料",
       "id": "i_b41xskg"
     },
@@ -85,7 +85,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 143,
+      "count": 146,
       "desc": "炼器材料",
       "id": "i_9yr1b5o"
     },
@@ -464,6 +464,34 @@
       "hp": 177,
       "crit": 0,
       "mp": 85
+    },
+    {
+      "id": "it_e9xo08n",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·玄龟甲",
+      "atk": 29,
+      "def": 78,
+      "hp": 500,
+      "crit": 0,
+      "mp": 85
+    },
+    {
+      "id": "it_8j7a5u4",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·混元幡",
+      "atk": 121,
+      "def": 31,
+      "hp": 173,
+      "crit": 0,
+      "mp": 85
     }
   ],
   "skills": [
@@ -548,8 +576,8 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 20,
-        "exp": 203460,
-        "kill": 64
+        "exp": 240748,
+        "kill": 71
       },
       "claimed": [
         "d1",
@@ -562,10 +590,10 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 20,
-        "exp": 203460,
-        "kill": 64,
-        "火麒麟": 15,
-        "b3": 36,
+        "exp": 240748,
+        "kill": 71,
+        "火麒麟": 18,
+        "b3": 43,
         "采药童子": 9,
         "b1": 23,
         "竹叶蛇": 9,
@@ -574,8 +602,8 @@
         "b2": 5,
         "女鬼": 2,
         "僵尸": 2,
-        "熔岩巨人": 12,
-        "炎魔": 9
+        "熔岩巨人": 13,
+        "炎魔": 12
       },
       "claimed": [
         "b1",
@@ -627,14 +655,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 64,
+    "kills": 71,
     "deaths": 2,
-    "battles": 66,
-    "breakthrough": 28,
+    "battles": 73,
+    "breakthrough": 30,
     "offlineMin": 16,
     "meditate": 2,
     "dungeon": 135,
-    "encounters": 12,
+    "encounters": 16,
     "rob": 0
   },
   "meditateUntil": 1789992087208,
