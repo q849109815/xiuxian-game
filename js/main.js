@@ -322,6 +322,7 @@ function bindGlobal() {
       if (autoFight) runBattle();
     }
     if (t.id === 'btnHarvest') {
+      if (window.REALQ) REALQ.add(P, 'cave', 1);
       const r = SYS.harvestCave(P);
       UI.toast(r.msg, r.ok ? 'ok' : 'err'); UI.renderCave(P); UI.renderHUD(P); save();
     }
@@ -490,6 +491,8 @@ function onEnterDungeon(p, did) {
     UI.pushLog(`奖励：${UI.rewardTxt(r.reward)}${r.skill ? '、功法【' + r.skill + '】' : ''}${r.beast ? '、灵兽【' + r.beast + '】' : ''}`, 'sys', '#dungeonLog');
     UI.flashBreakthrough();
     SYS.taskProgress(p, 'dungeon', 1);
+    if (window.REALQ) REALQ.add(p, 'dungeon', 1);
+    if (window.FRXX && FRXX.data) { p.dungeonCleared = p.dungeonCleared || []; if (p.dungeonCleared.indexOf(did) < 0) p.dungeonCleared.push(did); }
   } else {
     UI.toast('秘境挑战失败', 'err');
   }
