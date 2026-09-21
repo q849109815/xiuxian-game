@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789994110565,
-  "lastTick": 1789994110565,
+  "lastSeen": 1789994113448,
+  "lastTick": 1789994113448,
   "realm": 9,
   "stage": 3,
-  "exp": 122597756667.25157,
-  "stone": 1356889,
+  "exp": 175139587696.9308,
+  "stone": 1463855,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -236,6 +236,20 @@
       "atk": 42,
       "def": 142,
       "hp": 729,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_jm2oex0",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·聚灵戒",
+      "atk": 73,
+      "def": 34,
+      "hp": 351,
       "crit": 0,
       "mp": 115
     }
@@ -1164,6 +1178,105 @@
       "exp": 0,
       "stage": 0,
       "apt": 1
+    },
+    {
+      "id": "bs_hptj66o",
+      "ref": "b_dragon",
+      "name": "蛟龙",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_zy89mtu",
+      "ref": "b_tiger",
+      "name": "白额虎王",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_r33ym5z",
+      "ref": "b_dragon",
+      "name": "蛟龙",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_mn38m6b",
+      "ref": "b_tiger",
+      "name": "白额虎王",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_nwdp93u",
+      "ref": "b_tiger",
+      "name": "白额虎王",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_cu6z61k",
+      "ref": "b_qilin",
+      "name": "麒麟",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_g1l5kl2",
+      "ref": "b_tiger",
+      "name": "白额虎王",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_mme07p5",
+      "ref": "b_qilin",
+      "name": "麒麟",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_fgf0hv9",
+      "ref": "b_dragon",
+      "name": "蛟龙",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_86inmat",
+      "ref": "b_phoenix",
+      "name": "青鸾",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_hfwyytz",
+      "ref": "b_tiger",
+      "name": "白额虎王",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
     }
   ],
   "activeBeast": 0,
@@ -1186,9 +1299,9 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 10753026,
-        "kill": 336,
-        "dungeon": 103,
+        "exp": 10812540,
+        "kill": 337,
+        "dungeon": 114,
         "arena": 20
       },
       "claimed": [
@@ -1200,8 +1313,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 10753026,
-        "kill": 336,
+        "exp": 10812540,
+        "kill": 337,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1210,13 +1323,13 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 103,
+        "dungeon": 114,
         "arena": 20,
         "九幽冥王": 7,
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 53,
+        "星宿仙君": 54,
         "混沌祖龙": 53,
         "天兵": 44
       },
@@ -1261,13 +1374,13 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 336,
+    "kills": 337,
     "deaths": 0,
-    "battles": 336,
+    "battles": 337,
     "breakthrough": 36,
     "offlineMin": 35,
     "meditate": 1,
-    "dungeon": 103,
+    "dungeon": 114,
     "encounters": 39,
     "rob": 0
   },
