@@ -9,6 +9,7 @@
 </head>
 <body>
 <canvas id="bg"></canvas>
+<img id="sceneImg" alt="" style="display:none;position:fixed;inset:0;width:100%;height:100%;object-fit:cover;opacity:.3;z-index:0;pointer-events:none">
 
 <!-- ================= 登录 ================= -->
 <div id="login">
@@ -75,7 +76,8 @@
     <div class="tb-notice"><div class="roll" id="noticeTxt">仙门公告加载中…</div></div>
     <div class="tb-right">
       <span class="small" style="display:flex;align-items:center;gap:4px"><i class="dot" id="netDot"></i><span id="netTxt" style="font-size:11px">检测中</span></span>
-      <button class="mini" id="btnTopSet">⚙️</button>
+      <button class="mini" id="btnAudio" title="音乐/音效">🔊</button>
+<button class="mini" id="btnTopSet">⚙️</button>
     </div>
   </div>
 
@@ -123,7 +125,7 @@
       <!-- 剧情 -->
       <div id="storyBox">
         <div class="story-npc">
-          <div class="portrait" id="stFace">🧓</div>
+          <div class="portrait" id="stFace"><span id="stFaceEmoji">🧓</span><img id="stPortraitImg" alt="" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%"></div>
           <div><div class="plate" id="stName">引路人</div></div>
         </div>
         <div class="small" id="stChapter" style="margin-bottom:8px">第一章 · 初入仙途</div>
@@ -422,6 +424,19 @@
             <div class="row"><input class="txt" id="codeInput" placeholder="输入礼包码"><button class="mini" id="btnCode" style="flex:0 0 auto">兑换</button></div>
             <div class="small mt8">可用：XIUXIAN2026、TIANDAO、XIANYUAN</div>
           </div>
+          <div class="card"><h3>音 乐 与 音 效</h3>
+            <div class="row" style="flex-wrap:wrap">
+              <button class="mini" id="setAudioAll">🔊 总开关</button>
+              <button class="mini" id="setAudioMusic">🎵 背景音乐</button>
+              <button class="mini" id="setAudioSfx">💥 音效</button>
+            </div>
+            <div class="row mt8" style="align-items:center;gap:8px">
+              <span class="small">音量</span>
+              <input type="range" id="setVol" min="0" max="100" value="50" style="flex:1">
+              <span class="small" id="setVolTxt">50</span>
+            </div>
+            <div class="small mt8" id="setTrackTxt">当前曲目：—</div>
+          </div>
           <div class="card"><h3>存档</h3>
             <div class="kv"><span>上次保存</span><b id="setSaveAt">—</b></div>
             <button class="act mt8" id="btnSave">立即存档</button>
@@ -475,6 +490,7 @@
 
 <script src="js/api.js"></script>
 <script src="js/engine.js"></script>
+<script src="js/audio.js"></script>
 <script src="js/frxx.js"></script>
 <script src="js/systems.js"></script>
 <script src="js/story.js"></script>
