@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995824050,
-  "lastTick": 1789995824050,
+  "lastSeen": 1789995825727,
+  "lastTick": 1789995825727,
   "realm": 9,
   "stage": 3,
-  "exp": 61860091615.65027,
-  "stone": 4545925,
+  "exp": 92790232572.4754,
+  "stone": 4558387,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 153,
+      "count": 154,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -127,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 61,
+      "count": 63,
       "desc": "炼器材料",
       "id": "i_jir574s"
     },
@@ -362,6 +362,20 @@
       "atk": 59,
       "def": 45,
       "hp": 308,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_3bpmpdm",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·云锦袍",
+      "atk": 42,
+      "def": 149,
+      "hp": 715,
       "crit": 0,
       "mp": 115
     }
@@ -1489,8 +1503,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 42247686,
-        "kill": 825,
+        "exp": 42377936,
+        "kill": 827,
         "dungeon": 213,
         "arena": 20
       },
@@ -1503,8 +1517,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 42247686,
-        "kill": 825,
+        "exp": 42377936,
+        "kill": 827,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1519,9 +1533,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 208,
+        "星宿仙君": 209,
         "混沌祖龙": 226,
-        "天兵": 205
+        "天兵": 206
       },
       "claimed": [
         "b2",
@@ -1564,17 +1578,17 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 825,
+    "kills": 827,
     "deaths": 0,
-    "battles": 825,
+    "battles": 827,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 94,
+    "encounters": 95,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 1805
+  "bonusWuxing": 1835
 }
