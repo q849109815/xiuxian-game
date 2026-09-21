@@ -68,7 +68,19 @@
     "dayDate": "",
     "fights": 0
   },
-  "mail": [],
+  "mail": [
+    {
+      "id": "m_5nd3p7u",
+      "at": 1789990867877,
+      "read": false,
+      "title": "新游戏开服发福利了",
+      "body": "感谢各位怒充 68 我请大家明天吃午饭",
+      "reward": {
+        "stone": 1000,
+        "herb": 1000
+      }
+    }
+  ],
   "karma": 0,
   "dao": {
     "partner": null,
