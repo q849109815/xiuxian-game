@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996289841,
-  "lastTick": 1789996289841,
+  "lastSeen": 1789996292674,
+  "lastTick": 1789996292674,
   "realm": 9,
   "stage": 3,
-  "exp": 153910713820.376,
-  "stone": 7106192,
+  "exp": 246257066480.20163,
+  "stone": 7114054,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 104,
+      "count": 105,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -562,6 +562,20 @@
       "atk": 161,
       "def": 40,
       "hp": 365,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_tk6rbkf",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·灵蛇杖",
+      "atk": 187,
+      "def": 38,
+      "hp": 321,
       "crit": 0,
       "mp": 115
     }
@@ -1707,8 +1721,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 65057768,
-        "kill": 1182,
+        "exp": 65186408,
+        "kill": 1184,
         "dungeon": 213,
         "arena": 20
       },
@@ -1721,8 +1735,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 65057768,
-        "kill": 1182,
+        "exp": 65186408,
+        "kill": 1184,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1739,7 +1753,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 338,
         "混沌祖龙": 340,
-        "天兵": 318
+        "天兵": 320
       },
       "claimed": [
         "b2",
@@ -1750,7 +1764,7 @@
   "sectInfo": {
     "id": "s_06ixz2",
     "rankIdx": 4,
-    "contrib": 2700,
+    "contrib": 3140,
     "joinedAt": 1789996255530
   },
   "arena": {
@@ -1782,9 +1796,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1182,
+    "kills": 1184,
     "deaths": 0,
-    "battles": 1182,
+    "battles": 1184,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
