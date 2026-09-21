@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990676113,
-  "lastTick": 1789990676113,
+  "lastSeen": 1789990677630,
+  "lastTick": 1789990677630,
   "realm": 8,
   "stage": 3,
-  "exp": 5098162149.297147,
+  "exp": 5768077028.49771,
   "stone": 116356,
   "equip": {
     "weapon": {
@@ -59,16 +59,6 @@
     "talisman": null
   },
   "bag": [
-    {
-      "kind": "ore",
-      "ref": "ore_fire",
-      "name": "炎晶",
-      "icon": "🔶",
-      "price": 150,
-      "count": 23,
-      "desc": "炼器材料",
-      "id": "i_qg53eix"
-    },
     {
       "kind": "herb",
       "ref": "herb_soul",
@@ -142,10 +132,10 @@
       "id": "bs_n55gsok",
       "ref": "b_dragon",
       "name": "蛟龙",
-      "level": 7,
-      "exp": 140,
+      "level": 8,
+      "exp": 67,
       "stage": 1,
-      "apt": 1.2500000000000002
+      "apt": 1.3000000000000003
     }
   ],
   "activeBeast": 0,
