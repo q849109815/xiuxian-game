@@ -126,6 +126,10 @@ function clearLog(box = '#logbox') { const b = $(box); if (b) b.innerHTML = ''; 
 /* ---------- HUD ---------- */
 function renderHUD(p) {
   const a = ENGINE.attrs(p);
+  const face = $('#hFace'); if (face) face.firstChild.textContent = p.avatar || '🧙';
+  const th = $('#tbHp'), tm = $('#tbMp');
+  if (th) { th.style.width = '100%'; $('#tbHpTxt').textContent = `${fmt(a.hp)} 气血`; }
+  if (tm) { tm.style.width = '100%'; $('#tbMpTxt').textContent = `${fmt(a.mp)} 灵力`; }
   $('#hRealm').textContent = ENGINE.realmName(p);
   $('#hRealm').style.color = GAME_CONFIG.realms[p.realm].color;
   $('#hExp').textContent = fmt(p.exp);
@@ -170,6 +174,10 @@ function renderAttrs(p) {
   ].map(([k, v]) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('');
   const rt = ENGINE.rootInfo(p);
   $('#cultTip').textContent = `灵根【${rt.name}】${rt.desc}｜在线自动累积修为，离线也结算（上限 ${GAME_CONFIG.offlineMaxHours} 小时）`;
+  const am = $('#attrMini');
+  if (am) am.innerHTML = [['战力', fmt(ENGINE.power(p))], ['攻', fmt(a.atk)], ['防', fmt(a.def)], ['血', fmt(a.hp)],
+    ['暴', (a.crit * 100).toFixed(1) + '%'], ['闪', (a.dodge * 100).toFixed(1) + '%'], ['悟', fmt(a.wuxing + (p.bonusWuxing || 0))], ['福', fmt(a.fuyuan)]]
+    .map(([k, v]) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('');
   const rc = $('#reincCard');
   if (rc) { rc.style.display = (p.stage === 3 && p.realm >= 5) ? '' : 'none'; $('#reincTip').textContent = GAME_CONFIG.reincarnation.desc + `　当前第 ${p.reinc || 0} 世`; }
 }
@@ -183,6 +191,11 @@ function renderSpots(p) {
       <div class="sub">修为 ×${s.expMul}${s.cost ? ` · ${s.cost} 灵石/时` : ''}</div>
       <div class="sub">${lock ? `需【${GAME_CONFIG.realms[s.realmReq].name}】境` : s.desc}</div></div></div>`;
   }).join('');
+  const sm = $('#spotMini');
+  const cur = spots.find((x) => x.id === p.spot) || spots[0];
+  if (sm && cur) sm.innerHTML = `<div class="kv"><span>当前</span><b>${cur.icon} ${cur.name}</b></div>
+    <div class="kv"><span>倍率</span><b>×${cur.expMul}</b></div>
+    <div class="small mt8">在【角色】页可更换洞天</div>`;
   $$('#spotList [data-spot]').forEach((el) => el.onclick = () => {
     const id = el.dataset.spot;
     const s = spots.find((x) => x.id === id);
@@ -436,6 +449,33 @@ function renderTasks(p) {
     <button class="mini" data-bt="${t.id}" ${t.done && !t.claimed ? '' : 'disabled'}>${t.claimed ? '已领' : '领取'}</button></div>`).join('');
   $$('#bountyTasks [data-bt]').forEach((b) => b.onclick = () => { const r = SYS.claimBounty(p, b.dataset.bt); toast(r.msg, r.ok ? 'ok' : 'err'); renderTasks(p); renderHUD(p); save(); });
 }
+function renderTracker(p) {
+  const mt = SYS.mainTaskOf(p);
+  const done = SYS.checkMain(p);
+  const tm = $('#trkMain');
+  if (tm) {
+    if (mt) tm.innerHTML = `<div class="t">${mt.name}</div><div class="d">${mt.desc}</div>
+      <div class="p">${done ? '✔ 可领取' : '进行中…'}</div>
+      <div class="d">奖励 ${rewardTxt(mt.reward)}</div>`;
+    else tm.innerHTML = '<div class="d">主线已全部完成</div>';
+  }
+  const dl = SYS.dailyList(p).filter((t) => !t.claimed).slice(0, 3);
+  const bl = SYS.bountyList(p).filter((t) => !t.claimed).slice(0, 2);
+  const td = $('#trkDaily');
+  if (td) td.innerHTML = (dl.length || bl.length)
+    ? dl.map((t) => `<div class="row-i"><span>${t.done ? '✔' : '○'} ${t.name}</span><span class="p">${t.prog}/${t.need}</span></div>`).join('')
+      + bl.map((t) => `<div class="row-i"><span>${t.done ? '✔' : '○'} ${t.name}</span><span class="p">${t.prog}/${t.need}</span></div>`).join('')
+    : '<div class="d">今日任务已清</div>';
+  // 剧情提示
+  const st = $('#trkStory');
+  if (st) {
+    const i = storyAvailable(p);
+    st.innerHTML = i >= 0
+      ? `<div class="t">${STORY[i].title}</div><div class="d">点击观看剧情</div>`
+      : `<div class="d">下一章需【${GAME_CONFIG.realms[(STORY[p.storyIdx || 0] || {}).req || 0].name}】境</div>`;
+  }
+}
+
 function rewardTxt(rw) {
   if (!rw) return '—';
   const map = { stone: '灵石', exp: '修为', herb: '灵草', ore: '矿石', contrib: '贡献', pill: '丹药', skill: '功法' };
@@ -501,6 +541,118 @@ function renderSocial(p) {
 async function renderChat() {
   const list = await SYS.chatLoad();
   $('#chatBox').innerHTML = list.length ? list.slice(0, 40).map((m) => `<p class="${m.uid === (window.P && P.uid) ? 'p' : 'm'}">${m.avatar || ''}<b>${m.name}</b>（${m.realm}）：${m.text} <span class="small">${timeAgo(m.at)}</span></p>`).join('') : '<p class="sys">还没有人发言</p>';
+  const tk = $('#chatTicker');
+  if (tk) tk.innerHTML = list.length ? `<b>${list[0].name}</b>：${list[0].text}` : '仙途漫漫，与君共勉。';
+  const cd = $('#chatCd');
+  if (cd) { const left = SYS.chatCooldownLeft(window.P || { lastChatAt: 0 }); cd.textContent = left > 0 ? `冷却 ${left}s` : ''; }
+}
+
+/* ---------- 底部功能栏 & 面板窗口 ---------- */
+const TOOLS = [
+  { k: 'story', i: '📖', n: '剧情' },
+  { k: 'role', i: '👤', n: '角色' },
+  { k: 'bag', i: '🎒', n: '背包' },
+  { k: 'fight', i: '⚔️', n: '历练' },
+  { k: 'dungeon', i: '🌀', n: '秘境' },
+  { k: 'skill', i: '📜', n: '功法' },
+  { k: 'alchemy', i: '⚗️', n: '丹器' },
+  { k: 'beast', i: '🐾', n: '灵兽' },
+  { k: 'cave', i: '🏠', n: '洞府' },
+  { k: 'sect', i: '🏯', n: '宗门' },
+  { k: 'task', i: '📋', n: '任务' },
+  { k: 'rank', i: '🏆', n: '论道' },
+  { k: 'market', i: '💰', n: '坊市' },
+  { k: 'social', i: '💬', n: '交游' },
+  { k: 'set', i: '⚙️', n: '系统' },
+];
+function renderToolBar() {
+  const bar = $('#toolbar'); if (!bar) return;
+  bar.innerHTML = TOOLS.map((t) => `<button class="tbtn" data-tab="${t.k}"><span class="ti">${t.i}</span><span class="tn">${t.n}</span></button>`).join('')
+    + '<span class="sep-v"></span>'
+    + '<button class="tbtn" id="tAuto"><span class="ti">🤖</span><span class="tn">挂机</span></button>';
+}
+let CUR_WIN = '';
+function openWin(k) {
+  $$('.win').forEach((w) => w.classList.toggle('on', w.dataset.page === k));
+  $$('#toolbar .tbtn[data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === k));
+  $('#storyBox').classList.toggle('on', k === 'story');
+  CUR_WIN = k;
+  if (k === 'story') renderStory();
+  if (k === 'role') { UI.renderSpots(window.P); UI.renderAttrs(window.P); }
+  if (k === 'bag') { UI.renderEquip(window.P); UI.renderBag(window.P); }
+  if (k === 'fight') UI.renderMaps(window.P);
+  if (k === 'dungeon') UI.renderDungeons(window.P);
+  if (k === 'skill') UI.renderSkills(window.P);
+  if (k === 'alchemy') UI.renderAlchemy(window.P);
+  if (k === 'beast') UI.renderBeasts(window.P);
+  if (k === 'cave') UI.renderCave(window.P);
+  if (k === 'sect') UI.renderSect(window.P);
+  if (k === 'task') { UI.renderTasks(window.P); UI.renderTracker(window.P); }
+  if (k === 'rank') { UI.renderArena(window.P); window.loadRank && window.loadRank(); }
+  if (k === 'market') UI.renderMarket(window.P);
+  if (k === 'social') { UI.renderSocial(window.P); UI.renderChat(); }
+  return k;
+}
+function closeWin() {
+  $$('.win').forEach((w) => w.classList.remove('on'));
+  $$('#toolbar .tbtn[data-tab]').forEach((b) => b.classList.remove('on'));
+  $('#storyBox').classList.remove('on');
+  CUR_WIN = '';
+}
+function bindWinTabs() {
+  document.addEventListener('click', (e) => {
+    const wt = e.target.closest('.wtabs button');
+    if (wt) {
+      const box = wt.closest('.win');
+      box.querySelectorAll('.wtabs button').forEach((b) => b.classList.toggle('on', b === wt));
+      const k = wt.dataset.wt;
+      box.querySelectorAll('[data-wc]').forEach((c) => c.style.display = c.dataset.wc === k ? '' : 'none');
+    }
+    if (e.target.dataset && e.target.dataset.close !== undefined) closeWin();
+    if (e.target.dataset && e.target.dataset.go) openWin(e.target.dataset.go);
+  });
+}
+
+/* ---------- 剧情界面 ---------- */
+let ST_CUR = -1, ST_SCENE = 0;
+function renderStory() {
+  const p = window.P; if (!p) return;
+  const i = p.storyIdx || 0;
+  if (!STORY[i]) { $('#stText').innerHTML = '<span class="cur">全部剧情已完成。道途无尽，各自珍重。</span>'; $('#stBtns').innerHTML = ''; return; }
+  if (ST_CUR !== i) { ST_CUR = i; ST_SCENE = 0; }
+  const s = STORY[i];
+  const sc = s.scenes[ST_SCENE];
+  $('#stChapter').textContent = s.title + `（${ST_SCENE + 1}/${s.scenes.length}）`;
+  $('#stName').textContent = sc.who;
+  $('#stFace').textContent = sc.face;
+  $('#stText').innerHTML = s.scenes.slice(0, ST_SCENE + 1).map((x, k) =>
+    `<div ${k === ST_SCENE ? 'class="cur"' : 'style="opacity:.5"'}><b>${x.who}</b>：${x.text}</div>`).join('');
+  const last = ST_SCENE >= s.scenes.length - 1;
+  $('#stBtns').innerHTML = !last
+    ? '<button class="act" id="stNext">继续 ▸</button>'
+    : (p.realm >= s.req
+      ? `<button class="act" id="stDone">完成本章（${UI.rewardTxt(s.reward)}）</button>`
+      : `<button class="ghost" disabled>需【${GAME_CONFIG.realms[s.req].name}】境</button>`);
+  const nx = $('#stNext'); if (nx) nx.onclick = () => { ST_SCENE++; renderStory(); };
+  const dn = $('#stDone'); if (dn) dn.onclick = () => {
+    const r = storyFinish(p, i);
+    UI.toast(r.msg, 'ok'); ST_CUR = -1; renderAll && renderAll(); renderStory(); save && save();
+  };
+}
+
+/* ---------- 左侧精简面板 ---------- */
+function renderMini(p) {
+  const a = ENGINE.attrs(p);
+  const am = $('#attrMini');
+  if (am) am.innerHTML = [['战力', fmt(ENGINE.power(p))], ['攻', fmt(a.atk)], ['防', fmt(a.def)], ['血', fmt(a.hp)],
+    ['暴', (a.crit * 100).toFixed(1) + '%'], ['悟', fmt(a.wuxing + (p.bonusWuxing || 0))], ['福', fmt(a.fuyuan)]]
+    .map(([k, v]) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('');
+  const spots = GAME_CONFIG.cultivateSpots || [];
+  const cur = spots.find((x) => x.id === p.spot) || spots[0];
+  const sm = $('#spotMini');
+  if (sm && cur) sm.innerHTML = `<div class="kv"><span>洞天</span><b>${cur.icon}${cur.name}</b></div>
+    <div class="kv"><span>倍率</span><b>×${cur.expMul}</b></div>
+    <div class="kv"><span>灵根</span><b>${ENGINE.rootInfo(p).name}</b></div>`;
 }
 
 /* ---------- 装备栏 ---------- */
@@ -572,6 +724,7 @@ function renderNotice() {
   const box = $('#noticeTxt'); if (!box) return;
   box.textContent = n.notice || '暂无公告';
   const ev = n.events || {};
+  const box2 = $('#noticeTxt2'); if (box2) box2.textContent = n.notice || '暂无公告';
   const eb = $('#eventBox');
   if (eb) eb.innerHTML = (ev.doubleExp || ev.doubleStone)
     ? `<div class="event">🎉 ${ev.eventName || '全服活动'}：${ev.doubleExp ? '修为×' + ev.expMul : ''} ${ev.doubleStone ? '灵石×' + ev.stoneMul : ''} ${ev.eventEnd ? '（至 ' + ev.eventEnd + '）' : ''}</div>` : '';
@@ -604,6 +757,8 @@ window.UI = {
   renderSkills, renderAlchemy, renderBeasts, renderBeastDetail, bindBeastButtons, renderCave,
   renderSect, renderTasks, renderArena, renderRank, renderMarket, renderSocial, renderChat,
   renderBag, renderEquip, renderDevour, renderNet, renderNotice, renderCreate, rewardTxt,
+  renderTracker, renderToolBar, openWin, closeWin, bindWinTabs, renderStory, renderMini, TOOLS,
+  get CUR_WIN() { return CUR_WIN; },
   setFighters, floatNum, boom, shake, hitAnim, hpBar, pushLog, clearLog,
   get curMap() { return CUR_MAP; }, set curMap(v) { CUR_MAP = v; },
   get bagFilter() { return BAG_FILTER; }, set bagFilter(v) { BAG_FILTER = v; },
