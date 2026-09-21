@@ -37,6 +37,10 @@
     <button data-p="mail">📮 全服邮件</button>
     <button data-p="more">🧭 榜与宗门</button>
     <button data-p="tools">🧰 工具</button>
+    <button data-p="wallet">💰 货币管理</button>
+    <button data-p="acts">🎯 活动管理</button>
+    <button data-p="title">🎖️ 称号管理</button>
+    <button data-p="equip">🔮 法宝发放</button>
   </div>
 
   <!-- 看板 -->
@@ -167,6 +171,86 @@
       <button class="ghost" id="btnClearCache">清除浏览器缓存与会话</button>
     </div>
   </section>
+
+  <!-- 货币管理 -->
+  <section data-pg="wallet" style="display:none">
+    <div class="card">
+      <h3>💰 多货币管理（11_资源货币 16 种）</h3>
+      <div class="search">
+        <input class="txt" id="wUid" placeholder="道号 / UID">
+        <button class="mini" id="btnWLoad" style="flex:0 0 auto">读取</button>
+      </div>
+      <div class="small mt8" id="wWho">—</div>
+      <div class="grid3 mt8" id="walletGrid"></div>
+      <div class="tool mt8">
+        <button class="act" style="flex:0 0 auto;padding:10px 18px" id="btnWSave">保存全部货币</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>快捷发放</h3>
+      <div class="grid3">
+        <div><div class="small">元宝</div><input class="txt" id="qYb" type="number" placeholder="如 100"></div>
+        <div><div class="small">功勋值</div><input class="txt" id="qMerit" type="number" placeholder="如 50"></div>
+        <div><div class="small">声望</div><input class="txt" id="qRep" type="number" placeholder="如 50"></div>
+      </div>
+      <button class="ghost mt8" id="btnQuickGive">发放给上述玩家</button>
+    </div>
+  </section>
+
+  <!-- 活动管理 -->
+  <section data-pg="acts" style="display:none">
+    <div class="card">
+      <h3>🎯 活动总览（17_活动系统 24 条）</h3>
+      <div id="actAdminList"></div>
+    </div>
+    <div class="card">
+      <h3>全服双倍开关</h3>
+      <div class="tool">
+        <button class="act" id="btnDblExp">双倍修为</button>
+        <button class="act" id="btnDblStone">双倍灵石</button>
+        <button class="act" id="btnDblDrop">双倍掉落</button>
+        <button class="ghost" id="btnDblOff">全部关闭</button>
+      </div>
+      <div class="small mt8" id="dblState">当前：—</div>
+    </div>
+    <div class="card">
+      <h3>批量发放奖励（写入全服邮件）</h3>
+      <div class="grid3">
+        <div><div class="small">灵石</div><input class="txt" id="bStone" type="number" placeholder="0"></div>
+        <div><div class="small">元宝</div><input class="txt" id="bYb" type="number" placeholder="0"></div>
+        <div><div class="small">功勋</div><input class="txt" id="bMerit" type="number" placeholder="0"></div>
+      </div>
+      <button class="act mt8" id="btnBatchGive">向全体玩家发放</button>
+      <div class="small mt8" id="batchMsg"></div>
+    </div>
+  </section>
+
+  <!-- 称号管理 -->
+  <section data-pg="title" style="display:none">
+    <div class="card">
+      <h3>🎖️ 称号管理</h3>
+      <div class="search">
+        <input class="txt" id="tUid" placeholder="道号 / UID">
+        <button class="mini" id="btnTLoad" style="flex:0 0 auto">读取</button>
+      </div>
+      <div class="small mt8" id="tWho">—</div>
+      <div id="titleAdminList" class="mt8"></div>
+    </div>
+  </section>
+
+  <!-- 法宝发放 -->
+  <section data-pg="equip" style="display:none">
+    <div class="card">
+      <h3>🔮 真实法宝发放（07_法宝装备 30 件）</h3>
+      <div class="search">
+        <input class="txt" id="eUid" placeholder="道号 / UID">
+        <button class="mini" id="btnELoad" style="flex:0 0 auto">读取</button>
+      </div>
+      <div class="small mt8" id="eWho">—</div>
+      <div class="grid3 mt8" id="equipAdminGrid"></div>
+    </div>
+  </section>
+
 </div>
 <div id="toasts"></div>
 
