@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009904079,
-  "lastTick": 1790009904079,
+  "lastSeen": 1790009908393,
+  "lastTick": 1790009908393,
   "realm": 31,
   "stage": 0,
-  "exp": 91209732079.9539,
-  "stone": 8505051582391.912,
+  "exp": 182419464159.9078,
+  "stone": 8505051583905.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -224,34 +224,6 @@
       "atk": 33,
       "def": 130,
       "hp": 855,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_mlsvdvm",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·青锋剑",
-      "atk": 144,
-      "def": 41,
-      "hp": 238,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_ofewvpu",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·锁子金甲",
-      "atk": 30,
-      "def": 127,
-      "hp": 896,
       "crit": 0,
       "mp": 115
     },
@@ -1634,7 +1606,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 6,
-    "acc": 33,
+    "acc": 37,
     "level": 13
   },
   "titles": {
