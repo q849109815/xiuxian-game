@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990163071,
-  "lastTick": 1789990163071,
+  "lastSeen": 1789990164105,
+  "lastTick": 1789990164105,
   "realm": 4,
   "stage": 3,
-  "exp": 1090229.3336000051,
-  "stone": 17587,
+  "exp": 1136381.6081000052,
+  "stone": 8523,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -105,7 +105,7 @@
       "name": "炎晶",
       "icon": "🔶",
       "price": 150,
-      "count": 3,
+      "count": 4,
       "desc": "炼器材料",
       "id": "i_qg53eix"
     },
@@ -249,7 +249,7 @@
     },
     {
       "id": "sk_art_drain",
-      "level": 7,
+      "level": 8,
       "exp": 0
     }
   ],
@@ -272,8 +272,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 289066,
-        "kill": 80,
+        "exp": 294304,
+        "kill": 81,
         "dungeon": 4
       },
       "claimed": []
@@ -281,15 +281,15 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 289066,
-        "kill": 80,
+        "exp": 294304,
+        "kill": 81,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
         "熔岩巨人": 19,
-        "b3": 46,
-        "火麒麟": 10,
+        "b3": 47,
+        "火麒麟": 11,
         "炎魔": 17,
         "dungeon": 4
       },
@@ -327,9 +327,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 80,
+    "kills": 81,
     "deaths": 0,
-    "battles": 80,
+    "battles": 81,
     "breakthrough": 19,
     "offlineMin": 0,
     "meditate": 1,
