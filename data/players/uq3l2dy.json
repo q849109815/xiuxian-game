@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990347753,
-  "lastTick": 1789990347753,
+  "lastSeen": 1789990348255,
+  "lastTick": 1789990348255,
   "realm": 5,
   "stage": 1,
   "exp": 15057500.01228233,
-  "stone": 10860,
+  "stone": 10460,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -488,7 +488,8 @@
   "riding": false,
   "cave": {
     "lv": {
-      "farm": 10
+      "farm": 10,
+      "array": 1
     },
     "array": "none",
     "lastHarvest": 1789989635634,
