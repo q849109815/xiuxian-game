@@ -260,7 +260,7 @@ function renderSkills(p) {
   if (eb) eb.innerHTML = eq.length ? eq.map((id) => {
     const sk = SYS.skillDef(id); if (!sk) return '';
     const own = SYS.ownSkill(p, id);
-    return `<div class="skcell on" data-sk="${id}"><div class="si">${(window.ART&&ART.skillOf&&ART.skillOf(sk.name))?'<img src="'+ART.skillOf(sk.name)+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px" onerror="this.outerHTML=\'' + sk.icon + '\'">':sk.icon}</div><div class="sn">${sk.name}</div><div class="sl">${own ? own.level : 1} 层</div></div>`;
+    return `<div class="skcell on" data-sk="${id}"><div class="si">${(window.ART&&ART.skillOf&&ART.skillOf(sk.name))?'<img src="'+ART.skillOf(sk.name)+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px" class="autoimg" data-fallback="' + sk.icon + '" onerror="fallbackImg(this)">':sk.icon}</div><div class="sn">${sk.name}</div><div class="sl">${own ? own.level : 1} 层</div></div>`;
   }).join('') : '<div class="small" style="grid-column:1/-1">尚未装备功法</div>';
   $$('#equippedSkills [data-sk]').forEach((el) => el.onclick = () => { SK_SEL = el.dataset.sk; renderSkills(p); });
 
@@ -269,7 +269,7 @@ function renderSkills(p) {
   if (sb) sb.innerHTML = owned.length ? owned.map((o) => {
     const sk = SYS.skillDef(o.id); if (!sk) return '';
     const on = eq.includes(o.id);
-    return `<div class="skcell ${on ? 'on' : ''}" data-sk2="${o.id}"><div class="si">${(window.ART&&ART.skillOf&&ART.skillOf(sk.name))?'<img src="'+ART.skillOf(sk.name)+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px" onerror="this.outerHTML=\'' + sk.icon + '\'">':sk.icon}</div><div class="sn">${sk.name}</div><div class="sl">${o.level}/${sk.maxLevel}层${on ? ' ✔' : ''}</div></div>`;
+    return `<div class="skcell ${on ? 'on' : ''}" data-sk2="${o.id}"><div class="si">${(window.ART&&ART.skillOf&&ART.skillOf(sk.name))?'<img src="'+ART.skillOf(sk.name)+'" style="width:100%;height:100%;object-fit:cover;border-radius:6px" class="autoimg" data-fallback="' + sk.icon + '" onerror="fallbackImg(this)">':sk.icon}</div><div class="sn">${sk.name}</div><div class="sl">${o.level}/${sk.maxLevel}层${on ? ' ✔' : ''}</div></div>`;
   }).join('') : '<div class="small" style="grid-column:1/-1">尚未习得功法（坊市购买 / 秘境掉落）</div>';
   $$('#skillList [data-sk2]').forEach((el) => el.onclick = () => { SK_SEL = el.dataset.sk2; renderSkills(p); });
 
@@ -762,7 +762,7 @@ function renderStory() {
   {
     const fEl = $('#stFace');
     const u = (window.ART && ART.charOf) ? ART.charOf(sc.who) : null;
-    if (u) fEl.innerHTML = `<img src="${u}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.outerHTML='${sc.face}'">`;
+    if (u) fEl.innerHTML = `<img src="${u}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" class="autoimg" data-fallback="${sc.face}" onerror="fallbackImg(this)">`;
     else fEl.textContent = sc.face;
   }
   $('#stText').innerHTML = s.scenes.map((x, k) =>
@@ -822,7 +822,7 @@ function renderEquip(p) {
     const inner = it
       ? `${sd.icon}${it.level ? `<span class="lv">+${it.level}</span>` : ''}`
       : (slotImg
-        ? `<img src="${slotImg}" style="width:100%;height:100%;object-fit:contain;opacity:.35" onerror="this.outerHTML='<span style=\\'opacity:.28;font-size:22px\\'>${sd.icon}</span>'">`
+        ? `<img src="${slotImg}" class="autoimg" data-fallback="${sd.icon}" style="width:100%;height:100%;object-fit:contain;opacity:.35" onerror="fallbackImg(this)">`
         : `<span style="opacity:.28;font-size:22px">${sd.icon}</span>`);
     return `<div class="bslot ${cls} ${EQ_SEL === c.k ? 'sel' : ''}" data-slot="${c.k}" title="${sd.name}">${inner}<span class="nm2">${sd.name}</span></div>`;
   }).join('');
@@ -1155,7 +1155,7 @@ function renderPartners(p) {
   const card = (c) => {
     const qc = c.q.includes('仙') ? 4 : c.q.includes('极') ? 3 : c.q.includes('上') ? 2 : c.q.includes('中') ? 1 : 0;
     return `<div class="compitem ${PARTNER_SEL === c.id ? 'on' : ''} ${c.unlocked ? '' : 'lock'}" data-cid="${c.id}">
-      <div class="cface q${qc}">${(function(){ const emo = c.unlocked ? (c.type.includes('灵虫') ? '🐛' : c.type.includes('灵兽') ? '🐾' : c.type.includes('反派') ? '😈' : '🌸') : '🔒'; const u = (window.ART && c.unlocked) ? (ART.faceOf(c.name) || ART.charOf(c.name)) : null; return u ? '<img src="'+u+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.outerHTML=\'' + emo + '\'">' : emo; })()}</div>
+      <div class="cface q${qc}">${(function(){ const emo = c.unlocked ? (c.type.includes('灵虫') ? '🐛' : c.type.includes('灵兽') ? '🐾' : c.type.includes('反派') ? '😈' : '🌸') : '🔒'; const u = (window.ART && c.unlocked) ? (ART.faceOf(c.name) || ART.charOf(c.name)) : null; return u ? '<img src="'+u+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" class="autoimg" data-fallback="' + emo + '" onerror="fallbackImg(this)">' : emo; })()}</div>
       <div class="cinfo"><div class="cnm">${c.name}${c.active ? ' <span style="color:var(--jade)">出战</span>' : ''}</div>
       <div class="csub">${c.q} · ${c.type}${c.unlocked ? ` · 好感 ${c.favor}` : ' · 未结缘'}</div>
       <div class="bar" style="height:9px;margin-top:3px"><i style="width:${c.favor}%"></i><span style="font-size:9px">${c.bonus.desc}</span></div></div>
@@ -1283,13 +1283,23 @@ function renderActs(p) {
     const can = A.canSign(p);
     const streak = p.act.sign.streak || 0;
     const list = (GAME_SOCIAL.signRewards) || [];
-    sb.innerHTML = `<div class="small">已连续签到 <b style="color:var(--gold)">${streak}</b> 天　累计 ${p.act.sign.days || 0} 天</div>
+    // 已签天数进度：本轮第几天（1~7）
+    const prog = streak > 0 ? ((streak - 1) % 7) + 1 : 0;
+    sb.innerHTML = `<div class="small">连续签到 <b style="color:var(--gold)">${streak}</b> 天　累计 ${p.act.sign.days || 0} 天</div>
       <div class="row mt8" style="flex-wrap:wrap">
-        ${list.map((r, i) => `<div class="bslot ${((streak % 7) === i && !can) ? 'sel' : ''}" style="width:52px;height:52px;font-size:18px">
-          <span>${i + 1}</span></div>`).join('')}
+        ${list.map((r, i) => {
+          const dayNo = i + 1;
+          const got = dayNo <= prog;                       // 本轮已领
+          const isNext = dayNo === prog + 1 && can;        // 下一个可签
+          return `<div class="bslot ${got ? 'sel' : ''}" title="第${dayNo}天：${(r.stone ? '灵石×' + r.stone : '') + (r.exp ? ' 修为×' + r.exp : '')}"
+            style="width:56px;height:60px;font-size:15px;${isNext ? 'border-color:var(--gold);box-shadow:0 0 8px rgba(217,180,90,.5)' : ''}${got ? '' : 'opacity:.55'}">
+            <span style="font-size:11px;color:var(--txt2)">第${dayNo}天</span>
+            <span style="font-size:16px">${got ? '✔️' : (r.stone ? '💎' : '✨')}</span>
+            <span style="font-size:10px;color:var(--txt2)">${r.stone ? fmt(r.stone) : ''}</span></div>`;
+        }).join('')}
       </div>
-      <button class="act mt8" id="btnSign" ${can ? '' : 'disabled'}>${can ? '📅 今日签到' : '✔ 今日已签'}</button>
-      <div class="small mt8">连续 7 天额外奖励元宝×5</div>`;
+      <button class="act mt8" id="btnSign" ${can ? '' : 'disabled'}>${can ? `📅 签到领第 ${prog + 1} 天奖励` : '✔ 今日已签，明日再来'}</button>
+      <div class="small mt8">${can ? '每天仅可签到一次，连续 7 天额外奖励元宝×5' : '明日签到可继续累积连续天数'}</div>`;
     const b = $('#btnSign');
     if (b && can) b.onclick = () => { const r = A.sign(p); toast(r.msg, r.ok ? 'ok' : 'err'); renderActs(p); renderHUD(p); save(); };
   }
@@ -1446,7 +1456,7 @@ function renderSkins(p) {
       const cost = 500 * Math.pow(3, Math.floor(sk.realm / 4));
       const clsOk = sk.cls === '通用' || sk.cls === (p.faction || '') || !(p.faction);
       return `<div class="compitem ${on ? 'on' : ''} ${sk.owned ? '' : 'lock'}" data-sk="${sk.id}">
-        <div class="cface">${(function(){ const u=(window.ART&&ART.skinOf)?ART.skinOf(sk.id):null; return u? '<img src="'+u+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.outerHTML=\'' + sk.icon + '\'">' : sk.icon; })()}</div>
+        <div class="cface">${(function(){ const u=(window.ART&&ART.skinOf)?ART.skinOf(sk.id):null; return u? '<img src="'+u+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" class="autoimg" data-fallback="' + sk.icon + '" onerror="fallbackImg(this)">' : sk.icon; })()}</div>
         <div class="cinfo"><div class="cnm">${sk.name} ${on ? '<span style="color:var(--jade)">穿戴中</span>' : ''}</div>
         <div class="csub">${sk.cls}｜${sk.desc}</div>
         <div class="csub" style="color:var(--gold)">${Object.entries(sk.buff || {}).map(([k, v]) =>
@@ -1626,3 +1636,17 @@ window.UI = {
   get curBeast() { return CUR_BEAST; }, set curBeast(v) { CUR_BEAST = v; },
   CR,
 };
+
+
+/* =========================================================
+ * 图片加载失败统一回落：避免内联 HTML 嵌套引号导致解析错乱（乱码）
+ * ========================================================= */
+function fallbackImg(img) {
+  if (!img) return;
+  const fb = img.getAttribute('data-fallback');
+  const span = document.createElement('span');
+  span.textContent = fb || '📦';
+  if (img.parentNode) img.parentNode.replaceChild(span, img);
+  else img.remove();
+}
+window.fallbackImg = fallbackImg;
