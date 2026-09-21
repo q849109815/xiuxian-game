@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789991527988,
-  "lastTick": 1789991527988,
+  "lastSeen": 1789991529186,
+  "lastTick": 1789991529186,
   "realm": 9,
   "stage": 3,
-  "exp": 168178464578.7602,
-  "stone": 429017,
+  "exp": 179495059059.06033,
+  "stone": 425897,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -88,34 +88,6 @@
       "count": 20,
       "desc": "炼器材料",
       "id": "i_ckq27h0"
-    },
-    {
-      "id": "it_j71yrvd",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·灵蛇杖",
-      "atk": 144,
-      "def": 42,
-      "hp": 344,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_h8d4wxj",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·青锋剑",
-      "atk": 158,
-      "def": 37,
-      "hp": 360,
-      "crit": 0,
-      "mp": 115
     },
     {
       "id": "it_9kepqza",
