@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995588505,
-  "lastTick": 1789995588505,
+  "lastSeen": 1789995589938,
+  "lastTick": 1789995589938,
   "realm": 9,
   "stage": 3,
-  "exp": 259812482981.33112,
-  "stone": 3262040,
+  "exp": 296928556699.5213,
+  "stone": 3272944,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -117,7 +117,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 24,
+      "count": 25,
       "desc": "炼器材料",
       "id": "i_n9wf73t"
     },
@@ -202,76 +202,6 @@
       "mp": 115
     },
     {
-      "id": "it_0s2udk8",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·诛仙剑",
-      "atk": 200,
-      "def": 36,
-      "hp": 266,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_mfozii7",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·聚灵戒",
-      "atk": 87,
-      "def": 40,
-      "hp": 235,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_a532aqz",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·玄龟甲",
-      "atk": 39,
-      "def": 102,
-      "hp": 901,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_8a5xz5c",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·云锦袍",
-      "atk": 41,
-      "def": 107,
-      "hp": 932,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_l7uo2rw",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·灵蛇杖",
-      "atk": 174,
-      "def": 33,
-      "hp": 241,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "id": "it_932nycp",
       "kind": "equip",
       "slot": "weapon",
@@ -338,6 +268,20 @@
       "atk": 37,
       "def": 120,
       "hp": 696,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_37rurzn",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·诛仙剑",
+      "atk": 132,
+      "def": 31,
+      "hp": 281,
       "crit": 0,
       "mp": 115
     }
@@ -1447,8 +1391,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 31088814,
-        "kill": 651,
+        "exp": 31149684,
+        "kill": 652,
         "dungeon": 213,
         "arena": 20
       },
@@ -1461,8 +1405,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 31088814,
-        "kill": 651,
+        "exp": 31149684,
+        "kill": 652,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1477,7 +1421,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 150,
+        "星宿仙君": 151,
         "混沌祖龙": 167,
         "天兵": 148
       },
@@ -1522,9 +1466,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 651,
+    "kills": 652,
     "deaths": 0,
-    "battles": 651,
+    "battles": 652,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
