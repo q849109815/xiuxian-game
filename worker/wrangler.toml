@@ -1,0 +1,7 @@
+name = "xiuxian-gh-proxy"
+main = "src/index.js"
+compatibility_date = "2024-06-01"
+
+# 部署：npx wrangler deploy
+# 之后得到的地址形如 https://xiuxian-gh-proxy.xxx.workers.dev
+# 填到游戏「设置 → 自定义加速地址」即可（不加 https://api.github.com 前缀，直接填域名根）
