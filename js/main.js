@@ -11,7 +11,8 @@ const CFG_FILES = ['data/config/game.json', 'data/config/content.json', 'data/co
 /* ---------------- 启动 ---------------- */
 window.addEventListener('load', async () => {
   UI.initBackground();
-  bindTabs(); bindSettings(); bindGlobal();
+  AUDIO.load();
+  bindTabs(); bindSettings(); bindGlobal(); bindAudio();
   UI.renderNet();
 
   // ① 先加载本地静态配置，保证秒开
@@ -184,6 +185,7 @@ function tick() {
   P.lastTick = Date.now();
   UI.renderHUD(P); UI.renderMeditate(P);
   if (ups > 0) {
+    AUDIO.sfx('break');
     UI.toast(`修为圆满，突破至 ${ENGINE.realmName(P)}！`);
     UI.flashBreakthrough(); UI.renderAttrs(P); UI.renderMaps(P); UI.renderSpots(P); save();
   }
@@ -224,6 +226,35 @@ function toggleAuto(btn) {
 
 /* ---------------- 通用交互绑定 ---------------- */
 const HOTKEY = { c: 'role', b: 'bag', t: 'task', s: 'skill', l: 'beast', h: 'cave', g: 'sect', m: 'market', f: 'social', v: 'alchemy', x: 'story', k: 'rank', z: 'set', o: 'bottle', p: 'partner', j: 'codex' };
+function bindAudio() {
+  const kick = () => { AUDIO.resume(); if (AUDIO.on && AUDIO.musicOn) AUDIO.play('town'); document.removeEventListener('pointerdown', kick); document.removeEventListener('keydown', kick); };
+  document.addEventListener('pointerdown', kick);
+  document.addEventListener('keydown', kick);
+
+  const ba = $('#btnAudio');
+  if (ba) ba.onclick = () => {
+    AUDIO.on = !AUDIO.on; AUDIO.save();
+    ba.textContent = AUDIO.on ? '🔊' : '🔇';
+    if (!AUDIO.on) AUDIO.stop(); else { AUDIO.resume(); AUDIO.play(AUDIO_SCENE.trackFor(UI.CUR_WIN, (GAME_CONFIG.maps[UI.curMap] || {}).name)); }
+    UI.toast(AUDIO.on ? '音频已开' : '音频已静音');
+  };
+  const up = () => {
+    const a = $('#setAudioAll'), m = $('#setAudioMusic'), f = $('#setAudioSfx');
+    if (a) { a.textContent = (AUDIO.on ? '🔊' : '🔇') + ' 总开关'; a.style.background = AUDIO.on ? 'rgba(255,216,138,.28)' : ''; }
+    if (m) { m.textContent = '🎵 背景音乐 ' + (AUDIO.musicOn ? '开' : '关'); m.style.background = AUDIO.musicOn ? 'rgba(255,216,138,.28)' : ''; }
+    if (f) { f.textContent = '💥 音效 ' + (AUDIO.sfxOn ? '开' : '关'); f.style.background = AUDIO.sfxOn ? 'rgba(255,216,138,.28)' : ''; }
+    const t = $('#setTrackTxt'); if (t) t.textContent = '当前曲目：' + (AUDIO.cur ? (AUDIO.TRACKS[AUDIO.cur] || {}).desc : '—');
+    const b2 = $('#btnAudio'); if (b2) b2.textContent = AUDIO.on ? '🔊' : '🔇';
+  };
+  const a1 = $('#setAudioAll'); if (a1) a1.onclick = () => { AUDIO.on = !AUDIO.on; if (!AUDIO.on) AUDIO.stop(); else { AUDIO.resume(); AUDIO.play('town'); } AUDIO.save(); up(); };
+  const a2 = $('#setAudioMusic'); if (a2) a2.onclick = () => { AUDIO.musicOn = !AUDIO.musicOn; if (!AUDIO.musicOn) AUDIO.stop(); else { AUDIO.resume(); AUDIO.play('town'); } AUDIO.save(); up(); };
+  const a3 = $('#setAudioSfx'); if (a3) a3.onclick = () => { AUDIO.sfxOn = !AUDIO.sfxOn; AUDIO.save(); up(); if (AUDIO.sfxOn) AUDIO.sfx('click'); };
+  const v = $('#setVol');
+  if (v) { v.value = Math.round(AUDIO.vol * 100); $('#setVolTxt').textContent = v.value;
+    v.oninput = () => { AUDIO.setVol(v.value / 100); $('#setVolTxt').textContent = v.value; }; }
+  window.__updAudio = up; up();
+}
+
 function bindHotkeys() {
   document.addEventListener('keydown', (e) => {
     if (/input|textarea/i.test(e.target.tagName)) return;
@@ -246,6 +277,11 @@ function bindTabs() {
   });
   // 顶部设置按钮
   const ts = $('#btnTopSet'); if (ts) ts.onclick = () => { UI.CUR_WIN === 'set' ? UI.closeWin() : UI.openWin('set'); };
+  // 全局点击音效
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b && window.AUDIO) AUDIO.sfx('click');
+  }, true);
   // 关闭按钮（窗口头部 ×）
   $$('.win-hd .x').forEach((b) => b.onclick = () => UI.closeWin());
 }
