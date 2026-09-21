@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790011886611,
-  "lastTick": 1790011886611,
+  "lastSeen": 1790011889997,
+  "lastTick": 1790011889997,
   "realm": 31,
   "stage": 0,
-  "exp": 187600425049.4848,
-  "stone": 2827460427758.0703,
+  "exp": 7596,
+  "stone": 2827460430558.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -131,20 +131,6 @@
     }
   },
   "bag": [
-    {
-      "id": "it_xfwb4fa",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·云锦袍",
-      "atk": 64,
-      "def": 480,
-      "hp": 2475,
-      "crit": 0,
-      "mp": 337
-    },
     {
       "id": "fr_fr_e004",
       "name": "玄铁剑",
@@ -428,7 +414,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 62,
+      "count": 64,
       "desc": "炼器材料",
       "id": "i_nn3fjek"
     },
@@ -1244,6 +1230,20 @@
       "enh": 0,
       "temp": 0,
       "fr": true
+    },
+    {
+      "id": "it_daonk3v",
+      "kind": "equip",
+      "slot": "bracelet",
+      "q": 3,
+      "level": 0,
+      "temper": 0,
+      "name": "仙器·锁金腕",
+      "atk": 211,
+      "def": 143,
+      "hp": 836,
+      "crit": 0.02,
+      "mp": 337
     }
   ],
   "skills": [
@@ -2554,16 +2554,16 @@
         "arena": 20,
         "dungeon": 242,
         "meditate": 1,
-        "exp": 129751993178,
-        "kill": 1174
+        "exp": 129752016246,
+        "kill": 1177
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129851385272,
-        "kill": 2892,
+        "exp": 129851408340,
+        "kill": 2895,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2581,8 +2581,8 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 408,
-        "星斗海妖兽": 375,
+        "禁地守卫": 410,
+        "星斗海妖兽": 376,
         "天星宗弟子": 3,
         "墨蛟": 388
       },
@@ -2628,9 +2628,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 2892,
+    "kills": 2895,
     "deaths": 65,
-    "battles": 2957,
+    "battles": 2960,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
@@ -2664,7 +2664,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 36,
+    "acc": 39,
     "level": 30
   },
   "titles": {
