@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989950302,
-  "lastTick": 1789989950302,
+  "lastSeen": 1789989953404,
+  "lastTick": 1789989953404,
   "realm": 3,
   "stage": 3,
-  "exp": 174953.64720000015,
-  "stone": 17491,
+  "exp": 198803.62720000016,
+  "stone": 18135,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -29,18 +29,18 @@
       "mp": 34
     },
     "armor": {
-      "id": "it_gzth2ve",
+      "id": "it_2pke8pq",
       "kind": "equip",
       "slot": "armor",
       "q": 3,
       "level": 0,
       "temper": 0,
-      "name": "仙器·太极道衣",
-      "atk": 8,
-      "def": 39,
-      "hp": 290,
+      "name": "仙器·玄龟甲",
+      "atk": 15,
+      "def": 52,
+      "hp": 319,
       "crit": 0.02,
-      "mp": 34
+      "mp": 49
     },
     "ring": {
       "id": "it_gouk4pe",
@@ -194,18 +194,32 @@
       "mp": 49
     },
     {
-      "id": "it_2pke8pq",
+      "id": "it_q2hexa3",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·阴阳环",
+      "atk": 27,
+      "def": 15,
+      "hp": 159,
+      "crit": 0,
+      "mp": 49
+    },
+    {
+      "id": "it_gzth2ve",
       "kind": "equip",
       "slot": "armor",
       "q": 3,
       "level": 0,
       "temper": 0,
-      "name": "仙器·玄龟甲",
-      "atk": 15,
-      "def": 52,
-      "hp": 319,
+      "name": "仙器·太极道衣",
+      "atk": 8,
+      "def": 39,
+      "hp": 290,
       "crit": 0.02,
-      "mp": 49
+      "mp": 34
     }
   ],
   "skills": [],
@@ -225,23 +239,23 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 117788,
-        "kill": 47
+        "exp": 122232,
+        "kill": 48
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 117788,
-        "kill": 47,
+        "exp": 122232,
+        "kill": 48,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
         "熔岩巨人": 8,
-        "b3": 13,
-        "火麒麟": 2,
+        "b3": 14,
+        "火麒麟": 3,
         "炎魔": 3
       },
       "claimed": []
@@ -278,9 +292,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 47,
+    "kills": 48,
     "deaths": 0,
-    "battles": 47,
+    "battles": 48,
     "breakthrough": 15,
     "offlineMin": 0,
     "meditate": 1,
