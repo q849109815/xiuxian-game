@@ -7,12 +7,12 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790010214040,
-  "lastTick": 1790010214040,
+  "lastSeen": 1790010213396,
+  "lastTick": 1790010213396,
   "realm": 31,
   "stage": 0,
-  "exp": 93727618158.80525,
-  "stone": 8505046474762,
+  "exp": 93613640580.00508,
+  "stone": 8505046475687,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -66,7 +66,7 @@
   "riding": false,
   "cave": {
     "lv": {
-      "forge": 2
+      "forge": 1
     },
     "array": "none",
     "lastHarvest": 1790003121304,
@@ -128,7 +128,7 @@
   "trait": "P003",
   "bottle": {
     "liquid": 7,
-    "acc": 127,
+    "acc": 126,
     "level": 1
   },
   "partners": {},
