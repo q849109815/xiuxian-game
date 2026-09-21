@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995774372,
-  "lastTick": 1789995774372,
+  "lastSeen": 1789995776141,
+  "lastTick": 1789995776141,
   "realm": 9,
   "stage": 3,
-  "exp": 0,
-  "stone": 4255035,
+  "exp": 61860092833.65027,
+  "stone": 4264111,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -146,20 +146,6 @@
       "mp": 115
     },
     {
-      "id": "it_qkbmx3s",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·玄龟甲",
-      "atk": 45,
-      "def": 97,
-      "hp": 873,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "kind": "pill",
       "ref": "pill_zen",
       "name": "悟道金丹",
@@ -181,20 +167,6 @@
       "def": 35,
       "hp": 335,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_gs6kjpq",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·阴阳环",
-      "atk": 74,
-      "def": 29,
-      "hp": 343,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -306,6 +278,20 @@
       "atk": 157,
       "def": 35,
       "hp": 259,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_dkchevx",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·麒麟铠",
+      "atk": 37,
+      "def": 106,
+      "hp": 899,
       "crit": 0,
       "mp": 115
     }
@@ -1424,8 +1410,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 39660928,
-        "kill": 785,
+        "exp": 39732348,
+        "kill": 786,
         "dungeon": 213,
         "arena": 20
       },
@@ -1438,8 +1424,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 39660928,
-        "kill": 785,
+        "exp": 39732348,
+        "kill": 786,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1454,7 +1440,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 189,
+        "星宿仙君": 190,
         "混沌祖龙": 213,
         "天兵": 197
       },
@@ -1499,9 +1485,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 785,
+    "kills": 786,
     "deaths": 0,
-    "battles": 785,
+    "battles": 786,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
