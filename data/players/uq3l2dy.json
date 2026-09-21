@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996165105,
-  "lastTick": 1789996165105,
+  "lastSeen": 1789996174757,
+  "lastTick": 1789996174757,
   "realm": 9,
   "stage": 3,
-  "exp": 30930072158.825134,
-  "stone": 6426971,
+  "exp": 340230653395.0765,
+  "stone": 6478340,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -102,26 +102,12 @@
       "mp": 115
     },
     {
-      "id": "it_aqp8yoe",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 3,
-      "level": 0,
-      "temper": 0,
-      "name": "仙器·破妄戒",
-      "atk": 63,
-      "def": 40,
-      "hp": 347,
-      "crit": 0.02,
-      "mp": 115
-    },
-    {
       "kind": "herb",
       "ref": "herb_immortal",
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 58,
+      "count": 62,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -141,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 23,
+      "count": 25,
       "desc": "炼器材料",
       "id": "i_bkbhegu"
     },
@@ -160,30 +146,44 @@
       "mp": 115
     },
     {
-      "id": "it_361jeu3",
+      "id": "it_9b83agq",
       "kind": "equip",
-      "slot": "ring",
+      "slot": "weapon",
       "q": 1,
       "level": 0,
       "temper": 0,
-      "name": "灵器·养魂环",
-      "atk": 67,
-      "def": 42,
-      "hp": 282,
+      "name": "灵器·玄铁刀",
+      "atk": 137,
+      "def": 35,
+      "hp": 235,
       "crit": 0,
       "mp": 115
     },
     {
-      "id": "it_kg88fle",
+      "id": "it_b8tmyde",
       "kind": "equip",
-      "slot": "ring",
-      "q": 0,
+      "slot": "armor",
+      "q": 1,
       "level": 0,
       "temper": 0,
-      "name": "凡品·破妄戒",
-      "atk": 75,
-      "def": 41,
-      "hp": 283,
+      "name": "灵器·云锦袍",
+      "atk": 39,
+      "def": 131,
+      "hp": 868,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_hne000e",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·云锦袍",
+      "atk": 39,
+      "def": 119,
+      "hp": 752,
       "crit": 0,
       "mp": 115
     }
@@ -1320,8 +1320,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 58701170,
-        "kill": 1082,
+        "exp": 59175338,
+        "kill": 1089,
         "dungeon": 213,
         "arena": 20
       },
@@ -1334,8 +1334,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 58701170,
-        "kill": 1082,
+        "exp": 59175338,
+        "kill": 1089,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1350,9 +1350,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 303,
-        "混沌祖龙": 305,
-        "天兵": 288
+        "星宿仙君": 305,
+        "混沌祖龙": 309,
+        "天兵": 289
       },
       "claimed": [
         "b2",
@@ -1395,14 +1395,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1082,
+    "kills": 1089,
     "deaths": 0,
-    "battles": 1082,
+    "battles": 1089,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 134,
+    "encounters": 136,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
