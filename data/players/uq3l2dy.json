@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990156575,
-  "lastTick": 1789990156575,
+  "lastSeen": 1789990161991,
+  "lastTick": 1789990161991,
   "realm": 4,
   "stage": 3,
-  "exp": 798159.4121000047,
-  "stone": 19527,
+  "exp": 1049315.059100005,
+  "stone": 20117,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -95,7 +95,7 @@
       "name": "赤炎莲",
       "icon": "🔥",
       "price": 180,
-      "count": 22,
+      "count": 23,
       "desc": "炼丹材料",
       "id": "i_4dx4axl"
     },
@@ -220,6 +220,20 @@
       "hp": 158,
       "crit": 0,
       "mp": 58
+    },
+    {
+      "id": "it_6920msl",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·破妄戒",
+      "atk": 33,
+      "def": 18,
+      "hp": 148,
+      "crit": 0,
+      "mp": 58
     }
   ],
   "skills": [
@@ -235,7 +249,7 @@
     },
     {
       "id": "sk_art_drain",
-      "level": 1,
+      "level": 2,
       "exp": 0
     }
   ],
@@ -258,8 +272,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 283396,
-        "kill": 79,
+        "exp": 289066,
+        "kill": 80,
         "dungeon": 4
       },
       "claimed": []
@@ -267,14 +281,14 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 283396,
-        "kill": 79,
+        "exp": 289066,
+        "kill": 80,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
-        "熔岩巨人": 18,
-        "b3": 45,
+        "熔岩巨人": 19,
+        "b3": 46,
         "火麒麟": 10,
         "炎魔": 17,
         "dungeon": 4
@@ -313,9 +327,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 79,
+    "kills": 80,
     "deaths": 0,
-    "battles": 79,
+    "battles": 80,
     "breakthrough": 19,
     "offlineMin": 0,
     "meditate": 1,
