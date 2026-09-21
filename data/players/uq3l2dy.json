@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009708423,
-  "lastTick": 1790009708423,
+  "lastSeen": 1790009711694,
+  "lastTick": 1790009711694,
   "realm": 31,
   "stage": 0,
-  "exp": 198146618260.70642,
-  "stone": 8505051553250.912,
+  "exp": 243872760936.25403,
+  "stone": 8505051553979.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -884,20 +884,6 @@
       "atk": 35,
       "def": 125,
       "hp": 733,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_pu3wklp",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·玄铁刀",
-      "atk": 140,
-      "def": 34,
-      "hp": 330,
       "crit": 0,
       "mp": 115
     },
@@ -2208,7 +2194,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 4,
-    "acc": 28,
+    "acc": 31,
     "level": 13
   },
   "titles": {
