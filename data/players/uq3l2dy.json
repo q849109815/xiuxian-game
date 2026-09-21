@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790010306566,
-  "lastTick": 1790010306566,
+  "lastSeen": 1790010336565,
+  "lastTick": 1790010336565,
   "realm": 31,
   "stage": 0,
-  "exp": 25220701421.266693,
+  "exp": 126103457954.33347,
   "stone": 8505051536719.912,
   "equip": {
     "weapon": {
@@ -167,7 +167,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 454,
+      "count": 455,
       "desc": "炼丹材料",
       "id": "i_dwghtoq"
     },
@@ -1462,7 +1462,7 @@
         "arena": 20,
         "dungeon": 92,
         "meditate": 1,
-        "exp": 129735715758,
+        "exp": 129735764910,
         "kill": 16
       },
       "claimed": []
@@ -1470,7 +1470,7 @@
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129835107852,
+        "exp": 129835157004,
         "kill": 1734,
         "女鬼": 13,
         "b2": 34,
@@ -1536,13 +1536,13 @@
   "title": "",
   "stats": {
     "kills": 1734,
-    "deaths": 42,
-    "battles": 1776,
+    "deaths": 46,
+    "battles": 1780,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 305,
-    "encounters": 244,
+    "encounters": 245,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -1570,8 +1570,8 @@
   },
   "loginAt": 1790009125477,
   "bottle": {
-    "liquid": 10,
-    "acc": 76,
+    "liquid": 11,
+    "acc": 16,
     "level": 13
   },
   "titles": {
