@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995817283,
-  "lastTick": 1789995817283,
+  "lastSeen": 1789995819650,
+  "lastTick": 1789995819650,
   "realm": 9,
   "stage": 3,
-  "exp": 216510454355.77594,
-  "stone": 4513963,
+  "exp": 278370603383.4262,
+  "stone": 4526547,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 151,
+      "count": 152,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -127,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 60,
+      "count": 61,
       "desc": "炼器材料",
       "id": "i_jir574s"
     },
@@ -334,6 +334,20 @@
       "atk": 32,
       "def": 99,
       "hp": 997,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_nbk2qxb",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·混元幡",
+      "atk": 133,
+      "def": 39,
+      "hp": 282,
       "crit": 0,
       "mp": 115
     }
@@ -1430,6 +1444,15 @@
       "exp": 0,
       "stage": 0,
       "apt": 1
+    },
+    {
+      "id": "bs_3eld7sv",
+      "ref": "b_tiger",
+      "name": "白额虎王",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
     }
   ],
   "activeBeast": 0,
@@ -1452,8 +1475,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 41920886,
-        "kill": 820,
+        "exp": 42048306,
+        "kill": 822,
         "dungeon": 213,
         "arena": 20
       },
@@ -1466,8 +1489,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 41920886,
-        "kill": 820,
+        "exp": 42048306,
+        "kill": 822,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1482,7 +1505,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 205,
+        "星宿仙君": 207,
         "混沌祖龙": 225,
         "天兵": 204
       },
@@ -1527,17 +1550,17 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 820,
+    "kills": 822,
     "deaths": 0,
-    "battles": 820,
+    "battles": 822,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 91,
+    "encounters": 93,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 1680
+  "bonusWuxing": 1725
 }
