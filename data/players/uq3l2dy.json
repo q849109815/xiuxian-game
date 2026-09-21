@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996296501,
-  "lastTick": 1789996296501,
+  "lastSeen": 1789996299751,
+  "lastTick": 1789996299751,
   "realm": 9,
   "stage": 3,
-  "exp": 0,
-  "stone": 7128624,
+  "exp": 92346417287.8256,
+  "stone": 7143264,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -1735,8 +1735,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 65366860,
-        "kill": 1187,
+        "exp": 65560128,
+        "kill": 1190,
         "dungeon": 213,
         "arena": 20
       },
@@ -1749,8 +1749,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 65366860,
-        "kill": 1187,
+        "exp": 65560128,
+        "kill": 1190,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1765,8 +1765,8 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 340,
-        "混沌祖龙": 340,
+        "星宿仙君": 342,
+        "混沌祖龙": 341,
         "天兵": 321
       },
       "claimed": [
@@ -1778,7 +1778,7 @@
   "sectInfo": {
     "id": "s_06ixz2",
     "rankIdx": 4,
-    "contrib": 3660,
+    "contrib": 4180,
     "joinedAt": 1789996255530
   },
   "arena": {
@@ -1810,9 +1810,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1187,
+    "kills": 1190,
     "deaths": 0,
-    "battles": 1187,
+    "battles": 1190,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
