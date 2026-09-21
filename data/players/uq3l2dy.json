@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989830091,
-  "lastTick": 1789989830091,
+  "lastSeen": 1789989831325,
+  "lastTick": 1789989831325,
   "realm": 2,
   "stage": 3,
-  "exp": 39009.85519999999,
-  "stone": 6767,
+  "exp": 40076.20399999999,
+  "stone": 7299,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -88,34 +88,6 @@
       "count": 3,
       "desc": "炼丹材料",
       "id": "i_q0unirj"
-    },
-    {
-      "id": "it_vbtejo3",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·诛仙剑",
-      "atk": 56,
-      "def": 11,
-      "hp": 75,
-      "crit": 0,
-      "mp": 34
-    },
-    {
-      "id": "it_u0yfm3j",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·阴阳环",
-      "atk": 22,
-      "def": 13,
-      "hp": 101,
-      "crit": 0,
-      "mp": 34
     },
     {
       "id": "it_3vymxuu",
