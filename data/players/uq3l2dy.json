@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989832559,
-  "lastTick": 1789989832559,
-  "realm": 2,
-  "stage": 3,
-  "exp": 41142.55279999999,
-  "stone": 8160,
+  "lastSeen": 1789989842027,
+  "lastTick": 1789989842027,
+  "realm": 3,
+  "stage": 0,
+  "exp": 344.04079999998794,
+  "stone": 8854,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -65,7 +65,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 8,
+      "count": 11,
       "desc": "炼器材料",
       "id": "i_op7cm1h"
     },
@@ -85,7 +85,7 @@
       "name": "养魂花",
       "icon": "🌸",
       "price": 90,
-      "count": 3,
+      "count": 4,
       "desc": "炼丹材料",
       "id": "i_q0unirj"
     }
@@ -107,20 +107,20 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 38114,
-        "kill": 27
+        "exp": 43224,
+        "kill": 31
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 38114,
-        "kill": 27,
+        "exp": 43224,
+        "kill": 31,
         "女鬼": 11,
-        "b2": 27,
-        "僵尸": 12,
-        "尸王": 4
+        "b2": 31,
+        "僵尸": 14,
+        "尸王": 6
       },
       "claimed": []
     }
@@ -156,10 +156,10 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 27,
+    "kills": 31,
     "deaths": 0,
-    "battles": 27,
-    "breakthrough": 11,
+    "battles": 31,
+    "breakthrough": 12,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 0,
