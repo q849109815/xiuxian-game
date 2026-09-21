@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995910566,
-  "lastTick": 1789995910566,
+  "lastSeen": 1789995912251,
+  "lastTick": 1789995912251,
   "realm": 9,
   "stage": 3,
-  "exp": 123720321798.30054,
-  "stone": 5035572,
+  "exp": 154650389465.12567,
+  "stone": 5043284,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -768,6 +768,20 @@
       "atk": 72,
       "def": 38,
       "hp": 234,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_byps233",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·混元幡",
+      "atk": 130,
+      "def": 35,
+      "hp": 317,
       "crit": 0,
       "mp": 115
     }
@@ -1895,8 +1909,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 46781674,
-        "kill": 895,
+        "exp": 46838634,
+        "kill": 896,
         "dungeon": 213,
         "arena": 20
       },
@@ -1909,8 +1923,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 46781674,
-        "kill": 895,
+        "exp": 46838634,
+        "kill": 896,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1927,7 +1941,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 233,
         "混沌祖龙": 246,
-        "天兵": 230
+        "天兵": 231
       },
       "claimed": [
         "b2",
@@ -1970,9 +1984,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 895,
+    "kills": 896,
     "deaths": 0,
-    "battles": 895,
+    "battles": 896,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
@@ -1982,5 +1996,5 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 3345
+  "bonusWuxing": 3375
 }
