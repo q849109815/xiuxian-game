@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990685719,
-  "lastTick": 1789990685719,
+  "lastSeen": 1789990686286,
+  "lastTick": 1789990686286,
   "realm": 8,
   "stage": 3,
-  "exp": 11275389579.652157,
-  "stone": 112858,
+  "exp": 11997327768.553017,
+  "stone": 94040,
   "equip": {
     "weapon": {
       "id": "it_pion6p0",
@@ -133,7 +133,7 @@
   "cave": {
     "lv": {
       "farm": 10,
-      "array": 6,
+      "array": 7,
       "garden": 3
     },
     "array": "none",
