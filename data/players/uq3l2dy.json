@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990728920,
-  "lastTick": 1789990728920,
+  "lastSeen": 1789990737797,
+  "lastTick": 1789990737797,
   "realm": 9,
   "stage": 1,
-  "exp": 4226113363.8077545,
-  "stone": 79681,
+  "exp": 48891086133.204506,
+  "stone": 94600,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -65,7 +65,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 6,
+      "count": 7,
       "desc": "炼丹材料",
       "id": "i_fhce2n2"
     },
@@ -96,6 +96,34 @@
       "hp": 303,
       "crit": 0,
       "mp": 106
+    },
+    {
+      "id": "it_24ii1dc",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·灵蛇杖",
+      "atk": 194,
+      "def": 39,
+      "hp": 326,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_53l2l6z",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·混元幡",
+      "atk": 181,
+      "def": 37,
+      "hp": 338,
+      "crit": 0,
+      "mp": 115
     }
   ],
   "skills": [
@@ -160,8 +188,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 1623954,
-        "kill": 195,
+        "exp": 1749228,
+        "kill": 197,
         "dungeon": 5,
         "arena": 1
       },
@@ -174,8 +202,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 1623954,
-        "kill": 195,
+        "exp": 1749228,
+        "kill": 197,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -191,7 +219,8 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 5,
-        "混沌祖龙": 4
+        "混沌祖龙": 5,
+        "天兵": 1
       },
       "claimed": [
         "b2",
@@ -230,14 +259,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 195,
+    "kills": 197,
     "deaths": 0,
-    "battles": 195,
+    "battles": 197,
     "breakthrough": 34,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 5,
-    "encounters": 21,
+    "encounters": 22,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
