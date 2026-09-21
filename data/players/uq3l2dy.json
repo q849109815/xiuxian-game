@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990502020,
-  "lastTick": 1789990502020,
+  "lastSeen": 1789990502348,
+  "lastTick": 1789990502348,
   "realm": 6,
   "stage": 3,
   "exp": 1521329.8424841762,
-  "stone": 43920,
+  "stone": 44274,
   "equip": {
     "weapon": {
       "id": "it_pion6p0",
@@ -108,20 +108,6 @@
       "count": 2,
       "desc": "炼器材料",
       "id": "i_21cevzi"
-    },
-    {
-      "id": "it_zrfrnan",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·青锋剑",
-      "atk": 41,
-      "def": 10,
-      "hp": 87,
-      "crit": 0,
-      "mp": 34
     }
   ],
   "skills": [
