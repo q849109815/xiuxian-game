@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995455184,
-  "lastTick": 1789995455184,
+  "lastSeen": 1789995455844,
+  "lastTick": 1789995455844,
   "realm": 9,
   "stage": 3,
-  "exp": 148464321486.76065,
-  "stone": 2452767,
+  "exp": 185580334334.9508,
+  "stone": 2453858,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -85,20 +85,6 @@
       "def": 28,
       "hp": 279,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_2no4dej",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·玄铁刀",
-      "atk": 181,
-      "def": 40,
-      "hp": 260,
-      "crit": 0,
       "mp": 115
     },
     {
