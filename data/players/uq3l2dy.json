@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990323642,
-  "lastTick": 1789990323642,
+  "lastSeen": 1789990324809,
+  "lastTick": 1789990324809,
   "realm": 5,
   "stage": 1,
-  "exp": 8957573.012850001,
-  "stone": 103198,
+  "exp": 9193037.627400002,
+  "stone": 102718,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -445,7 +445,7 @@
     },
     {
       "id": "sk_heart_basic",
-      "level": 2,
+      "level": 3,
       "exp": 0
     }
   ],
