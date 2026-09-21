@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789994272931,
-  "lastTick": 1789994272931,
+  "lastSeen": 1789994274598,
+  "lastTick": 1789994274598,
   "realm": 9,
   "stage": 3,
-  "exp": 18196132126.642162,
-  "stone": 1531548,
+  "exp": 36392329041.284325,
+  "stone": 1470521,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -246,6 +246,20 @@
       "atk": 61,
       "def": 28,
       "hp": 237,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_4u23uc0",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·云锦袍",
+      "atk": 32,
+      "def": 94,
+      "hp": 706,
       "crit": 0,
       "mp": 115
     }
@@ -1301,7 +1315,7 @@
       "array": 10,
       "garden": 10,
       "alchemy": 8,
-      "forge": 5
+      "forge": 8
     },
     "array": "spirit",
     "lastHarvest": 1789989635634,
@@ -1313,8 +1327,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 13541646,
-        "kill": 380,
+        "exp": 13606434,
+        "kill": 381,
         "dungeon": 115,
         "arena": 20
       },
@@ -1327,8 +1341,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 13541646,
-        "kill": 380,
+        "exp": 13606434,
+        "kill": 381,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1343,7 +1357,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 65,
+        "星宿仙君": 66,
         "混沌祖龙": 71,
         "天兵": 58
       },
@@ -1388,9 +1402,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 380,
+    "kills": 381,
     "deaths": 0,
-    "battles": 380,
+    "battles": 381,
     "breakthrough": 36,
     "offlineMin": 35,
     "meditate": 1,
