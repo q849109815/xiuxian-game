@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789993769069,
-  "lastTick": 1789993769069,
+  "lastSeen": 1789993799070,
+  "lastTick": 1789993799070,
   "realm": 9,
   "stage": 3,
-  "exp": 140110217375.14465,
+  "exp": 297734211922.18225,
   "stone": 337859,
   "equip": {
     "weapon": {
@@ -264,5 +264,5 @@
     "rob": 0
   },
   "meditateUntil": 1789989945650,
-  "lastChatAt": 1789991427730
+  "lastChatAt": 1789993785456
 }
