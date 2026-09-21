@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009848304,
-  "lastTick": 1790009848304,
+  "lastSeen": 1790009851785,
+  "lastTick": 1790009851785,
   "realm": 31,
   "stage": 0,
-  "exp": 182419464159.9078,
-  "stone": 8505051566481.912,
+  "exp": 273629196239.86166,
+  "stone": 8505051568489.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -564,20 +564,6 @@
       "mp": 115
     },
     {
-      "id": "it_zcb16yv",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·云锦袍",
-      "atk": 40,
-      "def": 98,
-      "hp": 756,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "id": "it_821zved",
       "kind": "equip",
       "slot": "weapon",
@@ -589,20 +575,6 @@
       "def": 43,
       "hp": 265,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_0bph6nl",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·太极道衣",
-      "atk": 42,
-      "def": 116,
-      "hp": 651,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -1942,7 +1914,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 5,
-    "acc": 67,
+    "acc": 71,
     "level": 13
   },
   "titles": {
