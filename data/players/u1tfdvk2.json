@@ -7,12 +7,12 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789998424444,
-  "lastTick": 1789998424444,
+  "lastSeen": 1789998424880,
+  "lastTick": 1789998424880,
   "realm": 9,
   "stage": 3,
-  "exp": 190294508392.68613,
-  "stone": 466548527,
+  "exp": 190296508392.68613,
+  "stone": 467048527,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -593,7 +593,7 @@
     "store": {}
   },
   "tasks": {
-    "mainIdx": 5,
+    "mainIdx": 6,
     "daily": {
       "date": "2026-9-21",
       "prog": {
