@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990488476,
-  "lastTick": 1789990488476,
+  "lastSeen": 1789990497771,
+  "lastTick": 1789990497771,
   "realm": 6,
   "stage": 2,
-  "exp": 129162557.41140114,
-  "stone": 38972,
+  "exp": 207912841.5456688,
+  "stone": 41076,
   "equip": {
     "weapon": {
       "id": "it_pion6p0",
@@ -95,7 +95,7 @@
       "name": "炎晶",
       "icon": "🔶",
       "price": 150,
-      "count": 19,
+      "count": 20,
       "desc": "炼器材料",
       "id": "i_qg53eix"
     },
@@ -260,8 +260,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 792638,
-        "kill": 172,
+        "exp": 808740,
+        "kill": 173,
         "dungeon": 4,
         "arena": 1
       },
@@ -274,8 +274,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 792638,
-        "kill": 172,
+        "exp": 808740,
+        "kill": 173,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -287,7 +287,8 @@
         "dungeon": 4,
         "arena": 1,
         "九幽冥王": 2,
-        "b4": 2
+        "b4": 3,
+        "幽魂将": 1
       },
       "claimed": [
         "b2",
@@ -326,14 +327,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 172,
+    "kills": 173,
     "deaths": 0,
-    "battles": 172,
+    "battles": 173,
     "breakthrough": 25,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 4,
-    "encounters": 18,
+    "encounters": 19,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
