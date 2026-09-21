@@ -170,6 +170,22 @@ function renderHUD(p) {
   $('#cultAvatar').textContent = '🧘';
 }
 
+/** 闭关按钮：冷却中显示倒计时并禁用 */
+function renderMeditate(p) {
+  const btn = $('#btnMeditate'); if (!btn) return;
+  const left = ENGINE.meditateCdLeft(p);
+  if (left > 0) {
+    const mm = Math.floor(left / 60), ss = String(left % 60).padStart(2, '0');
+    btn.disabled = true;
+    btn.textContent = `🧘 调息中 ${mm}:${ss}`;
+    btn.classList.remove('act'); btn.classList.add('ghost');
+  } else {
+    btn.disabled = false;
+    btn.textContent = '🧘 闭关修炼';
+    btn.classList.add('act'); btn.classList.remove('ghost');
+  }
+}
+
 function renderAttrs(p) {
   const a = ENGINE.attrs(p);
   const rows = [['气血', a.hp], ['攻击', a.atk], ['防御', a.def], ['暴击', (a.crit * 100).toFixed(1) + '%'], ['暴伤', (a.critDmg * 100).toFixed(0) + '%'], ['速度', a.speed.toFixed(1)]];
@@ -263,4 +279,4 @@ function renderNet() {
   $('#setQueue').textContent = Net.queueSize();
 }
 
-window.UI = { initBackground, toast, renderHUD, renderAttrs, renderMaps, renderBag, renderRank, renderNotice, renderNet, startQi, flashBreakthrough, pushLog, clearLog, hpBar, setFighters, floatNum, boom, shake, hitAnim, get curMap() { return CUR_MAP; }, set curMap(v) { CUR_MAP = v; }, get bagFilter() { return BAG_FILTER; }, set bagFilter(v) { BAG_FILTER = v; } };
+window.UI = { initBackground, toast, renderHUD, renderMeditate, renderAttrs, renderMaps, renderBag, renderRank, renderNotice, renderNet, startQi, flashBreakthrough, pushLog, clearLog, hpBar, setFighters, floatNum, boom, shake, hitAnim, get curMap() { return CUR_MAP; }, set curMap(v) { CUR_MAP = v; }, get bagFilter() { return BAG_FILTER; }, set bagFilter(v) { BAG_FILTER = v; } };
