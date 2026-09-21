@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996410370,
-  "lastTick": 1789996410370,
+  "lastSeen": 1789996410901,
+  "lastTick": 1789996410901,
   "realm": 9,
   "stage": 3,
-  "exp": 184692751163.6512,
-  "stone": 8258742,
+  "exp": 184692815379.6512,
+  "stone": 8265494,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -538,20 +538,6 @@
       "mp": 115
     },
     {
-      "id": "it_3wgoqcd",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·养魂环",
-      "atk": 84,
-      "def": 41,
-      "hp": 285,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "id": "it_sluqnqf",
       "kind": "equip",
       "slot": "weapon",
@@ -1020,6 +1006,20 @@
       "atk": 60,
       "def": 44,
       "hp": 326,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_1bcebjd",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·破妄戒",
+      "atk": 58,
+      "def": 39,
+      "hp": 278,
       "crit": 0,
       "mp": 115
     }
@@ -2165,8 +2165,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 71118446,
-        "kill": 1277,
+        "exp": 71182662,
+        "kill": 1278,
         "dungeon": 213,
         "arena": 20
       },
@@ -2180,8 +2180,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 71118446,
-        "kill": 1277,
+        "exp": 71182662,
+        "kill": 1278,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2198,7 +2198,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 374,
         "混沌祖龙": 368,
-        "天兵": 349
+        "天兵": 350
       },
       "claimed": [
         "b2",
@@ -2242,9 +2242,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1277,
+    "kills": 1278,
     "deaths": 0,
-    "battles": 1277,
+    "battles": 1278,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
