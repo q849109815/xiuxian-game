@@ -7,19 +7,44 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989698723,
-  "lastTick": 1789989698723,
+  "lastSeen": 1789989728722,
+  "lastTick": 1789989728722,
   "realm": 1,
-  "stage": 2,
-  "exp": 1097.7904000000003,
-  "stone": 200,
+  "stage": 3,
+  "exp": 2903.0304000000015,
+  "stone": 536,
   "equip": {
     "weapon": null,
     "armor": null,
     "ring": null,
     "talisman": null
   },
-  "bag": [],
+  "bag": [
+    {
+      "kind": "ore",
+      "ref": "ore_iron",
+      "name": "玄铁",
+      "icon": "⚙️",
+      "price": 50,
+      "count": 1,
+      "desc": "炼器材料",
+      "id": "i_op7cm1h"
+    },
+    {
+      "id": "it_rjmltm8",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·云锦袍",
+      "atk": 7,
+      "def": 20,
+      "hp": 206,
+      "crit": 0,
+      "mp": 25
+    }
+  ],
   "skills": [],
   "equipped": [],
   "beasts": [],
@@ -36,13 +61,19 @@
     "daily": {
       "date": "2026-9-21",
       "prog": {
-        "meditate": 1
+        "meditate": 1,
+        "exp": 2900,
+        "kill": 2
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
-        "meditate": 1
+        "meditate": 1,
+        "exp": 2900,
+        "kill": 2,
+        "女鬼": 2,
+        "b2": 2
       },
       "claimed": []
     }
@@ -78,10 +109,10 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 0,
+    "kills": 2,
     "deaths": 0,
-    "battles": 0,
-    "breakthrough": 6,
+    "battles": 2,
+    "breakthrough": 7,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 0,
