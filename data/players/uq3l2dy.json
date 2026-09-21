@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996523968,
-  "lastTick": 1789996523968,
+  "lastSeen": 1789996525164,
+  "lastTick": 1789996525164,
   "realm": 9,
   "stage": 3,
-  "exp": 70935523955.19446,
-  "stone": 8769386,
+  "exp": 95840054996.58182,
+  "stone": 8775842,
   "equip": {
     "weapon": {
       "id": "it_33hcivs",
@@ -20,7 +20,7 @@
       "slot": "weapon",
       "q": 3,
       "level": 12,
-      "temper": 0,
+      "temper": 2,
       "name": "仙器·灵蛇杖",
       "atk": 201,
       "def": 40,
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 188,
+      "count": 189,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -1521,8 +1521,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 77136748,
-        "kill": 1370,
+        "exp": 77205526,
+        "kill": 1371,
         "dungeon": 213,
         "arena": 20
       },
@@ -1536,8 +1536,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 77136748,
-        "kill": 1370,
+        "exp": 77205526,
+        "kill": 1371,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1552,7 +1552,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 415,
+        "星宿仙君": 416,
         "混沌祖龙": 394,
         "天兵": 375
       },
@@ -1598,9 +1598,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1370,
+    "kills": 1371,
     "deaths": 0,
-    "battles": 1370,
+    "battles": 1371,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
