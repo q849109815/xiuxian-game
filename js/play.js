@@ -487,7 +487,8 @@ const SOCIALX = {
   maxTeam() { return (this.S().team || {}).max || 5; },
   createTeam(p) {
     this.init(p);
-    p.social.team = { lead: p.name, members: [{ uid: p.uid, name: p.name, power: (window.ENGINE && ENGINE.power(p)) || 0 }] };
+    const pw = (window.ENGINE && typeof ENGINE.power === 'function') ? ENGINE.power(p) : ((p.realm || 0) * 1000);
+    p.social.team = { lead: p.name, members: [{ uid: p.uid, name: p.name, power: pw }] };
     return { ok: true, msg: '队伍已创建' };
   },
   joinTeam(p, name, power) {
@@ -533,11 +534,16 @@ const AUCTION = {
   },
   /** 购买（从全服列表） */
   buy(p, entry) {
+    if (!entry) return { ok: false, msg: '无此拍品' };
+    // 系统寄售品每人限购一次，防止无限刷
+    p.aucBought = p.aucBought || [];
+    if (entry.sys && p.aucBought.indexOf(entry.id) >= 0) return { ok: false, msg: '该寄售品已购过' };
     if ((p.stone || 0) < entry.price) return { ok: false, msg: '灵石不足' };
     p.stone -= entry.price;
     if (window.WALLET) { WALLET.init(p); p.wallet.C001 = p.stone; }
     p.bag = p.bag || [];
     p.bag.push(entry.item);
+    if (entry.sys) p.aucBought.push(entry.id);
     return { ok: true, msg: `购得【${entry.item.name}】` };
   },
   /** 全服货架（本地模拟：自己的 + 系统寄售） */
