@@ -53,18 +53,33 @@ const ACTSYS = {
     WALLET.init(p);
     return p.act;
   },
-  today() { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; },
+  /** 统一用 UTC+8（中国时区）计算日期，避免服务器/浏览器时区差异导致跨天判断错乱 */
+  _d(offsetDays) {
+    const d = new Date(Date.now() + (offsetDays || 0) * 86400000);
+    const c = new Date(d.getTime() + 8 * 3600000);   // 转 UTC+8
+    return `${c.getUTCFullYear()}-${c.getUTCMonth() + 1}-${c.getUTCDate()}`;
+  },
+  today() { return this._d(0); },
+  yesterday() { return this._d(-1); },
 
   /* --- 每日签到 --- */
-  canSign(p) { this.init(p); return p.act.sign.last !== this.today(); },
+  /** 是否已签：日期为准，时间戳为辅（防改系统时间刷） */
+  canSign(p) {
+    this.init(p);
+    const t = this.today();
+    if (p.act.sign.last === t) return false;
+    // 时间戳比"现在"还晚 → 用户改了系统时间，拒绝
+    if (p.act.sign.at && p.act.sign.at > Date.now() + 3600000) return false;
+    return true;
+  },
   sign(p) {
     this.init(p);
-    if (!this.canSign(p)) return { ok: false, msg: '今日已签到' };
+    if (!this.canSign(p)) return { ok: false, msg: '今日已签到，明日再来' };
     const t = this.today();
-    const y = new Date(Date.now() - 86400000);
-    const ystr = `${y.getFullYear()}-${y.getMonth() + 1}-${y.getDate()}`;
+    const ystr = this.yesterday();
     p.act.sign.streak = (p.act.sign.last === ystr) ? (p.act.sign.streak || 0) + 1 : 1;
     p.act.sign.last = t;
+    p.act.sign.at = Date.now();          // 时间戳辅助校验
     p.act.sign.days = (p.act.sign.days || 0) + 1;
     const list = this.S().signRewards || [];
     const idx = ((p.act.sign.streak - 1) % 7);
