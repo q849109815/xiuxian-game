@@ -7,12 +7,12 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789991990317,
-  "lastTick": 1789991990317,
+  "lastSeen": 1789991992713,
+  "lastTick": 1789991992713,
   "realm": 6,
   "stage": 3,
-  "exp": 112629312.6372339,
-  "stone": 2777,
+  "exp": 126765050.3414515,
+  "stone": 3127,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -434,7 +434,10 @@
         "exp": 129098,
         "kill": 50
       },
-      "claimed": []
+      "claimed": [
+        "d1",
+        "d2"
+      ]
     },
     "bounty": {
       "prog": {
