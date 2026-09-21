@@ -20,12 +20,24 @@ window.addEventListener('load', async () => {
   $('#btnLogin').onclick = doLogin;
   $('#lgPwd').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
 
-  // 读取云端配置（拿不到就用内置默认）
-  try {
-    window.GAME_CONFIG = await readJSON('data/config/game.json') || await (await fetch('data/../data/config/game.json')).json();
-  } catch (e) { window.GAME_CONFIG = await fallbackConfig(); }
-  try { window.NOTICE = await readJSON('data/config/notice.json') || { notice: '', events: {} }; } catch (e) { window.NOTICE = { notice: '', events: {} }; }
+  // ① 先用「本地静态文件」启动：网页托管一定拿得到，秒开，完全不依赖 GitHub API
+  window.GAME_CONFIG = await fallbackConfig();
+  window.NOTICE = { notice: '', events: {} };
   UI.renderNotice();
+  if (!window.GAME_CONFIG) $('#lgNet').textContent = '本地配置读取失败，请检查文件是否上传完整';
+
+  // ② 后台再探云端；连上就拉最新配置/公告，连不上也不影响开局
+  Net.probe().then(async () => {
+    UI.renderNet();
+    $('#lgNet').textContent = Net.endpoint.replace('https://', '') + '（' + (Net.online ? '可用' : '不可用 · 可离线玩') + '）';
+    if (Net.online) {
+      try {
+        const c = await readJSON('data/config/game.json'); if (c) window.GAME_CONFIG = c;
+        const n = await readJSON('data/config/notice.json'); if (n) window.NOTICE = n;
+        UI.renderNotice(); UI.renderNet();
+      } catch (e) { /* 忽略：本地配置已经能用 */ }
+    }
+  });
 
   // 恢复上次登录
   const saved = localStorage.getItem('xx_session');
@@ -46,8 +58,14 @@ async function doLogin() {
   const uid = hashUid(name);
   PPATH = playerPath(uid);
   try {
+    if (!window.GAME_CONFIG) window.GAME_CONFIG = await fallbackConfig();
     let p = null;
-    try { p = await readJSON(PPATH, { useCache: !Net.online }); } catch (e) { p = null; }
+    try { p = await readJSON(PPATH, { useCache: true }); } catch (e) { p = null; }
+    // 云端读不到时，用本机上次保存的存档（离线也能继续玩）
+    if (!p) {
+      const lb = localStorage.getItem('xx_local_' + uid);
+      if (lb) { try { p = JSON.parse(lb); } catch (e) { p = null; } }
+    }
     if (p && p.pwd && p.pwd !== hashPwd(pwd)) {
       $('#btnLogin').disabled = false; $('#btnLogin').textContent = '登录 / 创建';
       return UI.toast('口令有误', 'err');
@@ -219,7 +237,7 @@ async function runBattle() {
   if (P.stats.battles % 5 === 0) save();
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// 注意：api.js 已在顶层声明过 sleep，这里不能重复声明 const，否则整个脚本语法报错不执行
 
 /* ---------------- 背包操作 ---------------- */
 function onEnhance(p, slot) {
