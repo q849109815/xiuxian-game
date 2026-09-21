@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009890656,
-  "lastTick": 1790009890656,
+  "lastSeen": 1790009899992,
+  "lastTick": 1790009899992,
   "realm": 31,
   "stage": 0,
-  "exp": 136814598119.93086,
-  "stone": 8505051579044.912,
+  "exp": 0,
+  "stone": 8505051580748.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -284,20 +284,6 @@
       "mp": 115
     },
     {
-      "id": "it_7lexftl",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·破妄戒",
-      "atk": 88,
-      "def": 40,
-      "hp": 360,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "id": "it_1a5lk0j",
       "kind": "equip",
       "slot": "weapon",
@@ -308,20 +294,6 @@
       "atk": 157,
       "def": 40,
       "hp": 291,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_h080gow",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·麒麟铠",
-      "atk": 43,
-      "def": 106,
-      "hp": 727,
       "crit": 0,
       "mp": 115
     },
@@ -1690,7 +1662,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 6,
-    "acc": 20,
+    "acc": 29,
     "level": 13
   },
   "titles": {
