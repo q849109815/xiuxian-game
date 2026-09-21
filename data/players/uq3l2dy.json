@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009915849,
-  "lastTick": 1790009915849,
+  "lastSeen": 1790009917936,
+  "lastTick": 1790009917936,
   "realm": 31,
   "stage": 0,
-  "exp": 22802433019.988476,
-  "stone": 8505051586394.912,
+  "exp": 68407299059.96542,
+  "stone": 8505051587444.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -168,20 +168,6 @@
       "atk": 140,
       "def": 38,
       "hp": 322,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_kcqf0ia",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·太极道衣",
-      "atk": 33,
-      "def": 121,
-      "hp": 1024,
       "crit": 0,
       "mp": 115
     },
@@ -1564,7 +1550,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 6,
-    "acc": 45,
+    "acc": 47,
     "level": 13
   },
   "titles": {
