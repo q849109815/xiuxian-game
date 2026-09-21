@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990617784,
-  "lastTick": 1789990617784,
+  "lastSeen": 1789990625450,
+  "lastTick": 1789990625450,
   "realm": 8,
   "stage": 1,
-  "exp": 7110698166.4077635,
-  "stone": 78290,
+  "exp": 10658754324.670723,
+  "stone": 95280,
   "equip": {
     "weapon": {
       "id": "it_pion6p0",
@@ -173,7 +173,17 @@
     "sk_art_drain",
     "sk_heart_basic"
   ],
-  "beasts": [],
+  "beasts": [
+    {
+      "id": "bs_n55gsok",
+      "ref": "b_dragon",
+      "name": "蛟龙",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    }
+  ],
   "activeBeast": -1,
   "riding": false,
   "cave": {
@@ -192,9 +202,9 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 1104762,
-        "kill": 187,
-        "dungeon": 4,
+        "exp": 1177752,
+        "kill": 188,
+        "dungeon": 5,
         "arena": 1
       },
       "claimed": [
@@ -206,8 +216,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 1104762,
-        "kill": 187,
+        "exp": 1177752,
+        "kill": 188,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -216,13 +226,13 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 4,
+        "dungeon": 5,
         "arena": 1,
         "九幽冥王": 7,
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 1
+        "星宿仙君": 2
       },
       "claimed": [
         "b2",
@@ -261,13 +271,13 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 187,
+    "kills": 188,
     "deaths": 0,
-    "battles": 187,
+    "battles": 188,
     "breakthrough": 30,
     "offlineMin": 0,
     "meditate": 1,
-    "dungeon": 4,
+    "dungeon": 5,
     "encounters": 21,
     "rob": 0
   },
