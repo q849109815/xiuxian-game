@@ -41,6 +41,10 @@
       <h3 class="mt12">灵根 <span class="small">（决定修炼速度与功法适配）</span></h3>
       <div id="crRoot" class="card-in"></div>
       <button class="ghost mt8" id="btnReroll" style="width:100%">🔄 重洗灵根</button>
+      <h3 class="mt12">修行派系 <span class="small">（决定功法路线与属性偏向）</span></h3>
+      <div id="crFaction"></div>
+      <h3 class="mt12">性情天赋 <span class="small">（影响成长与际遇）</span></h3>
+      <div id="crTrait"></div>
       <h3 class="mt12">出身宗门 <span class="small">（可入宗，也可日后自立）</span></h3>
       <div id="crSect"></div>
       <button class="act mt12" id="btnCreate" style="width:100%">✅ 踏入仙途</button>
@@ -344,6 +348,53 @@
         </div>
       </div>
 
+      <!-- 掌天瓶 -->
+      <div class="win" data-page="bottle">
+        <div class="win-hd"><span class="tt">🏺 掌 天 瓶</span><button class="x" data-close>×</button></div>
+        <div class="win-bd">
+          <div class="bottlewrap">
+            <div class="bottle" id="bottleArt">🏺</div>
+            <div class="bottleinfo">
+              <div class="bt">掌天瓶 · <span id="bottleLv">1</span> 阶</div>
+              <div class="small" id="bottleRate">产液间隔：—</div>
+              <div class="bar" style="margin-top:8px"><i id="bottleBar" style="width:0%"></i><span id="bottleBarTxt">0/0</span></div>
+              <div class="small mt8" id="bottleHint"></div>
+            </div>
+          </div>
+          <div class="card"><h3>绿液妙用</h3>
+            <div class="row" style="flex-wrap:wrap">
+              <button class="act" id="btnLiqExp">✨ 炼化修为（1滴）</button>
+              <button class="ghost" id="btnLiqHerb">🌿 催熟灵草（1滴）</button>
+              <button class="mini" id="btnLiqUp">⬆️ 升级掌天瓶</button>
+            </div>
+            <div class="small mt8">绿液乃掌天瓶精髓，可催熟万物。每瓶每小时所产有限，慎而用之。</div>
+          </div>
+          <div class="card"><h3>瓶中之秘</h3><div class="small" id="bottleLore"></div></div>
+        </div>
+      </div>
+
+      <!-- 仙缘伙伴 -->
+      <div class="win" data-page="partner">
+        <div class="win-hd"><span class="tt">🌸 仙 缘</span><button class="x" data-close>×</button></div>
+        <div class="wtabs">
+          <button class="on" data-wt="p1">仙缘伙伴</button><button data-wt="p2">灵虫灵兽</button>
+        </div>
+        <div class="win-bd">
+          <div data-wc="p1"><div class="card"><h3>结缘之人 <span class="small" id="partnerCount"></span></h3><div id="partnerList"></div></div></div>
+          <div data-wc="p2" style="display:none"><div class="card"><h3>灵虫灵兽</h3><div id="petList"></div></div></div>
+          <div class="card" id="partnerDetail"><div class="small">点选一位查看详情</div></div>
+        </div>
+      </div>
+
+      <!-- 图鉴 -->
+      <div class="win" data-page="codex">
+        <div class="win-hd"><span class="tt">📚 图 鉴</span><button class="x" data-close>×</button></div>
+        <div class="win-bd">
+          <div class="card"><h3>收录进度</h3><div id="codexList"></div></div>
+          <div class="card"><h3>山河志</h3><div id="codexMaps"></div></div>
+        </div>
+      </div>
+
       <!-- 设置 -->
       <div class="win" data-page="set">
         <div class="win-hd"><span class="tt">⚙️ 系 统</span><button class="x" data-close>×</button></div>
@@ -424,6 +475,7 @@
 
 <script src="js/api.js"></script>
 <script src="js/engine.js"></script>
+<script src="js/frxx.js"></script>
 <script src="js/systems.js"></script>
 <script src="js/story.js"></script>
 <script src="js/ui.js"></script>
