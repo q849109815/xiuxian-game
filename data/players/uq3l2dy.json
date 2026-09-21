@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990143001,
-  "lastTick": 1789990143001,
+  "lastSeen": 1789990145669,
+  "lastTick": 1789990145669,
   "realm": 4,
   "stage": 3,
-  "exp": 240207.8436000044,
-  "stone": 14989,
+  "exp": 368908.6671000044,
+  "stone": 15675,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -207,7 +207,8 @@
     }
   ],
   "equipped": [
-    "sk_art_shield"
+    "sk_art_shield",
+    "sk_art_thunder"
   ],
   "beasts": [],
   "activeBeast": -1,
@@ -224,8 +225,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 266330,
-        "kill": 76,
+        "exp": 272288,
+        "kill": 77,
         "dungeon": 3
       },
       "claimed": []
@@ -233,16 +234,16 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 266330,
-        "kill": 76,
+        "exp": 272288,
+        "kill": 77,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
         "熔岩巨人": 16,
-        "b3": 42,
+        "b3": 43,
         "火麒麟": 10,
-        "炎魔": 16,
+        "炎魔": 17,
         "dungeon": 3
       },
       "claimed": []
@@ -279,9 +280,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 76,
+    "kills": 77,
     "deaths": 0,
-    "battles": 76,
+    "battles": 77,
     "breakthrough": 19,
     "offlineMin": 0,
     "meditate": 1,
