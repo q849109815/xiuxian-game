@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990433276,
-  "lastTick": 1789990433276,
+  "lastSeen": 1789990437764,
+  "lastTick": 1789990437764,
   "realm": 6,
   "stage": 0,
-  "exp": 0,
-  "stone": 28767,
+  "exp": 7744348.290912587,
+  "stone": 29315,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -222,8 +222,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 710704,
-        "kill": 161,
+        "exp": 715212,
+        "kill": 162,
         "dungeon": 4,
         "arena": 1
       },
@@ -236,14 +236,14 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 710704,
-        "kill": 161,
+        "exp": 715212,
+        "kill": 162,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
-        "熔岩巨人": 49,
-        "b3": 127,
+        "熔岩巨人": 50,
+        "b3": 128,
         "火麒麟": 29,
         "炎魔": 49,
         "dungeon": 4,
@@ -286,9 +286,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 161,
+    "kills": 162,
     "deaths": 0,
-    "battles": 161,
+    "battles": 162,
     "breakthrough": 23,
     "offlineMin": 0,
     "meditate": 1,
