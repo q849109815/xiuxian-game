@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790013448800,
-  "lastTick": 1790013448800,
+  "lastSeen": 1790013450182,
+  "lastTick": 1790013450182,
   "realm": 31,
   "stage": 0,
-  "exp": 251881892873.33765,
-  "stone": 8505060085747.912,
+  "exp": 0,
+  "stone": 8505060073904.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -118,7 +118,7 @@
       "kind": "equip",
       "slot": "boots",
       "q": 3,
-      "level": 0,
+      "level": 2,
       "temper": 7,
       "name": "仙器·麒麟靴",
       "atk": 120,
@@ -2643,8 +2643,8 @@
         "arena": 20,
         "dungeon": 301,
         "meditate": 3,
-        "exp": 129761449530,
-        "kill": 2391
+        "exp": 129761458212,
+        "kill": 2392
       },
       "claimed": [
         "d1",
@@ -2656,8 +2656,8 @@
     "bounty": {
       "prog": {
         "meditate": 4,
-        "exp": 129860841624,
-        "kill": 4109,
+        "exp": 129860850306,
+        "kill": 4110,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2675,7 +2675,7 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 794,
+        "禁地守卫": 795,
         "星斗海妖兽": 754,
         "天星宗弟子": 3,
         "墨蛟": 739,
@@ -2725,9 +2725,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 4109,
+    "kills": 4110,
     "deaths": 72,
-    "battles": 4181,
+    "battles": 4182,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 4,
@@ -2762,7 +2762,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 63,
+    "acc": 64,
     "level": 30
   },
   "titles": {
