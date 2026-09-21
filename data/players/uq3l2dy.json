@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995764012,
-  "lastTick": 1789995764012,
+  "lastSeen": 1789995768113,
+  "lastTick": 1789995768113,
   "realm": 9,
   "stage": 3,
-  "exp": 154650319904.12567,
-  "stone": 4210122,
+  "exp": 185580386228.9508,
+  "stone": 4217700,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -117,7 +117,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 47,
+      "count": 48,
       "desc": "炼器材料",
       "id": "i_n9wf73t"
     },
@@ -320,6 +320,20 @@
       "atk": 78,
       "def": 42,
       "hp": 280,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_4yr24xa",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·云锦袍",
+      "atk": 36,
+      "def": 98,
+      "hp": 795,
       "crit": 0,
       "mp": 115
     }
@@ -1438,8 +1452,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 39292556,
-        "kill": 779,
+        "exp": 39348174,
+        "kill": 780,
         "dungeon": 213,
         "arena": 20
       },
@@ -1452,8 +1466,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 39292556,
-        "kill": 779,
+        "exp": 39348174,
+        "kill": 780,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1469,7 +1483,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 187,
-        "混沌祖龙": 210,
+        "混沌祖龙": 211,
         "天兵": 196
       },
       "claimed": [
@@ -1513,9 +1527,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 779,
+    "kills": 780,
     "deaths": 0,
-    "battles": 779,
+    "battles": 780,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
