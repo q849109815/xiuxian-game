@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996287682,
-  "lastTick": 1789996287682,
+  "lastSeen": 1789996286973,
+  "lastTick": 1789996286973,
   "realm": 9,
   "stage": 3,
   "exp": 92346436965.8256,
-  "stone": 7095558,
+  "stone": 7097058,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -1736,7 +1736,7 @@
   "sectInfo": {
     "id": "s_06ixz2",
     "rankIdx": 4,
-    "contrib": 2380,
+    "contrib": 2260,
     "joinedAt": 1789996255530
   },
   "arena": {
