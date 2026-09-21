@@ -247,29 +247,51 @@ function renderDungeons(p) {
 /* ---------- 功法 ---------- */
 function renderSkills(p) {
   const eq = p.equipped || [];
-  $('#equippedSkills').innerHTML = eq.length ? eq.map((id) => {
+  const eb = $('#equippedSkills');
+  if (eb) eb.innerHTML = eq.length ? eq.map((id) => {
     const sk = SYS.skillDef(id); if (!sk) return '';
     const own = SYS.ownSkill(p, id);
-    return `<div class="item"><div class="ic">${sk.icon}</div>
-      <div class="info"><div class="nm">${sk.name} <span class="small">${sk.type === 'heart' ? '心法' : '功法'} ${own ? own.level : 1} 层</span></div>
-      <div class="sub">${sk.desc}｜适配 ${Math.round(SYS.skillFit(p, sk) * 100)}%</div></div>
-      <button class="mini" data-un="${id}">卸下</button></div>`;
-  }).join('') : '<div class="small">尚未装备功法</div>';
-  $$('#equippedSkills [data-un]').forEach((b) => b.onclick = () => { toast(SYS.unequipSkill(p, b.dataset.un).msg); renderSkills(p); renderAttrs(p); save(); });
+    return `<div class="skcell on" data-sk="${id}"><div class="si">${sk.icon}</div><div class="sn">${sk.name}</div><div class="sl">${own ? own.level : 1} 层</div></div>`;
+  }).join('') : '<div class="small" style="grid-column:1/-1">尚未装备功法</div>';
+  $$('#equippedSkills [data-sk]').forEach((el) => el.onclick = () => { SK_SEL = el.dataset.sk; renderSkills(p); });
 
   const owned = p.skills || [];
-  $('#skillList').innerHTML = owned.length ? owned.map((o) => {
+  const sb = $('#skillList');
+  if (sb) sb.innerHTML = owned.length ? owned.map((o) => {
     const sk = SYS.skillDef(o.id); if (!sk) return '';
-    const equipped = eq.includes(o.id);
-    const cost = SYS.skillUpCost(sk, o.level);
-    return `<div class="item"><div class="ic">${sk.icon}</div>
-      <div class="info"><div class="nm">${sk.name} <span class="small">${o.level}/${sk.maxLevel} 层</span></div>
-      <div class="sub">${sk.desc}${sk.conflict && sk.conflict.length ? '｜冲突：' + sk.conflict.map((c) => (SYS.skillDef(c) || {}).name).join('、') : ''}</div></div>
-      <button class="mini" data-eq="${o.id}">${equipped ? '已装' : '装备'}</button>
-      <button class="mini" data-up="${o.id}">参悟 ${fmt(cost)}</button></div>`;
-  }).join('') : '<div class="small">尚未习得功法（可在坊市购买或秘境获取）</div>';
-  $$('#skillList [data-eq]').forEach((b) => b.onclick = () => { const r = SYS.equipSkill(p, b.dataset.eq); toast(r.msg, r.ok ? 'ok' : 'err'); renderSkills(p); renderAttrs(p); save(); });
-  $$('#skillList [data-up]').forEach((b) => b.onclick = () => { const r = SYS.upgradeSkill(p, b.dataset.up); toast(r.msg, r.ok ? 'ok' : 'err'); renderSkills(p); renderHUD(p); renderAttrs(p); save(); });
+    const on = eq.includes(o.id);
+    return `<div class="skcell ${on ? 'on' : ''}" data-sk2="${o.id}"><div class="si">${sk.icon}</div><div class="sn">${sk.name}</div><div class="sl">${o.level}/${sk.maxLevel}层${on ? ' ✔' : ''}</div></div>`;
+  }).join('') : '<div class="small" style="grid-column:1/-1">尚未习得功法（坊市购买 / 秘境掉落）</div>';
+  $$('#skillList [data-sk2]').forEach((el) => el.onclick = () => { SK_SEL = el.dataset.sk2; renderSkills(p); });
+
+  renderSkillDetail(p);
+}
+let SK_SEL = null;
+function renderSkillDetail(p) {
+  const box = $('#skillDetail'); if (!box) return;
+  const sk = SK_SEL ? SYS.skillDef(SK_SEL) : null;
+  if (!sk) { box.innerHTML = '<div class="small">点击功法查看详情</div>'; return; }
+  const own = SYS.ownSkill(p, SK_SEL);
+  const lv = own ? own.level : 1;
+  const on = (p.equipped || []).includes(SK_SEL);
+  const cost = SYS.skillUpCost(sk, lv);
+  const fit = Math.round(SYS.skillFit(p, sk) * 100);
+  const eff = [];
+  if (sk.passive) for (const k in sk.passive) eff.push(`${({ hp: '气血', atk: '攻击', def: '防御', exp: '修炼速度', crit: '暴击', hit: '命中', anticrit: '抗暴' }[k] || k)} +${(sk.passive[k] * 100).toFixed(0)}%`);
+  if (sk.active) eff.push(`伤害 ${sk.active.mult}倍 · 耗灵力 ${sk.active.mp}${sk.active.cd ? ` · 冷却 ${sk.active.cd} 回合` : ''}`);
+  box.innerHTML = `<div class="hd" style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+      <div class="big bslot q${sk.root === p.root ? 3 : 2}" style="cursor:default">${sk.icon}</div>
+      <div><div class="nm">${sk.name}</div><div class="sub">${sk.type === 'heart' ? '心法' : '功法'} · ${lv}/${sk.maxLevel} 层 · 灵根适配 ${fit}%</div></div></div>
+    <div class="goal small">${sk.desc}</div>
+    <div class="small" style="color:var(--jade)">当前效果：${eff.join('、') || '—'}</div>
+    <div class="acts" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+      ${on ? `<button class="mini" id="skOff">卸下</button>` : `<button class="mini" id="skOn">装备</button>`}
+      <button class="mini" id="skUp">参悟 ${fmt(cost)}💎</button>
+      <button class="mini" id="skForget" style="display:none">遗忘</button>
+    </div>`;
+  const b1 = on ? $('#skOff') : $('#skOn');
+  if (b1) b1.onclick = () => { const r = on ? SYS.unequipSkill(p, SK_SEL) : SYS.equipSkill(p, SK_SEL); toast(r.msg, r.ok ? 'ok' : 'err'); renderSkills(p); renderMini(p); save(); };
+  $('#skUp').onclick = () => { const r = SYS.upgradeSkill(p, SK_SEL); toast(r.msg, r.ok ? 'ok' : 'err'); renderSkills(p); renderHUD(p); renderMini(p); save(); };
 }
 
 /* ---------- 丹器 ---------- */
@@ -428,27 +450,98 @@ async function renderSect(p) {
 }
 
 /* ---------- 任务 ---------- */
+/* ---------- 任务面板（列表 + 详情） ---------- */
+let TASK_SEL = { main: null, daily: null, bounty: null };
+const NPC_FACE = { main: '🧓', daily: '📜', bounty: '📮' };
+
+function taskListOf(p, type) {
+  if (type === 'main') {
+    const all = (SC().tasks.main || []);
+    const idx = p.tasks.mainIdx || 0;
+    return all.map((t, i) => ({
+      id: t.id, name: t.name, desc: t.desc, reward: t.reward, type: 'main',
+      state: i < idx ? 'claimed' : (i === idx ? (SYS.checkMain(p) ? 'done' : 'doing') : 'lock'),
+      prog: 0, need: 0, npc: '引路人',
+      say: i < idx ? '此章已了，前路尚远。' : (SYS.checkMain(p) ? '不错，你已达成条件，速来领赏。' : '去吧，修为到了自然水到渠成。'),
+    }));
+  }
+  if (type === 'daily') {
+    SYS.refreshDaily(p);
+    return SYS.dailyList(p).map((t) => ({
+      id: t.id, name: t.name, desc: t.desc, reward: t.reward, type: 'daily',
+      state: t.claimed ? 'claimed' : (t.done ? 'done' : 'doing'), prog: t.prog, need: t.need, npc: '执事弟子',
+      say: t.claimed ? '今日份已领，明日再来。' : (t.done ? '已完成，领赏去吧。' : '每日功课不可荒废。'),
+    }));
+  }
+  return SYS.bountyList(p).map((t) => ({
+    id: t.id, name: t.name, desc: t.desc, reward: t.reward, type: 'bounty',
+    state: t.claimed ? 'claimed' : (t.done ? 'done' : 'doing'), prog: t.prog, need: t.need, npc: '悬赏长老',
+    say: t.claimed ? '赏金已付，好走。' : (t.done ? '妖已除，赏金在此。' : '去指定的地方，斩够数目再回来。'),
+  }));
+}
+const ST_TXT = { claimed: '已领取', done: '可领取', doing: '进行中', lock: '未解锁' };
+
+function renderTaskPane(p, type, listId, detailId) {
+  const list = taskListOf(p, type);
+  const lb = $(listId);
+  if (lb) lb.innerHTML = list.map((t) => `<div class="taskitem ${TASK_SEL[type] === t.id ? 'on' : ''}" data-tid="${t.id}">
+      <div class="tt">${t.name}</div>
+      <div class="ss ${t.state === 'done' ? 'done' : t.state === 'claimed' ? 'fin' : 'do'}">${ST_TXT[t.state]}${t.need ? ` ${t.prog}/${t.need}` : ''}</div>
+    </div>`).join('') || '<div class="small">暂无任务</div>';
+  $$(`${listId} [data-tid]`).forEach((el) => el.onclick = () => { TASK_SEL[type] = el.dataset.tid; renderTaskPane(p, type, listId, detailId); });
+
+  const cur = list.find((t) => t.id === TASK_SEL[type]) || list.find((t) => t.state === 'done') || list[0];
+  const db = $(detailId); if (!db) return;
+  if (!cur) { db.innerHTML = '<div class="small">暂无任务</div>'; return; }
+  const rwHtml = Object.entries(cur.reward || {}).map(([k, v]) => {
+    const icon = { stone: '💎', exp: '✨', herb: '🌿', ore: '⛏️', pill: '💊', skill: '📜', contrib: '🏯' }[k] || '🎁';
+    const nm = { stone: '灵石', exp: '修为', herb: '灵草', ore: '矿石', pill: '丹药', skill: '功法', contrib: '贡献' }[k] || k;
+    return `<span class="rwi">${icon} ${nm}×${v}</span>`;
+  }).join('');
+  const btn = cur.state === 'done'
+    ? `<button class="act" data-tclaim="${cur.id}">✔ 领取奖励</button>`
+    : cur.state === 'claimed' ? `<button class="ghost" disabled>已领取</button>`
+    : `<button class="ghost" disabled>进行中</button>`;
+  db.innerHTML = `<div class="npc"><div class="face">${NPC_FACE[type]}</div>
+      <div><div class="nm">${cur.npc}</div><div class="tag">${type === 'main' ? '主线任务' : type === 'daily' ? '每日任务' : '悬赏任务'}</div></div></div>
+    <div class="say">「${cur.say}」</div>
+    <div class="row" style="justify-content:space-between"><span style="font-size:14px;font-weight:700;color:var(--gold)">${cur.name}</span><span class="small">${ST_TXT[cur.state]}</span></div>
+    <div class="goal small">${cur.desc}${cur.need ? `　进度 <b style="color:var(--jade)">${cur.prog}/${cur.need}</b>` : ''}</div>
+    ${cur.need ? `<div class="bar" style="margin-bottom:8px"><i style="width:${Math.min(100, cur.prog / cur.need * 100)}%"></i><span>${cur.prog}/${cur.need}</span></div>` : ''}
+    <div class="rw"><span class="small">奖励：</span>${rwHtml}</div>
+    <div class="row">${btn}${cur.type === 'main' ? '<button class="mini" data-gostory>📖 前往剧情</button>' : ''}</div>`;
+  const cb = db.querySelector('[data-tclaim]');
+  if (cb) cb.onclick = () => {
+    const r = cur.type === 'main' ? SYS.claimMain(p) : cur.type === 'daily' ? SYS.claimDaily(p, cur.id) : SYS.claimBounty(p, cur.id);
+    toast(r.msg, r.ok ? 'ok' : 'err'); TASK_SEL[cur.type] = null; renderTasks(p); renderHUD(p); renderTracker(p); save();
+  };
+  const gs = db.querySelector('[data-gostory]');
+  if (gs) gs.onclick = () => openWin('story');
+}
+
 function renderTasks(p) {
-  SYS.refreshDaily(p);
-  const mt = SYS.mainTaskOf(p);
-  const done = SYS.checkMain(p);
-  $('#mainTask').innerHTML = mt ? `<div class="item"><div class="ic">📖</div>
-    <div class="info"><div class="nm">${mt.name}</div><div class="sub">${mt.desc}</div>
-    <div class="sub">奖励：${rewardTxt(mt.reward)}</div></div>
+  renderTaskPane(p, 'main', '#taskList', '#taskDetail');
+  renderTaskPane(p, 'daily', '#taskList2', '#taskDetail2');
+  renderTaskPane(p, 'bounty', '#taskList3', '#taskDetail3');
+  // 兼容旧容器
+  const mt = SYS.mainTaskOf(p); const done = SYS.checkMain(p);
+  const mb = $('#mainTask');
+  if (mb) mb.innerHTML = mt ? `<div class="item"><div class="ic">📖</div><div class="info"><div class="nm">${mt.name}</div><div class="sub">${mt.desc}</div></div>
     <button class="mini" id="btnMain" ${done ? '' : 'disabled'}>${done ? '领取' : '进行中'}</button></div>` : '<div class="small">主线已全部完成</div>';
   const bm = $('#btnMain'); if (bm) bm.onclick = () => { const r = SYS.claimMain(p); toast(r.msg, r.ok ? 'ok' : 'err'); renderTasks(p); renderHUD(p); save(); };
-  $('#dailyDate').textContent = `（${SYS.todayStr()}）`;
-  $('#dailyTasks').innerHTML = SYS.dailyList(p).map((t) => `<div class="item"><div class="ic">${t.done ? '✅' : '⭕'}</div>
-    <div class="info"><div class="nm">${t.name}</div><div class="sub">${t.desc}｜进度 ${t.prog}/${t.need}</div>
-    <div class="sub">奖励：${rewardTxt(t.reward)}</div></div>
+  const dd = $('#dailyDate'); if (dd) dd.textContent = `（${SYS.todayStr()}）`;
+  const db = $('#dailyTasks');
+  if (db) db.innerHTML = SYS.dailyList(p).map((t) => `<div class="item"><div class="ic">${t.done ? '✅' : '⭕'}</div>
+    <div class="info"><div class="nm">${t.name}</div><div class="sub">${t.desc}｜${t.prog}/${t.need}</div></div>
     <button class="mini" data-dt="${t.id}" ${t.done && !t.claimed ? '' : 'disabled'}>${t.claimed ? '已领' : '领取'}</button></div>`).join('');
   $$('#dailyTasks [data-dt]').forEach((b) => b.onclick = () => { const r = SYS.claimDaily(p, b.dataset.dt); toast(r.msg, r.ok ? 'ok' : 'err'); renderTasks(p); renderHUD(p); save(); });
-  $('#bountyTasks').innerHTML = SYS.bountyList(p).map((t) => `<div class="item"><div class="ic">📮</div>
-    <div class="info"><div class="nm">${t.name}</div><div class="sub">${t.desc}｜进度 ${t.prog}/${t.need}</div>
-    <div class="sub">赏金：${rewardTxt(t.reward)}</div></div>
+  const bb = $('#bountyTasks');
+  if (bb) bb.innerHTML = SYS.bountyList(p).map((t) => `<div class="item"><div class="ic">📮</div>
+    <div class="info"><div class="nm">${t.name}</div><div class="sub">${t.desc}｜${t.prog}/${t.need}</div></div>
     <button class="mini" data-bt="${t.id}" ${t.done && !t.claimed ? '' : 'disabled'}>${t.claimed ? '已领' : '领取'}</button></div>`).join('');
   $$('#bountyTasks [data-bt]').forEach((b) => b.onclick = () => { const r = SYS.claimBounty(p, b.dataset.bt); toast(r.msg, r.ok ? 'ok' : 'err'); renderTasks(p); renderHUD(p); save(); });
 }
+
 function renderTracker(p) {
   const mt = SYS.mainTaskOf(p);
   const done = SYS.checkMain(p);
@@ -613,31 +706,322 @@ function bindWinTabs() {
   });
 }
 
-/* ---------- 剧情界面 ---------- */
+/* ---------- 剧情对话 ---------- */
 let ST_CUR = -1, ST_SCENE = 0;
 function renderStory() {
   const p = window.P; if (!p) return;
   const i = p.storyIdx || 0;
-  if (!STORY[i]) { $('#stText').innerHTML = '<span class="cur">全部剧情已完成。道途无尽，各自珍重。</span>'; $('#stBtns').innerHTML = ''; return; }
+  if (!STORY[i]) {
+    $('#stChapter').textContent = '终章已了';
+    $('#stName').textContent = '旁白';
+    $('#stFace').textContent = '☯️';
+    $('#stText').innerHTML = '<div class="ln now">道途无尽，各自珍重。此界已了，去往他方吧。</div>';
+    $('#stBtns').innerHTML = '';
+    return;
+  }
   if (ST_CUR !== i) { ST_CUR = i; ST_SCENE = 0; }
   const s = STORY[i];
   const sc = s.scenes[ST_SCENE];
-  $('#stChapter').textContent = s.title + `（${ST_SCENE + 1}/${s.scenes.length}）`;
+  $('#stChapter').textContent = `${s.title}　（${ST_SCENE + 1}/${s.scenes.length}）`;
   $('#stName').textContent = sc.who;
   $('#stFace').textContent = sc.face;
-  $('#stText').innerHTML = s.scenes.slice(0, ST_SCENE + 1).map((x, k) =>
-    `<div ${k === ST_SCENE ? 'class="cur"' : 'style="opacity:.5"'}><b>${x.who}</b>：${x.text}</div>`).join('');
+  $('#stText').innerHTML = s.scenes.map((x, k) =>
+    `<div class="ln ${k === ST_SCENE ? 'now' : k < ST_SCENE ? 'old' : ''}" style="${k > ST_SCENE ? 'display:none' : ''}"><b>${x.who}</b>：${x.text}</div>`).join('');
   const last = ST_SCENE >= s.scenes.length - 1;
-  $('#stBtns').innerHTML = !last
-    ? '<button class="act" id="stNext">继续 ▸</button>'
-    : (p.realm >= s.req
-      ? `<button class="act" id="stDone">完成本章（${UI.rewardTxt(s.reward)}）</button>`
-      : `<button class="ghost" disabled>需【${GAME_CONFIG.realms[s.req].name}】境</button>`);
+  const can = p.realm >= s.req;
+  $('#stBtns').innerHTML = (last ? '' : '<button class="act" id="stNext">继续 ▸</button>')
+    + (last ? (can ? `<button class="act" id="stDone">✔ 完成本章 · 领奖</button>`
+      : `<button class="ghost" disabled>需【${GAME_CONFIG.realms[s.req].name}】境</button>`) : '')
+    + (STORY[i - 1] ? '<button class="ghost" id="stPrev">◂ 上一章</button>' : '');
   const nx = $('#stNext'); if (nx) nx.onclick = () => { ST_SCENE++; renderStory(); };
+  const pv = $('#stPrev'); if (pv) pv.onclick = () => { ST_CUR = i - 1; ST_SCENE = (STORY[i - 1] ? STORY[i - 1].scenes.length - 1 : 0); renderStory(); };
   const dn = $('#stDone'); if (dn) dn.onclick = () => {
     const r = storyFinish(p, i);
-    UI.toast(r.msg, 'ok'); ST_CUR = -1; renderAll && renderAll(); renderStory(); save && save();
+    toast(r.msg, 'ok'); ST_CUR = -1; ST_SCENE = 0;
+    if (typeof renderAll === 'function') renderAll();
+    renderStory(); if (typeof save === 'function') save();
   };
+}
+
+
+
+/* ================= 页游风面板渲染（纸娃娃/背包网格/任务/功法/剧情） ================= */
+const DOLL_CELLS = [
+  { k: 'helmet' }, { k: 'necklace' }, { k: 'bracelet' },
+  { k: 'weapon' }, { k: '__fig' }, { k: 'armor' },
+  { k: 'artifact' }, { k: 'boots' }, { k: 'ring' },
+];
+let EQ_SEL = 'weapon';
+let DEVOUR_TARGET = null;
+
+
+function slotDef(k) { return (C().slots || []).find((x) => x.key === k) || { key: k, name: k, icon: '❓' }; }
+function itemIcon(it) {
+  if (it.icon) return it.icon;
+  if (it.kind === 'equip') return slotDef(it.slot).icon;
+  return '📦';
+}
+function sellPrice(it) {
+  const cfg = C();
+  if (it.kind === 'equip') return Math.round((60 + (it.atk || 0) * 2 + (it.def || 0) * 2 + (it.hp || 0) * 0.4) * cfg.qualities[it.q || 0].mul * (1 + (it.level || 0) * 0.3));
+  return (it.price || 50) * (it.count || 1);
+}
+
+/* ---------- 纸娃娃装备栏 ---------- */
+function renderEquip(p) {
+  const cfg = C();
+  const html = DOLL_CELLS.map((c) => {
+    if (c.k === '__fig') return `<div class="fig"><span>${p.avatar || '🧙'}</span></div>`;
+    const sd = slotDef(c.k);
+    const it = p.equip[c.k];
+    const cls = it ? 'q' + (it.q || 0) : 'q0';
+    const inner = it
+      ? `${sd.icon}${it.level ? `<span class="lv">+${it.level}</span>` : ''}`
+      : `<span style="opacity:.28;font-size:22px">${sd.icon}</span>`;
+    return `<div class="bslot ${cls} ${EQ_SEL === c.k ? 'sel' : ''}" data-slot="${c.k}" title="${sd.name}">${inner}<span class="nm2">${sd.name}</span></div>`;
+  }).join('');
+  const box = $('#dollBox'); if (box) box.innerHTML = html;
+  $$('#dollBox [data-slot]').forEach((el) => el.onclick = () => { EQ_SEL = el.dataset.slot; renderEquip(p); });
+
+  const a = ENGINE.attrs(p);
+  const dp = $('#dollPow'); if (dp) dp.textContent = fmt(ENGINE.power(p));
+  const da = $('#dollAttr');
+  if (da) da.innerHTML = [['攻击', fmt(a.atk)], ['防御', fmt(a.def)], ['气血', fmt(a.hp)], ['灵力', fmt(a.mp)],
+    ['暴击', (a.crit * 100).toFixed(1) + '%'], ['身法', a.speed.toFixed(0)]]
+    .map(([k, v]) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('');
+  renderEquipDetail(p);
+}
+
+function renderEquipDetail(p) {
+  const box = $('#equipDetail'); if (!box) return;
+  const it = p.equip[EQ_SEL];
+  const sd = slotDef(EQ_SEL);
+  if (!it) {
+    box.innerHTML = `<div class="hd"><div class="big bslot q0" style="cursor:default">${sd.icon}</div>
+      <div><div class="nm">${sd.name}（空）</div><div class="sub">尚未装备 · 去【储物袋】装备</div></div></div>`;
+    return;
+  }
+  const q = C().qualities[it.q || 0];
+  const m = q.mul * (1 + (it.level || 0) * C().enhance.attrPerLevel) * (1 + (it.temper || 0) * C().temper.attrPerLevel);
+  box.innerHTML = `<div class="hd">
+      <div class="big bslot q${it.q || 0}" style="cursor:default">${sd.icon}${it.level ? `<span class="lv">+${it.level}</span>` : ''}</div>
+      <div><div class="nm" style="color:${q.color}">${it.name}</div>
+      <div class="sub">${q.name} · ${sd.name} · 强化 +${it.level || 0} · 淬灵 ${it.temper || 0}</div></div></div>
+    <div class="stats">
+      ${[['攻击', Math.round((it.atk || 0) * m)], ['防御', Math.round((it.def || 0) * m)], ['气血', Math.round((it.hp || 0) * m)], ['灵力', Math.round((it.mp || 0) * m)]]
+        .map(([k, v]) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('')}
+    </div>
+    <div class="acts">
+      <button class="mini" id="edEnh">强化 ${fmt(ENGINE.enhanceCost(it))}💎</button>
+      <button class="mini" id="edTem">淬灵 ${fmt(ENGINE.temperCost(it))}💎</button>
+      <button class="mini" id="edDev">炼化</button>
+      <button class="mini" id="edOff">卸下</button>
+    </div>`;
+  const e1 = $('#edEnh'); if (e1) e1.onclick = () => { const r = ENGINE.enhance(p, it); toast(r.msg, r.ok ? 'ok' : 'err'); renderEquip(p); renderHUD(p); renderMini(p); save(); };
+  const e2 = $('#edTem'); if (e2) e2.onclick = () => { const r = ENGINE.temper(p, it); toast(r.msg, r.ok ? 'ok' : 'err'); renderEquip(p); renderHUD(p); renderMini(p); save(); };
+  const e3 = $('#edDev'); if (e3) e3.onclick = () => { DEVOUR_TARGET = EQ_SEL; renderDevour(p); };
+  const e4 = $('#edOff'); if (e4) e4.onclick = () => {
+    if (!p.equip[EQ_SEL]) return;
+    ENGINE.addItem(p, p.equip[EQ_SEL]); p.equip[EQ_SEL] = null;
+    toast('已卸下'); renderEquip(p); renderBag(p); renderMini(p); save();
+  };
+}
+
+function renderDevour(p) {
+  const box = $('#bagDetail'); if (!box) return;
+  const it = p.equip[DEVOUR_TARGET];
+  if (!it) { DEVOUR_TARGET = null; return; }
+  const foods = p.bag.filter((x) => x.id !== it.id).slice(0, 18);
+  box.innerHTML = `<h3>炼化【${it.name}】</h3>
+    <div class="small">选择一件材料喂给它（有几率提升强化等级）：</div>
+    <div class="row mt8" style="flex-wrap:wrap">${foods.length ? foods.map((f) => `<button class="mini" data-dvf="${f.id}">${itemIcon(f)}${f.name}</button>`).join('') : '<span class="small">无可炼化物品</span>'}</div>
+    <button class="ghost mt8" id="dvCancel">取消</button>`;
+  $$('#bagDetail [data-dvf]').forEach((b) => b.onclick = () => {
+    const r = ENGINE.devour(p, it, b.dataset.dvf);
+    toast(r.msg, r.ok ? 'ok' : 'err'); renderEquip(p); renderBag(p); renderHUD(p); renderMini(p); save();
+  });
+  const cc = $('#dvCancel'); if (cc) cc.onclick = () => { DEVOUR_TARGET = null; renderBag(p); };
+}
+
+/* ---------- 背包网格 + 详情 ---------- */
+function renderBag(p) {
+  const box = $('#bagList'); if (!box) return;
+  const cnt = $('#bagCount'); if (cnt) cnt.textContent = `（${p.bag.length}/80）`;
+  const list = p.bag.filter((x) => BAG_FILTER === 'all' || x.kind === BAG_FILTER);
+  box.innerHTML = list.length ? list.map((it) => {
+    const q = it.kind === 'equip' ? (it.q || 0) : 0;
+    return `<div class="bslot q${q} ${BAG_SEL === it.id ? 'sel' : ''}" data-bid="${it.id}" title="${it.name}">
+      ${itemIcon(it)}
+      ${it.count ? `<span class="cnt">${it.count}</span>` : ''}
+      ${it.level ? `<span class="lv">+${it.level}</span>` : ''}
+    </div>`;
+  }).join('') : '<div class="small" style="grid-column:1/-1">空空如也</div>';
+  $$('#bagList [data-bid]').forEach((el) => el.onclick = () => { BAG_SEL = el.dataset.bid; renderBag(p); renderBagDetail(p); });
+  renderBagDetail(p);
+}
+function renderBagDetail(p) {
+  if (DEVOUR_TARGET) return;
+  const box = $('#bagDetail'); if (!box) return;
+  const it = p.bag.find((x) => x.id === BAG_SEL);
+  if (!it) { box.innerHTML = '<div class="small">点击物品查看详情</div>'; return; }
+  const cfg = C();
+  let sub = it.desc || '';
+  let stats = '';
+  if (it.kind === 'equip') {
+    const q = cfg.qualities[it.q];
+    const m = q.mul * (1 + (it.level || 0) * cfg.enhance.attrPerLevel) * (1 + (it.temper || 0) * cfg.temper.attrPerLevel);
+    sub = `${q.name} · ${slotDef(it.slot).name} · 强化+${it.level || 0} 淬灵${it.temper || 0}`;
+    stats = `<div class="stats">${[['攻击', Math.round((it.atk || 0) * m)], ['防御', Math.round((it.def || 0) * m)], ['气血', Math.round((it.hp || 0) * m)], ['灵力', Math.round((it.mp || 0) * m)]]
+      .map(([k, v]) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('')}</div>`;
+  }
+  const acts = [];
+  if (it.kind === 'equip') acts.push('<button class="mini" id="bdEq">装备</button>', '<button class="mini" id="bdMk">寄售</button>');
+  if (it.kind === 'pill') acts.push('<button class="mini" id="bdUse">服用</button>');
+  if (it.kind === 'talisman') acts.push('<button class="mini" id="bdUse">激活</button>');
+  acts.push(`<button class="mini" id="bdSell">出售 ${fmt(sellPrice(it))}💎</button>`);
+  box.innerHTML = `<div class="hd"><div class="big bslot q${it.kind === 'equip' ? it.q : 0}" style="cursor:default">${itemIcon(it)}${it.count ? `<span class="cnt">${it.count}</span>` : ''}</div>
+    <div><div class="nm">${it.name}${it.count ? ' ×' + it.count : ''}</div><div class="sub">${sub}</div></div></div>
+    ${stats}<div class="acts">${acts.join('')}</div>`;
+  const e1 = $('#bdEq'); if (e1) e1.onclick = () => { ENGINE.equipItem(p, it); toast('已装备 ' + it.name); BAG_SEL = null; renderEquip(p); renderBag(p); renderHUD(p); renderMini(p); save(); };
+  const e2 = $('#bdUse'); if (e2) e2.onclick = () => {
+    const r = it.kind === 'pill' ? ENGINE.usePill(p, it) : SYS.useTalisman(p, it.ref || it.id);
+    toast(r.msg, r.ok ? 'ok' : 'err'); BAG_SEL = null; renderBag(p); renderHUD(p); renderMini(p); save();
+  };
+  const e3 = $('#bdSell'); if (e3) e3.onclick = () => { const price = ENGINE.sellItem(p, it); toast('出售获得 ' + fmt(price) + ' 灵石'); BAG_SEL = null; renderBag(p); renderHUD(p); save(); };
+  const e4 = $('#bdMk'); if (e4) e4.onclick = async () => {
+    const v = prompt('挂单售价（灵石）', String(Math.max(50, Math.round((it.price || 200) * 1.2))));
+    if (v === null) return;
+    const r = await SYS.marketSell(p, it.id, parseInt(v, 10));
+    toast(r.msg, r.ok ? 'ok' : 'err'); BAG_SEL = null; renderBag(p); renderMarket(p); save();
+  };
+}
+
+/* ---------- 功法网格 ---------- */
+function renderSkills(p) {
+  const eq = p.equipped || [];
+  const eb = $('#equippedSkills');
+  if (eb) eb.innerHTML = eq.length ? eq.map((id) => {
+    const sk = SYS.skillDef(id); if (!sk) return '';
+    const own = SYS.ownSkill(p, id);
+    return `<div class="skcell on" data-sk="${id}"><div class="si">${sk.icon}</div><div class="sn">${sk.name}</div><div class="sl">${own ? own.level : 1} 层</div></div>`;
+  }).join('') : '<div class="small" style="grid-column:1/-1">尚未装备功法</div>';
+  $$('#equippedSkills [data-sk]').forEach((el) => el.onclick = () => { SK_SEL = el.dataset.sk; renderSkills(p); });
+
+  const owned = p.skills || [];
+  const sb = $('#skillList');
+  if (sb) sb.innerHTML = owned.length ? owned.map((o) => {
+    const sk = SYS.skillDef(o.id); if (!sk) return '';
+    const on = eq.includes(o.id);
+    return `<div class="skcell ${on ? 'on' : ''}" data-sk2="${o.id}"><div class="si">${sk.icon}</div><div class="sn">${sk.name}</div><div class="sl">${o.level}/${sk.maxLevel}层${on ? ' ✔' : ''}</div></div>`;
+  }).join('') : '<div class="small" style="grid-column:1/-1">尚未习得功法（坊市购买 / 秘境掉落）</div>';
+  $$('#skillList [data-sk2]').forEach((el) => el.onclick = () => { SK_SEL = el.dataset.sk2; renderSkills(p); });
+  renderSkillDetail(p);
+}
+function renderSkillDetail(p) {
+  const box = $('#skillDetail'); if (!box) return;
+  const sk = SK_SEL ? SYS.skillDef(SK_SEL) : null;
+  if (!sk) { box.innerHTML = '<div class="small">点击功法查看详情</div>'; return; }
+  const own = SYS.ownSkill(p, SK_SEL);
+  const lv = own ? own.level : 1;
+  const on = (p.equipped || []).includes(SK_SEL);
+  const cost = SYS.skillUpCost(sk, lv);
+  const fit = Math.round(SYS.skillFit(p, sk) * 100);
+  const eff = [];
+  if (sk.passive) for (const k in sk.passive) eff.push(`${({ hp: '气血', atk: '攻击', def: '防御', exp: '修炼速度', crit: '暴击', hit: '命中', anticrit: '抗暴' }[k] || k)} +${(sk.passive[k] * 100).toFixed(0)}%`);
+  if (sk.active) eff.push(`伤害 ${sk.active.mult} 倍 · 耗灵力 ${sk.active.mp}${sk.active.cd ? ` · 冷却 ${sk.active.cd} 回合` : ''}`);
+  box.innerHTML = `<div class="hd" style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+      <div class="big bslot q${sk.root === p.root ? 3 : 2}" style="cursor:default">${sk.icon}</div>
+      <div><div class="nm">${sk.name}</div><div class="sub">${sk.type === 'heart' ? '心法' : '功法'} · ${lv}/${sk.maxLevel} 层 · 灵根适配 ${fit}%</div></div></div>
+    <div class="goal small">${sk.desc}</div>
+    <div class="small" style="color:var(--jade)">当前效果：${eff.join('、') || '—'}</div>
+    <div class="acts" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+      ${on ? '<button class="mini" id="skOff">卸下</button>' : '<button class="mini" id="skOn">装备</button>'}
+      <button class="mini" id="skUp">参悟 ${fmt(cost)}💎</button>
+    </div>`;
+  const b1 = on ? $('#skOff') : $('#skOn');
+  if (b1) b1.onclick = () => { const r = on ? SYS.unequipSkill(p, SK_SEL) : SYS.equipSkill(p, SK_SEL); toast(r.msg, r.ok ? 'ok' : 'err'); renderSkills(p); renderMini(p); save(); };
+  const b2 = $('#skUp'); if (b2) b2.onclick = () => { const r = SYS.upgradeSkill(p, SK_SEL); toast(r.msg, r.ok ? 'ok' : 'err'); renderSkills(p); renderHUD(p); renderMini(p); save(); };
+}
+
+/* ---------- 剧情对话（覆盖旧实现） ---------- */
+function renderStory() {
+  const p = window.P; if (!p) return;
+  const i = p.storyIdx || 0;
+  if (!STORY[i]) {
+    const c = $('#stChapter'); if (c) c.textContent = '终章已了';
+    const n = $('#stName'); if (n) n.textContent = '旁白';
+    const f = $('#stFace'); if (f) f.textContent = '☯️';
+    const t = $('#stText'); if (t) t.innerHTML = '<div class="ln now">道途无尽，各自珍重。</div>';
+    const b = $('#stBtns'); if (b) b.innerHTML = '';
+    return;
+  }
+  if (ST_CUR !== i) { ST_CUR = i; ST_SCENE = 0; }
+  const s = STORY[i];
+  const sc = s.scenes[ST_SCENE];
+  const c1 = $('#stChapter'); if (c1) c1.textContent = `${s.title}　（${ST_SCENE + 1}/${s.scenes.length}）`;
+  const n1 = $('#stName'); if (n1) n1.textContent = sc.who;
+  const f1 = $('#stFace'); if (f1) f1.textContent = sc.face;
+  const t1 = $('#stText');
+  if (t1) t1.innerHTML = s.scenes.map((x, k) =>
+    `<div class="ln ${k === ST_SCENE ? 'now' : k < ST_SCENE ? 'old' : ''}" style="${k > ST_SCENE ? 'display:none' : ''}"><b>${x.who}</b>：${x.text}</div>`).join('');
+  const last = ST_SCENE >= s.scenes.length - 1;
+  const can = p.realm >= s.req;
+  const b1 = $('#stBtns');
+  if (b1) b1.innerHTML = (last ? '' : '<button class="act" id="stNext">继续 ▸</button>')
+    + (last ? (can ? '<button class="act" id="stDone">✔ 完成本章 · 领奖</button>'
+      : `<button class="ghost" disabled>需【${GAME_CONFIG.realms[s.req].name}】境</button>`) : '')
+    + (STORY[i - 1] ? '<button class="ghost" id="stPrev">◂ 上一章</button>' : '');
+  const nx = $('#stNext'); if (nx) nx.onclick = () => { ST_SCENE++; renderStory(); };
+  const pv = $('#stPrev'); if (pv) pv.onclick = () => { ST_CUR = i - 1; ST_SCENE = (STORY[i - 1] ? STORY[i - 1].scenes.length - 1 : 0); renderStory(); };
+  const dn = $('#stDone'); if (dn) dn.onclick = () => {
+    const r = storyFinish(p, i);
+    toast(r.msg, 'ok'); ST_CUR = -1; ST_SCENE = 0;
+    if (typeof renderAll === 'function') renderAll();
+    renderStory(); if (typeof save === 'function') save();
+  };
+}
+
+
+/* ---------- 网络 / 公告 / 角色创建 ---------- */
+function renderNet() {
+  const on = Net.online;
+  const d = $('#netDot'); if (d) d.className = 'dot ' + (on ? 'on' : 'off');
+  const t = $('#netTxt'); if (t) t.textContent = on ? '云端已连接' : (Net.queueSize() ? '离线中（存档待传）' : '离线模式');
+  const e = $('#setEp'); if (e) e.textContent = Net.endpoint.replace('https://', '');
+  const q = $('#setQueue'); if (q) q.textContent = Net.queueSize();
+}
+function renderNotice() {
+  const n = window.NOTICE || {};
+  const box = $('#noticeTxt'); if (box) box.textContent = n.notice || '仙门公告：潜心修炼，勿生事端。';
+  const box2 = $('#noticeTxt2'); if (box2) box2.textContent = n.notice || '暂无公告';
+  const ev = n.events || {};
+  const eb = $('#eventBox');
+  if (eb) eb.innerHTML = (ev.doubleExp || ev.doubleStone)
+    ? `<div class="event">🎉 ${ev.eventName || '全服活动'}：${ev.doubleExp ? '修为×' + ev.expMul : ''} ${ev.doubleStone ? '灵石×' + ev.stoneMul : ''} ${ev.eventEnd ? '（至 ' + ev.eventEnd + '）' : ''}</div>` : '';
+}
+/* ---------- 角色创建 ---------- */
+let CR = { gender: "m", avatar: "🧙", root: "mixed", sect: null };
+function renderCreate() {
+  const gs = GAME_CONFIG.genders || [];
+  const gb = $('#crGender');
+  if (gb) gb.innerHTML = gs.map((g) => `<button class="mini" data-g="${g.id}" style="${CR.gender === g.id ? 'background:rgba(255,216,138,.3)' : ''}">${g.name}</button>`).join('');
+  $$('#crGender [data-g]').forEach((b) => b.onclick = () => { CR.gender = b.dataset.g; CR.avatar = (gs.find((x) => x.id === CR.gender).icons || ['🧙'])[0]; renderCreate(); });
+  const icons = (gs.find((x) => x.id === CR.gender) || { icons: ['🧙'] }).icons;
+  const ab = $('#crAvatar');
+  if (ab) ab.innerHTML = icons.map((ic) => `<button class="mini" data-a="${ic}" style="font-size:20px;${CR.avatar === ic ? 'background:rgba(255,216,138,.3)' : ''}">${ic}</button>`).join('');
+  $$('#crAvatar [data-a]').forEach((b) => b.onclick = () => { CR.avatar = b.dataset.a; renderCreate(); });
+  const rt = GAME_CONFIG.roots.find((r) => r.id === CR.root) || GAME_CONFIG.roots[0];
+  const rb = $('#crRoot');
+  if (rb) rb.innerHTML = `<div class="item"><div class="ic">${rt.icon}</div>
+    <div class="info"><div class="nm" style="color:${rt.color}">${rt.name}</div>
+    <div class="sub">${rt.desc}｜修炼 ×${rt.expMul} 攻击 ×${rt.atkMul} 防御 ×${rt.defMul} 福缘 ×${rt.luck}</div></div></div>`;
+  const sects = (window.GAME_SOCIAL && GAME_SOCIAL.sects) || [];
+  const sb = $('#crSect');
+  if (sb) sb.innerHTML = sects.map((s) => `<div class="mapc ${CR.sect === s.id ? 'on' : ''}" data-cs="${s.id}">
+    <div class="ic">${s.icon}</div><div style="flex:1"><div class="nm">${s.name}</div>
+    <div class="sub">${s.desc}</div></div></div>`).concat([`<div class="mapc ${CR.sect === null ? 'on' : ''}" data-cs="none">
+    <div class="ic">🚶</div><div style="flex:1"><div class="nm">散修</div><div class="sub">不加入宗门，自由自在</div></div></div>`]).join('');
+  $$('#crSect [data-cs]').forEach((el) => el.onclick = () => { CR.sect = el.dataset.cs === 'none' ? null : el.dataset.cs; renderCreate(); });
 }
 
 /* ---------- 左侧精简面板 ---------- */
@@ -655,102 +1039,6 @@ function renderMini(p) {
     <div class="kv"><span>灵根</span><b>${ENGINE.rootInfo(p).name}</b></div>`;
 }
 
-/* ---------- 装备栏 ---------- */
-let DEVOUR_TARGET = null;
-function renderEquip(p) {
-  const cfg = GAME_CONFIG;
-  $('#equipBox').innerHTML = cfg.slots.map((s) => {
-    const it = p.equip[s.key];
-    const m = it ? cfg.qualities[it.q].mul * (1 + (it.level || 0) * cfg.enhance.attrPerLevel) * (1 + (it.temper || 0) * cfg.temper.attrPerLevel) : 1;
-    return `<div class="item"><div class="ic">${s.icon}</div>
-      <div class="info"><div class="nm ${it ? 'q' + it.q : ''}">${s.name}：${it ? it.name + (it.level ? ' +' + it.level : '') + (it.temper ? ' 淬' + it.temper : '') : '（空）'}</div>
-      <div class="sub">${it ? `攻${Math.round((it.atk || 0) * m)} 防${Math.round((it.def || 0) * m)} 血${Math.round((it.hp || 0) * m)}` : '去储物袋装备'}</div></div>
-      ${it ? `<button class="mini" data-enh="${s.key}">强化 ${fmt(ENGINE.enhanceCost(it))}</button>
-      <button class="mini" data-tem="${s.key}">淬灵 ${fmt(ENGINE.temperCost(it))}</button>
-      <button class="mini" data-dev="${s.key}">炼化</button>` : ''}</div>`;
-  }).join('');
-  $$('#equipBox [data-enh]').forEach((b) => b.onclick = () => onEquipAction(p, 'enhance', b.dataset.enh));
-  $$('#equipBox [data-tem]').forEach((b) => b.onclick = () => onEquipAction(p, 'temper', b.dataset.tem));
-  $$('#equipBox [data-dev]').forEach((b) => b.onclick = () => { DEVOUR_TARGET = b.dataset.dev; renderDevour(p); });
-}
-function renderDevour(p) {
-  const it = p.equip[DEVOUR_TARGET];
-  if (!it) { $('#devourCard').style.display = 'none'; return; }
-  $('#devourCard').style.display = '';
-  $('#devourWho').textContent = it.name;
-  const foods = p.bag.filter((x) => x.id !== it.id).slice(0, 15);
-  $('#devourList').innerHTML = foods.length ? foods.map((f) => `<button class="mini" data-dvf="${f.id}" style="margin:2px">${f.icon || '📦'}${f.name}${f.count ? '×' + f.count : ''}</button>`).join('') : '<div class="small">没有可炼化的物品</div>';
-  $$('#devourList [data-dvf]').forEach((b) => b.onclick = () => {
-    const r = ENGINE.devour(p, it, b.dataset.dvf);
-    toast(r.msg, r.ok ? 'ok' : 'err'); renderEquip(p); renderBag(p); renderHUD(p); renderAttrs(p); save();
-  });
-}
-
-/* ---------- 背包（设置页之外共用） ---------- */
-let BAG_FILTER = 'all';
-function renderBag(p) {
-  const cfg = GAME_CONFIG;
-  const box = $('#bagList'); if (!box) return;
-  const cnt = $('#bagCount'); if (cnt) cnt.textContent = `（${p.bag.length}/80）`;
-  const list = p.bag.filter((x) => BAG_FILTER === 'all' || x.kind === BAG_FILTER);
-  box.innerHTML = list.length ? list.map((it) => {
-    const q = it.kind === 'equip' ? (it.q || 0) : 0;
-    const sub = it.kind === 'equip'
-      ? `${cfg.slots.find((s) => s.key === it.slot).name} · 攻${it.atk} 防${it.def} 血${it.hp}${it.level ? ' +' + it.level : ''}${it.temper ? ' 淬' + it.temper : ''}`
-      : (it.desc || '') + (it.count ? ` ×${it.count}` : '');
-    return `<div class="item"><div class="ic">${it.icon || (it.kind === 'equip' ? cfg.slots.find((s) => s.key === it.slot).icon : '📦')}</div>
-      <div class="info"><div class="nm q${q}">${it.name}${it.count ? ' ×' + it.count : ''}</div><div class="sub">${sub}</div></div>
-      ${it.kind === 'equip' ? `<button class="mini" data-buse="${it.id}">装备</button><button class="mini" data-bsell="${it.id}">售</button>`
-        : it.kind === 'pill' ? `<button class="mini" data-buse="${it.id}">服用</button>`
-        : it.kind === 'talisman' ? `<button class="mini" data-buse="${it.id}">激活</button>`
-        : `<button class="mini" data-bsell="${it.id}">售</button>`}
-      ${it.kind === 'equip' ? `<button class="mini" data-bmk="${it.id}">寄售</button>` : ''}</div>`;
-  }).join('') : '<div class="small">空空如也</div>';
-  $$('#bagList [data-buse]').forEach((b) => b.onclick = () => onUseItem(p, b.dataset.buse));
-  $$('#bagList [data-bsell]').forEach((b) => b.onclick = () => onSell(p, b.dataset.bsell));
-  $$('#bagList [data-bmk]').forEach((b) => b.onclick = () => onMarketSell(p, b.dataset.bmk));
-}
-
-/* ---------- 网络 / 公告 ---------- */
-function renderNet() {
-  const on = Net.online;
-  $('#netDot').className = 'dot ' + (on ? 'on' : 'off');
-  $('#netTxt').textContent = on ? '云端已连接' : (Net.queueSize() ? '离线中（存档待传）' : '离线模式');
-  $('#setEp').textContent = Net.endpoint.replace('https://', '');
-  $('#setQueue').textContent = Net.queueSize();
-}
-function renderNotice() {
-  const n = window.NOTICE || {};
-  const box = $('#noticeTxt'); if (!box) return;
-  box.textContent = n.notice || '暂无公告';
-  const ev = n.events || {};
-  const box2 = $('#noticeTxt2'); if (box2) box2.textContent = n.notice || '暂无公告';
-  const eb = $('#eventBox');
-  if (eb) eb.innerHTML = (ev.doubleExp || ev.doubleStone)
-    ? `<div class="event">🎉 ${ev.eventName || '全服活动'}：${ev.doubleExp ? '修为×' + ev.expMul : ''} ${ev.doubleStone ? '灵石×' + ev.stoneMul : ''} ${ev.eventEnd ? '（至 ' + ev.eventEnd + '）' : ''}</div>` : '';
-}
-
-/* ---------- 角色创建 ---------- */
-let CR = { gender: 'm', avatar: '🧙', root: 'mixed', sect: null };
-function renderCreate() {
-  const gs = GAME_CONFIG.genders || [];
-  $('#crGender').innerHTML = gs.map((g) => `<button class="mini" data-g="${g.id}" style="${CR.gender === g.id ? 'background:rgba(255,215,110,.3)' : ''}">${g.name}</button>`).join('');
-  $$('#crGender [data-g]').forEach((b) => b.onclick = () => { CR.gender = b.dataset.g; CR.avatar = gs.find((x) => x.id === CR.gender).icons[0]; renderCreate(); });
-  const icons = gs.find((x) => x.id === CR.gender).icons;
-  $('#crAvatar').innerHTML = icons.map((ic) => `<button class="mini" data-a="${ic}" style="font-size:20px;${CR.avatar === ic ? 'background:rgba(255,215,110,.3)' : ''}">${ic}</button>`).join('');
-  $$('#crAvatar [data-a]').forEach((b) => b.onclick = () => { CR.avatar = b.dataset.a; renderCreate(); });
-  const rt = GAME_CONFIG.roots.find((r) => r.id === CR.root);
-  $('#crRoot').innerHTML = `<div class="item"><div class="ic">${rt.icon}</div>
-    <div class="info"><div class="nm" style="color:${rt.color}">${rt.name}</div>
-    <div class="sub">${rt.desc}｜修炼 ×${rt.expMul} 攻击 ×${rt.atkMul} 防御 ×${rt.defMul} 福缘 ×${rt.luck}</div></div></div>`;
-  const sects = (window.GAME_SOCIAL && GAME_SOCIAL.sects) || [];
-  $('#crSect').innerHTML = sects.map((s) => `<div class="mapc ${CR.sect === s.id ? 'on' : ''}" data-cs="${s.id}">
-    <div class="ic">${s.icon}</div><div style="flex:1"><div class="nm">${s.name}</div>
-    <div class="sub">${s.desc}</div></div></div>`).concat([`<div class="mapc ${CR.sect === null ? 'on' : ''}" data-cs="none">
-    <div class="ic">🚶</div><div style="flex:1"><div class="nm">散修</div><div class="sub">不加入宗门，自由自在</div></div></div>`]).join('');
-  $$('#crSect [data-cs]').forEach((el) => el.onclick = () => { CR.sect = el.dataset.cs === 'none' ? null : el.dataset.cs; renderCreate(); });
-}
-
 window.UI = {
   initBackground, toast, fmt, timeAgo, startQi, flashBreakthrough,
   renderHUD, renderMeditate, renderAttrs, renderSpots, renderMaps, renderDungeons,
@@ -758,6 +1046,7 @@ window.UI = {
   renderSect, renderTasks, renderArena, renderRank, renderMarket, renderSocial, renderChat,
   renderBag, renderEquip, renderDevour, renderNet, renderNotice, renderCreate, rewardTxt,
   renderTracker, renderToolBar, openWin, closeWin, bindWinTabs, renderStory, renderMini, TOOLS,
+  renderEquipDetail, renderBagDetail, renderSkillDetail, slotDef,
   get CUR_WIN() { return CUR_WIN; },
   setFighters, floatNum, boom, shake, hitAnim, hpBar, pushLog, clearLog,
   get curMap() { return CUR_MAP; }, set curMap(v) { CUR_MAP = v; },
