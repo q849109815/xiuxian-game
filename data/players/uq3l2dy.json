@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995461728,
-  "lastTick": 1789995461728,
+  "lastSeen": 1789995462188,
+  "lastTick": 1789995462188,
   "realm": 9,
   "stage": 3,
   "exp": 37116079192.19016,
-  "stone": 2497145,
+  "stone": 2498551,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -99,20 +99,6 @@
       "def": 135,
       "hp": 845,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_zk454a8",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·太极道衣",
-      "atk": 37,
-      "def": 145,
-      "hp": 893,
-      "crit": 0,
       "mp": 115
     },
     {
