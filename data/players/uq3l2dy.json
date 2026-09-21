@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990822177,
-  "lastTick": 1789990822177,
+  "lastSeen": 1789990824376,
+  "lastTick": 1789990824376,
   "realm": 9,
   "stage": 3,
-  "exp": 141314737718.7156,
-  "stone": 159412,
+  "exp": 158272476549.1215,
+  "stone": 160012,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -253,7 +253,7 @@
         "exp": 2329836,
         "kill": 206,
         "dungeon": 5,
-        "arena": 5
+        "arena": 10
       },
       "claimed": [
         "d1",
@@ -275,7 +275,7 @@
         "火麒麟": 31,
         "炎魔": 53,
         "dungeon": 5,
-        "arena": 5,
+        "arena": 10,
         "九幽冥王": 7,
         "b4": 16,
         "幽魂将": 4,
@@ -297,11 +297,11 @@
     "joinedAt": 1789989635634
   },
   "arena": {
-    "score": 100,
-    "wins": 5,
+    "score": 200,
+    "wins": 10,
     "losses": 0,
     "dayDate": "2026-9-21",
-    "fights": 5
+    "fights": 10
   },
   "mail": [],
   "karma": 0,
