@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789994075173,
-  "lastTick": 1789994075173,
+  "lastSeen": 1789994075893,
+  "lastTick": 1789994075893,
   "realm": 9,
   "stage": 3,
-  "exp": 245193277586.50305,
-  "stone": 448427,
+  "exp": 245193317586.50305,
+  "stone": 457427,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -257,6 +257,15 @@
       "exp": 0,
       "stage": 0,
       "apt": 1
+    },
+    {
+      "id": "bs_5oqth5w",
+      "ref": "b_qilin",
+      "name": "麒麟",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
     }
   ],
   "activeBeast": 0,
@@ -281,7 +290,7 @@
         "meditate": 1,
         "exp": 10099792,
         "kill": 326,
-        "dungeon": 10,
+        "dungeon": 11,
         "arena": 20
       },
       "claimed": [
@@ -303,7 +312,7 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 10,
+        "dungeon": 11,
         "arena": 20,
         "九幽冥王": 7,
         "b4": 16,
@@ -360,7 +369,7 @@
     "breakthrough": 36,
     "offlineMin": 35,
     "meditate": 1,
-    "dungeon": 10,
+    "dungeon": 11,
     "encounters": 38,
     "rob": 0
   },
