@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790012996580,
-  "lastTick": 1790012996580,
+  "lastSeen": 1790012998516,
+  "lastTick": 1790012998516,
   "realm": 31,
   "stage": 0,
-  "exp": 138898137547.03415,
-  "stone": 8505059462313.912,
+  "exp": 209502984301.53925,
+  "stone": 8505059463923.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -129,20 +129,6 @@
     }
   },
   "bag": [
-    {
-      "id": "it_zpl743t",
-      "kind": "equip",
-      "slot": "helmet",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·玄铁盔",
-      "atk": 81,
-      "def": 264,
-      "hp": 1406,
-      "crit": 0,
-      "mp": 337
-    },
     {
       "id": "it_mhagqfb",
       "kind": "equip",
@@ -1239,6 +1225,20 @@
       "atk": 234,
       "def": 62,
       "hp": 605,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_i22fryh",
+      "kind": "equip",
+      "slot": "boots",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·踏云靴",
+      "atk": 102,
+      "def": 146,
+      "hp": 1134,
       "crit": 0,
       "mp": 337
     }
@@ -2623,16 +2623,16 @@
         "arena": 20,
         "dungeon": 301,
         "meditate": 1,
-        "exp": 129758585716,
-        "kill": 2016
+        "exp": 129758600774,
+        "kill": 2018
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129857977810,
-        "kill": 3734,
+        "exp": 129857992868,
+        "kill": 3736,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2653,7 +2653,7 @@
         "禁地守卫": 661,
         "星斗海妖兽": 632,
         "天星宗弟子": 3,
-        "墨蛟": 619,
+        "墨蛟": 621,
         "野狼": 42,
         "青纹蛇": 30,
         "灵兔": 29
@@ -2700,9 +2700,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3734,
+    "kills": 3736,
     "deaths": 72,
-    "battles": 3806,
+    "battles": 3808,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
@@ -2736,7 +2736,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 66,
+    "acc": 67,
     "level": 30
   },
   "titles": {
@@ -2751,7 +2751,7 @@
       "ti9",
       "ti10"
     ],
-    "cur": "ti9"
+    "cur": null
   },
   "act": {
     "sign": {
