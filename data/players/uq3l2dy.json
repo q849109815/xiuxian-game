@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995808233,
-  "lastTick": 1789995808233,
+  "lastSeen": 1789995809350,
+  "lastTick": 1789995809350,
   "realm": 9,
   "stage": 3,
-  "exp": 309300678674.25134,
-  "stone": 4458377,
+  "exp": 340230754687.0765,
+  "stone": 4464681,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 147,
+      "count": 148,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -117,7 +117,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 52,
+      "count": 53,
       "desc": "炼器材料",
       "id": "i_n9wf73t"
     },
@@ -1396,8 +1396,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 41412312,
-        "kill": 812,
+        "exp": 41477618,
+        "kill": 813,
         "dungeon": 213,
         "arena": 20
       },
@@ -1410,8 +1410,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 41412312,
-        "kill": 812,
+        "exp": 41477618,
+        "kill": 813,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1427,7 +1427,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 201,
-        "混沌祖龙": 222,
+        "混沌祖龙": 223,
         "天兵": 203
       },
       "claimed": [
@@ -1471,9 +1471,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 812,
+    "kills": 813,
     "deaths": 0,
-    "battles": 812,
+    "battles": 813,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
@@ -1483,5 +1483,5 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 1525
+  "bonusWuxing": 1545
 }
