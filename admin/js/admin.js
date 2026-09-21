@@ -267,3 +267,163 @@ function bind() {
 }
 
 boot();
+
+
+/* ================= 后台扩展：货币 / 活动 / 称号 / 法宝 ================= */
+const ADMINX = {
+  cur: {},   // 当前操作的玩家对象
+
+  async loadPlayer(uid, whoEl, cb) {
+    if (!uid) return atoast('请先填道号', 'err');
+    const r = await API.getPlayer(uid);
+    if (!r || !r.data) { if (whoEl) whoEl.textContent = '未找到该玩家'; return null; }
+    this.cur = r.data;
+    if (whoEl) whoEl.textContent = `已载入：${r.data.name || uid}（${uid}）`;
+    if (cb) cb(r.data);
+    return r.data;
+  },
+
+  /* ---------- 货币 ---------- */
+  CUR_IDS: ['C001','C002','C003','C004','C005','C006','C007','C008','C009','C010','C011','C012','C013','C014','C015','C016'],
+  CUR_NAME: {'C001':'下品灵石','C002':'中品灵石','C003':'上品灵石','C004':'极品灵石','C005':'宗门贡献',
+    'C006':'道义币','C007':'元宝','C008':'灵玉','C009':'功法残篇','C010':'突破丹碎片','C011':'轮回石',
+    'C012':'通天令','C013':'仙元','C014':'功勋值','C015':'声望(人界)','C016':'积分(PVP)'},
+  renderWallet(p) {
+    const g = document.getElementById('walletGrid');
+    if (!g) return;
+    p.wallet = p.wallet || {};
+    g.innerHTML = this.CUR_IDS.map((id) => {
+      const v = (id === 'C001') ? (p.stone || p.wallet[id] || 0) : (p.wallet[id] || 0);
+      return `<div><div class="small">${this.CUR_NAME[id]}</div>
+        <input class="txt" data-cur="${id}" type="number" value="${v}"></div>`;
+    }).join('');
+  },
+  async saveWallet(uid) {
+    if (!this.cur || !this.cur.uid) return atoast('请先读取玩家', 'err');
+    const p = this.cur;
+    p.wallet = p.wallet || {};
+    document.querySelectorAll('#walletGrid [data-cur]').forEach((el) => {
+      const v = Math.max(0, parseInt(el.value || '0', 10));
+      p.wallet[el.dataset.cur] = v;
+      if (el.dataset.cur === 'C001') p.stone = v;
+    });
+    await API.savePlayer(p.uid, p, `admin: wallet ${p.name}`);
+    atoast('货币已保存', 'ok');
+  },
+  async quickGive(uid) {
+    if (!this.cur || !this.cur.uid) return atoast('请先读取玩家', 'err');
+    const p = this.cur; p.wallet = p.wallet || {};
+    const add = (id, el) => { const n = parseInt((document.getElementById(el) || {}).value || '0', 10); if (n) { p.wallet[id] = (p.wallet[id] || 0) + n; if (id === 'C001') p.stone = p.wallet[id]; } };
+    add('C007', 'qYb'); add('C014', 'qMerit'); add('C015', 'qRep');
+    await API.savePlayer(p.uid, p, `admin: give ${p.name}`);
+    atoast('已发放', 'ok'); this.renderWallet(p);
+  },
+
+  /* ---------- 活动 ---------- */
+  async renderActsAdmin() {
+    const box = document.getElementById('actAdminList');
+    if (!box) return;
+    const cfg = await API.getConfig('social');
+    const list = (cfg && cfg.acts) || [];
+    box.innerHTML = list.length ? list.map((a) =>
+      `<div class="item" style="margin-bottom:5px"><div class="ic">${a.icon}</div>
+        <div class="info"><div class="nm">${a.name} <span class="small">${a.type}</span></div>
+        <div class="sub">${a.content}</div><div class="sub" style="color:var(--jade)">${a.reward}</div></div></div>`
+    ).join('') : '<div class="small">未加载到活动配置</div>';
+    const st = document.getElementById('dblState');
+    const nc = await API.getConfig('notice');
+    const ev = (nc && nc.events) || {};
+    if (st) st.textContent = '当前：' + [
+      ev.doubleExp ? '双倍修为✔' : '', ev.doubleStone ? '双倍灵石✔' : '', ev.doubleDrop ? '双倍掉落✔' : ''
+    ].filter(Boolean).join(' ') || '无';
+  },
+  async setDouble(key) {
+    const nc = await API.getConfig('notice');
+    if (!nc) return atoast('读取配置失败', 'err');
+    nc.events = nc.events || {};
+    ['doubleExp','doubleStone','doubleDrop'].forEach((k) => nc.events[k] = false);
+    if (key) { nc.events[key] = true; nc.events[key.replace('double','') + 'Mul'] = 2; }
+    await API.saveConfig('notice', nc, 'admin: double event');
+    atoast(key ? '已开启' : '已全部关闭', 'ok');
+    this.renderActsAdmin();
+  },
+  async batchGive() {
+    const stone = parseInt((document.getElementById('bStone') || {}).value || '0', 10);
+    const yb = parseInt((document.getElementById('bYb') || {}).value || '0', 10);
+    const mt = parseInt((document.getElementById('bMerit') || {}).value || '0', 10);
+    if (!stone && !yb && !mt) return atoast('请填至少一项', 'err');
+    const nc = await API.getConfig('notice');
+    if (!nc) return atoast('读取配置失败', 'err');
+    nc.mails = nc.mails || [];
+    nc.mails.push({
+      id: 'm_' + Date.now(), title: '全服活动奖励',
+      body: `灵石×${stone}　元宝×${yb}　功勋×${mt}`,
+      give: { stone, yuanbao: yb, merit: mt }, at: Date.now(), to: 'all',
+    });
+    await API.saveConfig('notice', nc, 'admin: batch give');
+    document.getElementById('batchMsg').textContent = `已写入全服邮件（共 ${nc.mails.length} 封）`;
+    atoast('已发放，玩家下次登录可见', 'ok');
+  },
+
+  /* ---------- 称号 ---------- */
+  async renderTitlesAdmin(p) {
+    const box = document.getElementById('titleAdminList');
+    if (!box) return;
+    const cfg = await API.getConfig('social');
+    const list = (cfg && cfg.titles) || [];
+    p.titles = p.titles || { owned: [], cur: null };
+    box.innerHTML = list.map((t) => {
+      const owned = p.titles.owned.indexOf(t.id) >= 0;
+      return `<div class="item" style="margin-bottom:5px"><div class="ic">${t.icon}</div>
+        <div class="info"><div class="nm">${t.name}</div><div class="sub">${t.desc}</div></div>
+        <button class="mini" data-tid="${t.id}">${owned ? '撤销' : '授予'}</button></div>`;
+    }).join('');
+    box.querySelectorAll('[data-tid]').forEach((b) => b.onclick = async () => {
+      const id = b.dataset.tid;
+      const i = p.titles.owned.indexOf(id);
+      if (i >= 0) p.titles.owned.splice(i, 1); else p.titles.owned.push(id);
+      await API.savePlayer(p.uid, p, `admin: title ${id}`);
+      atoast('已更新', 'ok'); this.renderTitlesAdmin(p);
+    });
+  },
+
+  /* ---------- 法宝发放 ---------- */
+  async renderEquipAdmin(p) {
+    const g = document.getElementById('equipAdminGrid');
+    if (!g) return;
+    const ct = await API.getConfig('content');
+    const recs = ((ct && ct.forge && ct.forge.recipes) || []).filter((x) => x.fr);
+    g.innerHTML = recs.map((r) =>
+      `<div><button class="ghost" style="width:100%;text-align:left" data-eq="${r.id}">
+        ${r.icon} ${r.name} <span class="small">q${r.q}</span></button></div>`
+    ).join('') || '<div class="small">未加载到法宝数据</div>';
+    g.querySelectorAll('[data-eq]').forEach((b) => b.onclick = async () => {
+      const rec = recs.find((x) => x.id === b.dataset.eq);
+      p.bag = p.bag || [];
+      p.bag.push({ id: 'fr_' + rec.id, name: rec.name, icon: rec.icon, kind: 'equip',
+        q: rec.q, slot: rec.slot, base: rec.base || {}, enh: 0, temp: 0, fr: true });
+      await API.savePlayer(p.uid, p, `admin: give equip ${rec.name}`);
+      atoast(`已发放【${rec.name}】`, 'ok');
+    });
+  },
+};
+window.ADMINX = ADMINX;
+
+/* 绑定后台扩展事件 */
+document.addEventListener('DOMContentLoaded', () => {
+  const q = (s) => document.querySelector(s);
+  const bw = q('#btnWLoad'); if (bw) bw.onclick = () => ADMINX.loadPlayer(q('#wUid').value.trim(), q('#wWho'), (p) => ADMINX.renderWallet(p));
+  const bs = q('#btnWSave'); if (bs) bs.onclick = () => ADMINX.saveWallet();
+  const bg = q('#btnQuickGive'); if (bg) bg.onclick = () => ADMINX.quickGive();
+  const bt = q('#btnTLoad'); if (bt) bt.onclick = () => ADMINX.loadPlayer(q('#tUid').value.trim(), q('#tWho'), (p) => ADMINX.renderTitlesAdmin(p));
+  const be = q('#btnELoad'); if (be) be.onclick = () => ADMINX.loadPlayer(q('#eUid').value.trim(), q('#eWho'), (p) => ADMINX.renderEquipAdmin(p));
+  const de = q('#btnDblExp'); if (de) de.onclick = () => ADMINX.setDouble('doubleExp');
+  const ds = q('#btnDblStone'); if (ds) ds.onclick = () => ADMINX.setDouble('doubleStone');
+  const dd = q('#btnDblDrop'); if (dd) dd.onclick = () => ADMINX.setDouble('doubleDrop');
+  const df = q('#btnDblOff'); if (df) df.onclick = () => ADMINX.setDouble(null);
+  const bb = q('#btnBatchGive'); if (bb) bb.onclick = () => ADMINX.batchGive();
+  // 切到活动页时自动渲染
+  document.querySelectorAll('[data-p]').forEach((b) => b.onclick = () => {
+    if (b.dataset.p === 'acts') ADMINX.renderActsAdmin();
+  });
+});
