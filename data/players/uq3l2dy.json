@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996043705,
-  "lastTick": 1789996043705,
+  "lastSeen": 1789996044095,
+  "lastTick": 1789996044095,
   "realm": 9,
   "stage": 3,
-  "exp": 123720284559.30054,
-  "stone": 5797761,
+  "exp": 154650295266.12567,
+  "stone": 5798447,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -113,20 +113,6 @@
       "def": 42,
       "hp": 234,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_ip5bbss",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·破妄戒",
-      "atk": 67,
-      "def": 34,
-      "hp": 298,
-      "crit": 0,
       "mp": 115
     },
     {
