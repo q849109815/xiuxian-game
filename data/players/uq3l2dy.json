@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995926671,
-  "lastTick": 1789995926671,
+  "lastSeen": 1789995929298,
+  "lastTick": 1789995929298,
   "realm": 9,
   "stage": 3,
-  "exp": 247440466800.60107,
-  "stone": 5114464,
+  "exp": 309300621044.25134,
+  "stone": 5128852,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 187,
+      "count": 188,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -127,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 82,
+      "count": 83,
       "desc": "炼器材料",
       "id": "i_jir574s"
     },
@@ -838,6 +838,34 @@
       "atk": 143,
       "def": 39,
       "hp": 368,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_2mpfldf",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·诛仙剑",
+      "atk": 164,
+      "def": 31,
+      "hp": 240,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_ip5bbss",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·破妄戒",
+      "atk": 67,
+      "def": 34,
+      "hp": 298,
       "crit": 0,
       "mp": 115
     }
@@ -1965,8 +1993,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 47479156,
-        "kill": 906,
+        "exp": 47611986,
+        "kill": 908,
         "dungeon": 213,
         "arena": 20
       },
@@ -1979,8 +2007,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 47479156,
-        "kill": 906,
+        "exp": 47611986,
+        "kill": 908,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1995,8 +2023,8 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 237,
-        "混沌祖龙": 250,
+        "星宿仙君": 238,
+        "混沌祖龙": 251,
         "天兵": 233
       },
       "claimed": [
@@ -2040,9 +2068,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 906,
+    "kills": 908,
     "deaths": 0,
-    "battles": 906,
+    "battles": 908,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
@@ -2052,5 +2080,5 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 3640
+  "bonusWuxing": 3670
 }
