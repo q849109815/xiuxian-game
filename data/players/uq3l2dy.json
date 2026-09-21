@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995421319,
-  "lastTick": 1789995421319,
+  "lastSeen": 1789995422646,
+  "lastTick": 1789995422646,
   "realm": 9,
   "stage": 3,
-  "exp": 25112780157.8461,
-  "stone": 2342948,
+  "exp": 84337329069.32982,
+  "stone": 2339436,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -20,7 +20,7 @@
       "slot": "weapon",
       "q": 4,
       "level": 12,
-      "temper": 2,
+      "temper": 5,
       "name": "神品·混元幡",
       "atk": 139,
       "def": 39,
@@ -75,7 +75,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 67,
+      "count": 68,
       "desc": "炼器材料",
       "id": "i_frp5ygh"
     },
@@ -2256,8 +2256,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 22410016,
-        "kill": 518,
+        "exp": 22474850,
+        "kill": 519,
         "dungeon": 213,
         "arena": 20
       },
@@ -2270,8 +2270,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 22410016,
-        "kill": 518,
+        "exp": 22474850,
+        "kill": 519,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2287,7 +2287,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 116,
-        "混沌祖龙": 111,
+        "混沌祖龙": 112,
         "天兵": 105
       },
       "claimed": [
@@ -2331,9 +2331,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 518,
+    "kills": 519,
     "deaths": 0,
-    "battles": 518,
+    "battles": 519,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
