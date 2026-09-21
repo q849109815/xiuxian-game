@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789991574479,
-  "lastTick": 1789991574479,
+  "lastSeen": 1789991576147,
+  "lastTick": 1789991576147,
   "realm": 9,
   "stage": 3,
-  "exp": 310464062265.0705,
-  "stone": 279926,
+  "exp": 332124697647.5544,
+  "stone": 242523,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -47,7 +47,7 @@
       "kind": "equip",
       "slot": "ring",
       "q": 4,
-      "level": 11,
+      "level": 12,
       "temper": 0,
       "name": "神品·太虚戒",
       "atk": 79,
@@ -75,7 +75,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 19,
+      "count": 20,
       "desc": "炼器材料",
       "id": "i_frp5ygh"
     },
@@ -368,6 +368,20 @@
       "hp": 1037,
       "crit": 0,
       "mp": 115
+    },
+    {
+      "id": "it_4rtx00m",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·阴阳环",
+      "atk": 78,
+      "def": 33,
+      "hp": 281,
+      "crit": 0,
+      "mp": 115
     }
   ],
   "skills": [
@@ -434,8 +448,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 8123146,
-        "kill": 296,
+        "exp": 8191956,
+        "kill": 297,
         "dungeon": 5,
         "arena": 20
       },
@@ -448,8 +462,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 8123146,
-        "kill": 296,
+        "exp": 8191956,
+        "kill": 297,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -466,7 +480,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 41,
         "混沌祖龙": 37,
-        "天兵": 32
+        "天兵": 33
       },
       "claimed": [
         "b2",
@@ -505,14 +519,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 296,
+    "kills": 297,
     "deaths": 0,
-    "battles": 296,
+    "battles": 297,
     "breakthrough": 36,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 5,
-    "encounters": 32,
+    "encounters": 33,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
