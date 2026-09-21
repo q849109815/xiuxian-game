@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995541129,
-  "lastTick": 1789995541129,
+  "lastSeen": 1789995541989,
+  "lastTick": 1789995541989,
   "realm": 9,
   "stage": 3,
-  "exp": 0,
-  "stone": 2993370,
+  "exp": 37116077048.19016,
+  "stone": 3001282,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -174,20 +174,6 @@
       "mp": 115
     },
     {
-      "id": "it_0tpnc9f",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·玄龟甲",
-      "atk": 39,
-      "def": 100,
-      "hp": 649,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "id": "it_bcvvxjl",
       "kind": "equip",
       "slot": "ring",
@@ -212,6 +198,20 @@
       "atk": 60,
       "def": 32,
       "hp": 233,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_92rdvhx",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·青锋剑",
+      "atk": 203,
+      "def": 34,
+      "hp": 256,
       "crit": 0,
       "mp": 115
     }
@@ -1321,8 +1321,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 28630722,
-        "kill": 614,
+        "exp": 28694922,
+        "kill": 615,
         "dungeon": 213,
         "arena": 20
       },
@@ -1335,8 +1335,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 28630722,
-        "kill": 614,
+        "exp": 28694922,
+        "kill": 615,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1352,7 +1352,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 143,
-        "混沌祖龙": 150,
+        "混沌祖龙": 151,
         "天兵": 135
       },
       "claimed": [
@@ -1396,9 +1396,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 614,
+    "kills": 615,
     "deaths": 0,
-    "battles": 614,
+    "battles": 615,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
