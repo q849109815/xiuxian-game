@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990677630,
-  "lastTick": 1789990677630,
+  "lastSeen": 1789990678947,
+  "lastTick": 1789990678947,
   "realm": 8,
   "stage": 3,
-  "exp": 5768077028.49771,
+  "exp": 7134804247.54428,
   "stone": 116356,
   "equip": {
     "weapon": {
@@ -59,16 +59,6 @@
     "talisman": null
   },
   "bag": [
-    {
-      "kind": "herb",
-      "ref": "herb_soul",
-      "name": "养魂花",
-      "icon": "🌸",
-      "price": 90,
-      "count": 3,
-      "desc": "炼丹材料",
-      "id": "i_ayoxwbn"
-    },
     {
       "kind": "herb",
       "ref": "herb_immortal",
@@ -133,9 +123,9 @@
       "ref": "b_dragon",
       "name": "蛟龙",
       "level": 8,
-      "exp": 67,
+      "exp": 85,
       "stage": 1,
-      "apt": 1.3000000000000003
+      "apt": 1.3500000000000003
     }
   ],
   "activeBeast": 0,
