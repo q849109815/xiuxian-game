@@ -7,12 +7,12 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790009860537,
-  "lastTick": 1790009860537,
-  "realm": 4,
+  "lastSeen": 1790009862799,
+  "lastTick": 1790009862799,
+  "realm": 5,
   "stage": 0,
-  "exp": 41523.97674580481,
-  "stone": 700,
+  "exp": 527.753590604807,
+  "stone": 1000,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -100,7 +100,7 @@
     "kills": 0,
     "deaths": 0,
     "battles": 0,
-    "breakthrough": 4,
+    "breakthrough": 5,
     "offlineMin": 2,
     "meditate": 0,
     "dungeon": 0,
@@ -111,7 +111,7 @@
   "trait": "P003",
   "bottle": {
     "liquid": 6,
-    "acc": 216,
+    "acc": 218,
     "level": 1
   },
   "partners": {},
@@ -154,7 +154,7 @@
     "c014": 0,
     "c015": 0,
     "c016": 0,
-    "C001": 700
+    "C001": 1000
   },
   "loginAt": 1790009818804,
   "lastChatAt": 1790009843908,
@@ -164,7 +164,9 @@
       "days": 1,
       "streak": 1
     },
-    "seven": {},
+    "seven": {
+      "s7_0": 1
+    },
     "growth": {},
     "online": {
       "claimed": 0
