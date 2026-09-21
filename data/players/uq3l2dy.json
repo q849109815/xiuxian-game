@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996063835,
-  "lastTick": 1789996063835,
+  "lastSeen": 1789996065201,
+  "lastTick": 1789996065201,
   "realm": 9,
   "stage": 3,
-  "exp": 69750,
-  "stone": 5933254,
+  "exp": 61860091163.65027,
+  "stone": 5934414,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -199,34 +199,6 @@
       "def": 142,
       "hp": 836,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_5p3nl8l",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·诛仙剑",
-      "atk": 185,
-      "def": 36,
-      "hp": 289,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_457kkvw",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·养魂环",
-      "atk": 85,
-      "def": 29,
-      "hp": 284,
-      "crit": 0,
       "mp": 115
     },
     {
