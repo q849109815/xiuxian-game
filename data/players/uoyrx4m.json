@@ -7,12 +7,12 @@
   "root": "earth",
   "sect": "s_wuji",
   "createdAt": 1789989442446,
-  "lastSeen": 1789989657942,
-  "lastTick": 1789989657942,
+  "lastSeen": 1789989662038,
+  "lastTick": 1789989662038,
   "realm": 2,
   "stage": 0,
-  "exp": 4129.241600000007,
-  "stone": 600,
+  "exp": 7266.176000000009,
+  "stone": 800,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -26,7 +26,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 4,
+      "count": 6,
       "desc": "炼丹材料",
       "id": "i_w2zpn4r"
     }
@@ -47,13 +47,13 @@
     "daily": {
       "date": "2026-9-21",
       "prog": {
-        "dungeon": 2
+        "dungeon": 3
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
-        "dungeon": 2
+        "dungeon": 3
       },
       "claimed": []
     }
@@ -95,7 +95,7 @@
     "breakthrough": 7,
     "offlineMin": 0,
     "meditate": 0,
-    "dungeon": 2,
+    "dungeon": 3,
     "encounters": 0,
     "rob": 0
   }
