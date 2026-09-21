@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990028143,
-  "lastTick": 1789990028143,
+  "lastSeen": 1789990047720,
+  "lastTick": 1789990047720,
   "realm": 4,
   "stage": 1,
-  "exp": 25475.20400000119,
-  "stone": 24627,
+  "exp": 794526.6706000011,
+  "stone": 26599,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -65,7 +65,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 15,
+      "count": 17,
       "desc": "炼器材料",
       "id": "i_op7cm1h"
     },
@@ -123,7 +123,7 @@
       "name": "赤炎莲",
       "icon": "🔥",
       "price": 180,
-      "count": 11,
+      "count": 12,
       "desc": "炼丹材料",
       "id": "i_4dx4axl"
     },
@@ -234,6 +234,20 @@
       "hp": 280,
       "crit": 0,
       "mp": 49
+    },
+    {
+      "id": "it_gtpwqh2",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·玄铁刀",
+      "atk": 92,
+      "def": 22,
+      "hp": 168,
+      "crit": 0,
+      "mp": 58
     }
   ],
   "skills": [],
@@ -253,23 +267,23 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 173458,
-        "kill": 58
+        "exp": 189924,
+        "kill": 61
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 173458,
-        "kill": 58,
+        "exp": 189924,
+        "kill": 61,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
-        "熔岩巨人": 10,
-        "b3": 24,
-        "火麒麟": 7,
+        "熔岩巨人": 12,
+        "b3": 27,
+        "火麒麟": 8,
         "炎魔": 7
       },
       "claimed": []
@@ -306,14 +320,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 58,
+    "kills": 61,
     "deaths": 0,
-    "battles": 58,
+    "battles": 61,
     "breakthrough": 17,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 0,
-    "encounters": 5,
+    "encounters": 6,
     "rob": 0
   },
   "meditateUntil": 1789989945650
