@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996057099,
-  "lastTick": 1789996057099,
+  "lastSeen": 1789996058659,
+  "lastTick": 1789996058659,
   "realm": 9,
   "stage": 3,
-  "exp": 185580379060.9508,
-  "stone": 5891299,
+  "exp": 216510462637.77594,
+  "stone": 5899955,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -178,48 +178,6 @@
       "id": "i_1c42jnp"
     },
     {
-      "id": "it_qe16m02",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·玄铁刀",
-      "atk": 135,
-      "def": 44,
-      "hp": 277,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_pln0y65",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·青锋剑",
-      "atk": 133,
-      "def": 30,
-      "hp": 314,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_t94royq",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·云锦袍",
-      "atk": 28,
-      "def": 133,
-      "hp": 932,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "kind": "ore",
       "ref": "ore_dark",
       "name": "冥铁",
@@ -380,6 +338,20 @@
       "atk": 202,
       "def": 35,
       "hp": 347,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_thlinao",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·养魂环",
+      "atk": 88,
+      "def": 40,
+      "hp": 248,
       "crit": 0,
       "mp": 115
     }
@@ -1516,8 +1488,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 54020896,
-        "kill": 1009,
+        "exp": 54093766,
+        "kill": 1010,
         "dungeon": 213,
         "arena": 20
       },
@@ -1530,8 +1502,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 54020896,
-        "kill": 1009,
+        "exp": 54093766,
+        "kill": 1010,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1547,7 +1519,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 277,
-        "混沌祖龙": 280,
+        "混沌祖龙": 281,
         "天兵": 266
       },
       "claimed": [
@@ -1591,9 +1563,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1009,
+    "kills": 1010,
     "deaths": 0,
-    "battles": 1009,
+    "battles": 1010,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
