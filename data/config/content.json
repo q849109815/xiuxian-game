@@ -1,0 +1,110 @@
+{
+  "herbs": [
+    { "id": "herb_green", "name": "青灵草", "icon": "🌿", "price": 30, "tier": 1 },
+    { "id": "herb_soul",  "name": "养魂花", "icon": "🌸", "price": 90, "tier": 2 },
+    { "id": "herb_fire",  "name": "赤炎莲", "icon": "🔥", "price": 180, "tier": 3 },
+    { "id": "herb_dark",  "name": "幽冥草", "icon": "🖤", "price": 340, "tier": 4 },
+    { "id": "herb_immortal", "name": "不死药", "icon": "🌟", "price": 900, "tier": 5 }
+  ],
+  "ores": [
+    { "id": "ore_iron", "name": "玄铁", "icon": "⚙️", "price": 50, "tier": 1 },
+    { "id": "ore_fire", "name": "炎晶", "icon": "🔶", "price": 150, "tier": 2 },
+    { "id": "ore_dark", "name": "冥铁", "icon": "🔷", "price": 380, "tier": 3 },
+    { "id": "ore_star", "name": "星陨铁", "icon": "⭐", "price": 1000, "tier": 4 }
+  ],
+
+  "skills": [
+    { "id": "sk_heart_basic", "name": "长春诀", "icon": "📘", "type": "heart", "root": "any", "maxLevel": 9, "desc": "最基础的心法，稳健扎实",
+      "passive": { "hp": 0.06, "exp": 0.05 }, "price": 0 },
+    { "id": "sk_heart_wood", "name": "青木长生功", "icon": "🌿", "type": "heart", "root": "wood", "maxLevel": 9, "desc": "木灵根专属，生机不绝",
+      "passive": { "hp": 0.14, "exp": 0.12 }, "price": 1200, "conflict": ["sk_heart_fire"] },
+    { "id": "sk_heart_fire", "name": "焚天诀", "icon": "🔥", "type": "heart", "root": "fire", "maxLevel": 9, "desc": "火灵根专属，霸道刚猛",
+      "passive": { "atk": 0.16, "crit": 0.03 }, "price": 1200, "conflict": ["sk_heart_wood", "sk_heart_water"] },
+    { "id": "sk_heart_water", "name": "沧海心经", "icon": "💧", "type": "heart", "root": "water", "maxLevel": 9, "desc": "水灵根专属，绵延不绝",
+      "passive": { "def": 0.15, "hp": 0.08 }, "price": 1200, "conflict": ["sk_heart_fire"] },
+    { "id": "sk_heart_metal", "name": "锐金诀", "icon": "⚔️", "type": "heart", "root": "metal", "maxLevel": 9, "desc": "金灵根专属，锋芒毕露",
+      "passive": { "atk": 0.12, "hit": 0.05 }, "price": 1200 },
+    { "id": "sk_heart_earth", "name": "厚土诀", "icon": "🪨", "type": "heart", "root": "earth", "maxLevel": 9, "desc": "土灵根专属，固若金汤",
+      "passive": { "def": 0.18, "anticrit": 0.04 }, "price": 1200 },
+    { "id": "sk_heart_chaos", "name": "混沌道经", "icon": "✨", "type": "heart", "root": "chaos", "maxLevel": 9, "desc": "道体专属，包罗万象",
+      "passive": { "atk": 0.15, "def": 0.15, "hp": 0.15, "exp": 0.2 }, "price": 5000 },
+
+    { "id": "sk_art_slash", "name": "裂空斩", "icon": "🗡️", "type": "art", "root": "any", "maxLevel": 9, "desc": "主动：造成 180% 攻击伤害",
+      "active": { "mult": 1.8, "mp": 12, "cd": 2 }, "price": 300 },
+    { "id": "sk_art_fire", "name": "三昧真火", "icon": "🔥", "type": "art", "root": "fire", "maxLevel": 9, "desc": "主动：260% 伤害并灼烧",
+      "active": { "mult": 2.6, "mp": 25, "cd": 3, "burn": 0.1 }, "price": 900, "conflict": ["sk_art_ice"] },
+    { "id": "sk_art_ice", "name": "玄冰封印", "icon": "❄️", "type": "art", "root": "water", "maxLevel": 9, "desc": "主动：140% 伤害并减速",
+      "active": { "mult": 1.4, "mp": 20, "cd": 3, "slow": 0.3 }, "price": 900, "conflict": ["sk_art_fire"] },
+    { "id": "sk_art_thunder", "name": "掌心雷", "icon": "⚡", "type": "art", "root": "metal", "maxLevel": 9, "desc": "主动：220% 伤害，必暴击",
+      "active": { "mult": 2.2, "mp": 30, "cd": 4, "mustCrit": true }, "price": 1400 },
+    { "id": "sk_art_shield", "name": "金光护体", "icon": "🛡️", "type": "art", "root": "earth", "maxLevel": 9, "desc": "主动：获得护盾并回血",
+      "active": { "mult": 0.5, "mp": 18, "cd": 4, "shield": 0.35, "heal": 0.15 }, "price": 1000 },
+    { "id": "sk_art_drain", "name": "吸星大法", "icon": "🩸", "type": "art", "root": "any", "maxLevel": 9, "desc": "主动：150% 伤害并吸血 40%",
+      "active": { "mult": 1.5, "mp": 22, "cd": 3, "lifesteal": 0.4 }, "price": 1600 },
+    { "id": "sk_art_chaos", "name": "混沌开天", "icon": "🌌", "type": "art", "root": "chaos", "maxLevel": 9, "desc": "主动：360% 范围伤害",
+      "active": { "mult": 3.6, "mp": 60, "cd": 6, "aoe": true }, "price": 6000 }
+  ],
+  "skillUpCost": { "stoneBase": 100, "stoneGrowth": 1.6, "maxLevel": 9, "perLevel": 0.12 },
+  "skillFit": { "same": 1.0, "any": 0.85, "diff": 0.55, "desc": "功法与灵根的适配度：同属 100%、通用 85%、异属 55%" },
+
+  "alchemy": {
+    "recipes": [
+      { "id": "r_hp",  "name": "回气丹", "icon": "🔴", "pill": "pill_hp",  "cost": { "herb_green": 2 }, "rate": 0.85, "tier": 1, "exp": 20 },
+      { "id": "r_atk", "name": "凝神散", "icon": "🟠", "pill": "pill_atk", "cost": { "herb_green": 3, "herb_soul": 1 }, "rate": 0.75, "tier": 2, "exp": 40 },
+      { "id": "r_exp", "name": "悟道丹", "icon": "🟣", "pill": "pill_exp", "cost": { "herb_soul": 3 }, "rate": 0.7, "tier": 3, "exp": 80 },
+      { "id": "r_break", "name": "渡劫丹", "icon": "💊", "pill": "pill_break", "cost": { "herb_fire": 2, "herb_soul": 3 }, "rate": 0.6, "tier": 4, "exp": 160, "desc": "突破成功率 +25%" },
+      { "id": "r_root", "name": "洗髓丹", "icon": "🧬", "pill": "pill_root", "cost": { "herb_dark": 3, "herb_immortal": 1 }, "rate": 0.45, "tier": 5, "exp": 400, "desc": "可重洗灵根" },
+      { "id": "r_zen", "name": "悟道金丹", "icon": "🌟", "pill": "pill_zen", "cost": { "herb_immortal": 3 }, "rate": 0.4, "tier": 6, "exp": 900, "desc": "永久提升悟性 +5" }
+    ],
+    "failBoom": 0.25,
+    "boomLoss": "cost"
+  },
+
+  "forge": {
+    "recipes": [
+      { "id": "f_weapon1", "name": "青锋剑", "icon": "🗡️", "slot": "weapon", "q": 1, "cost": { "ore_iron": 4 }, "rate": 0.8, "tier": 1, "base": { "atk": 16, "hp": 20 } },
+      { "id": "f_armor1", "name": "玄龟甲", "icon": "🛡️", "slot": "armor", "q": 1, "cost": { "ore_iron": 4 }, "rate": 0.8, "tier": 1, "base": { "def": 12, "hp": 80 } },
+      { "id": "f_ring1", "name": "聚灵戒", "icon": "💍", "slot": "ring", "q": 1, "cost": { "ore_iron": 3 }, "rate": 0.8, "tier": 1, "base": { "atk": 6, "def": 4, "hp": 30 } },
+      { "id": "f_weapon2", "name": "炎阳刀", "icon": "🔥", "slot": "weapon", "q": 2, "cost": { "ore_fire": 5, "ore_iron": 3 }, "rate": 0.62, "tier": 2, "base": { "atk": 46, "crit": 0.04 } },
+      { "id": "f_armor2", "name": "火羽衣", "icon": "🦅", "slot": "armor", "q": 2, "cost": { "ore_fire": 5, "ore_iron": 3 }, "rate": 0.62, "tier": 2, "base": { "def": 34, "hp": 220 } },
+      { "id": "f_weapon3", "name": "冥魂幡", "icon": "🎴", "slot": "weapon", "q": 3, "cost": { "ore_dark": 6, "ore_fire": 4 }, "rate": 0.45, "tier": 3, "base": { "atk": 140, "crit": 0.07 } },
+      { "id": "f_armor3", "name": "幽冥铠", "icon": "🕸️", "slot": "armor", "q": 3, "cost": { "ore_dark": 6, "ore_fire": 4 }, "rate": 0.45, "tier": 3, "base": { "def": 100, "hp": 620 } },
+      { "id": "f_weapon4", "name": "诛仙剑", "icon": "⚔️", "slot": "weapon", "q": 4, "cost": { "ore_star": 8, "ore_dark": 6 }, "rate": 0.3, "tier": 4, "base": { "atk": 420, "crit": 0.1 } }
+    ],
+    "failBoom": 0.3
+  },
+
+  "talismans": [
+    { "id": "t_atk", "name": "攻击符", "icon": "📕", "effect": "atk", "value": 0.4, "dur": 2, "cost": { "herb_green": 2 }, "desc": "战斗中攻击 +40%，持续 2 回合" },
+    { "id": "t_shield", "name": "护盾符", "icon": "📗", "effect": "shield", "value": 0.5, "dur": 2, "cost": { "herb_green": 2, "ore_iron": 1 }, "desc": "获得 50% 气血护盾" },
+    { "id": "t_heal", "name": "回春符", "icon": "📘", "effect": "heal", "value": 0.5, "dur": 0, "cost": { "herb_soul": 2 }, "desc": "立刻恢复 50% 气血" },
+    { "id": "t_escape", "name": "遁地符", "icon": "📙", "effect": "escape", "value": 1, "dur": 0, "cost": { "herb_soul": 1, "ore_iron": 2 }, "desc": "立刻结束战斗并保留收益" }
+  ],
+
+  "beasts": [
+    { "id": "b_wolf", "name": "青风狼", "icon": "🐺", "tier": 1, "hp": 60, "atk": 12, "def": 5, "speed": 14, "skill": "撕咬", "skillMult": 1.5, "growAtk": 0.9, "growHp": 5 },
+    { "id": "b_crane", "name": "白羽鹤", "icon": "🕊️", "tier": 1, "hp": 50, "atk": 10, "def": 4, "speed": 18, "skill": "羽击", "skillMult": 1.4, "growAtk": 0.7, "growHp": 4, "ride": true },
+    { "id": "b_bear", "name": "玄铁熊", "icon": "🐻", "tier": 2, "hp": 150, "atk": 22, "def": 14, "speed": 8, "skill": "拍击", "skillMult": 1.6, "growAtk": 1.5, "growHp": 12 },
+    { "id": "b_fox", "name": "九尾狐", "icon": "🦊", "tier": 2, "hp": 110, "atk": 26, "def": 8, "speed": 16, "skill": "狐火", "skillMult": 1.8, "growAtk": 1.8, "growHp": 8 },
+    { "id": "b_tiger", "name": "白额虎王", "icon": "🐯", "tier": 3, "hp": 320, "atk": 48, "def": 24, "speed": 13, "skill": "虎啸", "skillMult": 2.0, "growAtk": 3.0, "growHp": 26 },
+    { "id": "b_dragon", "name": "蛟龙", "icon": "🐉", "tier": 4, "hp": 900, "atk": 120, "def": 60, "speed": 15, "skill": "龙息", "skillMult": 2.4, "growAtk": 7.0, "growHp": 70, "ride": true },
+    { "id": "b_phoenix", "name": "青鸾", "icon": "🦅", "tier": 5, "hp": 1400, "atk": 190, "def": 80, "speed": 20, "skill": "涅槃火", "skillMult": 2.8, "growAtk": 11.0, "growHp": 100, "ride": true },
+    { "id": "b_qilin", "name": "麒麟", "icon": "🦌", "tier": 6, "hp": 2600, "atk": 300, "def": 140, "speed": 16, "skill": "雷罚", "skillMult": 3.2, "growAtk": 18.0, "growHp": 180, "ride": true }
+  ],
+  "beast": {
+    "maxLevel": 20,
+    "maxStage": 5,
+    "feedExpPerMat": 10,
+    "feedExpPerHerb": 6,
+    "levelExpBase": 50,
+    "levelExpGrowth": 1.35,
+    "advanceAt": [5, 9, 13, 17, 20],
+    "advanceCost": [300, 1200, 4000, 12000, 40000],
+    "aptBase": 1.0,
+    "aptPerDevour": 0.05,
+    "aptMax": 3.0,
+    "captureRate": 0.55,
+    "inherit": 0.18,
+    "desc": "灵兽出战继承主人部分属性，吞噬材料可提升资质"
+  }
+}
