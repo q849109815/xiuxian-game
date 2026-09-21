@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790012808091,
-  "lastTick": 1790012808091,
+  "lastSeen": 1790012810282,
+  "lastTick": 1790012810282,
   "realm": 31,
   "stage": 0,
-  "exp": 325558774234.7795,
-  "stone": 2827462220181.0703,
+  "exp": 81391488851.44487,
+  "stone": 2827463157641.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -129,20 +129,6 @@
     }
   },
   "bag": [
-    {
-      "id": "it_owmgmul",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·养魂环",
-      "atk": 196,
-      "def": 58,
-      "hp": 647,
-      "crit": 0,
-      "mp": 337
-    },
     {
       "id": "it_d3h5xud",
       "kind": "equip",
@@ -500,7 +486,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 98,
+      "count": 129,
       "desc": "炼丹材料",
       "id": "i_qv4rncc"
     },
@@ -510,7 +496,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 55,
+      "count": 56,
       "desc": "炼器材料",
       "id": "i_kv6q1eo"
     },
@@ -1242,6 +1228,20 @@
       "hp": 2171,
       "crit": 0,
       "mp": 337
+    },
+    {
+      "id": "fr_fr_e201",
+      "name": "头盔(各类)",
+      "icon": "🪖",
+      "kind": "equip",
+      "q": 1,
+      "slot": "helmet",
+      "base": {
+        "def": 20
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
     }
   ],
   "skills": [
@@ -2595,18 +2595,18 @@
       "date": "2026-9-22",
       "prog": {
         "arena": 20,
-        "dungeon": 263,
+        "dungeon": 273,
         "meditate": 1,
-        "exp": 129757372896,
-        "kill": 1858
+        "exp": 129757388376,
+        "kill": 1860
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129856764990,
-        "kill": 3576,
+        "exp": 129856780470,
+        "kill": 3578,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2615,7 +2615,7 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 476,
+        "dungeon": 486,
         "arena": 40,
         "九幽冥王": 7,
         "b4": 16,
@@ -2624,10 +2624,10 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 606,
+        "禁地守卫": 607,
         "星斗海妖兽": 577,
         "天星宗弟子": 3,
-        "墨蛟": 571,
+        "墨蛟": 572,
         "野狼": 42,
         "青纹蛇": 30,
         "灵兔": 29
@@ -2674,14 +2674,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3576,
+    "kills": 3578,
     "deaths": 72,
-    "battles": 3648,
+    "battles": 3650,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
-    "dungeon": 476,
-    "encounters": 477,
+    "dungeon": 486,
+    "encounters": 478,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -2710,7 +2710,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 57,
+    "acc": 59,
     "level": 30
   },
   "titles": {
