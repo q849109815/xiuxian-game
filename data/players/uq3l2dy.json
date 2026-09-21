@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009920351,
-  "lastTick": 1790009920351,
+  "lastSeen": 1790009922439,
+  "lastTick": 1790009922439,
   "realm": 31,
   "stage": 0,
-  "exp": 114012165099.94238,
-  "stone": 8505051588179.912,
+  "exp": 159617031139.91934,
+  "stone": 8505051588912.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -140,20 +140,6 @@
       "atk": 166,
       "def": 42,
       "hp": 339,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_8ljsqnn",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·太极道衣",
-      "atk": 42,
-      "def": 130,
-      "hp": 823,
       "crit": 0,
       "mp": 115
     },
@@ -1536,7 +1522,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 6,
-    "acc": 49,
+    "acc": 51,
     "level": 13
   },
   "titles": {
