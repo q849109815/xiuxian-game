@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790013148004,
-  "lastTick": 1790013148004,
+  "lastSeen": 1790013156569,
+  "lastTick": 1790013156569,
   "realm": 31,
   "stage": 0,
-  "exp": 175099220682.865,
-  "stone": 8505060001672.912,
+  "exp": 262648833545.2975,
+  "stone": 8505060008694.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -129,68 +129,6 @@
     }
   },
   "bag": [
-    {
-      "id": "it_3h4fa0d",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·麒麟铠",
-      "atk": 57,
-      "def": 357,
-      "hp": 3228,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "kind": "herb",
-      "ref": "herb_green",
-      "name": "青灵草",
-      "icon": "🌿",
-      "price": 30,
-      "count": 110,
-      "desc": "炼丹材料",
-      "id": "i_130mr7h"
-    },
-    {
-      "kind": "ore",
-      "ref": "ore_iron",
-      "name": "玄铁",
-      "icon": "⚙️",
-      "price": 50,
-      "count": 78,
-      "desc": "炼器材料",
-      "id": "i_n8m81o0"
-    },
-    {
-      "id": "it_c5zu619",
-      "kind": "equip",
-      "slot": "helmet",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·狻猊盔",
-      "atk": 82,
-      "def": 342,
-      "hp": 1526,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_6nehzb9",
-      "kind": "equip",
-      "slot": "boots",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·太极履",
-      "atk": 111,
-      "def": 218,
-      "hp": 1438,
-      "crit": 0,
-      "mp": 337
-    },
     {
       "id": "fr_fr_e005",
       "name": "紫郢剑",
@@ -1239,6 +1177,68 @@
       "atk": 645,
       "def": 61,
       "hp": 596,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_gvcykzk",
+      "kind": "equip",
+      "slot": "necklace",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·阴阳环",
+      "atk": 127,
+      "def": 71,
+      "hp": 873,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_w2j72lo",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·灵蛇杖",
+      "atk": 677,
+      "def": 55,
+      "hp": 522,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "kind": "herb",
+      "ref": "herb_green",
+      "name": "青灵草",
+      "icon": "🌿",
+      "price": 30,
+      "count": 3,
+      "desc": "炼丹材料",
+      "id": "i_6zrahp6"
+    },
+    {
+      "kind": "ore",
+      "ref": "ore_iron",
+      "name": "玄铁",
+      "icon": "⚙️",
+      "price": 50,
+      "count": 2,
+      "desc": "炼器材料",
+      "id": "i_m1spbrq"
+    },
+    {
+      "id": "it_odu6hj3",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·阴阳环",
+      "atk": 189,
+      "def": 84,
+      "hp": 595,
       "crit": 0,
       "mp": 337
     }
@@ -2623,8 +2623,8 @@
         "arena": 20,
         "dungeon": 301,
         "meditate": 2,
-        "exp": 129759553132,
-        "kill": 2143
+        "exp": 129759616276,
+        "kill": 2151
       },
       "claimed": [
         "d1",
@@ -2636,8 +2636,8 @@
     "bounty": {
       "prog": {
         "meditate": 3,
-        "exp": 129858945226,
-        "kill": 3861,
+        "exp": 129859008370,
+        "kill": 3869,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2655,10 +2655,10 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 702,
-        "星斗海妖兽": 677,
+        "禁地守卫": 704,
+        "星斗海妖兽": 679,
         "天星宗弟子": 3,
-        "墨蛟": 660,
+        "墨蛟": 664,
         "野狼": 42,
         "青纹蛇": 30,
         "灵兔": 29
@@ -2705,14 +2705,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3861,
+    "kills": 3869,
     "deaths": 72,
-    "battles": 3933,
+    "battles": 3941,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 3,
     "dungeon": 514,
-    "encounters": 513,
+    "encounters": 514,
     "rob": 0
   },
   "meditateUntil": 1790013397690,
@@ -2742,7 +2742,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 37,
+    "acc": 46,
     "level": 30
   },
   "titles": {
