@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009184477,
-  "lastTick": 1790009184477,
+  "lastSeen": 1790009201718,
+  "lastTick": 1790009201718,
   "realm": 31,
   "stage": 0,
-  "exp": 226120295021.42642,
+  "exp": 150746858014.28424,
   "stone": 10923391,
   "equip": {
     "weapon": {
@@ -2338,7 +2338,7 @@
       "alchemy": 8,
       "forge": 8
     },
-    "array": "swift",
+    "array": "f007",
     "lastHarvest": 1789989635634,
     "store": {}
   },
@@ -2451,7 +2451,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 0,
-    "acc": 58,
+    "acc": 75,
     "level": 1
   }
 }
