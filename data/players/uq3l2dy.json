@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990585350,
-  "lastTick": 1789990585350,
-  "realm": 7,
-  "stage": 3,
-  "exp": 1516618.953865528,
-  "stone": 65903,
+  "lastSeen": 1789990586929,
+  "lastTick": 1789990586929,
+  "realm": 8,
+  "stage": 0,
+  "exp": 0,
+  "stone": 67895,
   "equip": {
     "weapon": {
       "id": "it_pion6p0",
@@ -238,8 +238,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 1010628,
-        "kill": 184,
+        "exp": 1029080,
+        "kill": 185,
         "dungeon": 4,
         "arena": 1
       },
@@ -252,8 +252,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 1010628,
-        "kill": 184,
+        "exp": 1029080,
+        "kill": 185,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -265,9 +265,9 @@
         "dungeon": 4,
         "arena": 1,
         "九幽冥王": 6,
-        "b4": 14,
+        "b4": 15,
         "幽魂将": 4,
-        "深渊魔蛛": 4
+        "深渊魔蛛": 5
       },
       "claimed": [
         "b2",
@@ -306,9 +306,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 184,
+    "kills": 185,
     "deaths": 0,
-    "battles": 184,
+    "battles": 185,
     "breakthrough": 29,
     "offlineMin": 0,
     "meditate": 1,
