@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009724525,
-  "lastTick": 1790009724525,
+  "lastSeen": 1790009724717,
+  "lastTick": 1790009724717,
   "realm": 31,
   "stage": 0,
   "exp": 106694332909.61118,
-  "stone": 8505051556827.912,
+  "stone": 8505051557375.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -813,20 +813,6 @@
       "name": "凡品·破妄戒",
       "atk": 56,
       "def": 29,
-      "hp": 336,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_bm4jfhl",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·玄铁刀",
-      "atk": 133,
-      "def": 44,
       "hp": 336,
       "crit": 0,
       "mp": 115
