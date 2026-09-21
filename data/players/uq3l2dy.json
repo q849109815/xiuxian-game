@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990338903,
-  "lastTick": 1789990338903,
+  "lastSeen": 1789990340986,
+  "lastTick": 1789990340986,
   "realm": 5,
   "stage": 1,
-  "exp": 12744938.65980419,
-  "stone": 97725,
+  "exp": 13260686.29368822,
+  "stone": 96273,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -65,7 +65,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 30,
+      "count": 31,
       "desc": "炼器材料",
       "id": "i_op7cm1h"
     },
@@ -85,7 +85,7 @@
       "name": "赤炎莲",
       "icon": "🔥",
       "price": 180,
-      "count": 43,
+      "count": 44,
       "desc": "炼丹材料",
       "id": "i_4dx4axl"
     },
@@ -420,6 +420,20 @@
       "hp": 176,
       "crit": 0,
       "mp": 67
+    },
+    {
+      "id": "it_yk1v5qo",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·玄铁刀",
+      "atk": 99,
+      "def": 16,
+      "hp": 174,
+      "crit": 0,
+      "mp": 67
     }
   ],
   "skills": [
@@ -460,7 +474,7 @@
   "riding": false,
   "cave": {
     "lv": {
-      "farm": 1
+      "farm": 4
     },
     "array": "none",
     "lastHarvest": 1789989635634,
@@ -472,8 +486,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 547486,
-        "kill": 130,
+        "exp": 553076,
+        "kill": 131,
         "dungeon": 4,
         "arena": 1
       },
@@ -486,14 +500,14 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 547486,
-        "kill": 130,
+        "exp": 553076,
+        "kill": 131,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
-        "熔岩巨人": 41,
-        "b3": 96,
+        "熔岩巨人": 42,
+        "b3": 97,
         "火麒麟": 19,
         "炎魔": 36,
         "dungeon": 4,
@@ -536,9 +550,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 130,
+    "kills": 131,
     "deaths": 0,
-    "battles": 130,
+    "battles": 131,
     "breakthrough": 21,
     "offlineMin": 0,
     "meditate": 1,
