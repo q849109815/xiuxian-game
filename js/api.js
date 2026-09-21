@@ -19,13 +19,29 @@ const GH = {
 
 /* ---------- 端点池：把多个可用入口都列出来，谁快用谁 ---------- */
 const ENDPOINTS = [
+  // ===== 官方 =====
   'https://api.github.com',
-  // 免费公共反代（随时可能失效，失效会自动跳过，不影响游戏）
+  // ===== jsDelivr / CDN 类（访问 GitHub 数据） =====
+  'https://data.jsdelivr.com/v1/packages/gh',
+  // ===== 公共反代（多点冗余，失效自动跳过） =====
   'https://gh-api.vercel.app',
   'https://github-api-proxy.vercel.app',
   'https://ghproxy.net/https://api.github.com',
   'https://gh-proxy.com/https://api.github.com',
+  'https://gh.llkk.cc/https://api.github.com',
+  'https://ghproxy.com/https://api.github.com',
+  'https://hub.fastgit.org/https://api.github.com',
   'https://api.github.com.cdn.cloudflare.net',
+  'https://ghapi.vvhan.com',
+  'https://git.xfj0.cn/https://api.github.com',
+  'https://gh-proxy.ygxz.in/https://api.github.com',
+  'https://api-github.kkgithub.com',
+  'https://gh.idayer.com/https://api.github.com',
+  'https://ghps.cc/https://api.github.com',
+  // ===== 可通过 raw 直读（只读场景兜底） =====
+  'https://raw.githubusercontent.com',
+  'https://raw.fastgit.org',
+  'https://raw.gitmirror.com',
 ];
 
 const LS = {
@@ -37,7 +53,6 @@ const LS = {
 };
 
 let BEST_ENDPOINT = localStorage.getItem(LS.best) || '';
-let DEAD = new Set(JSON.parse(localStorage.getItem(LS.dead) || '[]'));
 let WRITE_QUEUE = JSON.parse(localStorage.getItem(LS.queue) || '[]');
 let ONLINE = localStorage.getItem(LS.net) !== 'offline';
 
@@ -54,15 +69,27 @@ async function fetchWithTimeout(url, opt = {}, timeout = 8000) {
   }
 }
 
+/* 死端点记录：{ ep: expireAt }，超过 3 分钟自动复活重试，避免永久拉黑 */
+let DEAD_MAP = {};
+try { DEAD_MAP = JSON.parse(localStorage.getItem(LS.dead) || '{}'); } catch (e) { DEAD_MAP = {}; }
+function markDead(ep) { DEAD_MAP[ep] = Date.now() + 180000; saveDead(); }
+function saveDead() { try { localStorage.setItem(LS.dead, JSON.stringify(DEAD_MAP)); } catch (e) {} }
+function isDead(ep) {
+  const t = DEAD_MAP[ep];
+  if (!t) return false;
+  if (Date.now() > t) { delete DEAD_MAP[ep]; saveDead(); return false; }  // 复活
+  return true;
+}
+
 function allEndpoints() {
   const list = [...(BEST_ENDPOINT ? [BEST_ENDPOINT] : []), ...ENDPOINTS, ...(GH.extraEndpoints || [])];
   const seen = new Set();
-  return list.filter((e) => e && !seen.has(e) && seen.add(e)).filter((e) => !DEAD.has(e));
+  return list.filter((e) => e && !seen.has(e) && seen.add(e)).filter((e) => !isDead(e));
 }
 
 function markDead(ep) {
   if (ep === 'https://api.github.com' || (GH.extraEndpoints || []).includes(ep)) return; // 官方与自定义端点永不拉黑
-  DEAD.add(ep);
+  markDead(ep);
   localStorage.setItem(LS.dead, JSON.stringify([...DEAD].slice(-20)));
   if (BEST_ENDPOINT === ep) { BEST_ENDPOINT = ''; localStorage.removeItem(LS.best); }
 }
@@ -88,10 +115,18 @@ async function probeEndpoints() {
     const list = allEndpoints();
     const test = async (ep) => {
       const t0 = performance.now();
-      const r = await fetchWithTimeout(`${ep}/rate_limit`, {
+      // 用 rate_limit 测速；反代不支持时退回 HEAD 任意路径
+      let r = await fetchWithTimeout(`${ep}/rate_limit`, {
         headers: { Authorization: `Bearer ${GH.token}`, Accept: 'application/vnd.github+json' },
-      }, 6000);
-      if (!r.ok) throw new Error('status ' + r.status);
+      }, 6000).catch(() => null);
+      if (!r || (!r.ok && r.status !== 401 && r.status !== 403)) {
+        r = await fetchWithTimeout(`${ep}/repos/${GH.owner}/${GH.repo}`, {
+          headers: { Authorization: `Bearer ${GH.token}`, Accept: 'application/vnd.github+json' },
+        }, 6000).catch(() => null);
+      }
+      // 401/403 也说明网络能通（只是凭据问题），视为可用
+      if (!r) throw new Error('no response');
+      if (!r.ok && r.status !== 401 && r.status !== 403) throw new Error('status ' + r.status);
       return { ep, ms: performance.now() - t0 };
     };
     const settled = await Promise.allSettled(list.map(test));
@@ -282,9 +317,22 @@ const Net = {
   flushQueue,
   queueSize,
   setExtra(list) { GH.extraEndpoints = list || []; localStorage.setItem('xx_extra_ep', JSON.stringify(list || [])); },
-  reset() { DEAD.clear(); BEST_ENDPOINT = ''; localStorage.removeItem(LS.dead); localStorage.removeItem(LS.best); },
+  reset() { DEAD_MAP = {}; saveDead(); BEST_ENDPOINT = ''; localStorage.removeItem(LS.best); ONLINE = true; localStorage.setItem(LS.net, 'online'); },
 };
 GH.extraEndpoints = JSON.parse(localStorage.getItem('xx_extra_ep') || '[]');
+
+/* 后台定期重测：断网时每 90 秒、在线时每 5 分钟自动重新探活 */
+setInterval(() => {
+  if (document.hidden) return;
+  if (!ONLINE || !BEST_ENDPOINT) {
+    DEAD_MAP = {}; saveDead();          // 全部复活重试
+    probeEndpoints().then(() => { if (window.UI && UI.renderNet) UI.renderNet(); });
+  }
+}, 90000);
+setInterval(() => {
+  if (document.hidden || !ONLINE) return;
+  probeEndpoints().then(() => { if (window.UI && UI.renderNet) UI.renderNet(); });
+}, 300000);
 
 window.GH = GH; window.Net = Net;
 window.readJSON = readJSON; window.writeJSON = writeJSON; window.listDir = listDir; window.mutateShared = mutateShared;
