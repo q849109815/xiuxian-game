@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990106414,
-  "lastTick": 1789990106414,
+  "lastSeen": 1789990107727,
+  "lastTick": 1789990107727,
   "realm": 4,
   "stage": 2,
-  "exp": 1552229.3703000005,
-  "stone": 42055,
+  "exp": 1638098.8141000005,
+  "stone": 42605,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -150,6 +150,20 @@
       "hp": 334,
       "crit": 0,
       "mp": 58
+    },
+    {
+      "id": "it_nwy52gl",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·锁子金甲",
+      "atk": 17,
+      "def": 65,
+      "hp": 364,
+      "crit": 0,
+      "mp": 58
     }
   ],
   "skills": [
@@ -175,8 +189,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 234826,
-        "kill": 70,
+        "exp": 240290,
+        "kill": 71,
         "dungeon": 2
       },
       "claimed": []
@@ -184,16 +198,16 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 234826,
-        "kill": 70,
+        "exp": 240290,
+        "kill": 71,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
         "熔岩巨人": 15,
-        "b3": 36,
+        "b3": 37,
         "火麒麟": 10,
-        "炎魔": 11,
+        "炎魔": 12,
         "dungeon": 2
       },
       "claimed": []
@@ -230,9 +244,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 70,
+    "kills": 71,
     "deaths": 0,
-    "battles": 70,
+    "battles": 71,
     "breakthrough": 18,
     "offlineMin": 0,
     "meditate": 1,
