@@ -508,3 +508,120 @@ textarea.txt { resize: vertical; font-size: 12px; }
   .skgrid { grid-template-columns: repeat(3, 1fr); }
   .story-npc .portrait { width: 60px; height: 60px; font-size: 34px; }
 }
+
+/* =========================================================
+ * 凡人修仙传 · 水墨国风主题
+ * 规范：水墨国风 / 暗金色边框 / 云纹浮雕 / 卷轴 / 简约干净
+ * ========================================================= */
+:root {
+  --ink: #0b0d14;
+  --paper: #14161f;
+  --gold: #d9b45a;
+  --gold-d: #9a7426;
+  --gold-l: #f2dc9b;
+}
+body { background: var(--ink); }
+#bg { opacity: .55; }
+
+/* 云纹浮雕底：细密斜纹 + 径向光晕 */
+#app::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(217,180,90,.10), transparent 55%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.014) 0 2px, transparent 2px 6px);
+}
+
+/* 卷轴式标题 */
+.win-hd, .card h3, #leftPanel .pcard h4, #rightPanel .pcard h4 {
+  background-image: linear-gradient(180deg, rgba(217,180,90,.14), transparent);
+  border-image: linear-gradient(90deg, transparent, var(--gold-d), transparent) 1;
+}
+.win-hd .tt, .card h3 {
+  letter-spacing: 3px;
+  background: linear-gradient(180deg, #f7e9bd, var(--gold) 55%, var(--gold-d));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,.6));
+}
+/* 卷轴两端轴头 */
+.win-hd::before, .win-hd::after {
+  content: ''; position: absolute; top: 50%; transform: translateY(-50%);
+  width: 8px; height: 26px; border-radius: 3px;
+  background: linear-gradient(180deg, var(--gold-l), var(--gold-d));
+  box-shadow: 0 1px 4px rgba(0,0,0,.6);
+}
+.win-hd::before { left: -1px; } .win-hd::after { right: -1px; }
+.win-hd { position: relative; }
+
+/* 面板边框：暗金 */
+.win, .card {
+  border: 1px solid rgba(217,180,90,.34);
+  box-shadow: 0 3px 16px rgba(0,0,0,.55), inset 0 0 40px rgba(217,180,90,.045);
+}
+.win { background: linear-gradient(180deg, rgba(24,22,32,.985), rgba(11,11,18,.985)); }
+.card { background: linear-gradient(180deg, rgba(26,24,34,.92), rgba(13,13,20,.9)); }
+
+/* 按钮：玉牌 / 金令 */
+.act { background: linear-gradient(180deg, #c9a24a, #8a6216); border-color: var(--gold); }
+.ghost, .mini { border-color: rgba(217,180,90,.3); }
+.tbtn.on { background: linear-gradient(180deg, rgba(217,180,90,.34), rgba(0,0,0,.24)); border-color: var(--gold); }
+.tbtn:hover { background: rgba(217,180,90,.12); }
+
+/* 顶部条 */
+#topbar { border-bottom: 1px solid rgba(217,180,90,.4); }
+.tb-avatar { border-color: var(--gold); box-shadow: 0 0 12px rgba(217,180,90,.34); }
+.tb-avatar .lv { background: var(--gold-d); }
+
+/* 打坐光环 */
+.halo { border-color: rgba(217,180,90,.45); }
+.halo.b { border-color: rgba(160,200,190,.3); }
+
+/* 品质描边（水墨配色） */
+.bslot.q1 { border-color: #6fae8c; }
+.bslot.q2 { border-color: #6f9ecb; }
+.bslot.q3 { border-color: #d9b45a; }
+.bslot.q4 { border-color: #cf7fb0; }
+
+/* ---------- 掌天瓶 ---------- */
+.bottlewrap { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; }
+.bottle {
+  width: 92px; height: 92px; flex: 0 0 auto; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 46px;
+  background: radial-gradient(circle at 50% 38%, rgba(126,200,150,.22), rgba(0,0,0,.5) 72%);
+  border: 2px solid #7ec8a0; box-shadow: 0 0 22px rgba(126,200,150,.35);
+  animation: breathe 3.8s ease-in-out infinite; position: relative;
+}
+.bottle::after {
+  content: ''; position: absolute; inset: -8px; border-radius: 50%;
+  border: 1px dashed rgba(126,200,150,.35); animation: halo 5s linear infinite;
+}
+.bottleinfo { flex: 1; min-width: 0; }
+.bottleinfo .bt { font-size: 15px; font-weight: 700; color: var(--gold); letter-spacing: 1px; }
+
+/* ---------- 仙缘伙伴 ---------- */
+.compitem {
+  display: flex; align-items: center; gap: 9px; padding: 7px 9px; margin-bottom: 6px;
+  border-radius: 8px; border: 1px solid rgba(255,255,255,.1);
+  background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+  cursor: pointer; transition: .14s;
+}
+.compitem:hover { border-color: rgba(217,180,90,.45); }
+.compitem.on { border-color: var(--gold); background: linear-gradient(135deg, rgba(217,180,90,.18), transparent); }
+.compitem.lock { opacity: .42; }
+.compitem .cface {
+  width: 42px; height: 42px; flex: 0 0 auto; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 24px;
+  background: radial-gradient(circle, #34303f, #15121c); border: 1px solid rgba(255,255,255,.16);
+}
+.compitem .cface.q4 { border-color: #cf7fb0; box-shadow: 0 0 9px rgba(207,127,176,.4); }
+.compitem .cface.q3 { border-color: var(--gold); box-shadow: 0 0 9px rgba(217,180,90,.35); }
+.compitem .cinfo { flex: 1; min-width: 0; }
+.compitem .cnm { font-size: 13px; font-weight: 600; }
+.compitem .csub { font-size: 11px; color: var(--dim); margin-top: 1px; }
+
+/* ---------- 图鉴条目 ---------- */
+#codexList .item { border-left: 3px solid var(--gold-d); }
+
+@media (max-width: 560px) {
+  .bottle { width: 72px; height: 72px; font-size: 36px; }
+  .bottlewrap { gap: 10px; }
+}
