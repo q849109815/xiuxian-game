@@ -350,17 +350,22 @@ const ART = {
     'SK-011': 'skin/wing_tianfeng.jpg', // 天凤之翼
     'SK-012': 'skin/wing_kunpeng.jpg',  // 鲲鹏之翼
     'SK-013': 'skin/mount_qingniu.jpg', // 青牛坐骑
+    'SK-014': 'skin/mount_linglu.jpg',  // 灵鹿坐骑
     'SK-015': 'skin/mount_xianhe.jpg',  // 仙鹤坐骑
+    'SK-016': 'skin/mount_huolin.jpg',  // 火麟坐骑
     'SK-017': 'skin/mount_jinlong.jpg', // 金龙坐骑
+    'SK-018': 'skin/aura_xiuxian.jpg',  // 修仙者光环
+    'SK-019': 'skin/aura_jindan.jpg',   // 金丹光环
+    'SK-020': 'skin/aura_xianqi.jpg',   // 仙气缭绕
   },
   /** CG 过场图（24_CG加载过场） */
   cg: {
     '七玄门篇': 'cg/cg01_qixuanmen.jpg',
-    '黄枫谷篇': 'cg/cg03_xuese.jpg',
+    '黄枫谷篇': 'cg/cg05_huangfenggu.jpg',
     '乱星海篇': 'cg/cg04_xutiandian.jpg',
-    '落云宗篇': 'cg/cg01_qixuanmen.jpg',
-    '灵界篇': 'cg/cg04_xutiandian.jpg',
-    '仙界篇': 'cg/cg03_xuese.jpg',
+    '落云宗篇': 'cg/cg06_luoyunzong.jpg',
+    '灵界篇': 'cg/cg08_flysheng.jpg',
+    '仙界篇': 'cg/cg09_juezhan.jpg',
     'default': 'cg/cg01_qixuanmen.jpg',
   },
   /** 灵宠头像 */
