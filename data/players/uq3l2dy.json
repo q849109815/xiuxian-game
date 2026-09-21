@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995717184,
-  "lastTick": 1789995717184,
+  "lastSeen": 1789995717603,
+  "lastTick": 1789995717603,
   "realm": 9,
   "stage": 3,
-  "exp": 340230757583.0765,
-  "stone": 4022453,
+  "exp": 0,
+  "stone": 4023395,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -251,20 +251,6 @@
       "def": 142,
       "hp": 871,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_xdkrji9",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·云锦袍",
-      "atk": 42,
-      "def": 133,
-      "hp": 719,
-      "crit": 0,
       "mp": 115
     },
     {
