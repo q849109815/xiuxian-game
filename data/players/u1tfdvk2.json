@@ -7,12 +7,12 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790009868622,
-  "lastTick": 1790009868622,
+  "lastSeen": 1790009877804,
+  "lastTick": 1790009877804,
   "realm": 5,
   "stage": 0,
-  "exp": 24149.23438676481,
-  "stone": 9400,
+  "exp": 31851.70238036481,
+  "stone": 10900,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -111,7 +111,7 @@
   "trait": "P003",
   "bottle": {
     "liquid": 6,
-    "acc": 224,
+    "acc": 234,
     "level": 1
   },
   "partners": {},
@@ -119,7 +119,11 @@
   "dungeonCleared": [],
   "storyIdx": 1,
   "skin": {
-    "owned": [],
+    "owned": [
+      "SK-010",
+      "SK-013",
+      "SK-018"
+    ],
     "wear": {}
   },
   "worm": {
@@ -154,7 +158,7 @@
     "c014": 0,
     "c015": 0,
     "c016": 0,
-    "C001": 9400,
+    "C001": 10900,
     "C007": 6
   },
   "loginAt": 1790009818804,
@@ -175,7 +179,8 @@
       "s7_6": 1
     },
     "growth": {
-      "g1": 1
+      "g1": 1,
+      "g2": 1
     },
     "online": {
       "claimed": 0
