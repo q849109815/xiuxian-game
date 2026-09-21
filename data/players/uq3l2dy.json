@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790011999902,
-  "lastTick": 1790011999902,
+  "lastSeen": 1790012014389,
+  "lastTick": 1790012014389,
   "realm": 31,
   "stage": 0,
-  "exp": 0,
-  "stone": 2827461138931.0703,
+  "exp": 113524647152.94847,
+  "stone": 2827461149163.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -131,62 +131,6 @@
     }
   },
   "bag": [
-    {
-      "id": "it_bjd4kkb",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·麒麟铠",
-      "atk": 67,
-      "def": 345,
-      "hp": 2543,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_x6baf0k",
-      "kind": "equip",
-      "slot": "necklace",
-      "q": 3,
-      "level": 0,
-      "temper": 0,
-      "name": "仙器·太虚锁",
-      "atk": 133,
-      "def": 62,
-      "hp": 759,
-      "crit": 0.02,
-      "mp": 337
-    },
-    {
-      "id": "it_mo9075n",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·诛仙剑",
-      "atk": 513,
-      "def": 56,
-      "hp": 607,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_uumazd3",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·诛仙剑",
-      "atk": 613,
-      "def": 85,
-      "hp": 651,
-      "crit": 0,
-      "mp": 337
-    },
     {
       "id": "it_lth9hky",
       "kind": "equip",
@@ -1077,7 +1021,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 31,
+      "count": 37,
       "desc": "炼丹材料",
       "id": "i_03x1gcr"
     },
@@ -1101,7 +1045,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 23,
+      "count": 30,
       "desc": "炼器材料",
       "id": "i_p2tat4a"
     },
@@ -1240,6 +1184,62 @@
       "slot": "weapon",
       "base": {
         "atk": 80
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
+    },
+    {
+      "id": "it_r753ein",
+      "kind": "equip",
+      "slot": "helmet",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·混元盔",
+      "atk": 70,
+      "def": 231,
+      "hp": 1330,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "fr_fr_t001",
+      "name": "镇物：玄荒钟",
+      "icon": "🔮",
+      "kind": "equip",
+      "q": 1,
+      "slot": "artifact",
+      "base": {
+        "atk": 10
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
+    },
+    {
+      "id": "it_mfivzo9",
+      "kind": "equip",
+      "slot": "boots",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·追风靴",
+      "atk": 129,
+      "def": 184,
+      "hp": 989,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "fr_fr_t002",
+      "name": "镇物：缚灵索",
+      "icon": "🔮",
+      "kind": "equip",
+      "q": 1,
+      "slot": "artifact",
+      "base": {
+        "def": 30
       },
       "enh": 0,
       "temp": 0,
@@ -2554,16 +2554,16 @@
         "arena": 20,
         "dungeon": 249,
         "meditate": 1,
-        "exp": 129752723642,
-        "kill": 1269
+        "exp": 129752814510,
+        "kill": 1281
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129852115736,
-        "kill": 2987,
+        "exp": 129852206604,
+        "kill": 2999,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2581,10 +2581,10 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 446,
-        "星斗海妖兽": 406,
+        "禁地守卫": 448,
+        "星斗海妖兽": 410,
         "天星宗弟子": 3,
-        "墨蛟": 414
+        "墨蛟": 420
       },
       "claimed": [
         "b2",
@@ -2628,14 +2628,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 2987,
+    "kills": 2999,
     "deaths": 65,
-    "battles": 3052,
+    "battles": 3064,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 462,
-    "encounters": 396,
+    "encounters": 397,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -2664,7 +2664,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 59,
+    "acc": 73,
     "level": 30
   },
   "titles": {
@@ -2842,6 +2842,10 @@
   },
   "worm": {
     "own": [
+      "L004",
+      "L004",
+      "L004",
+      "L004",
       "L004",
       "L004",
       "L004",
