@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990657844,
-  "lastTick": 1789990657844,
+  "lastSeen": 1789990660810,
+  "lastTick": 1789990660810,
   "realm": 8,
   "stage": 2,
-  "exp": 15636533409.822248,
-  "stone": 108672,
+  "exp": 17416809086.292503,
+  "stone": 108372,
   "equip": {
     "weapon": {
       "id": "it_pion6p0",
@@ -184,7 +184,7 @@
       "name": "蛟龙",
       "level": 5,
       "exp": 88,
-      "stage": 0,
+      "stage": 1,
       "apt": 1.05
     }
   ],
