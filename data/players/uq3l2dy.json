@@ -7,8 +7,8 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009604286,
-  "lastTick": 1790009604286,
+  "lastSeen": 1790009607363,
+  "lastTick": 1790009607363,
   "realm": 31,
   "stage": 0,
   "exp": 0,
@@ -2446,7 +2446,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 3,
-    "acc": 14,
+    "acc": 17,
     "level": 13
   },
   "titles": {
