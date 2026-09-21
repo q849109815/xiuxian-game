@@ -34,6 +34,8 @@
     <button data-p="players">👥 玩家管理</button>
     <button data-p="notice">📢 公告活动</button>
     <button data-p="config">🎛 数值配置</button>
+    <button data-p="mail">📮 全服邮件</button>
+    <button data-p="more">🧭 榜与宗门</button>
     <button data-p="tools">🧰 工具</button>
   </div>
 
@@ -115,6 +117,40 @@
         <button class="act" id="btnSaveCfg">保存配置</button>
         <button class="ghost" id="btnLoadCfg">重新载入</button>
       </div>
+    </div>
+  </section>
+
+  <!-- 全服邮件 -->
+  <section data-pg="mail" style="display:none">
+    <div class="card">
+      <h3>发送全服邮件</h3>
+      <div class="small">邮件会写入每位玩家的存档（下次登录可见）。人数多时较慢，请耐心。</div>
+      <div class="field mt8"><div class="small">标题</div><input class="txt" id="mTitle" placeholder="如：开服补偿"></div>
+      <div class="field"><div class="small">正文</div><input class="txt" id="mBody" placeholder="如：感谢道友支持"></div>
+      <div class="grid3">
+        <div><div class="small">灵石</div><input class="txt" id="mStone" type="number" value="0"></div>
+        <div><div class="small">修为</div><input class="txt" id="mExp" type="number" value="0"></div>
+        <div><div class="small">灵草</div><input class="txt" id="mHerb" type="number" value="0"></div>
+      </div>
+      <button class="act mt8" id="btnSendMail">📮 发送给全体道友</button>
+      <div class="small mt8" id="mailMsg"></div>
+    </div>
+  </section>
+
+  <!-- 榜与宗门 -->
+  <section data-pg="more" style="display:none">
+    <div class="card">
+      <h3>论道榜（积分）</h3>
+      <div id="arenaRankBox"><div class="small">加载中…</div></div>
+    </div>
+    <div class="card">
+      <h3>宗门一览</h3>
+      <div id="sectBox"><div class="small">加载中…</div></div>
+    </div>
+    <div class="card">
+      <h3>世界频道</h3>
+      <div style="max-height:220px;overflow:auto"><table id="chatTable"></table></div>
+      <button class="ghost mt8" id="btnClearChat">清空聊天记录</button>
     </div>
   </section>
 
