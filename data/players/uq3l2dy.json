@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009124476,
-  "lastTick": 1790009124476,
-  "realm": 29,
+  "lastSeen": 1790009127484,
+  "lastTick": 1790009127484,
+  "realm": 30,
   "stage": 0,
-  "exp": 88404303687.6514,
+  "exp": 5259903128.311905,
   "stone": 10920991,
   "equip": {
     "weapon": {
@@ -2417,7 +2417,7 @@
     "kills": 1718,
     "deaths": 0,
     "battles": 1718,
-    "breakthrough": 56,
+    "breakthrough": 57,
     "offlineMin": 243,
     "meditate": 1,
     "dungeon": 213,
@@ -2445,5 +2445,11 @@
     "c015": 0,
     "c016": 0,
     "C001": 10920991
+  },
+  "loginAt": 1790009125477,
+  "bottle": {
+    "liquid": 0,
+    "acc": 1,
+    "level": 1
   }
 }
