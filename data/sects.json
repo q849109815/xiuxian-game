@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-21T13:10:51.496Z",
+  "updatedAt": "2026-09-21T13:10:54.024Z",
   "list": [
     {
       "id": "s_qingyun",
@@ -77,6 +77,22 @@
       },
       "levelReq": 2,
       "members": 3
+    },
+    {
+      "id": "s_06ixz2",
+      "name": "老六",
+      "icon": "🏯",
+      "root": "fire",
+      "desc": "新立宗门",
+      "buff": {
+        "atk": 0.05
+      },
+      "levelReq": 0,
+      "members": 1,
+      "level": 1,
+      "notice": "宗主立派，广纳门徒",
+      "leader": "66666比",
+      "createdAt": 1789996253300
     }
   ]
 }
