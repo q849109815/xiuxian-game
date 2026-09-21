@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009677783,
-  "lastTick": 1790009677783,
+  "lastSeen": 1790009680467,
+  "lastTick": 1790009680467,
   "realm": 31,
   "stage": 0,
-  "exp": 76210237792.5794,
-  "stone": 8505051545529.912,
+  "exp": 106694332909.61118,
+  "stone": 8505051545915.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -1024,20 +1024,6 @@
       "atk": 36,
       "def": 127,
       "hp": 734,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_2ktza0l",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·聚灵戒",
-      "atk": 72,
-      "def": 37,
-      "hp": 270,
       "crit": 0,
       "mp": 115
     },
@@ -2361,8 +2347,8 @@
   },
   "loginAt": 1790009125477,
   "bottle": {
-    "liquid": 3,
-    "acc": 88,
+    "liquid": 4,
+    "acc": 0,
     "level": 13
   },
   "titles": {
