@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>修仙游戏 · 管理后台</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  body { background: #070b14; }
+  #admin { max-width: 980px; margin: 0 auto; padding: 12px 12px 80px; }
+  .sidebar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .sidebar button { padding: 8px 14px; border-radius: 10px; background: rgba(255,255,255,.06); color: #8ea0c4; border: 1px solid var(--line); font-weight: 700; }
+  .sidebar button.on { background: linear-gradient(135deg, rgba(255,215,110,.22), rgba(126,247,200,.14)); color: #fff; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,.08); text-align: left; }
+  th { color: var(--gold); font-size: 12px; }
+  td.num { text-align: right; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .statc { padding: 12px; border-radius: 14px; background: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.02)); border: 1px solid var(--line); }
+  .statc .v { font-size: 24px; font-weight: 800; color: var(--gold); }
+  .statc .k { font-size: 12px; color: var(--dim); }
+  textarea.json { width: 100%; min-height: 320px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+  .search { display: flex; gap: 8px; }
+  .tool { display: flex; gap: 6px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div id="admin">
+  <h2 style="margin:6px 0 2px;color:var(--gold)">⚙️ 修仙游戏 · 管理后台</h2>
+  <div class="small" style="margin-bottom:12px">数据直接读写 GitHub 仓库 <code id="repoName"></code>｜当前通道：<span id="epName">—</span>　<span id="netState"></span></div>
+
+  <div class="sidebar">
+    <button data-p="dash" class="on">📊 数据看板</button>
+    <button data-p="players">👥 玩家管理</button>
+    <button data-p="notice">📢 公告活动</button>
+    <button data-p="config">🎛 数值配置</button>
+    <button data-p="tools">🧰 工具</button>
+  </div>
+
+  <!-- 看板 -->
+  <section data-pg="dash">
+    <div class="stat-grid" id="statGrid"></div>
+    <div class="card">
+      <h3>境界分布</h3>
+      <div id="realmDist"></div>
+    </div>
+    <div class="card">
+      <h3>活跃榜（最近登录）</h3>
+      <div id="activeList"><div class="small">加载中…</div></div>
+    </div>
+  </section>
+
+  <!-- 玩家 -->
+  <section data-pg="players" style="display:none">
+    <div class="card">
+      <h3>查找道友</h3>
+      <div class="search">
+        <input class="txt" id="qUid" placeholder="按道号 / UID 搜索">
+        <button class="mini" id="btnSearch" style="flex:0 0 auto">搜索</button>
+        <button class="mini" id="btnReload" style="flex:0 0 auto">刷新列表</button>
+      </div>
+      <div class="small mt8" id="pCount"></div>
+    </div>
+    <div class="card">
+      <h3>玩家列表</h3>
+      <div style="max-height:320px;overflow:auto"><table id="pTable"></table></div>
+    </div>
+    <div class="card" id="editCard" style="display:none">
+      <h3>编辑玩家 <span class="small" id="editWho"></span></h3>
+      <div class="grid3">
+        <div><div class="small">灵石</div><input class="txt" id="fStone" type="number"></div>
+        <div><div class="small">当前修为</div><input class="txt" id="fExp" type="number"></div>
+        <div><div class="small">境界序号(0起)</div><input class="txt" id="fRealm" type="number"></div>
+        <div><div class="small">层数(0-8)</div><input class="txt" id="fLayer" type="number"></div>
+        <div><div class="small">击杀</div><input class="txt" id="fKills" type="number"></div>
+        <div><div class="small">封禁</div><select id="fBan"><option value="0">正常</option><option value="1">封禁</option></select></div>
+      </div>
+      <div class="tool mt8">
+        <button class="act" style="flex:0 0 auto;padding:10px 18px" id="btnSaveP">保存修改</button>
+        <button class="ghost" style="flex:0 0 auto;padding:10px 18px" id="btnGift">发放补偿（下方灵石/修为正数即加）</button>
+        <button class="ghost" style="flex:0 0 auto;padding:10px 18px" id="btnDel">删除存档</button>
+      </div>
+      <hr class="sep">
+      <div class="small">原始 JSON（高级，直接改完点「保存 JSON」）</div>
+      <textarea class="json" id="rawJson"></textarea>
+      <button class="ghost mt8" id="btnSaveRaw">保存 JSON</button>
+    </div>
+  </section>
+
+  <!-- 公告 -->
+  <section data-pg="notice" style="display:none">
+    <div class="card">
+      <h3>全服公告</h3>
+      <textarea class="txt" id="nText" rows="4" placeholder="输入公告内容"></textarea>
+      <div class="row mt8">
+        <label class="small"><input type="checkbox" id="evExp"> 双倍修为</label>
+        <label class="small"><input type="checkbox" id="evStone"> 双倍灵石</label>
+      </div>
+      <div class="grid2 mt8">
+        <div><div class="small">活动名</div><input class="txt" id="evName" placeholder="如：开服狂欢"></div>
+        <div><div class="small">结束时间</div><input class="txt" id="evEnd" placeholder="如：2026-10-01"></div>
+      </div>
+      <button class="act mt8" id="btnSaveNotice">发布（立即生效）</button>
+      <div class="small mt8">玩家端每 2 分钟自动拉取一次公告，无需重新部署。</div>
+    </div>
+  </section>
+
+  <!-- 配置 -->
+  <section data-pg="config" style="display:none">
+    <div class="card">
+      <h3>游戏数值（data/config/game.json）</h3>
+      <div class="small">改完点击保存，玩家下次刷新即生效。改之前建议先「备份到仓库历史」（GitHub 本身有提交历史）。</div>
+      <textarea class="json" id="cfgJson"></textarea>
+      <div class="row mt8">
+        <button class="act" id="btnSaveCfg">保存配置</button>
+        <button class="ghost" id="btnLoadCfg">重新载入</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 工具 -->
+  <section data-pg="tools" style="display:none">
+    <div class="card">
+      <h3>手动触发汇总</h3>
+      <div class="small">排行榜 / 统计由 GitHub Actions 每 10 分钟自动跑一次。也可去仓库 Actions 页面手动 Run workflow。</div>
+      <button class="ghost mt8" id="btnDispatch">触发一次汇总</button>
+      <div class="small mt8" id="dispatchMsg"></div>
+    </div>
+    <div class="card">
+      <h3>清空本地缓存</h3>
+      <button class="ghost" id="btnClearCache">清除浏览器缓存与会话</button>
+    </div>
+  </section>
+</div>
+<div id="toasts"></div>
+
+<script src="../js/api.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
