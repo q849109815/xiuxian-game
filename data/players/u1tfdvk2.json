@@ -7,12 +7,12 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789991650918,
-  "lastTick": 1789991650918,
+  "lastSeen": 1789991654279,
+  "lastTick": 1789991654279,
   "realm": 4,
   "stage": 3,
-  "exp": 1981139.2023475163,
-  "stone": 5274,
+  "exp": 2228764.7773875166,
+  "stone": 5422,
   "equip": {
     "weapon": {
       "id": "it_a2ldwkg",
@@ -52,7 +52,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 1032,
+      "count": 1033,
       "desc": "炼丹材料",
       "id": "i_kjgsvit"
     },
@@ -103,6 +103,20 @@
       "hp": 144,
       "crit": 0,
       "mp": 46
+    },
+    {
+      "id": "it_22qyagn",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·太极道衣",
+      "atk": 14,
+      "def": 46,
+      "hp": 359,
+      "crit": 0,
+      "mp": 46
     }
   ],
   "skills": [],
@@ -124,8 +138,8 @@
         "meditate": 1,
         "dungeon": 13,
         "arena": 1,
-        "exp": 10590,
-        "kill": 12
+        "exp": 12050,
+        "kill": 15
       },
       "claimed": []
     },
@@ -134,14 +148,14 @@
         "meditate": 1,
         "dungeon": 13,
         "arena": 1,
-        "exp": 10590,
-        "kill": 12,
+        "exp": 12050,
+        "kill": 15,
         "火麒麟": 1,
         "b3": 1,
-        "采药童子": 5,
-        "b1": 11,
-        "竹叶蛇": 4,
-        "野兔精": 2
+        "采药童子": 6,
+        "b1": 14,
+        "竹叶蛇": 5,
+        "野兔精": 3
       },
       "claimed": []
     }
@@ -185,9 +199,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 12,
+    "kills": 15,
     "deaths": 0,
-    "battles": 12,
+    "battles": 15,
     "breakthrough": 18,
     "offlineMin": 14,
     "meditate": 1,
