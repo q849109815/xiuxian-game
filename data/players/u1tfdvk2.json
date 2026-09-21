@@ -7,11 +7,11 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790018652039,
-  "lastTick": 1790018652039,
+  "lastSeen": 1790018656608,
+  "lastTick": 1790018656608,
   "realm": 5,
   "stage": 0,
-  "exp": 58399.68099785217,
+  "exp": 59250.91499465217,
   "stone": 9900,
   "equip": {
     "weapon": null,
@@ -111,7 +111,7 @@
   "trait": "P003",
   "bottle": {
     "liquid": 7,
-    "acc": 89,
+    "acc": 94,
     "level": 1
   },
   "partners": {},
@@ -126,7 +126,9 @@
       "SK-006",
       "SK-008"
     ],
-    "wear": {}
+    "wear": {
+      "翅膀": "SK-010"
+    }
   },
   "worm": {
     "own": [],
