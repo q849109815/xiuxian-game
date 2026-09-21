@@ -37,6 +37,7 @@ async function loadAll() {
   A$('#evEnd').value = (n.events || {}).eventEnd || '';
   await loadPlayers();
   renderDash();
+  renderMore().catch(() => {});
 }
 
 async function loadPlayers() {
@@ -124,11 +125,62 @@ function renderDash() {
     `<div class="kv"><span>${p.name} · ${realmOf(p)}</span><b>${Math.round((now - (p.lastSeen || 0)) / 60000)} 分钟前</b></div>`).join('') || '<div class="small">暂无数据</div>';
 }
 
+
+/* ---------- 全服邮件 ---------- */
+async function sendGlobalMail() {
+  const title = A$('#mTitle').value.trim() || '系统邮件';
+  const body = A$('#mBody').value.trim() || '';
+  const rw = { stone: +A$('#mStone').value || 0, exp: +A$('#mExp').value || 0, herb: +A$('#mHerb').value || 0 };
+  const reward = {};
+  for (const k in rw) if (rw[k] > 0) reward[k] = rw[k];
+  if (!confirm(`确认向全部 ${PLAYERS.length} 位道友发送邮件？`)) return;
+  A$('#mailMsg').textContent = '发送中…（每人一次写操作，请耐心）';
+  let ok = 0, fail = 0;
+  for (const item of PLAYERS) {
+    const p = item.obj;
+    if (!Array.isArray(p.mail)) p.mail = [];
+    p.mail.unshift({ id: 'm_' + Math.random().toString(36).slice(2, 9), at: Date.now(), read: false, title, body, reward: Object.keys(reward).length ? reward : null });
+    p.mail = p.mail.slice(0, 30);
+    try { await writeJSON(playerPath(p.uid), p, 'admin mail'); ok++; }
+    catch (e) { fail++; }
+  }
+  A$('#mailMsg').textContent = `完成：成功 ${ok} 位${fail ? `，失败 ${fail} 位（稍后重试）` : ''}`;
+  atoast(`邮件已发送：${ok} 位`, 'ok');
+}
+
+/* ---------- 榜与宗门 ---------- */
+async function renderMore() {
+  try {
+    const d = await readJSON('data/arena_rank.json');
+    A$('#arenaRankBox').innerHTML = (d && d.list && d.list.length)
+      ? d.list.slice(0, 30).map((r, i) => `<div class="kv"><span>${i + 1}. ${r.name} · ${r.realm}</span><b>${r.arena} 分</b></div>`).join('')
+      : '<div class="small">暂无数据</div>';
+  } catch (e) { A$('#arenaRankBox').innerHTML = '<div class="small">暂无数据</div>'; }
+
+  try {
+    const d = await readJSON('data/sects.json');
+    const list = (d && d.list) || [];
+    A$('#sectBox').innerHTML = list.length
+      ? list.map((s) => `<div class="kv"><span>${s.icon || ''} ${s.name}</span><b>${s.members || 0} 人</b></div>`).join('')
+      : '<div class="small">暂无宗门</div>';
+  } catch (e) { A$('#sectBox').innerHTML = '<div class="small">暂无宗门</div>'; }
+
+  try {
+    const d = await readJSON('data/chat.json');
+    const list = (d && d.list) || [];
+    A$('#chatTable').innerHTML = list.length
+      ? '<tr><th>道号</th><th>内容</th><th>时间</th></tr>' + list.slice(0, 40).map((m) => `<tr><td>${m.name}</td><td>${m.text}</td><td>${new Date(m.at).toLocaleString()}</td></tr>`).join('')
+      : '<tr><td class="small">暂无消息</td></tr>';
+  } catch (e) { A('#chatTable').innerHTML = '<tr><td class="small">暂无消息</td></tr>'; }
+}
+
 /* ---------- 事件绑定 ---------- */
 function bind() {
   A$$('.sidebar button').forEach((b) => b.onclick = () => {
     A$$('.sidebar button').forEach((x) => x.classList.remove('on')); b.classList.add('on');
     A$$('[data-pg]').forEach((s) => s.style.display = s.dataset.pg === b.dataset.p ? '' : 'none');
+    if (b.dataset.p === 'more') renderMore();
+    if (b.dataset.p === 'mail') A$('#mailMsg').textContent = `当前玩家数：${PLAYERS.length}`;
   });
 
   A$('#btnSearch').onclick = () => {
@@ -205,6 +257,13 @@ function bind() {
     } catch (e) { A$('#dispatchMsg').textContent = '触发失败（Token 需 workflow 权限）'; }
   };
   A$('#btnClearCache').onclick = () => { localStorage.clear(); atoast('已清除'); };
+
+  A$('#btnSendMail').onclick = sendGlobalMail;
+  A$('#btnClearChat').onclick = async () => {
+    if (!confirm('确认清空世界频道？')) return;
+    await writeJSON('data/chat.json', { updatedAt: new Date().toISOString(), list: [] }, 'admin clear chat');
+    atoast('已清空', 'ok'); renderMore();
+  };
 }
 
 boot();
