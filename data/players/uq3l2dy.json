@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790010435032,
-  "lastTick": 1790010435032,
+  "lastSeen": 1790010437303,
+  "lastTick": 1790010437303,
   "realm": 31,
   "stage": 0,
-  "exp": 308530270778.37555,
-  "stone": 8505051595359.912,
+  "exp": 27665642090.37045,
+  "stone": 8505051515351.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -79,7 +79,7 @@
       "slot": "helmet",
       "q": 4,
       "level": 0,
-      "temper": 2,
+      "temper": 8,
       "name": "神品·混元盔",
       "atk": 81,
       "def": 310,
@@ -191,7 +191,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 123,
+      "count": 125,
       "desc": "炼器材料",
       "id": "i_jdu35bw"
     },
@@ -489,6 +489,20 @@
       "enh": 0,
       "temp": 0,
       "fr": true
+    },
+    {
+      "id": "it_8ucrvhw",
+      "kind": "equip",
+      "slot": "helmet",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·混元盔",
+      "atk": 84,
+      "def": 272,
+      "hp": 1423,
+      "crit": 0,
+      "mp": 337
     }
   ],
   "skills": [
@@ -1673,16 +1687,16 @@
         "arena": 20,
         "dungeon": 92,
         "meditate": 1,
-        "exp": 129736285740,
-        "kill": 76
+        "exp": 129736301724,
+        "kill": 78
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129835677834,
-        "kill": 1794,
+        "exp": 129835693818,
+        "kill": 1796,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1700,8 +1714,8 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 24,
-        "星斗海妖兽": 24,
+        "禁地守卫": 25,
+        "星斗海妖兽": 25,
         "天星宗弟子": 3,
         "墨蛟": 25
       },
@@ -1747,9 +1761,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1794,
+    "kills": 1796,
     "deaths": 51,
-    "battles": 1845,
+    "battles": 1847,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
@@ -1783,7 +1797,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 12,
-    "acc": 24,
+    "acc": 26,
     "level": 13
   },
   "titles": {
