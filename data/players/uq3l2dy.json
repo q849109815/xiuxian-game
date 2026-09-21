@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790010696566,
-  "lastTick": 1790010696566,
+  "lastSeen": 1790010726609,
+  "lastTick": 1790010726609,
   "realm": 31,
   "stage": 0,
-  "exp": 214987091876.0428,
+  "exp": 128992267413.62567,
   "stone": 8505051094286.912,
   "equip": {
     "weapon": {
@@ -2447,7 +2447,7 @@
         "arena": 20,
         "dungeon": 92,
         "meditate": 1,
-        "exp": 129738122302,
+        "exp": 129738527806,
         "kill": 278
       },
       "claimed": []
@@ -2455,7 +2455,7 @@
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129837514396,
+        "exp": 129837919900,
         "kill": 1996,
         "女鬼": 13,
         "b2": 34,
@@ -2522,8 +2522,8 @@
   "title": "",
   "stats": {
     "kills": 1996,
-    "deaths": 54,
-    "battles": 2050,
+    "deaths": 59,
+    "battles": 2055,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
@@ -2557,7 +2557,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 15,
-    "acc": 16,
+    "acc": 46,
     "level": 13
   },
   "titles": {
