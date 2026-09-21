@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996308103,
-  "lastTick": 1789996308103,
+  "lastSeen": 1789996326420,
+  "lastTick": 1789996326420,
   "realm": 9,
   "stage": 3,
-  "exp": 0,
-  "stone": 7180660,
+  "exp": 184692765715.6512,
+  "stone": 7280114,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 108,
+      "count": 113,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -117,7 +117,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 45,
+      "count": 48,
       "desc": "炼器材料",
       "id": "i_1c42jnp"
     },
@@ -127,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 46,
+      "count": 47,
       "desc": "炼器材料",
       "id": "i_bkbhegu"
     },
@@ -606,6 +606,114 @@
       "hp": 240,
       "crit": 0.02,
       "mp": 115
+    },
+    {
+      "id": "it_933josw",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·玄铁刀",
+      "atk": 185,
+      "def": 32,
+      "hp": 309,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_1vbsas0",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·诛仙剑",
+      "atk": 132,
+      "def": 37,
+      "hp": 306,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_facpy64",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·玄铁刀",
+      "atk": 136,
+      "def": 31,
+      "hp": 260,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_zo95njz",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·聚灵戒",
+      "atk": 85,
+      "def": 45,
+      "hp": 364,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_vnh205l",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·太极道衣",
+      "atk": 28,
+      "def": 101,
+      "hp": 773,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_3wgoqcd",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·养魂环",
+      "atk": 84,
+      "def": 41,
+      "hp": 285,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_sluqnqf",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·诛仙剑",
+      "atk": 135,
+      "def": 40,
+      "hp": 306,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "kind": "ore",
+      "ref": "ore_iron",
+      "name": "玄铁",
+      "icon": "⚙️",
+      "price": 50,
+      "count": "ore_iron",
+      "desc": "炼器材料",
+      "id": "i_ec9r0zo"
     }
   ],
   "skills": [
@@ -1749,8 +1857,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 66010614,
-        "kill": 1197,
+        "exp": 66919976,
+        "kill": 1211,
         "dungeon": 213,
         "arena": 20
       },
@@ -1763,8 +1871,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 66010614,
-        "kill": 1197,
+        "exp": 66919976,
+        "kill": 1211,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1779,9 +1887,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 344,
-        "混沌祖龙": 343,
-        "天兵": 324
+        "星宿仙君": 348,
+        "混沌祖龙": 349,
+        "天兵": 328
       },
       "claimed": [
         "b2",
@@ -1792,7 +1900,7 @@
   "sectInfo": {
     "id": "s_06ixz2",
     "rankIdx": 4,
-    "contrib": 5220,
+    "contrib": 5230,
     "joinedAt": 1789996255530
   },
   "arena": {
@@ -1824,14 +1932,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1197,
+    "kills": 1211,
     "deaths": 0,
-    "battles": 1197,
+    "battles": 1211,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 155,
+    "encounters": 158,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
