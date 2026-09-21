@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990587780,
-  "lastTick": 1789990587780,
+  "lastSeen": 1789990603422,
+  "lastTick": 1789990603422,
   "realm": 8,
-  "stage": 0,
-  "exp": 441286463.7142986,
-  "stone": 67895,
+  "stage": 1,
+  "exp": 317352904.14307404,
+  "stone": 70053,
   "equip": {
     "weapon": {
       "id": "it_pion6p0",
@@ -115,7 +115,7 @@
       "name": "幽冥草",
       "icon": "🖤",
       "price": 340,
-      "count": 3,
+      "count": 4,
       "desc": "炼丹材料",
       "id": "i_gw7a1cy"
     },
@@ -184,6 +184,20 @@
       "hp": 631,
       "crit": 0,
       "mp": 91
+    },
+    {
+      "id": "it_09z3n8d",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·养魂环",
+      "atk": 64,
+      "def": 28,
+      "hp": 232,
+      "crit": 0,
+      "mp": 100
     }
   ],
   "skills": [
@@ -238,8 +252,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 1029080,
-        "kill": 185,
+        "exp": 1049404,
+        "kill": 186,
         "dungeon": 4,
         "arena": 1
       },
@@ -252,8 +266,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 1029080,
-        "kill": 185,
+        "exp": 1049404,
+        "kill": 186,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -264,8 +278,8 @@
         "炎魔": 53,
         "dungeon": 4,
         "arena": 1,
-        "九幽冥王": 6,
-        "b4": 15,
+        "九幽冥王": 7,
+        "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5
       },
@@ -306,10 +320,10 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 185,
+    "kills": 186,
     "deaths": 0,
-    "battles": 185,
-    "breakthrough": 29,
+    "battles": 186,
+    "breakthrough": 30,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 4,
