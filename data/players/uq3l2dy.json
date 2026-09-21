@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996415761,
-  "lastTick": 1789996415761,
+  "lastSeen": 1789996416679,
+  "lastTick": 1789996416679,
   "realm": 9,
   "stage": 3,
-  "exp": 338603449500.0272,
-  "stone": 8294360,
+  "exp": 0,
+  "stone": 8295908,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -559,34 +559,6 @@
       "def": 30,
       "hp": 237,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_dmlcbux",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·玄龟甲",
-      "atk": 29,
-      "def": 144,
-      "hp": 949,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_wzlv4w1",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·云锦袍",
-      "atk": 42,
-      "def": 138,
-      "hp": 856,
-      "crit": 0,
       "mp": 115
     },
     {
