@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009731885,
-  "lastTick": 1790009731885,
+  "lastSeen": 1790009734019,
+  "lastTick": 1790009734019,
   "realm": 31,
   "stage": 0,
-  "exp": 228630713377.73816,
-  "stone": 8505051559193.912,
+  "exp": 259114808494.7699,
+  "stone": 8505051559557.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -772,20 +772,6 @@
       "atk": 41,
       "def": 142,
       "hp": 788,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_n2y9300",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·破妄戒",
-      "atk": 56,
-      "def": 29,
-      "hp": 336,
       "crit": 0,
       "mp": 115
     },
@@ -2096,7 +2082,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 4,
-    "acc": 52,
+    "acc": 54,
     "level": 13
   },
   "titles": {
