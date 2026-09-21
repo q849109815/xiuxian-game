@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009634514,
-  "lastTick": 1790009634514,
+  "lastSeen": 1790009656131,
+  "lastTick": 1790009656131,
   "realm": 31,
   "stage": 0,
-  "exp": 91452285351.09529,
-  "stone": 8505051541052.912,
+  "exp": 76210237792.5794,
+  "stone": 8505051541411.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -196,20 +196,6 @@
       "atk": 33,
       "def": 121,
       "hp": 1024,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_g6yyub4",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·养魂环",
-      "atk": 58,
-      "def": 30,
-      "hp": 308,
       "crit": 0,
       "mp": 115
     },
@@ -2446,7 +2432,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 3,
-    "acc": 45,
+    "acc": 66,
     "level": 13
   },
   "titles": {
