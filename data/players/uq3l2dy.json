@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989831325,
-  "lastTick": 1789989831325,
+  "lastSeen": 1789989832559,
+  "lastTick": 1789989832559,
   "realm": 2,
   "stage": 3,
-  "exp": 40076.20399999999,
-  "stone": 7299,
+  "exp": 41142.55279999999,
+  "stone": 8160,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -88,34 +88,6 @@
       "count": 3,
       "desc": "炼丹材料",
       "id": "i_q0unirj"
-    },
-    {
-      "id": "it_3vymxuu",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·太极道衣",
-      "atk": 9,
-      "def": 40,
-      "hp": 306,
-      "crit": 0,
-      "mp": 34
-    },
-    {
-      "id": "it_jeutfgp",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·麒麟铠",
-      "atk": 11,
-      "def": 34,
-      "hp": 294,
-      "crit": 0,
-      "mp": 34
     }
   ],
   "skills": [],
