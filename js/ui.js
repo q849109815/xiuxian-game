@@ -311,6 +311,7 @@ function renderAlchemy(p) {
       <button class="mini" data-refine="${r.id}" ${okAll ? '' : 'disabled'}>炼制</button></div>`;
   }).join('');
   $$('#recipeList [data-refine]').forEach((b) => b.onclick = () => {
+    if (window.REALQ) REALQ.add(p, 'alchemy', 1);
     const r = SYS.refine(p, b.dataset.refine);
     toast(r.msg, r.ok ? 'ok' : 'err'); renderAlchemy(p); renderHUD(p); renderBag && renderBag(p); save();
   });
@@ -339,7 +340,7 @@ function renderAlchemy(p) {
       <div class="info"><div class="nm">${t.name}</div><div class="sub">${t.desc}</div><div class="sub">${costTxt}</div></div>
       <button class="mini" data-tal="${t.id}" ${okAll ? '' : 'disabled'}>制作</button></div>`;
   }).join('');
-  $$('#talismanList [data-tal]').forEach((b) => b.onclick = () => { const r = SYS.makeTalisman(p, b.dataset.tal); toast(r.msg, r.ok ? 'ok' : 'err'); renderAlchemy(p); renderBag && renderBag(p); save(); });
+  $$('#talismanList [data-tal]').forEach((b) => b.onclick = () => { if (window.REALQ) REALQ.add(p, 'talisman', 1); const r = SYS.makeTalisman(p, b.dataset.tal); toast(r.msg, r.ok ? 'ok' : 'err'); renderAlchemy(p); renderBag && renderBag(p); save(); });
 }
 
 /* ---------- 灵兽 ---------- */
@@ -1261,7 +1262,7 @@ function renderActs(p) {
     const list = (GAME_SOCIAL.signRewards) || [];
     sb.innerHTML = `<div class="small">已连续签到 <b style="color:var(--gold)">${streak}</b> 天　累计 ${p.act.sign.days || 0} 天</div>
       <div class="row mt8" style="flex-wrap:wrap">
-        ${list.map((r, i) => `<div class="bslot ${((streak % 7) === i && !can) ? 'sel' : ''}" style="width:52px;height:52px;font-size:18px" title="${A.grant(p, {}), ''}">
+        ${list.map((r, i) => `<div class="bslot ${((streak % 7) === i && !can) ? 'sel' : ''}" style="width:52px;height:52px;font-size:18px">
           <span>${i + 1}</span></div>`).join('')}
       </div>
       <button class="act mt8" id="btnSign" ${can ? '' : 'disabled'}>${can ? '📅 今日签到' : '✔ 今日已签'}</button>
