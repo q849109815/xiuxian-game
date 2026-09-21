@@ -117,6 +117,30 @@ function offlineSettle(p) {
   return { exp: gained, seconds: sec, ups };
 }
 
+/* ---------- 闭关（主动修炼，带冷却，防无限刷） ---------- */
+function meditateCdLeft(p) {
+  const until = p.meditateUntil || 0;
+  return Math.max(0, Math.ceil((until - Date.now()) / 1000));
+}
+
+function meditate(p) {
+  const cfg = C();
+  const m = cfg.meditate || { cdSeconds: 300, gainSeconds: 180, stoneCostBase: 0 };
+  const left = meditateCdLeft(p);
+  if (left > 0) {
+    const mm = Math.floor(left / 60), ss = left % 60;
+    return { ok: false, msg: `心神未复，还需调息 ${mm}分${ss}秒`, left };
+  }
+  const cost = Math.round((m.stoneCostBase || 0) * Math.pow(1.8, p.realm));
+  if (cost > 0 && p.stone < cost) return { ok: false, msg: `灵石不足（闭关需 ${cost}）`, left: 0 };
+  if (cost > 0) p.stone -= cost;
+
+  const gain = expPerSec(p) * m.gainSeconds;
+  const ups = gainExp(p, gain);
+  p.meditateUntil = Date.now() + m.cdSeconds * 1000;
+  return { ok: true, gain, ups, cost, cd: m.cdSeconds, msg: `闭关 ${Math.round(m.gainSeconds / 60)} 刻，得 ${Math.round(gain)} 修为` };
+}
+
 /* ---------- 突破（大境界渡劫） ---------- */
 function breakthrough(p) {
   const cfg = C();
@@ -288,4 +312,4 @@ function redeemCode(p, code) {
   return { ok: true, msg: `领取成功：${g.desc}` };
 }
 
-window.ENGINE = { newPlayer, realmName, expNeed, totalExp, attrs, power, expPerSec, gainExp, offlineSettle, breakthrough, battle, battleReward, enhance, enhanceCost, sellItem, usePill, equipItem, addItem, redeemCode };
+window.ENGINE = { newPlayer, realmName, expNeed, totalExp, attrs, power, expPerSec, gainExp, offlineSettle, meditate, meditateCdLeft, breakthrough, battle, battleReward, enhance, enhanceCost, sellItem, usePill, equipItem, addItem, redeemCode };
