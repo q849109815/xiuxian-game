@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996484220,
-  "lastTick": 1789996484220,
+  "lastSeen": 1789996485415,
+  "lastTick": 1789996485415,
   "realm": 9,
   "stage": 3,
-  "exp": 279030623483.9567,
-  "stone": 8590112,
+  "exp": 313909452101.0763,
+  "stone": 8599785,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 171,
+      "count": 172,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -280,34 +280,6 @@
       "hp": 319,
       "crit": 0.02,
       "mp": 49
-    },
-    {
-      "id": "it_lc1lytv",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·聚灵戒",
-      "atk": 73,
-      "def": 36,
-      "hp": 243,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_cr7ci1k",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·玄铁刀",
-      "atk": 209,
-      "def": 32,
-      "hp": 275,
-      "crit": 0,
-      "mp": 115
     },
     {
       "id": "it_b2z9yrt",
@@ -1619,8 +1591,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 74968670,
-        "kill": 1337,
+        "exp": 75032454,
+        "kill": 1338,
         "dungeon": 213,
         "arena": 20
       },
@@ -1634,8 +1606,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 74968670,
-        "kill": 1337,
+        "exp": 75032454,
+        "kill": 1338,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1650,7 +1622,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 399,
+        "星宿仙君": 400,
         "混沌祖龙": 386,
         "天兵": 366
       },
@@ -1696,9 +1668,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1337,
+    "kills": 1338,
     "deaths": 0,
-    "battles": 1337,
+    "battles": 1338,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
