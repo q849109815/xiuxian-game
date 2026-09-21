@@ -145,7 +145,12 @@ function meditate(p) {
 function breakthrough(p) {
   const cfg = C();
   if (p.layer !== 8) return { ok: false, msg: '需先修满本境九层' };
-  const rate = cfg.breakthrough.baseRate - p.realm * 0.03;
+  // 已满级：真仙九层，再无可进之境
+  if (p.realm >= cfg.realms.length - 1) {
+    p.realm = cfg.realms.length - 1; p.layer = 8; p.exp = 0;
+    return { ok: false, msg: '已登仙境之巅，天道尽头，无可再进' };
+  }
+  const rate = Math.max(0.25, cfg.breakthrough.baseRate - p.realm * 0.03);
   const lucky = Math.random() < rate;
   if (lucky) {
     p.realm++; p.layer = 0; p.exp = 0;
