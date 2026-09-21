@@ -342,6 +342,20 @@ function extraPill(ref) {
 }
 
 /* ---------- 装备 ---------- */
+/** 真实法宝掉落（《凡人修仙传》07_法宝装备） */
+function randFrEquip(realmIdx) {
+  const pool = ((window.GAME_CONTENT && GAME_CONTENT.equipDrops) || []).map((id) => {
+    const r = ((window.GAME_CONTENT && GAME_CONTENT.forge && GAME_CONTENT.forge.recipes) || []).find((x) => x.id === id);
+    return r ? { id, name: r.name, icon: r.icon, q: r.q, slot: r.slot } : null;
+  }).filter(Boolean);
+  if (!pool.length) return null;
+  // 按境界筛选：只允许掉落不高于自身境界太多阶的
+  const cap = Math.min(4, Math.floor(realmIdx / 6));
+  const ok = pool.filter((x) => x.q <= cap + 1);
+  const list = ok.length ? ok : pool;
+  return list[Math.floor(Math.random() * list.length)];
+}
+
 function randItem(mapIndex, realmIdx) {
   const cfg = C();
   const qRoll = Math.random();
@@ -541,6 +555,14 @@ function battleReward(p, mapIndex, win, monster) {
     p.stone += stone; ups = gainExp(p, exp);
     p.stats.kills++;
     if (Math.random() < map.dropRate) drops.push(addItem(p, randItem(mapIndex, p.realm)));
+    // 真实法宝（稀有）
+    if (Math.random() < 0.05) {
+      const fe = randFrEquip(p.realm);
+      if (fe) {
+        const rec = ((window.GAME_CONTENT && GAME_CONTENT.forge && GAME_CONTENT.forge.recipes) || []).find((x) => x.id === fe.id);
+        if (rec) drops.push(addItem(p, { id: 'fr_' + fe.id, name: fe.name, icon: fe.icon, kind: 'equip', q: fe.q, slot: fe.slot, base: rec.base || {}, enh: 0, temp: 0, fr: true }));
+      }
+    }
     if (map.herbs && Math.random() < 0.45) drops.push(addHerb(p, map.herbs[Math.floor(Math.random() * map.herbs.length)], 1));
     if (map.ores && Math.random() < 0.35) drops.push(addOre(p, map.ores[Math.floor(Math.random() * map.ores.length)], 1));
   } else {
