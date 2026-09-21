@@ -7,14 +7,27 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789991642558,
-  "lastTick": 1789991642558,
+  "lastSeen": 1789991647327,
+  "lastTick": 1789991647327,
   "realm": 4,
   "stage": 3,
-  "exp": 1503641.8058675167,
-  "stone": 4976,
+  "exp": 1689321.2433075162,
+  "stone": 5120,
   "equip": {
-    "weapon": null,
+    "weapon": {
+      "id": "it_ahi55ti",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·混元幡",
+      "atk": 81,
+      "def": 13,
+      "hp": 144,
+      "crit": 0,
+      "mp": 46
+    },
     "armor": null,
     "ring": null,
     "talisman": null
@@ -26,7 +39,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 1029,
+      "count": 1030,
       "desc": "炼丹材料",
       "id": "i_kjgsvit"
     },
@@ -41,26 +54,12 @@
       "id": "i_b41xskg"
     },
     {
-      "id": "it_ahi55ti",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·混元幡",
-      "atk": 81,
-      "def": 13,
-      "hp": 144,
-      "crit": 0,
-      "mp": 46
-    },
-    {
       "kind": "ore",
       "ref": "ore_iron",
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 2,
+      "count": 4,
       "desc": "炼器材料",
       "id": "i_9yr1b5o"
     },
@@ -75,6 +74,20 @@
       "atk": 71,
       "def": 11,
       "hp": 145,
+      "crit": 0,
+      "mp": 46
+    },
+    {
+      "id": "it_a2ldwkg",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·青锋剑",
+      "atk": 73,
+      "def": 18,
+      "hp": 123,
       "crit": 0,
       "mp": 46
     }
@@ -98,8 +111,8 @@
         "meditate": 1,
         "dungeon": 13,
         "arena": 1,
-        "exp": 7714,
-        "kill": 6
+        "exp": 9212,
+        "kill": 9
       },
       "claimed": []
     },
@@ -108,13 +121,14 @@
         "meditate": 1,
         "dungeon": 13,
         "arena": 1,
-        "exp": 7714,
-        "kill": 6,
+        "exp": 9212,
+        "kill": 9,
         "火麒麟": 1,
         "b3": 1,
         "采药童子": 4,
-        "b1": 5,
-        "竹叶蛇": 1
+        "b1": 8,
+        "竹叶蛇": 2,
+        "野兔精": 2
       },
       "claimed": []
     }
@@ -158,9 +172,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 6,
+    "kills": 9,
     "deaths": 0,
-    "battles": 6,
+    "battles": 9,
     "breakthrough": 18,
     "offlineMin": 14,
     "meditate": 1,
