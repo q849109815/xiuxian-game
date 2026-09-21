@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990904780,
-  "lastTick": 1789990904780,
+  "lastSeen": 1789990905229,
+  "lastTick": 1789990905229,
   "realm": 9,
   "stage": 3,
-  "exp": 290189264699.1538,
-  "stone": 135506,
+  "exp": 290189319503.1538,
+  "stone": 136329,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -33,7 +33,7 @@
       "kind": "equip",
       "slot": "armor",
       "q": 3,
-      "level": 9,
+      "level": 10,
       "temper": 0,
       "name": "仙器·玄龟甲",
       "atk": 15,
@@ -65,7 +65,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 16,
+      "count": 17,
       "desc": "炼丹材料",
       "id": "i_fhce2n2"
     },
@@ -152,8 +152,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 3025044,
-        "kill": 217,
+        "exp": 3079848,
+        "kill": 218,
         "dungeon": 5,
         "arena": 20
       },
@@ -166,8 +166,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 3025044,
-        "kill": 217,
+        "exp": 3079848,
+        "kill": 218,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -182,7 +182,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 15,
+        "星宿仙君": 16,
         "混沌祖龙": 8,
         "天兵": 8
       },
@@ -223,9 +223,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 217,
+    "kills": 218,
     "deaths": 0,
-    "battles": 217,
+    "battles": 218,
     "breakthrough": 36,
     "offlineMin": 0,
     "meditate": 1,
