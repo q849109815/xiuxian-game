@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990140983,
-  "lastTick": 1789990140983,
+  "lastSeen": 1789990142133,
+  "lastTick": 1789990142133,
   "realm": 4,
   "stage": 3,
-  "exp": 158379.2946000044,
-  "stone": 26190,
+  "exp": 199293.5691000044,
+  "stone": 24133,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -202,7 +202,7 @@
     },
     {
       "id": "sk_art_thunder",
-      "level": 2,
+      "level": 6,
       "exp": 0
     }
   ],
