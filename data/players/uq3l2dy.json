@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990244109,
-  "lastTick": 1789990244109,
+  "lastSeen": 1789990246148,
+  "lastTick": 1789990246148,
   "realm": 4,
   "stage": 3,
-  "exp": 4825800.568100001,
-  "stone": 88148,
+  "exp": 4910229.117100001,
+  "stone": 88848,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -377,7 +377,9 @@
         "炎魔": 28,
         "dungeon": 4
       },
-      "claimed": []
+      "claimed": [
+        "b2"
+      ]
     }
   },
   "sectInfo": {
