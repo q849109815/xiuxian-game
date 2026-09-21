@@ -7,12 +7,12 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789991350592,
-  "lastTick": 1789991350592,
+  "lastSeen": 1789991357921,
+  "lastTick": 1789991357921,
   "realm": 3,
   "stage": 3,
-  "exp": 50121.91063296038,
-  "stone": 400,
+  "exp": 84581.88119296041,
+  "stone": 520,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -48,25 +48,27 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "dungeon": 1
+        "dungeon": 1,
+        "arena": 1
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "dungeon": 1
+        "dungeon": 1,
+        "arena": 1
       },
       "claimed": []
     }
   },
   "sectInfo": null,
   "arena": {
-    "score": 0,
-    "wins": 0,
+    "score": 20,
+    "wins": 1,
     "losses": 0,
-    "dayDate": "",
-    "fights": 0
+    "dayDate": "2026-9-21",
+    "fights": 1
   },
   "mail": [
     {
