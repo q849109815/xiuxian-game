@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789993829071,
-  "lastTick": 1789993829071,
+  "lastSeen": 1789993835046,
+  "lastTick": 1789993835046,
   "realm": 9,
   "stage": 3,
-  "exp": 87568885859.46541,
-  "stone": 337859,
+  "exp": 192651548890.82385,
+  "stone": 338359,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -249,7 +249,9 @@
     "pillExpUntil": 0,
     "rename": 0
   },
-  "codes": [],
+  "codes": [
+    "XIUXIAN2026"
+  ],
   "banned": false,
   "title": "",
   "stats": {
