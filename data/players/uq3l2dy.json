@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990719760,
-  "lastTick": 1789990719760,
+  "lastSeen": 1789990723160,
+  "lastTick": 1789990723160,
   "realm": 9,
   "stage": 0,
-  "exp": 16093942646.2165,
-  "stone": 79119,
+  "exp": 38300051657.65301,
+  "stone": 79681,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -96,20 +96,6 @@
       "hp": 303,
       "crit": 0,
       "mp": 106
-    },
-    {
-      "id": "it_pion6p0",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·青锋剑",
-      "atk": 119,
-      "def": 24,
-      "hp": 176,
-      "crit": 0,
-      "mp": 67
     }
   ],
   "skills": [
