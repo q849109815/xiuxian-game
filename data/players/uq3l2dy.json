@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995451159,
-  "lastTick": 1789995451159,
+  "lastSeen": 1789995453493,
+  "lastTick": 1789995453493,
   "realm": 9,
   "stage": 3,
-  "exp": 0,
-  "stone": 2419655,
+  "exp": 74232161220.38033,
+  "stone": 2437451,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -71,62 +71,6 @@
       "def": 38,
       "hp": 371,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_54kzme1",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·锁子金甲",
-      "atk": 43,
-      "def": 132,
-      "hp": 857,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_qoeufuv",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·养魂环",
-      "atk": 64,
-      "def": 39,
-      "hp": 364,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_y7posxx",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·玄铁刀",
-      "atk": 170,
-      "def": 39,
-      "hp": 246,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_3gebzik",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·青锋剑",
-      "atk": 192,
-      "def": 35,
-      "hp": 364,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -905,7 +849,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 8,
+      "count": 9,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -915,7 +859,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 5,
+      "count": 6,
       "desc": "炼器材料",
       "id": "i_n9wf73t"
     },
@@ -939,7 +883,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 5,
+      "count": 6,
       "desc": "炼器材料",
       "id": "i_jir574s"
     },
@@ -1010,6 +954,20 @@
       "atk": 39,
       "def": 145,
       "hp": 682,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_55quzuz",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·灵蛇杖",
+      "atk": 167,
+      "def": 44,
+      "hp": 314,
       "crit": 0,
       "mp": 115
     }
@@ -2110,8 +2068,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 23954452,
-        "kill": 542,
+        "exp": 24089976,
+        "kill": 544,
         "dungeon": 213,
         "arena": 20
       },
@@ -2124,8 +2082,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 23954452,
-        "kill": 542,
+        "exp": 24089976,
+        "kill": 544,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2141,8 +2099,8 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 122,
-        "混沌祖龙": 119,
-        "天兵": 115
+        "混沌祖龙": 120,
+        "天兵": 116
       },
       "claimed": [
         "b2",
@@ -2185,9 +2143,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 542,
+    "kills": 544,
     "deaths": 0,
-    "battles": 542,
+    "battles": 544,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
