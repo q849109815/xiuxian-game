@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990824376,
-  "lastTick": 1789990824376,
+  "lastSeen": 1789990825760,
+  "lastTick": 1789990825760,
   "realm": 9,
   "stage": 3,
-  "exp": 158272476549.1215,
-  "stone": 160012,
+  "exp": 163925112984.59012,
+  "stone": 167338,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -186,6 +186,20 @@
       "count": 1,
       "desc": "炼器材料",
       "id": "i_ckq27h0"
+    },
+    {
+      "id": "it_pvgheth",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·养魂环",
+      "atk": 58,
+      "def": 45,
+      "hp": 339,
+      "crit": 0,
+      "mp": 115
     }
   ],
   "skills": [
@@ -250,10 +264,10 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 2329836,
-        "kill": 206,
+        "exp": 2386128,
+        "kill": 207,
         "dungeon": 5,
-        "arena": 10
+        "arena": 13
       },
       "claimed": [
         "d1",
@@ -264,8 +278,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 2329836,
-        "kill": 206,
+        "exp": 2386128,
+        "kill": 207,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -275,12 +289,12 @@
         "火麒麟": 31,
         "炎魔": 53,
         "dungeon": 5,
-        "arena": 10,
+        "arena": 13,
         "九幽冥王": 7,
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 6,
+        "星宿仙君": 7,
         "混沌祖龙": 8,
         "天兵": 6
       },
@@ -297,11 +311,11 @@
     "joinedAt": 1789989635634
   },
   "arena": {
-    "score": 200,
-    "wins": 10,
+    "score": 260,
+    "wins": 13,
     "losses": 0,
     "dayDate": "2026-9-21",
-    "fights": 10
+    "fights": 13
   },
   "mail": [],
   "karma": 0,
@@ -321,9 +335,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 206,
+    "kills": 207,
     "deaths": 0,
-    "battles": 206,
+    "battles": 207,
     "breakthrough": 36,
     "offlineMin": 0,
     "meditate": 1,
