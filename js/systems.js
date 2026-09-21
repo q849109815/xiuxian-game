@@ -459,6 +459,7 @@ function doSectTask(p, tid) {
   }
   p.sectInfo.contrib = (p.sectInfo.contrib || 0) + t.contrib;
   if (t.stone) p.stone += t.stone;
+  if (window.REALQ && (t.name||'').indexOf('捐献')>=0) REALQ.add(p, 'donate', 1);
   if (t.exp) E().gainExp(p, t.exp);
   return { ok: true, msg: `完成【${t.name}】，宗门贡献 +${t.contrib}` };
 }
@@ -507,6 +508,7 @@ function arenaFight(p, opp) {
     p.arena.losses++;
   }
   return { ok: true, ...out };
+  if (window.REALQ) REALQ.add(p, 'arena', 1);
 }
 
 /* ============ 十、市场（共享文件 data/market.json） ============ */
