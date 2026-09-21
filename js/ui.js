@@ -167,7 +167,12 @@ function renderAttrs(p) {
     ['命中', (a.hit * 100).toFixed(0) + '%'], ['闪避', (a.dodge * 100).toFixed(1) + '%'],
     ['根骨', fmt(a.genu)], ['悟性', fmt(a.wuxing + (p.bonusWuxing || 0))], ['福缘', fmt(a.fuyuan)],
   ];
-  $('#attrBox').innerHTML = rows.map(([k, v]) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('');
+  const AICO = { '气血': 'hp', '攻击': 'atk', '防御': 'def' };
+  $('#attrBox').innerHTML = rows.map(([k, v]) => {
+    const u = (window.ART && ART.attrOf && AICO[k]) ? ART.attrOf(AICO[k]) : null;
+    const ic = u ? `<img src="${u}" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px;border-radius:2px" onerror="this.remove()">` : '';
+    return `<div class="kv"><span>${ic}${k}</span><b>${v}</b></div>`;
+  }).join('');
   $('#statBox').innerHTML = [
     ['总战力', fmt(ENGINE.power(p))], ['击杀', p.stats.kills], ['败北', p.stats.deaths],
     ['战次', p.stats.battles], ['闭关', p.stats.meditate || 0], ['秘境', p.stats.dungeon || 0],
@@ -798,9 +803,13 @@ function renderEquip(p) {
     const sd = slotDef(c.k);
     const it = p.equip[c.k];
     const cls = it ? 'q' + (it.q || 0) : 'q0';
+    // 空槽位优先显示真实槽位图标
+    const slotImg = (window.ART && ART.slotOf) ? ART.slotOf(c.k) : null;
     const inner = it
       ? `${sd.icon}${it.level ? `<span class="lv">+${it.level}</span>` : ''}`
-      : `<span style="opacity:.28;font-size:22px">${sd.icon}</span>`;
+      : (slotImg
+        ? `<img src="${slotImg}" style="width:100%;height:100%;object-fit:contain;opacity:.35" onerror="this.outerHTML='<span style=\\'opacity:.28;font-size:22px\\'>${sd.icon}</span>'">`
+        : `<span style="opacity:.28;font-size:22px">${sd.icon}</span>`);
     return `<div class="bslot ${cls} ${EQ_SEL === c.k ? 'sel' : ''}" data-slot="${c.k}" title="${sd.name}">${inner}<span class="nm2">${sd.name}</span></div>`;
   }).join('');
   const box = $('#dollBox'); if (box) box.innerHTML = html;
