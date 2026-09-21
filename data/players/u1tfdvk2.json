@@ -7,12 +7,12 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790010074018,
-  "lastTick": 1790010074018,
-  "realm": 6,
+  "lastSeen": 1790010087804,
+  "lastTick": 1790010087804,
+  "realm": 7,
   "stage": 0,
-  "exp": 24528.34035796483,
-  "stone": 26900,
+  "exp": 95623.729964672,
+  "stone": 66900,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -50,6 +50,11 @@
       "id": "sk_art_slash",
       "level": 1,
       "exp": 0
+    },
+    {
+      "id": "sk_art_thunder",
+      "level": 1,
+      "exp": 0
     }
   ],
   "equipped": [
@@ -65,7 +70,7 @@
     "store": {}
   },
   "tasks": {
-    "mainIdx": 4,
+    "mainIdx": 5,
     "daily": {
       "date": "2026-9-22",
       "prog": {},
@@ -105,7 +110,7 @@
     "kills": 0,
     "deaths": 0,
     "battles": 0,
-    "breakthrough": 6,
+    "breakthrough": 7,
     "offlineMin": 2,
     "meditate": 0,
     "dungeon": 0,
@@ -115,8 +120,8 @@
   "faction": "C001",
   "trait": "P003",
   "bottle": {
-    "liquid": 6,
-    "acc": 269,
+    "liquid": 7,
+    "acc": 1,
     "level": 1
   },
   "partners": {},
