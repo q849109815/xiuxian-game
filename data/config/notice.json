@@ -1,12 +1,12 @@
 {
   "notice": "欢迎来到《凡人修仙传·网页版》！打坐涨修为，历练掉法宝，飞升成仙指日可待。",
   "events": {
-    "doubleExp": false,
-    "doubleStone": false,
+    "doubleExp": true,
+    "doubleStone": true,
     "expMul": 2,
     "stoneMul": 2,
     "eventName": "",
     "eventEnd": ""
   },
-  "updatedAt": "2026-09-21T10:33:00.648Z"
+  "updatedAt": "2026-09-21T10:33:06.056Z"
 }
