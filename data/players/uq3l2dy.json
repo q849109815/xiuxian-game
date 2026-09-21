@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789994099427,
-  "lastTick": 1789994099427,
+  "lastSeen": 1789994100678,
+  "lastTick": 1789994100678,
   "realm": 9,
   "stage": 3,
-  "exp": 297736232208.18225,
-  "stone": 967473,
+  "exp": 315250224118.0753,
+  "stone": 1011309,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -790,6 +790,42 @@
       "exp": 0,
       "stage": 0,
       "apt": 1
+    },
+    {
+      "id": "bs_pt8vts3",
+      "ref": "b_dragon",
+      "name": "蛟龙",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_li8yijn",
+      "ref": "b_phoenix",
+      "name": "青鸾",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_ckcfq27",
+      "ref": "b_qilin",
+      "name": "麒麟",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_idgg925",
+      "ref": "b_phoenix",
+      "name": "青鸾",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
     }
   ],
   "activeBeast": 0,
@@ -812,9 +848,9 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 10501824,
-        "kill": 332,
-        "dungeon": 63,
+        "exp": 10556562,
+        "kill": 333,
+        "dungeon": 67,
         "arena": 20
       },
       "claimed": [
@@ -826,8 +862,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 10501824,
-        "kill": 332,
+        "exp": 10556562,
+        "kill": 333,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -836,7 +872,7 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 63,
+        "dungeon": 67,
         "arena": 20,
         "九幽冥王": 7,
         "b4": 16,
@@ -844,7 +880,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 53,
         "混沌祖龙": 52,
-        "天兵": 41
+        "天兵": 42
       },
       "claimed": [
         "b2",
@@ -887,13 +923,13 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 332,
+    "kills": 333,
     "deaths": 0,
-    "battles": 332,
+    "battles": 333,
     "breakthrough": 36,
     "offlineMin": 35,
     "meditate": 1,
-    "dungeon": 63,
+    "dungeon": 67,
     "encounters": 38,
     "rob": 0
   },
