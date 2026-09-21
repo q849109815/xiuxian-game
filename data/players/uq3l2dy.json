@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789997254331,
-  "lastTick": 1789997254331,
-  "realm": 9,
-  "stage": 3,
-  "exp": 209272969328.71756,
+  "lastSeen": 1790009124476,
+  "lastTick": 1790009124476,
+  "realm": 29,
+  "stage": 0,
+  "exp": 88404303687.6514,
   "stone": 10920991,
   "equip": {
     "weapon": {
@@ -1190,11 +1190,6 @@
       "exp": 0
     },
     {
-      "id": "sk_heart_basic",
-      "level": 9,
-      "exp": 0
-    },
-    {
       "id": "sk_art_ice",
       "level": 9,
       "exp": 0
@@ -1213,7 +1208,6 @@
   "equipped": [
     "sk_art_shield",
     "sk_art_thunder",
-    "sk_heart_basic",
     "sk_art_chaos"
   ],
   "beasts": [
@@ -2351,20 +2345,9 @@
   "tasks": {
     "mainIdx": 6,
     "daily": {
-      "date": "2026-9-21",
-      "prog": {
-        "meditate": 1,
-        "exp": 99392094,
-        "kill": 1718,
-        "dungeon": 213,
-        "arena": 20
-      },
-      "claimed": [
-        "d1",
-        "d2",
-        "d4",
-        "d5"
-      ]
+      "date": "2026-9-22",
+      "prog": {},
+      "claimed": []
     },
     "bounty": {
       "prog": {
@@ -2434,8 +2417,8 @@
     "kills": 1718,
     "deaths": 0,
     "battles": 1718,
-    "breakthrough": 36,
-    "offlineMin": 45,
+    "breakthrough": 56,
+    "offlineMin": 243,
     "meditate": 1,
     "dungeon": 213,
     "encounters": 239,
@@ -2443,5 +2426,24 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 3670
+  "bonusWuxing": 3670,
+  "wallet": {
+    "c001": 0,
+    "c002": 0,
+    "c003": 0,
+    "c004": 0,
+    "c005": 0,
+    "c006": 0,
+    "c007": 0,
+    "c008": 0,
+    "c009": 0,
+    "c010": 0,
+    "c011": 0,
+    "c012": 0,
+    "c013": 0,
+    "c014": 0,
+    "c015": 0,
+    "c016": 0,
+    "C001": 10920991
+  }
 }
