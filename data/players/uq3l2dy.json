@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995473680,
-  "lastTick": 1789995473680,
+  "lastSeen": 1789995474764,
+  "lastTick": 1789995474764,
   "realm": 9,
   "stage": 3,
-  "exp": 111348232126.5705,
-  "stone": 2590181,
+  "exp": 148464313508.76065,
+  "stone": 2598907,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -99,34 +99,6 @@
       "def": 135,
       "hp": 845,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_11badfh",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·玄铁刀",
-      "atk": 131,
-      "def": 39,
-      "hp": 344,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_i1db97h",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·玄铁刀",
-      "atk": 194,
-      "def": 29,
-      "hp": 255,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -289,7 +261,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 20,
+      "count": 21,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -299,7 +271,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 9,
+      "count": 10,
       "desc": "炼器材料",
       "id": "i_n9wf73t"
     },
@@ -1634,8 +1606,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 25223222,
-        "kill": 561,
+        "exp": 25291756,
+        "kill": 562,
         "dungeon": 213,
         "arena": 20
       },
@@ -1648,8 +1620,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 25223222,
-        "kill": 561,
+        "exp": 25291756,
+        "kill": 562,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1664,7 +1636,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 128,
+        "星宿仙君": 129,
         "混沌祖龙": 128,
         "天兵": 119
       },
@@ -1709,9 +1681,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 561,
+    "kills": 562,
     "deaths": 0,
-    "battles": 561,
+    "battles": 562,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
