@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "tickSeconds": 1,
   "offlineMaxHours": 12,
   "realms": [
@@ -7,102 +7,245 @@
       "name": "炼气",
       "color": "#7ec8ff",
       "expBase": 120,
-      "expGrowth": 1.28
+      "expGrowth": 1.75
     },
     {
       "name": "筑基",
       "color": "#7ef7c8",
       "expBase": 120,
-      "expGrowth": 1.28
+      "expGrowth": 1.75
     },
     {
       "name": "金丹",
       "color": "#ffd76e",
       "expBase": 120,
-      "expGrowth": 1.28
+      "expGrowth": 1.75
     },
     {
       "name": "元婴",
       "color": "#ff9f6e",
       "expBase": 120,
-      "expGrowth": 1.28
+      "expGrowth": 1.75
     },
     {
       "name": "化神",
       "color": "#c79bff",
       "expBase": 120,
-      "expGrowth": 1.28
+      "expGrowth": 1.75
     },
     {
       "name": "炼虚",
       "color": "#ff8fd0",
       "expBase": 120,
-      "expGrowth": 1.28
+      "expGrowth": 1.75
     },
     {
       "name": "合体",
       "color": "#9bff6e",
       "expBase": 120,
-      "expGrowth": 1.28
+      "expGrowth": 1.75
     },
     {
       "name": "大乘",
       "color": "#6ef0ff",
       "expBase": 120,
-      "expGrowth": 1.28
+      "expGrowth": 1.75
     },
     {
       "name": "渡劫",
       "color": "#ff6e6e",
       "expBase": 120,
-      "expGrowth": 1.28
+      "expGrowth": 1.75
     },
     {
       "name": "真仙",
       "color": "#fff3a0",
       "expBase": 120,
-      "expGrowth": 1.28
+      "expGrowth": 1.75
     }
   ],
+  "stages": [
+    "初期",
+    "中期",
+    "后期",
+    "巅峰"
+  ],
   "baseAttr": {
-    "hp": 100,
-    "atk": 12,
-    "def": 5,
+    "hp": 120,
+    "mp": 60,
+    "atk": 14,
+    "def": 6,
+    "speed": 10,
     "crit": 0.05,
-    "critDmg": 1.5,
-    "speed": 10
+    "anticrit": 0.03,
+    "hit": 0.9,
+    "dodge": 0.05,
+    "genu": 10,
+    "wuxing": 10,
+    "fuyuan": 10
   },
   "growthPerRealm": {
-    "hp": 60,
-    "atk": 8,
-    "def": 4,
-    "crit": 0.01,
-    "critDmg": 0.05,
-    "speed": 1
+    "hp": 130,
+    "mp": 30,
+    "atk": 20,
+    "def": 11,
+    "speed": 1,
+    "crit": 0.012,
+    "anticrit": 0.008,
+    "hit": 0.01,
+    "dodge": 0.006,
+    "genu": 4,
+    "wuxing": 4,
+    "fuyuan": 2
   },
-  "growthPerLayer": {
-    "hp": 8,
-    "atk": 1.2,
-    "def": 0.6,
-    "crit": 0.002,
-    "critDmg": 0.01,
-    "speed": 0.2
+  "growthPerStage": {
+    "hp": 30,
+    "mp": 8,
+    "atk": 4,
+    "def": 2,
+    "speed": 0.3,
+    "crit": 0.003,
+    "anticrit": 0.002,
+    "hit": 0.002,
+    "dodge": 0.002,
+    "genu": 1,
+    "wuxing": 1,
+    "fuyuan": 0.5
   },
-  "cultivate": {
-    "basePerSec": 3,
-    "perAtk": 0.06,
-    "perRealm": 5.5
+  "roots": [
+    {
+      "id": "metal",
+      "name": "金灵根",
+      "icon": "⚔️",
+      "color": "#ffd76e",
+      "expMul": 1.1,
+      "atkMul": 1.15,
+      "defMul": 0.95,
+      "luck": 1.0,
+      "desc": "锋锐无匹，攻伐之道"
+    },
+    {
+      "id": "wood",
+      "name": "木灵根",
+      "icon": "🌿",
+      "color": "#7ef7c8",
+      "expMul": 1.15,
+      "atkMul": 0.95,
+      "defMul": 1.05,
+      "luck": 1.1,
+      "desc": "生生不息，恢复极强"
+    },
+    {
+      "id": "water",
+      "name": "水灵根",
+      "icon": "💧",
+      "color": "#7ec8ff",
+      "expMul": 1.12,
+      "atkMul": 1.0,
+      "defMul": 1.12,
+      "luck": 1.05,
+      "desc": "上善若水，攻守兼备"
+    },
+    {
+      "id": "fire",
+      "name": "火灵根",
+      "icon": "🔥",
+      "color": "#ff8a5c",
+      "expMul": 1.08,
+      "atkMul": 1.25,
+      "defMul": 0.85,
+      "luck": 0.95,
+      "desc": "烈焰焚天，暴烈无双"
+    },
+    {
+      "id": "earth",
+      "name": "土灵根",
+      "icon": "🪨",
+      "color": "#c9a06a",
+      "expMul": 1.05,
+      "atkMul": 0.9,
+      "defMul": 1.3,
+      "luck": 1.0,
+      "desc": "厚德载物，坚不可摧"
+    },
+    {
+      "id": "mixed",
+      "name": "杂灵根",
+      "icon": "🌀",
+      "color": "#b9c4d0",
+      "expMul": 0.85,
+      "atkMul": 1.0,
+      "defMul": 1.0,
+      "luck": 1.0,
+      "desc": "五行驳杂，进境稍缓但道基全面"
+    },
+    {
+      "id": "chaos",
+      "name": "先天道体",
+      "icon": "✨",
+      "color": "#ff8fd0",
+      "expMul": 1.45,
+      "atkMul": 1.2,
+      "defMul": 1.2,
+      "luck": 1.5,
+      "desc": "万中无一，天道眷顾（稀有）"
+    }
+  ],
+  "rootWeights": {
+    "metal": 18,
+    "wood": 18,
+    "water": 18,
+    "fire": 18,
+    "earth": 18,
+    "mixed": 9,
+    "chaos": 1
   },
-  "meditate": {
-    "cdSeconds": 300,
-    "gainSeconds": 180,
-    "stoneCostBase": 0
-  },
-  "breakthrough": {
-    "baseRate": 0.85,
-    "failKeepExp": 0.5,
-    "failLoseHp": true
-  },
+  "genders": [
+    {
+      "id": "m",
+      "name": "男修",
+      "icons": [
+        "🧙",
+        "🧝‍♂️",
+        "🥷",
+        "🧛",
+        "🗡️"
+      ]
+    },
+    {
+      "id": "f",
+      "name": "女修",
+      "icons": [
+        "🧙‍♀️",
+        "🧝‍♀️",
+        "👩‍🎤",
+        "🧚",
+        "🌸"
+      ]
+    }
+  ],
+  "slots": [
+    {
+      "key": "weapon",
+      "name": "法宝",
+      "icon": "⚔️"
+    },
+    {
+      "key": "armor",
+      "name": "护甲",
+      "icon": "🛡️"
+    },
+    {
+      "key": "ring",
+      "name": "灵戒",
+      "icon": "💍"
+    },
+    {
+      "key": "talisman",
+      "name": "符箓",
+      "icon": "📜"
+    }
+  ],
   "qualities": [
     {
       "name": "凡品",
@@ -130,29 +273,98 @@
       "mul": 3.6
     }
   ],
-  "slots": [
+  "enhance": {
+    "costBase": 50,
+    "costGrowth": 1.55,
+    "maxLevel": 12,
+    "attrPerLevel": 0.12
+  },
+  "temper": {
+    "costBase": 120,
+    "costGrowth": 1.7,
+    "maxLevel": 8,
+    "attrPerLevel": 0.18,
+    "desc": "淬灵：额外提升法宝百分比属性"
+  },
+  "devour": {
+    "expPerQuality": 8,
+    "levelPerStage": 3,
+    "desc": "炼化多余装备喂养法宝"
+  },
+  "cultivate": {
+    "basePerSec": 3,
+    "perAtk": 0.06,
+    "perRealm": 5.5
+  },
+  "cultivateSpots": [
     {
-      "key": "weapon",
-      "name": "法宝",
-      "icon": "⚔️"
+      "id": "valley",
+      "name": "青云山谷",
+      "icon": "⛰️",
+      "realmReq": 0,
+      "expMul": 1.0,
+      "cost": 0,
+      "desc": "灵气稀薄，胜在安稳"
     },
     {
-      "key": "armor",
-      "name": "护甲",
-      "icon": "🛡️"
+      "id": "vein",
+      "name": "灵脉之地",
+      "icon": "🌊",
+      "realmReq": 1,
+      "expMul": 1.6,
+      "cost": 20,
+      "desc": "灵气充沛，每小时耗 20 灵石"
     },
     {
-      "key": "ring",
-      "name": "灵戒",
-      "icon": "💍"
+      "id": "cave",
+      "name": "洞天福地",
+      "icon": "🏔️",
+      "realmReq": 3,
+      "expMul": 2.4,
+      "cost": 60,
+      "desc": "钟灵毓秀，耗 60 灵石/时"
+    },
+    {
+      "id": "secret",
+      "name": "上古秘境",
+      "icon": "🌀",
+      "realmReq": 5,
+      "expMul": 3.6,
+      "cost": 150,
+      "desc": "机缘与凶险并存，耗 150 灵石/时"
+    },
+    {
+      "id": "immortal",
+      "name": "仙域灵泉",
+      "icon": "🌌",
+      "realmReq": 7,
+      "expMul": 5.5,
+      "cost": 400,
+      "desc": "仙人遗留，耗 400 灵石/时"
     }
   ],
+  "meditate": {
+    "cdSeconds": 300,
+    "gainSeconds": 180,
+    "stoneCostBase": 0
+  },
+  "breakthrough": {
+    "baseRate": 0.85,
+    "failKeepExp": 0.5
+  },
+  "reincarnation": {
+    "enabled": true,
+    "keepRatio": 0.08,
+    "bonusPerLife": 0.06,
+    "desc": "渡劫失败可选择转世重修，保留少量修为与天赋"
+  },
   "maps": [
     {
       "id": "bamboo",
       "name": "后山竹林",
       "icon": "🎋",
       "minRealm": 0,
+      "vein": 1,
       "monsters": [
         {
           "name": "竹叶蛇",
@@ -181,13 +393,20 @@
       ],
       "exp": 240,
       "stone": 25,
-      "dropRate": 0.28
+      "dropRate": 0.28,
+      "herbs": [
+        "herb_green"
+      ],
+      "ores": [
+        "ore_iron"
+      ]
     },
     {
       "id": "crypt",
       "name": "荒郊义庄",
       "icon": "⚰️",
       "minRealm": 1,
+      "vein": 1,
       "monsters": [
         {
           "name": "僵尸",
@@ -216,13 +435,21 @@
       ],
       "exp": 700,
       "stone": 90,
-      "dropRate": 0.32
+      "dropRate": 0.32,
+      "herbs": [
+        "herb_green",
+        "herb_soul"
+      ],
+      "ores": [
+        "ore_iron"
+      ]
     },
     {
       "id": "volcano",
       "name": "赤焰火山",
       "icon": "🌋",
       "minRealm": 3,
+      "vein": 2,
       "monsters": [
         {
           "name": "火麒麟",
@@ -251,13 +478,21 @@
       ],
       "exp": 2600,
       "stone": 320,
-      "dropRate": 0.36
+      "dropRate": 0.36,
+      "herbs": [
+        "herb_fire"
+      ],
+      "ores": [
+        "ore_iron",
+        "ore_fire"
+      ]
     },
     {
       "id": "abyss",
       "name": "九幽深渊",
       "icon": "🕳️",
       "minRealm": 5,
+      "vein": 3,
       "monsters": [
         {
           "name": "幽魂将",
@@ -286,49 +521,346 @@
       ],
       "exp": 9000,
       "stone": 1000,
-      "dropRate": 0.4
+      "dropRate": 0.4,
+      "herbs": [
+        "herb_soul",
+        "herb_dark"
+      ],
+      "ores": [
+        "ore_fire",
+        "ore_dark"
+      ]
     },
     {
       "id": "heaven",
       "name": "天外天",
       "icon": "🌌",
       "minRealm": 7,
+      "vein": 4,
       "monsters": [
         {
           "name": "天兵",
           "icon": "🗡️",
-          "hp": 7000,
-          "atk": 420,
-          "def": 180,
+          "hp": 4200,
+          "atk": 320,
+          "def": 130,
           "speed": 12
         },
         {
           "name": "星宿仙君",
           "icon": "🌟",
-          "hp": 9000,
-          "atk": 520,
-          "def": 220,
+          "hp": 5200,
+          "atk": 380,
+          "def": 160,
           "speed": 14
         },
         {
           "name": "混沌祖龙",
           "icon": "🐉",
-          "hp": 15000,
-          "atk": 650,
-          "def": 300,
+          "hp": 8000,
+          "atk": 450,
+          "def": 200,
           "speed": 10
         }
       ],
       "exp": 32000,
       "stone": 3500,
-      "dropRate": 0.45
+      "dropRate": 0.45,
+      "herbs": [
+        "herb_immortal"
+      ],
+      "ores": [
+        "ore_dark",
+        "ore_star"
+      ]
     }
   ],
-  "enhance": {
-    "costBase": 50,
-    "costGrowth": 1.55,
-    "maxLevel": 12,
-    "attrPerLevel": 0.12
+  "encounters": [
+    {
+      "id": "chest",
+      "type": "reward",
+      "weight": 22,
+      "icon": "📦",
+      "text": "你在草丛中发现一个陈旧木箱",
+      "stone": [
+        80,
+        300
+      ],
+      "exp": [
+        100,
+        400
+      ]
+    },
+    {
+      "id": "herb",
+      "type": "reward",
+      "weight": 20,
+      "icon": "🌿",
+      "text": "崖壁上长着一株灵药",
+      "herb": 1
+    },
+    {
+      "id": "ore",
+      "type": "reward",
+      "weight": 16,
+      "icon": "⛏️",
+      "text": "山石间闪过矿脉微光",
+      "ore": 1
+    },
+    {
+      "id": "beast",
+      "type": "beast",
+      "weight": 12,
+      "icon": "🥚",
+      "text": "一只幼兽闯入你的视线",
+      "desc": "可尝试捕捉"
+    },
+    {
+      "id": "npc",
+      "type": "chat",
+      "weight": 14,
+      "icon": "🗣️",
+      "text": "一名散修与你搭话",
+      "lines": [
+        "道友面相不凡，他日必成大器。",
+        "前方凶险，道友切莫贪功冒进。",
+        "我有一言：福缘深厚者，天必赐之。"
+      ]
+    },
+    {
+      "id": "door",
+      "type": "dungeon",
+      "weight": 10,
+      "icon": "🌀",
+      "text": "空间一阵扭曲，秘境入口显现！",
+      "desc": "获得一次秘境资格"
+    },
+    {
+      "id": "fate",
+      "type": "reward",
+      "weight": 4,
+      "icon": "✨",
+      "text": "天降机缘！一道流光没入眉心",
+      "exp": [
+        800,
+        3000
+      ],
+      "stone": [
+        200,
+        800
+      ]
+    },
+    {
+      "id": "trap",
+      "type": "battle",
+      "weight": 2,
+      "icon": "☠️",
+      "text": "你踩中了妖兽的陷阱！",
+      "desc": "强制战斗"
+    }
+  ],
+  "encounterChance": 0.14,
+  "dungeons": [
+    {
+      "id": "d1",
+      "name": "灵药山谷",
+      "icon": "🌿",
+      "minRealm": 0,
+      "waves": 2,
+      "timeLimit": 120,
+      "reward": {
+        "stone": 200,
+        "exp": 600,
+        "herb": 2
+      },
+      "boss": {
+        "name": "药园守护",
+        "icon": "🌳",
+        "hp": 500,
+        "atk": 25,
+        "def": 10,
+        "speed": 8
+      }
+    },
+    {
+      "id": "d2",
+      "name": "古修洞府",
+      "icon": "🏛️",
+      "minRealm": 2,
+      "waves": 3,
+      "timeLimit": 180,
+      "reward": {
+        "stone": 700,
+        "exp": 2400,
+        "ore": 2
+      },
+      "boss": {
+        "name": "洞府残魂",
+        "icon": "👤",
+        "hp": 1800,
+        "atk": 70,
+        "def": 30,
+        "speed": 10
+      }
+    },
+    {
+      "id": "d3",
+      "name": "血海魔窟",
+      "icon": "🩸",
+      "minRealm": 4,
+      "waves": 4,
+      "timeLimit": 240,
+      "reward": {
+        "stone": 2600,
+        "exp": 9000,
+        "skill": 1
+      },
+      "boss": {
+        "name": "血魔老祖",
+        "icon": "🩸",
+        "hp": 2600,
+        "atk": 130,
+        "def": 80,
+        "speed": 12
+      }
+    },
+    {
+      "id": "d4",
+      "name": "太虚仙境",
+      "icon": "🌠",
+      "minRealm": 6,
+      "waves": 4,
+      "timeLimit": 300,
+      "reward": {
+        "stone": 9000,
+        "exp": 40000,
+        "beast": 1
+      },
+      "boss": {
+        "name": "太虚道人",
+        "icon": "🧞",
+        "hp": 6000,
+        "atk": 300,
+        "def": 200,
+        "speed": 14
+      }
+    }
+  ],
+  "cave": {
+    "buildings": [
+      {
+        "id": "farm",
+        "name": "灵田",
+        "icon": "🌾",
+        "maxLevel": 10,
+        "costBase": 200,
+        "costGrowth": 1.8,
+        "outPerHour": 20,
+        "outType": "stone",
+        "desc": "每小时自动产出灵石"
+      },
+      {
+        "id": "garden",
+        "name": "药园",
+        "icon": "🌱",
+        "maxLevel": 10,
+        "costBase": 300,
+        "costGrowth": 1.8,
+        "outPerHour": 2,
+        "outType": "herb",
+        "desc": "每小时自动产出灵草"
+      },
+      {
+        "id": "array",
+        "name": "聚灵阵",
+        "icon": "🔯",
+        "maxLevel": 10,
+        "costBase": 400,
+        "costGrowth": 1.9,
+        "outPerHour": 0.06,
+        "outType": "exp",
+        "desc": "提升修炼速度（每级 +6%）"
+      },
+      {
+        "id": "alchemy",
+        "name": "丹房",
+        "icon": "⚗️",
+        "maxLevel": 8,
+        "costBase": 500,
+        "costGrowth": 1.85,
+        "outPerHour": 0.05,
+        "outType": "alchemyRate",
+        "desc": "提升炼丹成功率（每级 +5%）"
+      },
+      {
+        "id": "forge",
+        "name": "器阁",
+        "icon": "🔨",
+        "maxLevel": 8,
+        "costBase": 500,
+        "costGrowth": 1.85,
+        "outPerHour": 0.05,
+        "outType": "forgeRate",
+        "desc": "提升炼器成功率（每级 +5%）"
+      }
+    ],
+    "arrays": [
+      {
+        "id": "none",
+        "name": "未布置",
+        "icon": "➖",
+        "buff": {},
+        "cost": 0,
+        "desc": "洞府空空荡荡"
+      },
+      {
+        "id": "guard",
+        "name": "护山阵",
+        "icon": "🛡️",
+        "buff": {
+          "def": 0.15
+        },
+        "cost": 500,
+        "desc": "防御 +15%"
+      },
+      {
+        "id": "kill",
+        "name": "杀伐阵",
+        "icon": "⚔️",
+        "buff": {
+          "atk": 0.15
+        },
+        "cost": 500,
+        "desc": "攻击 +15%"
+      },
+      {
+        "id": "swift",
+        "name": "疾风阵",
+        "icon": "💨",
+        "buff": {
+          "speed": 0.2,
+          "dodge": 0.05
+        },
+        "cost": 800,
+        "desc": "身法 +20%、闪避 +5%"
+      },
+      {
+        "id": "spirit",
+        "name": "聚灵大阵",
+        "icon": "🔮",
+        "buff": {
+          "exp": 0.2
+        },
+        "cost": 1200,
+        "desc": "修炼速度 +20%"
+      }
+    ]
+  },
+  "karma": {
+    "maxGood": 100,
+    "maxEvil": -100,
+    "robGain": 0.3,
+    "desc": "善恶值：野外夺宝作恶会下降，影响奇遇与声望"
   },
   "pills": [
     {
@@ -385,6 +917,11 @@
       "stone": 1000,
       "exp": 2000,
       "desc": "天道酬勤：1000 灵石 + 2000 修为"
+    },
+    "XIANYUAN": {
+      "stone": 2000,
+      "herb": 5,
+      "desc": "仙缘礼包：2000 灵石 + 5 灵草"
     }
   }
 }
