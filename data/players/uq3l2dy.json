@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009415322,
-  "lastTick": 1790009415322,
+  "lastSeen": 1790009418456,
+  "lastTick": 1790009418456,
   "realm": 31,
   "stage": 0,
-  "exp": 45726282699.547646,
-  "stone": 13547159,
+  "exp": 91452757932.09529,
+  "stone": 13647821,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -1159,7 +1159,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 141,
+      "count": 179,
       "desc": "炼丹材料",
       "id": "i_dwghtoq"
     }
@@ -2344,7 +2344,7 @@
       "date": "2026-9-22",
       "prog": {
         "arena": 20,
-        "dungeon": 16
+        "dungeon": 35
       },
       "claimed": []
     },
@@ -2361,7 +2361,7 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 229,
+        "dungeon": 248,
         "arena": 40,
         "九幽冥王": 7,
         "b4": 16,
@@ -2419,7 +2419,7 @@
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 1,
-    "dungeon": 229,
+    "dungeon": 248,
     "encounters": 239,
     "rob": 0
   },
@@ -2449,7 +2449,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 1,
-    "acc": 6,
+    "acc": 9,
     "level": 1
   },
   "titles": {
