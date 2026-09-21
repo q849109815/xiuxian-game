@@ -433,7 +433,7 @@ async function renderSect(p) {
     $$('#sectTasks [data-st]').forEach((b) => b.onclick = () => { const r = SYS.doSectTask(p, b.dataset.st); toast(r.msg, r.ok ? 'ok' : 'err'); renderSect(p); renderHUD(p); save(); });
     $('#sectShop').innerHTML = (GAME_SOCIAL.sectShop || []).map((it) => `<div class="item"><div class="ic">${it.icon}</div>
       <div class="info"><div class="nm">${it.name}</div><div class="sub">${Object.entries(it.give).map(([k, v]) => k + '×' + v).join('、')}</div></div>
-      <button class="mini" data-ss="${it.id}" ${(p.sectInfo.contrib || 0) < it.contrib ? 'disabled' : ''}>${it.contrib} 贡献</button></div>`).join('');
+      <button class="mini" data-ss="${it.id}" ${((p.sectInfo && p.sectInfo.contrib) || 0) < it.contrib ? 'disabled' : ''}>${it.contrib} 贡献</button></div>`).join('');
     $$('#sectShop [data-ss]').forEach((b) => b.onclick = () => { const r = SYS.buySectShop(p, b.dataset.ss); toast(r.msg, r.ok ? 'ok' : 'err'); renderSect(p); renderBag && renderBag(p); save(); });
   } else {
     $('#mySect').innerHTML = '<div class="small">尚未加入宗门</div>';
@@ -643,6 +643,8 @@ async function renderChat() {
 /* ---------- 底部功能栏 & 面板窗口 ---------- */
 const TOOLS = [
   { k: 'story', i: '📖', n: '剧情' },
+  { k: 'bottle', i: '🏺', n: '掌天瓶' },
+  { k: 'bottle', i: '🏺', n: '掌天瓶' },
   { k: 'role', i: '👤', n: '角色' },
   { k: 'bag', i: '🎒', n: '背包' },
   { k: 'fight', i: '⚔️', n: '历练' },
@@ -655,6 +657,10 @@ const TOOLS = [
   { k: 'task', i: '📋', n: '任务' },
   { k: 'rank', i: '🏆', n: '论道' },
   { k: 'market', i: '💰', n: '坊市' },
+  { k: 'partner', i: '🌸', n: '仙缘' },
+  { k: 'codex', i: '📚', n: '图鉴' },
+  { k: 'partner', i: '🌸', n: '仙缘' },
+  { k: 'codex', i: '📚', n: '图鉴' },
   { k: 'social', i: '💬', n: '交游' },
   { k: 'set', i: '⚙️', n: '系统' },
 ];
@@ -684,6 +690,9 @@ function openWin(k) {
   if (k === 'rank') { UI.renderArena(window.P); window.loadRank && window.loadRank(); }
   if (k === 'market') UI.renderMarket(window.P);
   if (k === 'social') { UI.renderSocial(window.P); UI.renderChat(); }
+  if (k === 'bottle') UI.renderBottle(window.P);
+  if (k === 'partner') UI.renderPartners(window.P);
+  if (k === 'codex') UI.renderCodex(window.P);
   return k;
 }
 function closeWin() {
@@ -753,6 +762,8 @@ const DOLL_CELLS = [
 ];
 let EQ_SEL = 'weapon';
 let DEVOUR_TARGET = null;
+let BAG_FILTER = 'all';
+let BAG_SEL = null;
 
 
 function slotDef(k) { return (C().slots || []).find((x) => x.key === k) || { key: k, name: k, icon: '❓' }; }
@@ -1000,7 +1011,7 @@ function renderNotice() {
     ? `<div class="event">🎉 ${ev.eventName || '全服活动'}：${ev.doubleExp ? '修为×' + ev.expMul : ''} ${ev.doubleStone ? '灵石×' + ev.stoneMul : ''} ${ev.eventEnd ? '（至 ' + ev.eventEnd + '）' : ''}</div>` : '';
 }
 /* ---------- 角色创建 ---------- */
-let CR = { gender: "m", avatar: "🧙", root: "mixed", sect: null };
+let CR = { gender: "m", avatar: "🧙", root: "mixed", sect: null, faction: "C001", trait: "P002" };
 function renderCreate() {
   const gs = GAME_CONFIG.genders || [];
   const gb = $('#crGender');
@@ -1022,6 +1033,12 @@ function renderCreate() {
     <div class="sub">${s.desc}</div></div></div>`).concat([`<div class="mapc ${CR.sect === null ? 'on' : ''}" data-cs="none">
     <div class="ic">🚶</div><div style="flex:1"><div class="nm">散修</div><div class="sub">不加入宗门，自由自在</div></div></div>`]).join('');
   $$('#crSect [data-cs]').forEach((el) => el.onclick = () => { CR.sect = el.dataset.cs === 'none' ? null : el.dataset.cs; renderCreate(); });
+  if (window.FRXX && FRXX.loaded) renderCreateFaction();
+  const td = $('#crTraitDesc');
+  if (window.FRXX && FRXX.loaded) {
+    if (td) td.innerHTML = renderTraitDesc();
+    else { const box = $('#crTrait'); if (box && !$('#crTraitDesc')) box.insertAdjacentHTML('afterend', '<div id="crTraitDesc" class="small mt8"></div>'); const td2 = $('#crTraitDesc'); if (td2) td2.innerHTML = renderTraitDesc(); }
+  }
 }
 
 /* ---------- 左侧精简面板 ---------- */
@@ -1039,6 +1056,141 @@ function renderMini(p) {
     <div class="kv"><span>灵根</span><b>${ENGINE.rootInfo(p).name}</b></div>`;
 }
 
+
+/* ================= 凡人修仙传 · 新面板 ================= */
+
+/* ---------- 掌天瓶 ---------- */
+let BOTTLE_SEL = 1;
+function renderBottle(p) {
+  if (!p) return;
+  if (!p.bottle) p.bottle = { liquid: 0, acc: 0, level: 1 };
+  const F = window.FRXX;
+  const cap = F.bottleCap(p);
+  const lv = p.bottle.level || 1;
+  const every = Math.max(90, 300 - lv * 18);
+  const art = $('#bottleArt'); if (art) art.textContent = '🏺';
+  const l = $('#bottleLv'); if (l) l.textContent = lv;
+  const r = $('#bottleRate'); if (r) r.textContent = `产液间隔 ${every} 秒　上限 ${cap} 滴`;
+  const bar = $('#bottleBar');
+  if (bar) { bar.style.width = Math.min(100, (p.bottle.liquid || 0) / cap * 100) + '%';
+    $('#bottleBarTxt').textContent = `${p.bottle.liquid || 0} / ${cap} 滴绿液`; }
+  const hint = $('#bottleHint');
+  if (hint) hint.textContent = `瓶中绿液可催熟万物：1 滴可炼化约三成本层修为，或催熟灵草 3 株。`;
+  const lore = $('#bottleLore');
+  if (lore) lore.innerHTML = `七玄门后山所得，木质小瓶，夜里渗出绿液。此物来历不明，却是韩立一生最大的倚仗。<br>
+    <span class="small">瓶身刻有古朴纹路，隐隐与木灵根相合……</span>`;
+  const b1 = $('#btnLiqExp'); if (b1) b1.onclick = () => {
+    const r2 = F.useLiquidExp(p, 1); UI.toast(r2.msg, r2.ok ? 'ok' : 'err');
+    renderBottle(p); renderHUD(p); renderMini(p); save();
+  };
+  const b2 = $('#btnLiqHerb'); if (b2) b2.onclick = () => {
+    const r2 = F.useLiquidHerb(p, 1); UI.toast(r2.msg, r2.ok ? 'ok' : 'err');
+    renderBottle(p); save();
+  };
+  const b3 = $('#btnLiqUp'); if (b3) b3.onclick = () => {
+    const r2 = F.upgradeBottle(p); UI.toast(r2.msg, r2.ok ? 'ok' : 'err');
+    renderBottle(p); renderHUD(p); save();
+  };
+}
+
+/* ---------- 仙缘伙伴 ---------- */
+let PARTNER_SEL = null;
+function renderPartners(p) {
+  if (!p) return;
+  const F = window.FRXX;
+  const list = F.companionState(p);
+  const partners = list.filter((c) => c.id.startsWith('P0'));
+  const pets = list.filter((c) => !c.id.startsWith('P0'));
+  const cnt = $('#partnerCount');
+  if (cnt) cnt.textContent = `（${partners.filter((c) => c.unlocked).length}/${partners.length} 结缘）`;
+
+  const card = (c) => {
+    const qc = c.q.includes('仙') ? 4 : c.q.includes('极') ? 3 : c.q.includes('上') ? 2 : c.q.includes('中') ? 1 : 0;
+    return `<div class="compitem ${PARTNER_SEL === c.id ? 'on' : ''} ${c.unlocked ? '' : 'lock'}" data-cid="${c.id}">
+      <div class="cface q${qc}">${c.unlocked ? (c.type.includes('灵虫') ? '🐛' : c.type.includes('灵兽') ? '🐾' : c.type.includes('反派') ? '😈' : '🌸') : '🔒'}</div>
+      <div class="cinfo"><div class="cnm">${c.name}${c.active ? ' <span style="color:var(--jade)">出战</span>' : ''}</div>
+      <div class="csub">${c.q} · ${c.type}${c.unlocked ? ` · 好感 ${c.favor}` : ' · 未结缘'}</div>
+      <div class="bar" style="height:9px;margin-top:3px"><i style="width:${c.favor}%"></i><span style="font-size:9px">${c.bonus.desc}</span></div></div>
+    </div>`;
+  };
+  const pb = $('#partnerList'); if (pb) pb.innerHTML = partners.map(card).join('');
+  const tb = $('#petList'); if (tb) tb.innerHTML = pets.map(card).join('');
+  $$('[data-cid]').forEach((el) => el.onclick = () => { PARTNER_SEL = el.dataset.cid; renderPartners(p); });
+  renderPartnerDetail(p);
+}
+function renderPartnerDetail(p) {
+  const box = $('#partnerDetail'); if (!box) return;
+  const F = window.FRXX;
+  const c = PARTNER_SEL ? F.companion(PARTNER_SEL) : null;
+  if (!c) { box.innerHTML = '<div class="small">点选一位查看详情</div>'; return; }
+  const st = F.companionState(p).find((x) => x.id === c.id) || { favor: 0, active: false, unlocked: false, bonus: { lv: 0, desc: '—' } };
+  box.innerHTML = `<div class="hd" style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+      <div class="big bslot q${c.q.includes('仙') ? 4 : 3}" style="cursor:default">${c.type.includes('灵虫') ? '🐛' : c.type.includes('灵兽') ? '🐾' : c.type.includes('反派') ? '😈' : '🌸'}</div>
+      <div><div class="nm">${c.name} <span class="small">${c.q}</span></div>
+      <div class="sub">${c.type} · 好感 ${st.favor || 0}/100 · ${st.bonus ? st.bonus.desc : '—'}</div></div></div>
+    <div class="goal small">${c.attr || ''}</div>
+    <div class="small" style="color:var(--gold)">技能：${c.skill || '—'}</div>
+    <div class="small" style="color:var(--jade)">好感奖励：${c.favor || '—'}</div>
+    <div class="small">来历：${c.src || '—'}</div>
+    ${c.evo ? `<div class="small">进阶：${c.evo}</div>` : ''}
+    <div class="acts" style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap">
+      ${st.unlocked ? `<button class="mini" id="ptAct">${st.active ? '撤回' : '出战'}</button>
+        <button class="mini" id="ptGift">🎁 赠礼（好感+5，200灵石）</button>` : '<button class="ghost" disabled>尚未结缘</button>'}
+    </div>`;
+  const a = $('#ptAct'); if (a) a.onclick = () => {
+    const r = FRXX.toggleCompanion(p, c.id); UI.toast(r.msg, r.ok ? 'ok' : 'err'); renderPartners(p); renderMini(p); save();
+  };
+  const g = $('#ptGift'); if (g) g.onclick = () => {
+    if ((p.stone || 0) < 200) return UI.toast('灵石不足', 'err');
+    p.stone -= 200;
+    const r = FRXX.gainFavor(p, c.id, 5); UI.toast(r.msg, 'ok'); renderPartners(p); renderHUD(p); save();
+  };
+}
+
+/* ---------- 图鉴 ---------- */
+function renderCodex(p) {
+  if (!p) return;
+  const F = window.FRXX;
+  const list = F.codex(p);
+  const box = $('#codexList');
+  if (box) box.innerHTML = list.map((c) => {
+    const pct = c.max ? Math.round(c.now / c.max * 100) : 0;
+    return `<div class="item" style="margin-bottom:7px"><div class="ic">${c.icon}</div>
+      <div class="info"><div class="nm">${c.name}</div>
+      <div class="sub">收录 ${c.now}/${c.max}　<span class="q1">${pct}%</span></div>
+      <div class="bar" style="height:9px;margin-top:3px"><i style="width:${pct}%"></i><span style="font-size:9px">${pct}%</span></div></div></div>`;
+  }).join('');
+  const mb = $('#codexMaps');
+  const maps = (F.data && F.data.maps) || [];
+  if (mb) mb.innerHTML = maps.map((m) => {
+    const seen = (p.realm || 0) >= m.minRealm;
+    return `<div class="mapc ${seen ? '' : 'lock'}"><div class="ic">${m.icon}</div>
+      <div style="flex:1"><div class="nm">${m.name} ${seen ? '' : '（未至）'}</div>
+      <div class="sub">${m.zone || m.desc}　${m.npc ? '｜' + m.npc.slice(0, 16) : ''}</div></div></div>`;
+  }).join('');
+}
+
+/* ---------- 创建角色：派系 / 性情 ---------- */
+function renderCreateFaction() {
+  const F = window.FRXX;
+  const fs = F.factions();
+  const fb = $('#crFaction');
+  if (fb) fb.innerHTML = fs.map((f) => `<div class="mapc ${CR.faction === f.id ? 'on' : ''}" data-cf="${f.id}">
+      <div class="ic">${f.id === 'C001' ? '🗡️' : f.id === 'C002' ? '💪' : f.id === 'C003' ? '❄️' : '💀'}</div>
+      <div style="flex:1"><div class="nm">${f.name}　<span class="small">${f.role}</span></div>
+      <div class="sub">${f.desc}</div></div></div>`).join('');
+  $$('#crFaction [data-cf]').forEach((el) => el.onclick = () => { CR.faction = el.dataset.cf; renderCreate(); });
+  const ts = F.traits();
+  const tb = $('#crTrait');
+  if (tb) tb.innerHTML = ts.map((t) => `<button class="mini" data-ct="${t.id}" style="${CR.trait === t.id ? 'background:rgba(255,216,138,.3)' : ''}">${t.name}</button>`).join('');
+  $$('#crTrait [data-ct]').forEach((b) => b.onclick = () => { CR.trait = b.dataset.ct; renderCreate(); });
+}
+function renderTraitDesc() {
+  const F = window.FRXX;
+  const t = F.trait(CR.trait);
+  return t ? `<div class="small" style="color:var(--jade)">${t.name}：${t.desc}</div>` : '';
+}
+
 window.UI = {
   initBackground, toast, fmt, timeAgo, startQi, flashBreakthrough,
   renderHUD, renderMeditate, renderAttrs, renderSpots, renderMaps, renderDungeons,
@@ -1047,6 +1199,7 @@ window.UI = {
   renderBag, renderEquip, renderDevour, renderNet, renderNotice, renderCreate, rewardTxt,
   renderTracker, renderToolBar, openWin, closeWin, bindWinTabs, renderStory, renderMini, TOOLS,
   renderEquipDetail, renderBagDetail, renderSkillDetail, slotDef,
+  renderBottle, renderPartners, renderCodex, renderCreateFaction, renderTraitDesc,
   get CUR_WIN() { return CUR_WIN; },
   setFighters, floatNum, boom, shake, hitAnim, hpBar, pushLog, clearLog,
   get curMap() { return CUR_MAP; }, set curMap(v) { CUR_MAP = v; },
