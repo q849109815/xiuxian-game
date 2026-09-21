@@ -643,3 +643,37 @@ window.ENGINE = {
   equipItem, randItem, enhance, enhanceCost, temper, temperCost, devour, sellItem, usePill,
   pickActiveSkill, battle, battleReward, redeemCode,
 };
+
+
+/* ===== 扩展加成汇总：时装 / 灵虫 / 好友 / 组队 / 宗门技能 / 称号 ===== */
+function applyExtBuffs(a, p) {
+  const o = {};
+  const merge = (b) => { for (const k in (b || {})) o[k] = (o[k] || 0) + b[k]; };
+  try {
+    if (window.SKIN) merge(SKIN.buff(p));
+    if (window.WORM) merge(WORM.buff(p));
+    if (window.SOCIALX) { merge(SOCIALX.friendBuff(p)); merge(SOCIALX.teamBuff(p)); }
+    if (window.SECTSKILL) merge(SECTSKILL.buff(p));
+    if (window.TITLE) merge(TITLE.buff(p));
+  } catch (e) {}
+  if (!Object.keys(o).length) return a;
+  const m = (k) => 1 + (o[k] || 0);
+  return Object.assign({}, a, {
+    atk: Math.round((a.atk || 0) * m('atk')),
+    def: Math.round((a.def || 0) * m('def')),
+    hp: Math.round((a.hp || 0) * m('hp')),
+    mp: Math.round((a.mp || 0) * m('mp')),
+    speed: Math.round((a.speed || 0) * m('speed')),
+    dodge: (a.dodge || 0) + (o.dodge || 0),
+  });
+}
+// 包装 ENGINE.attrs，使外观/灵虫/好友/组队/宗门技能/称号 加成生效
+(function () {
+  const raw = attrs;
+  const wrapped = function (p) { return applyExtBuffs(raw(p), p); };
+  if (typeof window !== 'undefined') {
+    if (window.ENGINE && window.ENGINE.attrs) window.ENGINE.attrs = wrapped;
+    if (window.ENGINE) window.ENGINE.attrsRaw = raw;
+    window.attrs = wrapped;
+  }
+})();
