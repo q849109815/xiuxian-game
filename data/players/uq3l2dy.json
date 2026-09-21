@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790012055622,
-  "lastTick": 1790012055622,
+  "lastSeen": 1790012057375,
+  "lastTick": 1790012057375,
   "realm": 31,
   "stage": 0,
-  "exp": 113524648926.94847,
-  "stone": 2827461179793.0703,
+  "exp": 170286972719.4227,
+  "stone": 2827461180707.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -131,20 +131,6 @@
     }
   },
   "bag": [
-    {
-      "id": "it_qank9j0",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·麒麟铠",
-      "atk": 58,
-      "def": 434,
-      "hp": 2599,
-      "crit": 0,
-      "mp": 337
-    },
     {
       "id": "it_67w5dud",
       "kind": "equip",
@@ -1242,6 +1228,20 @@
       "def": 71,
       "hp": 459,
       "crit": 0.02,
+      "mp": 337
+    },
+    {
+      "id": "it_mom2aq7",
+      "kind": "equip",
+      "slot": "boots",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·追风靴",
+      "atk": 82,
+      "def": 158,
+      "hp": 1353,
+      "crit": 0,
       "mp": 337
     }
   ],
@@ -2562,16 +2562,16 @@
         "arena": 20,
         "dungeon": 249,
         "meditate": 1,
-        "exp": 129753080866,
-        "kill": 1316
+        "exp": 129753088146,
+        "kill": 1317
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129852472960,
-        "kill": 3034,
+        "exp": 129852480240,
+        "kill": 3035,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2592,7 +2592,7 @@
         "禁地守卫": 463,
         "星斗海妖兽": 422,
         "天星宗弟子": 3,
-        "墨蛟": 428
+        "墨蛟": 429
       },
       "claimed": [
         "b2",
@@ -2636,14 +2636,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3034,
+    "kills": 3035,
     "deaths": 65,
-    "battles": 3099,
+    "battles": 3100,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 462,
-    "encounters": 401,
+    "encounters": 402,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -2672,7 +2672,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 25,
+    "acc": 26,
     "level": 30
   },
   "titles": {
@@ -3216,6 +3216,15 @@
       "L003",
       "L003",
       "L003",
+      "L004",
+      "L004",
+      "L004",
+      "L004",
+      "L004",
+      "L004",
+      "L004",
+      "L004",
+      "L004",
       "L004",
       "L004",
       "L004",
