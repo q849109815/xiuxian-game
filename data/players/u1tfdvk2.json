@@ -7,12 +7,12 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789992000599,
-  "lastTick": 1789992000599,
+  "lastSeen": 1789992002886,
+  "lastTick": 1789992002886,
   "realm": 6,
   "stage": 3,
-  "exp": 160107440.64074105,
-  "stone": 7985,
+  "exp": 174757083.82913145,
+  "stone": 9545,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -454,7 +454,7 @@
       "prog": {
         "meditate": 2,
         "dungeon": 135,
-        "arena": 7,
+        "arena": 20,
         "exp": 138830,
         "kill": 52
       },
@@ -468,7 +468,7 @@
       "prog": {
         "meditate": 2,
         "dungeon": 135,
-        "arena": 7,
+        "arena": 20,
         "exp": 138830,
         "kill": 52,
         "火麒麟": 12,
@@ -497,11 +497,11 @@
     "joinedAt": 1789991987340
   },
   "arena": {
-    "score": 140,
-    "wins": 7,
+    "score": 400,
+    "wins": 20,
     "losses": 0,
     "dayDate": "2026-9-21",
-    "fights": 7
+    "fights": 20
   },
   "mail": [
     {
