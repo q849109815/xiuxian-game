@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790013418084,
-  "lastTick": 1790013418084,
+  "lastSeen": 1790013426566,
+  "lastTick": 1790013426566,
   "realm": 31,
   "stage": 0,
-  "exp": 0,
-  "stone": 8505060158707.912,
+  "exp": 87549603218.4325,
+  "stone": 8505060164863.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -275,7 +275,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 96,
+      "count": 100,
       "desc": "炼丹材料",
       "id": "i_6zrahp6"
     },
@@ -285,7 +285,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 74,
+      "count": 77,
       "desc": "炼器材料",
       "id": "i_m1spbrq"
     },
@@ -2610,6 +2610,15 @@
       "exp": 0,
       "stage": 0,
       "apt": 1
+    },
+    {
+      "id": "bs_kmgwakq",
+      "ref": "b_phoenix",
+      "name": "青鸾",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
     }
   ],
   "activeBeast": 0,
@@ -2634,8 +2643,8 @@
         "arena": 20,
         "dungeon": 301,
         "meditate": 3,
-        "exp": 129761254084,
-        "kill": 2365
+        "exp": 129761306118,
+        "kill": 2372
       },
       "claimed": [
         "d1",
@@ -2647,8 +2656,8 @@
     "bounty": {
       "prog": {
         "meditate": 4,
-        "exp": 129860646178,
-        "kill": 4083,
+        "exp": 129860698212,
+        "kill": 4090,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2666,10 +2675,10 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 786,
-        "星斗海妖兽": 743,
+        "禁地守卫": 787,
+        "星斗海妖兽": 746,
         "天星宗弟子": 3,
-        "墨蛟": 732,
+        "墨蛟": 735,
         "野狼": 42,
         "青纹蛇": 30,
         "灵兔": 29
@@ -2716,14 +2725,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 4083,
+    "kills": 4090,
     "deaths": 72,
-    "battles": 4155,
+    "battles": 4162,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 4,
     "dungeon": 514,
-    "encounters": 534,
+    "encounters": 537,
     "rob": 0
   },
   "meditateUntil": 1790013718083,
@@ -2753,7 +2762,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 32,
+    "acc": 41,
     "level": 30
   },
   "titles": {
