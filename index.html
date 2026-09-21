@@ -3,31 +3,32 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e1c">
 <title>凡人修仙 · 网页版</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <canvas id="bg"></canvas>
 
-<!-- 登录 -->
+<!-- ================= 登录 ================= -->
 <div id="login">
   <div class="box">
     <h1>凡人修仙</h1>
-    <div class="tip">一念起，万水千山；一念灭，沧海桑田</div>
+    <div class="tip">一念起，万水千山 · 一念灭，沧海桑田</div>
     <div class="card">
       <div class="field"><input class="txt" id="lgName" placeholder="道号（2-10字）" maxlength="10"></div>
       <div class="field"><input class="txt" id="lgPwd" placeholder="护道口令" type="password" maxlength="24"></div>
-      <div class="row"><button class="act" id="btnLogin">登录 / 创建</button></div>
+      <button class="act" id="btnLogin" style="width:100%">进入仙途</button>
       <div class="small center mt8" id="lgTip">首次进入自动开坛立道</div>
     </div>
     <div class="card">
-      <div class="small">网络：<span id="lgNet">检测中…</span></div>
+      <div class="small">通道：<span id="lgNet">检测中…</span></div>
       <div class="small mt8">连不上云端也能离线玩，联网后自动补传存档。</div>
     </div>
   </div>
 </div>
 
-<!-- 创建角色 -->
+<!-- ================= 创建角色 ================= -->
 <div id="create" style="display:none">
   <div class="box">
     <h1>开坛立道</h1>
@@ -37,367 +38,369 @@
       <div class="row" id="crGender"></div>
       <h3 class="mt12">形象</h3>
       <div class="row" id="crAvatar" style="flex-wrap:wrap"></div>
-      <h3 class="mt12">灵根<span class="small">（决定修炼速度与功法适配）</span></h3>
+      <h3 class="mt12">灵根 <span class="small">（决定修炼速度与功法适配）</span></h3>
       <div id="crRoot" class="card-in"></div>
-      <div class="row mt8">
-        <button class="ghost" id="btnReroll">🔄 重洗灵根</button>
-      </div>
-      <h3 class="mt12">出身宗门<span class="small">（可入宗，也可日后自立）</span></h3>
+      <button class="ghost mt8" id="btnReroll" style="width:100%">🔄 重洗灵根</button>
+      <h3 class="mt12">出身宗门 <span class="small">（可入宗，也可日后自立）</span></h3>
       <div id="crSect"></div>
-      <button class="act mt12" id="btnCreate">✅ 踏入仙途</button>
+      <button class="act mt12" id="btnCreate" style="width:100%">✅ 踏入仙途</button>
     </div>
   </div>
 </div>
 
+<!-- ================= 主界面 ================= -->
 <div id="app" style="display:none">
-  <!-- HUD -->
-  <div class="hud">
-    <div class="hud-row">
-      <span class="realm-badge" id="hRealm">炼气初期</span>
+
+  <!-- 顶部信息条 -->
+  <div id="topbar">
+    <div class="tb-role">
+      <div class="tb-avatar" id="hFace">🧙<span class="lv" id="hRealm">炼气初期</span></div>
+      <div class="tb-info">
+        <div class="tb-name" id="hName">道友</div>
+        <div class="tb-realm" id="hPow">战力 0</div>
+      </div>
+    </div>
+    <div class="tb-bars">
+      <div class="bar hp"><i id="tbHp" style="width:100%"></i><span id="tbHpTxt"></span></div>
+      <div class="bar mp"><i id="tbMp" style="width:100%"></i><span id="tbMpTxt"></span></div>
+    </div>
+    <div class="tb-res">
       <span class="chip">修为 <b id="hExp">0</b></span>
       <span class="chip">💎 <b id="hStone">0</b></span>
-      <span class="chip">战力 <b id="hPow">0</b></span>
-      <span class="chip" id="hName">道友</span>
     </div>
-    <div class="bar mt8"><i id="hBar" style="width:0%"></i><span id="hBarTxt">0 / 0</span></div>
+    <div class="tb-notice"><div class="roll" id="noticeTxt">仙门公告加载中…</div></div>
+    <div class="tb-right">
+      <span class="small" style="display:flex;align-items:center;gap:4px"><i class="dot" id="netDot"></i><span id="netTxt" style="font-size:11px">检测中</span></span>
+      <button class="mini" id="btnTopSet">⚙️</button>
+    </div>
   </div>
 
-  <div class="tabs">
-    <button data-tab="cult" class="on">🧘 修炼</button>
-    <button data-tab="bag">🎒 背包</button>
-    <button data-tab="fight">⚔️ 历练</button>
-    <button data-tab="dungeon">🌀 秘境</button>
-    <button data-tab="skill">📜 功法</button>
-    <button data-tab="alchemy">⚗️ 丹器</button>
-    <button data-tab="beast">🐾 灵兽</button>
-    <button data-tab="cave">🏠 洞府</button>
-    <button data-tab="sect">🏯 宗门</button>
-    <button data-tab="task">📋 任务</button>
-    <button data-tab="rank">🏆 论道</button>
-    <button data-tab="market">💰 坊市</button>
-    <button data-tab="social">💬 社交</button>
-    <button data-tab="set">⚙️ 设置</button>
-  </div>
+  <!-- 中部三栏 -->
+  <div id="mid">
 
-  <div id="pages">
-    <!-- 修炼 -->
-    <section data-page="cult">
-      <div class="card">
-        <h3>仙门公告</h3>
-        <div class="notice" id="noticeTxt">—</div>
-        <div id="eventBox"></div>
-      </div>
-      <div class="card">
-        <div class="cultivate">
-          <div class="avatar"><div class="halo"></div><div class="halo b"></div><div class="body" id="cultAvatar">🧘</div></div>
-          <div class="cult-num" id="cultRate">+0 /秒</div>
+    <!-- 左：人物 + 修炼 -->
+    <div id="leftPanel">
+      <div class="pcard">
+        <h4>🧘 打坐修炼</h4>
+        <div class="sit cultivate">
+          <div class="halo"></div><div class="halo b"></div>
+          <div class="body" id="cultAvatar">🧘</div>
         </div>
-        <div class="bar"><i id="cultBar" style="width:0%"></i><span id="cultBarTxt"></span></div>
-        <div class="row mt12">
-          <button class="act" id="btnMeditate">🧘 闭关修炼</button>
-          <button class="ghost" id="btnBreak">⚡ 渡劫突破</button>
+        <div class="rate" id="cultRate">+0 /秒</div>
+        <div class="bar mt8"><i id="cultBar" style="width:0%"></i><span id="cultBarTxt"></span></div>
+        <div class="row mt8">
+          <button class="act" id="btnMeditate" style="flex:1;font-size:12px;padding:6px 4px">闭关</button>
+          <button class="ghost" id="btnBreak" style="flex:1;font-size:12px;padding:6px 4px">渡劫</button>
         </div>
-        <div class="small center mt8" id="cultTip"></div>
+        <div class="bar mt8" style="display:none"><i id="hBar" style="width:0%"></i><span id="hBarTxt"></span></div>
       </div>
-      <div class="card">
-        <h3>修炼地点<span class="small">（灵脉越好，进境越快）</span></h3>
-        <div id="spotList"></div>
+      <div class="pcard">
+        <h4>📊 道体</h4>
+        <div id="attrMini"></div>
       </div>
-      <div class="card">
-        <h3>道体属性</h3>
-        <div class="grid2" id="attrBox"></div>
+      <div class="pcard">
+        <h4>📍 洞天</h4>
+        <div id="spotMini"></div>
       </div>
-      <div class="card">
-        <h3>道途统计</h3>
-        <div id="statBox"></div>
-      </div>
-      <div class="card" id="reincCard" style="display:none">
-        <h3>转世重修</h3>
-        <div class="small" id="reincTip"></div>
-        <button class="ghost mt8" id="btnReinc">♻️ 转世重修</button>
-      </div>
-    </section>
+    </div>
 
-    <!-- 背包 -->
-    <section data-page="bag" style="display:none">
-      <div class="card">
-        <h3>已装备<span class="small">（强化 / 淬灵 / 炼化）</span></h3>
-        <div id="equipBox"></div>
-      </div>
-      <div class="card">
-        <h3>储物袋 <span class="small" id="bagCount"></span></h3>
-        <div class="row mt8" style="flex-wrap:wrap">
-          <button class="mini" data-filter="all">全部</button>
-          <button class="mini" data-filter="equip">装备</button>
-          <button class="mini" data-filter="herb">灵草</button>
-          <button class="mini" data-filter="ore">矿石</button>
-          <button class="mini" data-filter="pill">丹药</button>
-          <button class="mini" data-filter="talisman">符箓</button>
-        </div>
-        <div class="mt8" id="bagList"></div>
-      </div>
-      <div class="card" id="devourCard" style="display:none">
-        <h3>炼化喂养 <span class="small" id="devourWho"></span></h3>
-        <div class="small">选择一件装备/材料喂给选中法宝，提升强化等级：</div>
-        <div class="mt8" id="devourList"></div>
-      </div>
-    </section>
-
-    <!-- 历练 -->
-    <section data-page="fight" style="display:none">
-      <div class="card">
-        <h3>大世界</h3>
-        <div id="mapList"></div>
-      </div>
-      <div class="card">
+    <!-- 中：舞台（战斗 / 剧情 / 面板窗口） -->
+    <div id="stage">
+      <div id="scene">
+        <div id="autoTag">自动挂机中…</div>
         <div class="arena" id="arena">
           <div class="hpbox me"><div class="nm" id="meNm">你</div><div class="bar hp"><i id="meHp" style="width:100%"></i><span id="meHpTxt"></span></div></div>
-          <div class="hpbox foe"><div class="nm" id="foeNm"></div><div class="bar mhp"><i id="foeHp" style="width:100%"></i><span id="foeHpTxt"></span></div></div>
+          <div class="hpbox foe"><div class="nm" id="foeNm">妖魔</div><div class="bar mhp"><i id="foeHp" style="width:100%"></i><span id="foeHpTxt"></span></div></div>
           <div class="fighter me" id="fMe">🧙<span class="nm">你</span></div>
           <div class="fighter foe" id="fFoe" style="display:none">🐍<span class="nm"></span></div>
         </div>
-        <div class="logbox mt8" id="logbox"><p class="sys">选择地图后点击「开始历练」</p></div>
-        <div class="row mt8">
-          <button class="act" id="btnFight">⚔️ 开始历练</button>
-          <button class="ghost" id="btnAuto">🤖 自动挂机</button>
+      </div>
+
+      <!-- 剧情 -->
+      <div id="storyBox">
+        <div class="story-who"><div class="face" id="stFace">🧓</div><div><div class="nm" id="stName">引路人</div><div class="small" id="stChapter">第一章 · 初入仙途</div></div></div>
+        <div class="story-text" id="stText"></div>
+        <div class="story-btns" id="stBtns"></div>
+      </div>
+
+      <!-- ===== 面板窗口 ===== -->
+      <!-- 角色 -->
+      <div class="win" data-page="role">
+        <div class="win-hd"><span class="tt">👤 角 色</span><button class="x" data-close>×</button></div>
+        <div class="wtabs">
+          <button class="on" data-wt="r1">修炼洞天</button><button data-wt="r2">属性</button><button data-wt="r3">道途</button>
+        </div>
+        <div class="win-bd">
+          <div data-wc="r1">
+            <div class="card"><h3>修炼地点<span class="small">（灵脉越好，进境越快）</span></h3><div id="spotList"></div></div>
+            <div class="card" id="reincCard" style="display:none"><h3>转世重修</h3><div class="small" id="reincTip"></div><button class="ghost mt8" id="btnReinc">♻️ 转世重修</button></div>
+          </div>
+          <div data-wc="r2" style="display:none"><div class="card"><h3>道体属性</h3><div class="grid2" id="attrBox"></div></div></div>
+          <div data-wc="r3" style="display:none"><div class="card"><h3>道途统计</h3><div id="statBox"></div></div></div>
+          <div class="card"><div class="small" id="cultTip"></div></div>
         </div>
       </div>
-      <div class="card">
-        <h3>奇遇记录</h3>
-        <div class="logbox" id="encBox" style="height:90px"></div>
-      </div>
-    </section>
 
-    <!-- 秘境 -->
-    <section data-page="dungeon" style="display:none">
-      <div class="card">
-        <h3>秘境副本</h3>
-        <div id="dungeonList"></div>
-      </div>
-      <div class="card">
-        <h3>战报</h3>
-        <div class="logbox" id="dungeonLog" style="height:150px"><p class="sys">选择秘境进入</p></div>
-      </div>
-    </section>
-
-    <!-- 功法 -->
-    <section data-page="skill" style="display:none">
-      <div class="card">
-        <h3>已装备<span class="small">（心法最多 2，功法最多 3）</span></h3>
-        <div id="equippedSkills"></div>
-      </div>
-      <div class="card">
-        <h3>已习得</h3>
-        <div id="skillList"></div>
-      </div>
-    </section>
-
-    <!-- 丹器 -->
-    <section data-page="alchemy" style="display:none">
-      <div class="card">
-        <h3>炼丹<span class="small" id="alchemyRateTxt"></span></h3>
-        <div id="recipeList"></div>
-      </div>
-      <div class="card">
-        <h3>炼器<span class="small" id="forgeRateTxt"></span></h3>
-        <div id="forgeList"></div>
-      </div>
-      <div class="card">
-        <h3>制符</h3>
-        <div id="talismanList"></div>
-      </div>
-    </section>
-
-    <!-- 灵兽 -->
-    <section data-page="beast" style="display:none">
-      <div class="card">
-        <h3>我的灵兽 <span class="small" id="beastCount"></span></h3>
-        <div id="beastList"></div>
-      </div>
-      <div class="card" id="beastDetail" style="display:none">
-        <h3>培养 <span class="small" id="beastWho"></span></h3>
-        <div id="beastInfo"></div>
-        <div class="row mt8">
-          <button class="mini" id="btnBeastActive">设为出战</button>
-          <button class="mini" id="btnBeastAdvance">进阶</button>
-          <button class="mini" id="btnBeastRide">骑乘</button>
-          <button class="mini" id="btnBeastRelease">放归</button>
-        </div>
-        <hr class="sep">
-        <div class="small">吞噬材料提升等级与资质（选背包中的灵草/矿石）：</div>
-        <div class="mt8" id="beastFood"></div>
-      </div>
-    </section>
-
-    <!-- 洞府 -->
-    <section data-page="cave" style="display:none">
-      <div class="card">
-        <h3>洞府建筑</h3>
-        <div id="caveBuildings"></div>
-      </div>
-      <div class="card">
-        <h3>洞府阵法</h3>
-        <div id="caveArrays"></div>
-      </div>
-      <div class="card">
-        <h3>产出</h3>
-        <div id="caveOutput"></div>
-        <button class="act mt8" id="btnHarvest">🌾 收取产出</button>
-      </div>
-    </section>
-
-    <!-- 宗门 -->
-    <section data-page="sect" style="display:none">
-      <div class="card">
-        <h3>我的宗门</h3>
-        <div id="mySect"></div>
-      </div>
-      <div class="card">
-        <h3>宗门列表</h3>
-        <div id="sectList"></div>
-      </div>
-      <div class="card">
-        <h3>开宗立派</h3>
-        <div class="row">
-          <input class="txt" id="sectName" placeholder="宗门名（2-8字）" maxlength="8">
-          <button class="mini" id="btnCreateSect" style="flex:0 0 auto">创建</button>
-        </div>
-        <div class="small mt8" id="sectCostTip"></div>
-      </div>
-      <div class="card" id="sectTaskCard" style="display:none">
-        <h3>宗门任务</h3>
-        <div id="sectTasks"></div>
-      </div>
-      <div class="card" id="sectShopCard" style="display:none">
-        <h3>宗门商店</h3>
-        <div id="sectShop"></div>
-      </div>
-    </section>
-
-    <!-- 任务 -->
-    <section data-page="task" style="display:none">
-      <div class="card">
-        <h3>主线</h3>
-        <div id="mainTask"></div>
-      </div>
-      <div class="card">
-        <h3>每日任务<span class="small" id="dailyDate"></span></h3>
-        <div id="dailyTasks"></div>
-      </div>
-      <div class="card">
-        <h3>悬赏</h3>
-        <div id="bountyTasks"></div>
-      </div>
-    </section>
-
-    <!-- 论道 / 排行 -->
-    <section data-page="rank" style="display:none">
-      <div class="card">
-        <h3>论道台</h3>
-        <div id="arenaBox"></div>
-        <div class="row mt8">
-          <button class="act" id="btnArena">⚔️ 挑战道友</button>
-        </div>
-        <div class="logbox mt8" id="arenaLog" style="height:120px"><p class="sys">与其他道友切磋，提升论道积分</p></div>
-      </div>
-      <div class="card">
-        <h3>天骄榜（战力）</h3>
-        <div id="rankList"><div class="small">加载中…</div></div>
-      </div>
-    </section>
-
-    <!-- 坊市 -->
-    <section data-page="market" style="display:none">
-      <div class="card">
-        <h3>商城</h3>
-        <div id="shopList"></div>
-      </div>
-      <div class="card">
-        <h3>寄售行</h3>
-        <div class="row">
-          <button class="mini" data-mk="all">全部</button>
-          <button class="mini" data-mk="mine">我的挂单</button>
-        </div>
-        <div class="mt8" id="marketList"><div class="small">加载中…</div></div>
-      </div>
-    </section>
-
-    <!-- 社交 -->
-    <section data-page="social" style="display:none">
-      <div class="card">
-        <h3>邮件 <span class="small" id="mailCount"></span></h3>
-        <div id="mailList"></div>
-      </div>
-      <div class="card">
-        <h3>道侣 / 师徒</h3>
-        <div id="relationBox"></div>
-        <div class="row mt8">
-          <input class="txt" id="relName" placeholder="对方道号">
-          <button class="mini" id="btnDaoLv" style="flex:0 0 auto">结为道侣</button>
-          <button class="mini" id="btnMaster" style="flex:0 0 auto">拜师</button>
+      <!-- 背包 -->
+      <div class="win" data-page="bag">
+        <div class="win-hd"><span class="tt">🎒 储 物 袋</span><button class="x" data-close>×</button></div>
+        <div class="win-bd">
+          <div class="card"><h3>已装备<span class="small">（强化 / 淬灵 / 炼化）</span></h3><div id="equipBox"></div></div>
+          <div class="card">
+            <h3>背包 <span class="small" id="bagCount"></span></h3>
+            <div class="row mt8" style="flex-wrap:wrap">
+              <button class="mini" data-filter="all">全部</button>
+              <button class="mini" data-filter="equip">装备</button>
+              <button class="mini" data-filter="herb">灵草</button>
+              <button class="mini" data-filter="ore">矿石</button>
+              <button class="mini" data-filter="pill">丹药</button>
+              <button class="mini" data-filter="talisman">符箓</button>
+            </div>
+            <div class="mt8" id="bagList"></div>
+          </div>
+          <div class="card" id="devourCard" style="display:none">
+            <h3>炼化喂养 <span class="small" id="devourWho"></span></h3>
+            <div class="small">选择一件装备/材料喂给选中法宝，提升强化等级：</div>
+            <div class="mt8" id="devourList"></div>
+          </div>
         </div>
       </div>
-      <div class="card">
-        <h3>世界频道 <span class="small" id="chatCd"></span></h3>
-        <div class="row">
-          <input class="txt" id="chatInput" placeholder="说点什么（60字内）" maxlength="60">
-          <button class="mini" id="btnChat" style="flex:0 0 auto">发送</button>
-        </div>
-        <div class="logbox mt8" id="chatBox" style="height:180px"><p class="sys">加载中…</p></div>
-      </div>
-    </section>
 
-    <!-- 设置 -->
-    <section data-page="set" style="display:none">
-      <div class="card">
-        <h3>网络通道</h3>
-        <div class="kv"><span>当前通道</span><b id="setEp">—</b></div>
-        <div class="kv"><span>待上传存档</span><b id="setQueue">0</b></div>
-        <div class="row mt8">
-          <button class="mini" id="btnProbe">重新测速</button>
-          <button class="mini" id="btnFlush">立即同步</button>
-          <button class="mini" id="btnReset">重置通道</button>
+      <!-- 历练 -->
+      <div class="win" data-page="fight">
+        <div class="win-hd"><span class="tt">⚔️ 大 世 界</span><button class="x" data-close>×</button></div>
+        <div class="win-bd">
+          <div class="card"><h3>选择历练之地</h3><div id="mapList"></div></div>
+          <div class="card">
+            <h3>战报</h3>
+            <div class="logbox" id="logbox"><p class="sys">选择地图后点击下方「开始历练」</p></div>
+            <div class="row mt8">
+              <button class="act" id="btnFight">⚔️ 开始历练</button>
+              <button class="ghost" id="btnAuto">🤖 自动挂机</button>
+            </div>
+          </div>
+          <div class="card"><h3>奇遇记录</h3><div class="logbox" id="encBox" style="height:90px"></div></div>
         </div>
-        <hr class="sep">
-        <div class="small">自定义加速地址（一行一个）：</div>
-        <textarea id="epsInput" rows="3" placeholder="https://your-worker.xxx.workers.dev"></textarea>
-        <button class="ghost mt8" id="btnSaveEp">保存加速地址</button>
       </div>
-      <div class="card">
-        <h3>角色</h3>
-        <div class="kv"><span>灵根</span><b id="setRoot">—</b></div>
-        <div class="kv"><span>善恶值</span><b id="setKarma">0</b></div>
-        <div class="kv"><span>转世</span><b id="setReinc">0</b></div>
-        <button class="ghost mt8" id="btnRename">📝 改名（消耗改名帖）</button>
-      </div>
-      <div class="card">
-        <h3>礼包码</h3>
-        <div class="row">
-          <input class="txt" id="codeInput" placeholder="输入礼包码">
-          <button class="mini" id="btnCode" style="flex:0 0 auto">兑换</button>
+
+      <!-- 秘境 -->
+      <div class="win" data-page="dungeon">
+        <div class="win-hd"><span class="tt">🌀 秘 境</span><button class="x" data-close>×</button></div>
+        <div class="win-bd">
+          <div class="card"><h3>秘境副本</h3><div id="dungeonList"></div></div>
+          <div class="card"><h3>战报</h3><div class="logbox" id="dungeonLog" style="height:150px"><p class="sys">选择秘境进入</p></div></div>
         </div>
-        <div class="small mt8">可用：XIUXIAN2026、TIANDAO、XIANYUAN</div>
       </div>
-      <div class="card">
-        <h3>存档</h3>
-        <div class="kv"><span>上次保存</span><b id="setSaveAt">—</b></div>
-        <button class="act mt8" id="btnSave">立即存档</button>
-        <button class="ghost mt8" id="btnLogout">退出登录</button>
+
+      <!-- 功法 -->
+      <div class="win" data-page="skill">
+        <div class="win-hd"><span class="tt">📜 功 法</span><button class="x" data-close>×</button></div>
+        <div class="win-bd">
+          <div class="card"><h3>已装备<span class="small">（心法 2 / 功法 3）</span></h3><div id="equippedSkills"></div></div>
+          <div class="card"><h3>已习得</h3><div id="skillList"></div></div>
+        </div>
       </div>
-    </section>
+
+      <!-- 丹器 -->
+      <div class="win" data-page="alchemy">
+        <div class="win-hd"><span class="tt">⚗️ 丹 器 符</span><button class="x" data-close>×</button></div>
+        <div class="wtabs">
+          <button class="on" data-wt="a1">炼丹</button><button data-wt="a2">炼器</button><button data-wt="a3">制符</button>
+        </div>
+        <div class="win-bd">
+          <div data-wc="a1"><div class="card"><h3>炼丹 <span class="small" id="alchemyRateTxt"></span></h3><div id="recipeList"></div></div></div>
+          <div data-wc="a2" style="display:none"><div class="card"><h3>炼器 <span class="small" id="forgeRateTxt"></span></h3><div id="forgeList"></div></div></div>
+          <div data-wc="a3" style="display:none"><div class="card"><h3>制符</h3><div id="talismanList"></div></div></div>
+        </div>
+      </div>
+
+      <!-- 灵兽 -->
+      <div class="win" data-page="beast">
+        <div class="win-hd"><span class="tt">🐾 灵 兽</span><button class="x" data-close>×</button></div>
+        <div class="win-bd">
+          <div class="card"><h3>我的灵兽 <span class="small" id="beastCount"></span></h3><div id="beastList"></div></div>
+          <div class="card" id="beastDetail" style="display:none">
+            <h3>培养 <span class="small" id="beastWho"></span></h3>
+            <div id="beastInfo"></div>
+            <div class="row mt8" style="flex-wrap:wrap">
+              <button class="mini" id="btnBeastActive">出战</button>
+              <button class="mini" id="btnBeastAdvance">进阶</button>
+              <button class="mini" id="btnBeastRide">骑乘</button>
+              <button class="mini" id="btnBeastRelease">放归</button>
+            </div>
+            <hr class="sep">
+            <div class="small">吞噬材料提升等级与资质：</div>
+            <div class="mt8" id="beastFood"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 洞府 -->
+      <div class="win" data-page="cave">
+        <div class="win-hd"><span class="tt">🏠 洞 府</span><button class="x" data-close>×</button></div>
+        <div class="win-bd">
+          <div class="card"><h3>洞府建筑</h3><div id="caveBuildings"></div></div>
+          <div class="card"><h3>洞府阵法</h3><div id="caveArrays"></div></div>
+          <div class="card"><h3>产出</h3><div id="caveOutput"></div><button class="act mt8" id="btnHarvest">🌾 收取产出</button></div>
+        </div>
+      </div>
+
+      <!-- 宗门 -->
+      <div class="win" data-page="sect">
+        <div class="win-hd"><span class="tt">🏯 宗 门</span><button class="x" data-close>×</button></div>
+        <div class="win-bd">
+          <div class="card"><h3>我的宗门</h3><div id="mySect"></div></div>
+          <div class="card"><h3>宗门列表</h3><div id="sectList"></div></div>
+          <div class="card"><h3>开宗立派</h3>
+            <div class="row"><input class="txt" id="sectName" placeholder="宗门名（2-8字）" maxlength="8"><button class="mini" id="btnCreateSect" style="flex:0 0 auto">创建</button></div>
+            <div class="small mt8" id="sectCostTip"></div>
+          </div>
+          <div class="card" id="sectTaskCard" style="display:none"><h3>宗门任务</h3><div id="sectTasks"></div></div>
+          <div class="card" id="sectShopCard" style="display:none"><h3>宗门商店</h3><div id="sectShop"></div></div>
+        </div>
+      </div>
+
+      <!-- 任务 -->
+      <div class="win" data-page="task">
+        <div class="win-hd"><span class="tt">📋 任 务</span><button class="x" data-close>×</button></div>
+        <div class="wtabs">
+          <button class="on" data-wt="t1">主线</button><button data-wt="t2">每日</button><button data-wt="t3">悬赏</button>
+        </div>
+        <div class="win-bd">
+          <div data-wc="t1"><div class="card"><h3>主线剧情</h3><div id="mainTask"></div></div></div>
+          <div data-wc="t2" style="display:none"><div class="card"><h3>每日 <span class="small" id="dailyDate"></span></h3><div id="dailyTasks"></div></div></div>
+          <div data-wc="t3" style="display:none"><div class="card"><h3>悬赏</h3><div id="bountyTasks"></div></div></div>
+        </div>
+      </div>
+
+      <!-- 论道 -->
+      <div class="win" data-page="rank">
+        <div class="win-hd"><span class="tt">🏆 论 道 台</span><button class="x" data-close>×</button></div>
+        <div class="win-bd">
+          <div class="card"><h3>我的战绩</h3><div id="arenaBox"></div>
+            <div class="row mt8"><button class="act" id="btnArena">⚔️ 挑战道友</button></div>
+            <div class="logbox mt8" id="arenaLog" style="height:110px"><p class="sys">与其他道友切磋，提升论道积分</p></div>
+          </div>
+          <div class="card"><h3>天骄榜（战力）</h3><div id="rankList"><div class="small">加载中…</div></div></div>
+        </div>
+      </div>
+
+      <!-- 坊市 -->
+      <div class="win" data-page="market">
+        <div class="win-hd"><span class="tt">💰 坊 市</span><button class="x" data-close>×</button></div>
+        <div class="wtabs">
+          <button class="on" data-wt="m1">商城</button><button data-wt="m2">寄售行</button>
+        </div>
+        <div class="win-bd">
+          <div data-wc="m1"><div class="card"><h3>商城</h3><div id="shopList"></div></div></div>
+          <div data-wc="m2" style="display:none"><div class="card"><h3>寄售行</h3>
+            <div class="row mt8"><button class="mini" data-mk="all">全部</button><button class="mini" data-mk="mine">我的挂单</button></div>
+            <div class="mt8" id="marketList"><div class="small">加载中…</div></div>
+          </div></div>
+        </div>
+      </div>
+
+      <!-- 社交 -->
+      <div class="win" data-page="social">
+        <div class="win-hd"><span class="tt">💬 交 游</span><button class="x" data-close>×</button></div>
+        <div class="wtabs">
+          <button class="on" data-wt="s1">邮件</button><button data-wt="s2">道侣师徒</button><button data-wt="s3">世界</button>
+        </div>
+        <div class="win-bd">
+          <div data-wc="s1"><div class="card"><h3>邮件 <span class="small" id="mailCount"></span></h3><div id="mailList"></div></div></div>
+          <div data-wc="s2" style="display:none"><div class="card"><h3>道侣 / 师徒</h3><div id="relationBox"></div>
+            <div class="row mt8"><input class="txt" id="relName" placeholder="对方道号"></div>
+            <div class="row mt8"><button class="mini" id="btnDaoLv">结为道侣</button><button class="mini" id="btnMaster">拜师</button></div>
+          </div></div>
+          <div data-wc="s3" style="display:none"><div class="card"><h3>世界频道 <span class="small" id="chatCd"></span></h3>
+            <div class="row"><input class="txt" id="chatInput" placeholder="说点什么（60字内）" maxlength="60"><button class="mini" id="btnChat" style="flex:0 0 auto">发送</button></div>
+            <div class="logbox mt8" id="chatBox" style="height:220px"><p class="sys">加载中…</p></div>
+          </div></div>
+        </div>
+      </div>
+
+      <!-- 设置 -->
+      <div class="win" data-page="set">
+        <div class="win-hd"><span class="tt">⚙️ 系 统</span><button class="x" data-close>×</button></div>
+        <div class="win-bd">
+          <div class="card"><h3>网络通道</h3>
+            <div class="kv"><span>当前通道</span><b id="setEp">—</b></div>
+            <div class="kv"><span>待上传存档</span><b id="setQueue">0</b></div>
+            <div class="row mt8" style="flex-wrap:wrap">
+              <button class="mini" id="btnProbe">重新测速</button>
+              <button class="mini" id="btnFlush">立即同步</button>
+              <button class="mini" id="btnReset">重置通道</button>
+            </div>
+            <hr class="sep">
+            <div class="small">自定义加速地址（一行一个）：</div>
+            <textarea class="txt" id="epsInput" rows="3" placeholder="https://your-worker.xxx.workers.dev"></textarea>
+            <button class="ghost mt8" id="btnSaveEp">保存加速地址</button>
+          </div>
+          <div class="card"><h3>角色</h3>
+            <div class="kv"><span>灵根</span><b id="setRoot">—</b></div>
+            <div class="kv"><span>善恶值</span><b id="setKarma">0</b></div>
+            <div class="kv"><span>转世</span><b id="setReinc">0</b></div>
+            <button class="ghost mt8" id="btnRename">📝 改名（消耗改名帖）</button>
+          </div>
+          <div class="card"><h3>礼包码</h3>
+            <div class="row"><input class="txt" id="codeInput" placeholder="输入礼包码"><button class="mini" id="btnCode" style="flex:0 0 auto">兑换</button></div>
+            <div class="small mt8">可用：XIUXIAN2026、TIANDAO、XIANYUAN</div>
+          </div>
+          <div class="card"><h3>存档</h3>
+            <div class="kv"><span>上次保存</span><b id="setSaveAt">—</b></div>
+            <button class="act mt8" id="btnSave">立即存档</button>
+            <button class="ghost mt8" id="btnLogout">退出登录</button>
+          </div>
+          <div class="card"><h3>公告</h3><div class="notice" id="noticeTxt2">—</div><div id="eventBox"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右：任务追踪 -->
+    <div id="rightPanel">
+      <div class="pcard">
+        <h4>📜 主线任务</h4>
+        <div class="trk" id="trkMain"></div>
+      </div>
+      <div class="pcard">
+        <h4>📋 每日 / 悬赏</h4>
+        <div class="trk" id="trkDaily"></div>
+      </div>
+      <div class="pcard">
+        <h4>📖 剧情</h4>
+        <div class="trk" id="trkStory"></div>
+      </div>
+      <div class="pcard">
+        <h4>⚡ 快捷</h4>
+        <div class="trk">
+          <div class="row-i"><span class="d">修炼</span><span class="go" data-go="role">洞天→</span></div>
+          <div class="row-i"><span class="d">历练</span><span class="go" data-go="fight">大世界→</span></div>
+          <div class="row-i"><span class="d">秘境</span><span class="go" data-go="dungeon">进入→</span></div>
+          <div class="row-i"><span class="d">洞府</span><span class="go" data-go="cave">收取→</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部：聊天 + 功能栏 -->
+  <div id="bottombar">
+    <div id="chatline">
+      <span class="small">世界</span>
+      <span class="log" id="chatTicker">仙途漫漫，与君共勉。</span>
+      <input class="txt" id="chatQuick" placeholder="说点什么…" maxlength="60">
+      <button class="mini" id="btnChatQuick">发送</button>
+    </div>
+    <div id="toolbar"></div>
   </div>
 </div>
 
 <div id="flash"></div>
 <div id="toasts"></div>
-<div class="footbar">
-  <span><i class="dot" id="netDot"></i><span id="netTxt">检测中</span></span>
-  <span id="footRight">凡人修仙 · 网页版</span>
-</div>
 
 <script src="js/api.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/systems.js"></script>
+<script src="js/story.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
 </body>
