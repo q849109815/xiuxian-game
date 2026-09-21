@@ -7,12 +7,12 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790010179205,
-  "lastTick": 1790010179205,
+  "lastSeen": 1790010182976,
+  "lastTick": 1790010182976,
   "realm": 31,
   "stage": 0,
   "exp": 0,
-  "stone": 2657827111901,
+  "stone": 8505046476187,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -26,7 +26,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 136,
+      "count": 150,
       "desc": "炼丹材料",
       "id": "i_bq6ku1f"
     },
@@ -36,7 +36,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 80,
+      "count": 88,
       "desc": "炼器材料",
       "id": "i_ddvwuer"
     }
@@ -121,13 +121,13 @@
   "trait": "P003",
   "bottle": {
     "liquid": 7,
-    "acc": 92,
+    "acc": 96,
     "level": 1
   },
   "partners": {},
   "mapsSeen": [],
   "dungeonCleared": [],
-  "storyIdx": 35,
+  "storyIdx": 37,
   "skin": {
     "owned": [
       "SK-010",
