@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790013720109,
-  "lastTick": 1790013720109,
+  "lastSeen": 1790013721993,
+  "lastTick": 1790013721993,
   "realm": 31,
   "stage": 0,
-  "exp": 216716513003.2799,
-  "stone": 8505059799446.912,
+  "exp": 0,
+  "stone": 8505059790074.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -70,7 +70,7 @@
       "enh": 0,
       "temp": 0,
       "fr": true,
-      "level": 3
+      "level": 8
     },
     "helmet": {
       "id": "it_bek78n1",
@@ -136,7 +136,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 112,
+      "count": 114,
       "desc": "炼丹材料",
       "id": "i_q9y2i64"
     },
@@ -2680,8 +2680,8 @@
         "arena": 20,
         "dungeon": 301,
         "meditate": 3,
-        "exp": 129763214346,
-        "kill": 2619
+        "exp": 129763223110,
+        "kill": 2620
       },
       "claimed": [
         "d1",
@@ -2693,8 +2693,8 @@
     "bounty": {
       "prog": {
         "meditate": 4,
-        "exp": 129862606440,
-        "kill": 4337,
+        "exp": 129862615204,
+        "kill": 4338,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2713,7 +2713,7 @@
         "混沌祖龙": 508,
         "天兵": 506,
         "禁地守卫": 862,
-        "星斗海妖兽": 834,
+        "星斗海妖兽": 835,
         "天星宗弟子": 3,
         "墨蛟": 819,
         "野狼": 42,
@@ -2762,14 +2762,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 4337,
+    "kills": 4338,
     "deaths": 72,
-    "battles": 4409,
+    "battles": 4410,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 4,
     "dungeon": 514,
-    "encounters": 566,
+    "encounters": 567,
     "rob": 0
   },
   "meditateUntil": 1790013718083,
@@ -2799,7 +2799,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 64,
+    "acc": 66,
     "level": 30
   },
   "titles": {
