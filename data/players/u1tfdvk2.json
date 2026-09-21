@@ -7,12 +7,12 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790010207803,
-  "lastTick": 1790010207803,
+  "lastSeen": 1790010214040,
+  "lastTick": 1790010214040,
   "realm": 31,
   "stage": 0,
-  "exp": 89822527214.00423,
-  "stone": 8505046476187,
+  "exp": 93727618158.80525,
+  "stone": 8505046474762,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -36,7 +36,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 88,
+      "count": 89,
       "desc": "炼器材料",
       "id": "i_ddvwuer"
     }
@@ -58,13 +58,16 @@
     }
   ],
   "equipped": [
-    "sk002"
+    "sk002",
+    "sk_art_thunder"
   ],
   "beasts": [],
   "activeBeast": -1,
   "riding": false,
   "cave": {
-    "lv": {},
+    "lv": {
+      "forge": 2
+    },
     "array": "none",
     "lastHarvest": 1790003121304,
     "store": {}
@@ -74,13 +77,13 @@
     "daily": {
       "date": "2026-9-22",
       "prog": {
-        "exp": 86973087744
+        "exp": 90194313216
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
-        "exp": 86973087744
+        "exp": 90194313216
       },
       "claimed": []
     }
@@ -112,20 +115,20 @@
   "title": "",
   "stats": {
     "kills": 0,
-    "deaths": 6,
-    "battles": 6,
+    "deaths": 7,
+    "battles": 7,
     "breakthrough": 31,
     "offlineMin": 2,
     "meditate": 0,
     "dungeon": 0,
-    "encounters": 0,
+    "encounters": 1,
     "rob": 0
   },
   "faction": "C001",
   "trait": "P003",
   "bottle": {
     "liquid": 7,
-    "acc": 121,
+    "acc": 127,
     "level": 1
   },
   "partners": {},
