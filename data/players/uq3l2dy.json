@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995837818,
-  "lastTick": 1789995837818,
+  "lastSeen": 1789995838185,
+  "lastTick": 1789995838185,
   "realm": 9,
   "stage": 3,
-  "exp": 92790230362.4754,
+  "exp": 123720241069.30054,
   "stone": 4625041,
   "equip": {
     "weapon": {
@@ -1646,5 +1646,5 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 2050
+  "bonusWuxing": 2055
 }
