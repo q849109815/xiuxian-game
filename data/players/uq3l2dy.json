@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990866881,
-  "lastTick": 1789990866881,
+  "lastSeen": 1789990869098,
+  "lastTick": 1789990869098,
   "realm": 9,
   "stage": 3,
-  "exp": 36302886825.461044,
-  "stone": 207775,
+  "exp": 48403826775.94806,
+  "stone": 208177,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -88,20 +88,6 @@
       "count": 2,
       "desc": "炼器材料",
       "id": "i_ckq27h0"
-    },
-    {
-      "id": "it_pvgheth",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·养魂环",
-      "atk": 58,
-      "def": 45,
-      "hp": 339,
-      "crit": 0,
-      "mp": 115
     },
     {
       "id": "it_2hbq49r",
