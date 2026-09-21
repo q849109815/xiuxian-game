@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990407760,
-  "lastTick": 1789990407760,
+  "lastSeen": 1789990413405,
+  "lastTick": 1789990413405,
   "realm": 5,
   "stage": 2,
-  "exp": 20013221.910104662,
-  "stone": 22883,
+  "exp": 21715841.211531743,
+  "stone": 24601,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -126,6 +126,34 @@
       "hp": 178,
       "crit": 0,
       "mp": 67
+    },
+    {
+      "id": "it_r3thvsw",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·玄龟甲",
+      "atk": 21,
+      "def": 60,
+      "hp": 582,
+      "crit": 0,
+      "mp": 67
+    },
+    {
+      "id": "it_xa32mad",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·聚灵戒",
+      "atk": 44,
+      "def": 25,
+      "hp": 194,
+      "crit": 0,
+      "mp": 67
     }
   ],
   "skills": [
@@ -180,8 +208,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 662030,
-        "kill": 152,
+        "exp": 679080,
+        "kill": 155,
         "dungeon": 4,
         "arena": 1
       },
@@ -194,16 +222,16 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 662030,
-        "kill": 152,
+        "exp": 679080,
+        "kill": 155,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
-        "熔岩巨人": 47,
-        "b3": 118,
+        "熔岩巨人": 48,
+        "b3": 121,
         "火麒麟": 26,
-        "炎魔": 45,
+        "炎魔": 47,
         "dungeon": 4,
         "arena": 1
       },
@@ -244,9 +272,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 152,
+    "kills": 155,
     "deaths": 0,
-    "battles": 152,
+    "battles": 155,
     "breakthrough": 22,
     "offlineMin": 0,
     "meditate": 1,
