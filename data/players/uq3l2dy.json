@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996687503,
-  "lastTick": 1789996687503,
+  "lastSeen": 1789996696342,
+  "lastTick": 1789996696342,
   "realm": 9,
   "stage": 3,
-  "exp": 313909404447.0763,
-  "stone": 9432413,
+  "exp": 69757724244.23918,
+  "stone": 9459517,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -79,7 +79,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 247,
+      "count": 249,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -99,7 +99,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 105,
+      "count": 106,
       "desc": "炼器材料",
       "id": "i_bkbhegu"
     },
@@ -236,6 +236,34 @@
       "atk": 85,
       "def": 30,
       "hp": 244,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_oih90e1",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·混元幡",
+      "atk": 160,
+      "def": 34,
+      "hp": 256,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_efia1uw",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·锁子金甲",
+      "atk": 32,
+      "def": 92,
+      "hp": 905,
       "crit": 0,
       "mp": 115
     }
@@ -1408,8 +1436,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 85896196,
-        "kill": 1506,
+        "exp": 86153256,
+        "kill": 1510,
         "dungeon": 213,
         "arena": 20
       },
@@ -1423,8 +1451,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 85896196,
-        "kill": 1506,
+        "exp": 86153256,
+        "kill": 1510,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1439,9 +1467,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 458,
-        "混沌祖龙": 439,
-        "天兵": 423
+        "星宿仙君": 460,
+        "混沌祖龙": 440,
+        "天兵": 424
       },
       "claimed": [
         "b2",
@@ -1485,9 +1513,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1506,
+    "kills": 1510,
     "deaths": 0,
-    "battles": 1506,
+    "battles": 1510,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
