@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990187730,
-  "lastTick": 1789990187730,
+  "lastSeen": 1789990187829,
+  "lastTick": 1789990187829,
   "realm": 4,
   "stage": 3,
-  "exp": 2111082.9216000065,
-  "stone": 10503,
+  "exp": 2152397.1961000063,
+  "stone": 10653,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -85,7 +85,7 @@
       "name": "养魂花",
       "icon": "🌸",
       "price": 90,
-      "count": 6,
+      "count": 3,
       "desc": "炼丹材料",
       "id": "i_q0unirj"
     },
@@ -328,7 +328,7 @@
   "sectInfo": {
     "id": "s_qingyun",
     "rankIdx": 0,
-    "contrib": 85,
+    "contrib": 110,
     "joinedAt": 1789989635634
   },
   "arena": {
