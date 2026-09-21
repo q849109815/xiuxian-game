@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009675286,
-  "lastTick": 1790009675286,
+  "lastSeen": 1790009677783,
+  "lastTick": 1790009677783,
   "realm": 31,
   "stage": 0,
-  "exp": 30484095117.031765,
-  "stone": 8505051544691.912,
+  "exp": 76210237792.5794,
+  "stone": 8505051545529.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -1024,20 +1024,6 @@
       "atk": 36,
       "def": 127,
       "hp": 734,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_i7brx2r",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·灵蛇杖",
-      "atk": 199,
-      "def": 35,
-      "hp": 231,
       "crit": 0,
       "mp": 115
     },
@@ -2376,7 +2362,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 3,
-    "acc": 85,
+    "acc": 88,
     "level": 13
   },
   "titles": {
