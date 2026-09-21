@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995891121,
-  "lastTick": 1789995891121,
+  "lastSeen": 1789995892229,
+  "lastTick": 1789995892229,
   "realm": 9,
   "stage": 3,
-  "exp": 247440531886.60107,
-  "stone": 4930217,
+  "exp": 278370607624.4262,
+  "stone": 4938085,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -1825,8 +1825,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 45807930,
-        "kill": 880,
+        "exp": 45872776,
+        "kill": 881,
         "dungeon": 213,
         "arena": 20
       },
@@ -1839,8 +1839,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 45807930,
-        "kill": 880,
+        "exp": 45872776,
+        "kill": 881,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1857,7 +1857,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 228,
         "混沌祖龙": 239,
-        "天兵": 227
+        "天兵": 228
       },
       "claimed": [
         "b2",
@@ -1900,17 +1900,17 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 880,
+    "kills": 881,
     "deaths": 0,
-    "battles": 880,
+    "battles": 881,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 99,
+    "encounters": 100,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 2985
+  "bonusWuxing": 3010
 }
