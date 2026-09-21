@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789991649849,
-  "lastTick": 1789991649849,
+  "lastSeen": 1789991650608,
+  "lastTick": 1789991650608,
   "realm": 9,
   "stage": 3,
-  "exp": 280220844146.2892,
-  "stone": 315415,
+  "exp": 297734621318.18225,
+  "stone": 316345,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -115,20 +115,6 @@
       "def": 132,
       "hp": 654,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_6dqoob4",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·太极道衣",
-      "atk": 43,
-      "def": 102,
-      "hp": 847,
-      "crit": 0,
       "mp": 115
     }
   ],
