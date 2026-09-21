@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009738112,
-  "lastTick": 1790009738112,
+  "lastSeen": 1790009740630,
+  "lastTick": 1790009740630,
   "realm": 31,
   "stage": 0,
-  "exp": 320082998728.8334,
-  "stone": 8505051560706.912,
+  "exp": 15242047558.515882,
+  "stone": 8505051561553.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -710,20 +710,6 @@
       "atk": 63,
       "def": 31,
       "hp": 268,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_pyghewm",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·云锦袍",
-      "atk": 31,
-      "def": 101,
-      "hp": 758,
       "crit": 0,
       "mp": 115
     },
@@ -2054,7 +2040,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 4,
-    "acc": 58,
+    "acc": 60,
     "level": 13
   },
   "titles": {
