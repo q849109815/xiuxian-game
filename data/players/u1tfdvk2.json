@@ -1,0 +1,32 @@
+{
+  "uid": "u1tfdvk2",
+  "name": "q849109815",
+  "pwd": "iz2s4w",
+  "createdAt": 1789986590023,
+  "lastSeen": 1789986590023,
+  "lastTick": 1789986590023,
+  "realm": 0,
+  "layer": 0,
+  "exp": 0,
+  "stone": 0,
+  "equip": {
+    "weapon": null,
+    "armor": null,
+    "ring": null
+  },
+  "bag": [],
+  "buffs": {
+    "pillAtk": 0,
+    "pillExpUntil": 0
+  },
+  "stats": {
+    "kills": 0,
+    "deaths": 0,
+    "breakthrough": 0,
+    "battles": 0,
+    "offlineMin": 0
+  },
+  "codes": [],
+  "banned": false,
+  "title": ""
+}
