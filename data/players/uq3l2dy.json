@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789991582814,
-  "lastTick": 1789991582814,
+  "lastSeen": 1789991591616,
+  "lastTick": 1789991591616,
   "realm": 9,
   "stage": 3,
-  "exp": 45969627799.595535,
-  "stone": 175389,
+  "exp": 203593748774.63324,
+  "stone": 190965,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -65,7 +65,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 51,
+      "count": 52,
       "desc": "炼丹材料",
       "id": "i_fhce2n2"
     },
@@ -75,7 +75,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 20,
+      "count": 21,
       "desc": "炼器材料",
       "id": "i_frp5ygh"
     },
@@ -382,6 +382,34 @@
       "hp": 281,
       "crit": 0,
       "mp": 115
+    },
+    {
+      "id": "it_nrvi125",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·云锦袍",
+      "atk": 37,
+      "def": 101,
+      "hp": 652,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_lr9vpxl",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·青锋剑",
+      "atk": 203,
+      "def": 36,
+      "hp": 322,
+      "crit": 0,
+      "mp": 115
     }
   ],
   "skills": [
@@ -448,8 +476,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 8262038,
-        "kill": 298,
+        "exp": 8388466,
+        "kill": 300,
         "dungeon": 5,
         "arena": 20
       },
@@ -462,8 +490,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 8262038,
-        "kill": 298,
+        "exp": 8388466,
+        "kill": 300,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -478,9 +506,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 41,
+        "星宿仙君": 42,
         "混沌祖龙": 38,
-        "天兵": 33
+        "天兵": 34
       },
       "claimed": [
         "b2",
@@ -519,14 +547,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 298,
+    "kills": 300,
     "deaths": 0,
-    "battles": 298,
+    "battles": 300,
     "breakthrough": 36,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 5,
-    "encounters": 33,
+    "encounters": 34,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
