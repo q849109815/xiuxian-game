@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995448984,
-  "lastTick": 1789995448984,
+  "lastSeen": 1789995450177,
+  "lastTick": 1789995450177,
   "realm": 9,
   "stage": 3,
-  "exp": 296928551135.5213,
-  "stone": 2403685,
+  "exp": 334044628331.7115,
+  "stone": 2412120,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -60,20 +60,6 @@
   },
   "bag": [
     {
-      "id": "it_qc8leqt",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·灵蛇杖",
-      "atk": 208,
-      "def": 36,
-      "hp": 340,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "id": "it_1gkqain",
       "kind": "equip",
       "slot": "ring",
@@ -85,20 +71,6 @@
       "def": 38,
       "hp": 371,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_om4bz1d",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·诛仙剑",
-      "atk": 173,
-      "def": 33,
-      "hp": 346,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -961,7 +933,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 7,
+      "count": 8,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -2152,8 +2124,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 23817000,
-        "kill": 540,
+        "exp": 23881348,
+        "kill": 541,
         "dungeon": 213,
         "arena": 20
       },
@@ -2166,8 +2138,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 23817000,
-        "kill": 540,
+        "exp": 23881348,
+        "kill": 541,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2182,7 +2154,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 121,
+        "星宿仙君": 122,
         "混沌祖龙": 118,
         "天兵": 115
       },
@@ -2227,9 +2199,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 540,
+    "kills": 541,
     "deaths": 0,
-    "battles": 540,
+    "battles": 541,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
