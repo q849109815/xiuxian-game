@@ -310,7 +310,30 @@ const ART = {
     '剑修': 'icon/cls_jian.jpg',
     '体修': 'icon/cls_ti.jpg',
     '法修': 'icon/cls_fa.jpg',
-    '魔修': 'icon/cls_fa.jpg',
+    '魔修': 'icon/cls_mo.jpg',
+  },
+  /** 装备槽位图标（20_图标资源 IC-030~033） */
+  slot: {
+    weapon: 'icon/slot_weapon.jpg',
+    armor: 'icon/slot_armor.jpg',
+    helm: 'icon/slot_helm.jpg',
+    ring: 'icon/slot_ring.jpg',
+  },
+  /** UI 通用图标（IC-029/034/035/036/040） */
+  ui: {
+    dungeon: 'icon/dungeon_gate.jpg',
+    lock: 'icon/lock.jpg',
+    reddot: 'icon/reddot.jpg',
+    check: 'icon/check.jpg',
+    star: 'icon/star.jpg',
+    questMain: 'icon/quest_main.jpg',
+    questDaily: 'icon/quest_daily.jpg',
+  },
+  /** 属性图标（IC-037~039） */
+  attr: {
+    atk: 'icon/attr_atk.jpg',
+    def: 'icon/attr_def.jpg',
+    hp: 'icon/attr_hp.jpg',
   },
   /** 灵宠头像 */
   pet: {
@@ -349,6 +372,21 @@ const ART = {
     if (!name) return null;
     for (const k in this.face) if (name.indexOf(k) >= 0) return this.base + this.face[k];
     return null;
+  },
+  /** 装备槽位图标 */
+  slotOf(id) {
+    const v = this.slot[id];
+    return v ? this.base + v : null;
+  },
+  /** UI 图标 */
+  uiOf(id) {
+    const v = this.ui[id];
+    return v ? this.base + v : null;
+  },
+  /** 属性图标 */
+  attrOf(id) {
+    const v = this.attr[id];
+    return v ? this.base + v : null;
   },
   /** 职业图标 */
   clsOf(name) {
