@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790012766565,
-  "lastTick": 1790012766565,
+  "lastSeen": 1790012796565,
+  "lastTick": 1790012796565,
   "realm": 31,
   "stage": 0,
-  "exp": 244166265096.3346,
-  "stone": 2827461160567.0703,
+  "exp": 244166264496.3346,
+  "stone": 2827461182322.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -129,104 +129,6 @@
     }
   },
   "bag": [
-    {
-      "id": "it_03fur0s",
-      "kind": "equip",
-      "slot": "helmet",
-      "q": 3,
-      "level": 0,
-      "temper": 0,
-      "name": "仙器·混元盔",
-      "atk": 55,
-      "def": 225,
-      "hp": 1408,
-      "crit": 0.02,
-      "mp": 337
-    },
-    {
-      "id": "it_8yc1wd2",
-      "kind": "equip",
-      "slot": "helmet",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·狻猊盔",
-      "atk": 56,
-      "def": 241,
-      "hp": 1551,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_lno6zkb",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·灵蛇杖",
-      "atk": 480,
-      "def": 70,
-      "hp": 548,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_ckaemk5",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·青锋剑",
-      "atk": 639,
-      "def": 65,
-      "hp": 464,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "fr_fr_e202",
-      "name": "护腕(各类)",
-      "icon": "🧤",
-      "kind": "equip",
-      "q": 1,
-      "slot": "bracelet",
-      "base": {
-        "atk": 15
-      },
-      "enh": 0,
-      "temp": 0,
-      "fr": true
-    },
-    {
-      "id": "it_5tfi5lo",
-      "kind": "equip",
-      "slot": "helmet",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·玄铁盔",
-      "atk": 70,
-      "def": 283,
-      "hp": 1345,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_thyxi1l",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·太虚戒",
-      "atk": 221,
-      "def": 74,
-      "hp": 674,
-      "crit": 0,
-      "mp": 337
-    },
     {
       "id": "it_a51gyqk",
       "kind": "equip",
@@ -641,7 +543,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 49,
+      "count": 60,
       "desc": "炼丹材料",
       "id": "i_qv4rncc"
     },
@@ -651,7 +553,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 45,
+      "count": 52,
       "desc": "炼器材料",
       "id": "i_kv6q1eo"
     },
@@ -1241,6 +1143,104 @@
       "atk": 109,
       "def": 68,
       "hp": 883,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_dwb347n",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·混元幡",
+      "atk": 579,
+      "def": 85,
+      "hp": 605,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "fr_fr_w006",
+      "name": "元合五极山",
+      "icon": "⛰️",
+      "kind": "equip",
+      "q": 4,
+      "slot": "armor",
+      "base": {
+        "def": 100
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
+    },
+    {
+      "id": "it_x9w59i8",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·养魂环",
+      "atk": 218,
+      "def": 65,
+      "hp": 725,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_5vpxcuq",
+      "kind": "equip",
+      "slot": "helmet",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·混元盔",
+      "atk": 61,
+      "def": 261,
+      "hp": 1820,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_re1hzlf",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·青锋剑",
+      "atk": 572,
+      "def": 66,
+      "hp": 657,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_c6hfgqx",
+      "kind": "equip",
+      "slot": "helmet",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·狻猊盔",
+      "atk": 65,
+      "def": 343,
+      "hp": 1349,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_xftzshj",
+      "kind": "equip",
+      "slot": "helmet",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·玉清冠",
+      "atk": 56,
+      "def": 337,
+      "hp": 1328,
       "crit": 0,
       "mp": 337
     }
@@ -2598,16 +2598,16 @@
         "arena": 20,
         "dungeon": 252,
         "meditate": 1,
-        "exp": 129757105056,
-        "kill": 1823
+        "exp": 129757296938,
+        "kill": 1848
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129856497150,
-        "kill": 3541,
+        "exp": 129856689032,
+        "kill": 3566,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2625,10 +2625,10 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 596,
-        "星斗海妖兽": 566,
+        "禁地守卫": 604,
+        "星斗海妖兽": 571,
         "天星宗弟子": 3,
-        "墨蛟": 557,
+        "墨蛟": 569,
         "野狼": 42,
         "青纹蛇": 30,
         "灵兔": 29
@@ -2675,14 +2675,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3541,
+    "kills": 3566,
     "deaths": 72,
-    "battles": 3613,
+    "battles": 3638,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 465,
-    "encounters": 472,
+    "encounters": 476,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -2711,7 +2711,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 16,
+    "acc": 46,
     "level": 30
   },
   "titles": {
