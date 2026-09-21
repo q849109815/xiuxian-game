@@ -7,12 +7,12 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789991964262,
-  "lastTick": 1789991964262,
+  "lastSeen": 1789991972306,
+  "lastTick": 1789991972306,
   "realm": 6,
-  "stage": 2,
-  "exp": 247703973.38328695,
-  "stone": 28006,
+  "stage": 3,
+  "exp": 31139319.436944563,
+  "stone": 1244,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -310,6 +310,20 @@
       "hp": 652,
       "crit": 0,
       "mp": 76
+    },
+    {
+      "id": "it_o9mspdy",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·聚灵戒",
+      "atk": 40,
+      "def": 24,
+      "hp": 194,
+      "crit": 0,
+      "mp": 76
     }
   ],
   "skills": [
@@ -357,13 +371,13 @@
   "riding": false,
   "cave": {
     "lv": {
-      "farm": 1,
-      "garden": 1,
-      "array": 5,
+      "farm": 5,
+      "garden": 6,
+      "array": 6,
       "alchemy": 8,
       "forge": 8
     },
-    "array": "none",
+    "array": "spirit",
     "lastHarvest": 1789989403736,
     "store": {}
   },
@@ -375,8 +389,8 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 1,
-        "exp": 104286,
-        "kill": 45
+        "exp": 109138,
+        "kill": 46
       },
       "claimed": []
     },
@@ -385,10 +399,10 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 1,
-        "exp": 104286,
-        "kill": 45,
+        "exp": 109138,
+        "kill": 46,
         "火麒麟": 7,
-        "b3": 17,
+        "b3": 18,
         "采药童子": 9,
         "b1": 23,
         "竹叶蛇": 9,
@@ -398,7 +412,7 @@
         "女鬼": 2,
         "僵尸": 2,
         "熔岩巨人": 4,
-        "炎魔": 6
+        "炎魔": 7
       },
       "claimed": []
     }
@@ -442,10 +456,10 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 45,
+    "kills": 46,
     "deaths": 2,
-    "battles": 47,
-    "breakthrough": 25,
+    "battles": 48,
+    "breakthrough": 26,
     "offlineMin": 16,
     "meditate": 2,
     "dungeon": 135,
