@@ -7,11 +7,11 @@
   "root": "earth",
   "sect": "s_wuji",
   "createdAt": 1789989442446,
-  "lastSeen": 1789989672776,
-  "lastTick": 1789989672776,
+  "lastSeen": 1789989673972,
+  "lastTick": 1789989673972,
   "realm": 2,
   "stage": 1,
-  "exp": 3150.0864000000083,
+  "exp": 4467.340800000008,
   "stone": 800,
   "equip": {
     "weapon": null,
@@ -26,7 +26,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 4,
+      "count": 2,
       "desc": "炼丹材料",
       "id": "i_w2zpn4r"
     },
@@ -37,7 +37,7 @@
       "icon": "🔴",
       "desc": "战斗中恢复 30% 气血",
       "price": 80,
-      "count": 1,
+      "count": 2,
       "id": "i_1jdaimp"
     }
   ],
