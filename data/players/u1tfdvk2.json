@@ -3,27 +3,37 @@
   "name": "q849109815",
   "pwd": "iz2s4w",
   "createdAt": 1789986590023,
-  "lastSeen": 1789986682700,
-  "lastTick": 1789986682700,
+  "lastSeen": 1789986712704,
+  "lastTick": 1789986712704,
   "realm": 4,
   "layer": 7,
-  "exp": 204087.62500000058,
-  "stone": 0,
+  "exp": 372605.10000000044,
+  "stone": 49,
   "equip": {
     "weapon": null,
     "armor": null,
     "ring": null
   },
-  "bag": [],
+  "bag": [
+    {
+      "id": "mt_juxoogn",
+      "kind": "mat",
+      "ref": "mat_iron",
+      "name": "玄铁",
+      "icon": "⚙️",
+      "price": 40,
+      "count": 4
+    }
+  ],
   "buffs": {
     "pillAtk": 0,
     "pillExpUntil": 0
   },
   "stats": {
-    "kills": 0,
+    "kills": 2,
     "deaths": 0,
     "breakthrough": 43,
-    "battles": 0,
+    "battles": 2,
     "offlineMin": 0
   },
   "codes": [],
