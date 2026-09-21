@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990603422,
-  "lastTick": 1789990603422,
+  "lastSeen": 1789990609317,
+  "lastTick": 1789990609317,
   "realm": 8,
   "stage": 1,
-  "exp": 317352904.14307404,
+  "exp": 2549001592.0696692,
   "stone": 70053,
   "equip": {
     "weapon": {
@@ -43,18 +43,18 @@
       "mp": 49
     },
     "ring": {
-      "id": "it_gouk4pe",
+      "id": "it_pe9q4ap",
       "kind": "equip",
       "slot": "ring",
       "q": 2,
       "level": 0,
       "temper": 0,
-      "name": "宝器·阴阳环",
-      "atk": 21,
-      "def": 9,
-      "hp": 78,
+      "name": "宝器·太虚戒",
+      "atk": 61,
+      "def": 27,
+      "hp": 271,
       "crit": 0,
-      "mp": 34
+      "mp": 91
     },
     "talisman": null
   },
@@ -144,20 +144,6 @@
       "id": "i_ayoxwbn"
     },
     {
-      "id": "it_pe9q4ap",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·太虚戒",
-      "atk": 61,
-      "def": 27,
-      "hp": 271,
-      "crit": 0,
-      "mp": 91
-    },
-    {
       "id": "it_dvqx6lt",
       "kind": "equip",
       "slot": "armor",
@@ -198,6 +184,20 @@
       "hp": 232,
       "crit": 0,
       "mp": 100
+    },
+    {
+      "id": "it_gouk4pe",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·阴阳环",
+      "atk": 21,
+      "def": 9,
+      "hp": 78,
+      "crit": 0,
+      "mp": 34
     }
   ],
   "skills": [
