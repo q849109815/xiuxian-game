@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789991650608,
-  "lastTick": 1789991650608,
+  "lastSeen": 1789991659587,
+  "lastTick": 1789991659587,
   "realm": 9,
   "stage": 3,
-  "exp": 297734621318.18225,
-  "stone": 316345,
+  "exp": 87568946857.46541,
+  "stone": 329825,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -65,7 +65,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 58,
+      "count": 60,
       "desc": "炼丹材料",
       "id": "i_fhce2n2"
     },
@@ -182,8 +182,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 9329372,
-        "kill": 314,
+        "exp": 9453748,
+        "kill": 316,
         "dungeon": 5,
         "arena": 20
       },
@@ -196,8 +196,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 9329372,
-        "kill": 314,
+        "exp": 9453748,
+        "kill": 316,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -213,8 +213,8 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 48,
-        "混沌祖龙": 43,
-        "天兵": 37
+        "混沌祖龙": 44,
+        "天兵": 38
       },
       "claimed": [
         "b2",
@@ -253,9 +253,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 314,
+    "kills": 316,
     "deaths": 0,
-    "battles": 314,
+    "battles": 316,
     "breakthrough": 36,
     "offlineMin": 0,
     "meditate": 1,
