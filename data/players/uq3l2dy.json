@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996185377,
-  "lastTick": 1789996185377,
+  "lastSeen": 1789996192478,
+  "lastTick": 1789996192478,
   "realm": 9,
   "stage": 3,
-  "exp": 278370597519.4262,
-  "stone": 6539343,
+  "exp": 154650325790.12567,
+  "stone": 6576072,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 67,
+      "count": 69,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -117,7 +117,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 29,
+      "count": 31,
       "desc": "炼器材料",
       "id": "i_1c42jnp"
     },
@@ -127,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 26,
+      "count": 28,
       "desc": "炼器材料",
       "id": "i_bkbhegu"
     },
@@ -157,6 +157,20 @@
       "def": 41,
       "hp": 267,
       "crit": 0.02,
+      "mp": 115
+    },
+    {
+      "id": "it_dlsvhej",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·混元幡",
+      "atk": 129,
+      "def": 45,
+      "hp": 362,
+      "crit": 0,
       "mp": 115
     }
   ],
@@ -1292,8 +1306,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 59676496,
-        "kill": 1097,
+        "exp": 60013958,
+        "kill": 1102,
         "dungeon": 213,
         "arena": 20
       },
@@ -1306,8 +1320,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 59676496,
-        "kill": 1097,
+        "exp": 60013958,
+        "kill": 1102,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1322,8 +1336,8 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 310,
-        "混沌祖龙": 311,
+        "星宿仙君": 312,
+        "混沌祖龙": 314,
         "天兵": 290
       },
       "claimed": [
@@ -1367,14 +1381,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1097,
+    "kills": 1102,
     "deaths": 0,
-    "battles": 1097,
+    "battles": 1102,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 137,
+    "encounters": 138,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
