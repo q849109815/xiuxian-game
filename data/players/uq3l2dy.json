@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996422181,
-  "lastTick": 1789996422181,
+  "lastSeen": 1789996423294,
+  "lastTick": 1789996423294,
   "realm": 9,
   "stage": 3,
-  "exp": 153910707556.376,
-  "stone": 8338342,
+  "exp": 184692845901.6512,
+  "stone": 8346327,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 146,
+      "count": 147,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -590,20 +590,6 @@
       "mp": 115
     },
     {
-      "id": "it_q1xzop7",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·混元幡",
-      "atk": 194,
-      "def": 34,
-      "hp": 284,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "id": "it_g4xuhps",
       "kind": "equip",
       "slot": "ring",
@@ -852,6 +838,20 @@
       "atk": 80,
       "def": 33,
       "hp": 261,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_b7kqb4o",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·诛仙剑",
+      "atk": 161,
+      "def": 42,
+      "hp": 294,
       "crit": 0,
       "mp": 115
     }
@@ -1997,8 +1997,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 71777606,
-        "kill": 1287,
+        "exp": 71841278,
+        "kill": 1288,
         "dungeon": 213,
         "arena": 20
       },
@@ -2012,8 +2012,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 71777606,
-        "kill": 1287,
+        "exp": 71841278,
+        "kill": 1288,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2028,7 +2028,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 377,
+        "星宿仙君": 378,
         "混沌祖龙": 373,
         "天兵": 351
       },
@@ -2074,9 +2074,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1287,
+    "kills": 1288,
     "deaths": 0,
-    "battles": 1287,
+    "battles": 1288,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
