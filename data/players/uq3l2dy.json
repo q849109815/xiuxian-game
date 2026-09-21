@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789994075893,
-  "lastTick": 1789994075893,
+  "lastSeen": 1789994078241,
+  "lastTick": 1789994078241,
   "realm": 9,
   "stage": 3,
-  "exp": 245193317586.50305,
-  "stone": 457427,
+  "exp": 297734809102.18225,
+  "stone": 493427,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -266,6 +266,42 @@
       "exp": 0,
       "stage": 0,
       "apt": 1
+    },
+    {
+      "id": "bs_d9h6vnl",
+      "ref": "b_tiger",
+      "name": "白额虎王",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_x3381mt",
+      "ref": "b_phoenix",
+      "name": "青鸾",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_db05adh",
+      "ref": "b_qilin",
+      "name": "麒麟",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_yt6c3j5",
+      "ref": "b_tiger",
+      "name": "白额虎王",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
     }
   ],
   "activeBeast": 0,
@@ -290,7 +326,7 @@
         "meditate": 1,
         "exp": 10099792,
         "kill": 326,
-        "dungeon": 11,
+        "dungeon": 15,
         "arena": 20
       },
       "claimed": [
@@ -312,7 +348,7 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 11,
+        "dungeon": 15,
         "arena": 20,
         "九幽冥王": 7,
         "b4": 16,
@@ -369,7 +405,7 @@
     "breakthrough": 36,
     "offlineMin": 35,
     "meditate": 1,
-    "dungeon": 11,
+    "dungeon": 15,
     "encounters": 38,
     "rob": 0
   },
