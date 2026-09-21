@@ -7,12 +7,12 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789991992713,
-  "lastTick": 1789991992713,
+  "lastSeen": 1789991995170,
+  "lastTick": 1789991995170,
   "realm": 6,
   "stage": 3,
-  "exp": 126765050.3414515,
-  "stone": 3127,
+  "exp": 136203044.8109299,
+  "stone": 6595,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -85,7 +85,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 139,
+      "count": 141,
       "desc": "炼器材料",
       "id": "i_9yr1b5o"
     },
@@ -189,7 +189,7 @@
       "name": "炎晶",
       "icon": "🔶",
       "price": 150,
-      "count": 5,
+      "count": 6,
       "desc": "炼器材料",
       "id": "i_6kk5p5s"
     },
@@ -431,12 +431,13 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 1,
-        "exp": 129098,
-        "kill": 50
+        "exp": 134234,
+        "kill": 51
       },
       "claimed": [
         "d1",
-        "d2"
+        "d2",
+        "d4"
       ]
     },
     "bounty": {
@@ -444,10 +445,10 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 1,
-        "exp": 129098,
-        "kill": 50,
-        "火麒麟": 10,
-        "b3": 22,
+        "exp": 134234,
+        "kill": 51,
+        "火麒麟": 11,
+        "b3": 23,
         "采药童子": 9,
         "b1": 23,
         "竹叶蛇": 9,
@@ -459,7 +460,10 @@
         "熔岩巨人": 4,
         "炎魔": 8
       },
-      "claimed": []
+      "claimed": [
+        "b1",
+        "b3"
+      ]
     }
   },
   "sectInfo": {
@@ -506,9 +510,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 50,
+    "kills": 51,
     "deaths": 2,
-    "battles": 52,
+    "battles": 53,
     "breakthrough": 26,
     "offlineMin": 16,
     "meditate": 2,
