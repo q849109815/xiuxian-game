@@ -383,3 +383,128 @@ textarea.txt { resize: vertical; font-size: 12px; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #666; box-shadow: 0 0 4px rgba(0,0,0,.6); }
 .dot.on { background: #6ee7c8; box-shadow: 0 0 7px #6ee7c8; animation: glow 2s infinite; }
 .dot.off { background: #e05a4a; box-shadow: 0 0 7px rgba(224,90,74,.6); }
+
+/* =========================================================
+ * 页游风：装备格子 / 纸娃娃 / 背包网格 / 任务面板 / 剧情对话
+ * ========================================================= */
+
+/* ---- 物品格子（背包/装备槽通用） ---- */
+.bslot {
+  position: relative; aspect-ratio: 1; border-radius: 6px; cursor: pointer;
+  background: radial-gradient(circle at 50% 32%, rgba(255,255,255,.10), rgba(0,0,0,.5) 70%);
+  border: 1px solid rgba(255,255,255,.14);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; line-height: 1; transition: .14s; overflow: hidden;
+  box-shadow: inset 0 0 12px rgba(0,0,0,.5);
+}
+.bslot:hover { filter: brightness(1.25); transform: translateY(-2px); }
+.bslot.sel { box-shadow: 0 0 0 2px var(--gold), inset 0 0 12px rgba(0,0,0,.5); }
+.bslot .cnt { position: absolute; right: 3px; bottom: 1px; font-size: 10px; color: #fff; text-shadow: 0 1px 2px #000; }
+.bslot .lv { position: absolute; left: 3px; top: 1px; font-size: 10px; color: var(--gold); text-shadow: 0 1px 2px #000; }
+.bslot .nm2 { position: absolute; left: 0; right: 0; bottom: -1px; font-size: 8.5px; text-align: center; color: var(--dim); background: rgba(0,0,0,.55); }
+/* 品质描边 */
+.bslot.q0 { border-color: #5d6673; }
+.bslot.q1 { border-color: #4fbf8b; box-shadow: inset 0 0 12px rgba(0,0,0,.5), 0 0 7px rgba(126,247,200,.28); }
+.bslot.q2 { border-color: #4f9ede; box-shadow: inset 0 0 12px rgba(0,0,0,.5), 0 0 8px rgba(126,200,255,.32); }
+.bslot.q3 { border-color: #d9ac3c; box-shadow: inset 0 0 12px rgba(0,0,0,.5), 0 0 10px rgba(255,215,110,.4); }
+.bslot.q4 { border-color: #e06fb4; box-shadow: inset 0 0 12px rgba(0,0,0,.5), 0 0 12px rgba(255,143,208,.45); }
+/* 四角金饰 */
+.bslot.q3::before, .bslot.q4::before, .bslot.q3::after, .bslot.q4::after {
+  content: ''; position: absolute; width: 7px; height: 7px; pointer-events: none;
+}
+.bslot.q3::before, .bslot.q4::before { top: 1px; left: 1px; border-top: 1.5px solid var(--gold); border-left: 1.5px solid var(--gold); }
+.bslot.q3::after, .bslot.q4::after { bottom: 1px; right: 1px; border-bottom: 1.5px solid var(--gold); border-right: 1.5px solid var(--gold); }
+
+/* ---- 背包网格 ---- */
+.baggrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.baggrid .bslot { font-size: 24px; }
+
+/* ---- 纸娃娃装备栏 ---- */
+.dollwrap { display: flex; gap: 12px; align-items: flex-start; }
+.doll {
+  flex: 0 0 auto; display: grid; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(3, 58px);
+  gap: 6px; padding: 10px; border-radius: 10px;
+  background: radial-gradient(ellipse at 50% 45%, rgba(255,216,138,.09), rgba(0,0,0,.35) 70%);
+  border: 1px solid var(--line-s);
+}
+.doll .bslot { font-size: 24px; }
+.doll .fig {
+  display: flex; align-items: center; justify-content: center; border-radius: 8px;
+  background: radial-gradient(circle at 50% 40%, rgba(255,216,138,.16), transparent 68%);
+  border: 1px dashed rgba(255,216,138,.28);
+}
+.doll .fig span { font-size: 40px; filter: drop-shadow(0 0 10px rgba(255,216,138,.45)); animation: breathe 3.4s ease-in-out infinite; }
+.dollside { flex: 1; min-width: 0; }
+
+/* 装备详情 */
+.eqdetail .hd { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.eqdetail .hd .big { width: 52px; height: 52px; font-size: 30px; }
+.eqdetail .hd .nm { font-size: 14px; font-weight: 700; }
+.eqdetail .hd .sub { font-size: 11px; color: var(--dim); }
+.eqdetail .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin: 8px 0; }
+.eqdetail .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ---- 功法网格 ---- */
+.skgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.skcell { text-align: center; padding: 7px 4px; border-radius: 8px; border: 1px solid var(--line-s); background: rgba(0,0,0,.25); cursor: pointer; transition: .14s; }
+.skcell:hover { border-color: var(--gold); background: rgba(255,216,138,.08); }
+.skcell.on { border-color: var(--gold); background: linear-gradient(180deg, rgba(255,216,138,.2), transparent); }
+.skcell .si { font-size: 28px; line-height: 1; }
+.skcell .sn { font-size: 11px; margin-top: 3px; color: var(--txt); }
+.skcell .sl { font-size: 10px; color: var(--gold); }
+.skcell .lock { opacity: .45; }
+
+/* ---- 任务面板 ---- */
+.taskwrap { display: flex; gap: 10px; align-items: flex-start; }
+.tasklist { flex: 0 0 150px; max-height: 340px; overflow-y: auto; }
+.taskitem {
+  padding: 7px 9px; margin-bottom: 5px; border-radius: 7px; cursor: pointer; font-size: 12.5px;
+  border: 1px solid var(--line-s); background: rgba(0,0,0,.25); transition: .14s;
+}
+.taskitem:hover { border-color: var(--line); }
+.taskitem.on { border-color: var(--gold); background: linear-gradient(135deg, rgba(255,216,138,.18), transparent); }
+.taskitem .tt { font-weight: 600; color: var(--txt); }
+.taskitem .ss { font-size: 10.5px; margin-top: 2px; }
+.taskitem .done { color: var(--jade); } .taskitem .do { color: var(--dim); } .taskitem .fin { color: #7ec8ff; }
+.taskdetail { flex: 1; min-width: 0; }
+.taskdetail .npc { display: flex; align-items: center; gap: 9px; margin-bottom: 9px; }
+.taskdetail .npc .face { font-size: 34px; width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, #3a2c46, #150f1e); border: 2px solid var(--gold); }
+.taskdetail .npc .nm { font-size: 13.5px; color: var(--gold); font-weight: 700; }
+.taskdetail .npc .tag { font-size: 10.5px; color: var(--dim); }
+.taskdetail .say { font-size: 13px; line-height: 1.85; color: var(--txt); background: rgba(0,0,0,.3); border: 1px solid var(--line-s); border-left: 3px solid var(--gold); border-radius: 0 8px 8px 0; padding: 10px 12px; margin-bottom: 10px; }
+.taskdetail .goal { font-size: 12px; margin-bottom: 8px; }
+.taskdetail .rw { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.taskdetail .rw .rwi { display: flex; align-items: center; gap: 3px; font-size: 11.5px; padding: 3px 8px; border-radius: 12px; background: rgba(0,0,0,.35); border: 1px solid var(--line-s); color: var(--gold); }
+
+/* ---- 剧情对话 ---- */
+.story-npc { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 12px; }
+.story-npc .portrait {
+  width: 80px; height: 80px; flex: 0 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 46px; background: radial-gradient(circle at 50% 35%, #4a3a5c, #150f1e 70%);
+  border: 3px solid var(--gold); box-shadow: 0 0 18px rgba(255,216,138,.35); animation: breathe 3.6s ease-in-out infinite;
+}
+.story-npc .plate {
+  padding: 5px 14px; border-radius: 4px; font-size: 14px; font-weight: 700; color: #fff6e0;
+  background: linear-gradient(180deg, #c9962f, #8a6216); border: 1px solid var(--gold);
+  box-shadow: 0 2px 8px rgba(0,0,0,.5);
+}
+.dialog {
+  flex: 1; font-size: 15px; line-height: 2.05; padding: 14px 16px; border-radius: 10px;
+  background: linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,.32));
+  border: 2px solid var(--line); box-shadow: inset 0 0 24px rgba(0,0,0,.5); overflow-y: auto; min-height: 110px;
+}
+.dialog .ln { margin-bottom: 6px; }
+.dialog .ln b { color: var(--gold); margin-right: 4px; }
+.dialog .ln.old { opacity: .42; }
+.dialog .ln.now { animation: fadeIn .35s; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } }
+
+@media (max-width: 560px) {
+  .dollwrap { flex-direction: column; align-items: stretch; }
+  .doll { grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 52px); justify-content: center; }
+  .taskwrap { flex-direction: column; }
+  .tasklist { flex: 0 0 auto; max-height: 150px; width: 100%; }
+  .baggrid { grid-template-columns: repeat(5, 1fr); }
+  .skgrid { grid-template-columns: repeat(3, 1fr); }
+  .story-npc .portrait { width: 60px; height: 60px; font-size: 34px; }
+}
