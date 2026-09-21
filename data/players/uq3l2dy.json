@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990066697,
-  "lastTick": 1789990066697,
+  "lastSeen": 1789990068301,
+  "lastTick": 1789990068301,
   "realm": 4,
-  "stage": 1,
-  "exp": 1561434.1372000005,
-  "stone": 32573,
+  "stage": 2,
+  "exp": 15748.660000000382,
+  "stone": 33212,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -108,20 +108,6 @@
       "count": 2,
       "desc": "炼器材料",
       "id": "i_qg53eix"
-    },
-    {
-      "id": "it_gtpwqh2",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·玄铁刀",
-      "atk": 92,
-      "def": 22,
-      "hp": 168,
-      "crit": 0,
-      "mp": 58
     }
   ],
   "skills": [],
@@ -197,7 +183,7 @@
     "kills": 64,
     "deaths": 0,
     "battles": 64,
-    "breakthrough": 17,
+    "breakthrough": 18,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 0,
