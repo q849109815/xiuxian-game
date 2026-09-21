@@ -7,19 +7,30 @@
   "root": "earth",
   "sect": "s_wuji",
   "createdAt": 1789989442446,
-  "lastSeen": 1789989627944,
-  "lastTick": 1789989627944,
-  "realm": 1,
-  "stage": 3,
-  "exp": 3128.953600000001,
-  "stone": 200,
+  "lastSeen": 1789989653578,
+  "lastTick": 1789989653578,
+  "realm": 2,
+  "stage": 0,
+  "exp": 358.0736000000061,
+  "stone": 400,
   "equip": {
     "weapon": null,
     "armor": null,
     "ring": null,
     "talisman": null
   },
-  "bag": [],
+  "bag": [
+    {
+      "kind": "herb",
+      "ref": "herb_green",
+      "name": "青灵草",
+      "icon": "🌿",
+      "price": 30,
+      "count": 2,
+      "desc": "炼丹材料",
+      "id": "i_w2zpn4r"
+    }
+  ],
   "skills": [],
   "equipped": [],
   "beasts": [],
@@ -35,11 +46,15 @@
     "mainIdx": 0,
     "daily": {
       "date": "2026-9-21",
-      "prog": {},
+      "prog": {
+        "dungeon": 1
+      },
       "claimed": []
     },
     "bounty": {
-      "prog": {},
+      "prog": {
+        "dungeon": 1
+      },
       "claimed": []
     }
   },
@@ -77,10 +92,10 @@
     "kills": 0,
     "deaths": 0,
     "battles": 0,
-    "breakthrough": 6,
+    "breakthrough": 7,
     "offlineMin": 0,
     "meditate": 0,
-    "dungeon": 0,
+    "dungeon": 1,
     "encounters": 0,
     "rob": 0
   }
