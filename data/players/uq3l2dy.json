@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790011651614,
-  "lastTick": 1790011651614,
+  "lastSeen": 1790011653460,
+  "lastTick": 1790011653460,
   "realm": 31,
   "stage": 0,
-  "exp": 340405,
-  "stone": 2827446500910.0703,
+  "exp": 46904192887.8712,
+  "stone": 2827447530975.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -179,7 +179,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 101,
+      "count": 135,
       "desc": "炼丹材料",
       "id": "i_e5kvmuj"
     },
@@ -2544,18 +2544,18 @@
       "date": "2026-9-22",
       "prog": {
         "arena": 20,
-        "dungeon": 95,
+        "dungeon": 106,
         "meditate": 1,
-        "exp": 129750506384,
-        "kill": 977
+        "exp": 129750513904,
+        "kill": 978
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129849898478,
-        "kill": 2695,
+        "exp": 129849905998,
+        "kill": 2696,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2564,7 +2564,7 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 308,
+        "dungeon": 319,
         "arena": 40,
         "九幽冥王": 7,
         "b4": 16,
@@ -2573,7 +2573,7 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 333,
+        "禁地守卫": 334,
         "星斗海妖兽": 304,
         "天星宗弟子": 3,
         "墨蛟": 337
@@ -2620,13 +2620,13 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 2695,
+    "kills": 2696,
     "deaths": 65,
-    "battles": 2760,
+    "battles": 2761,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
-    "dungeon": 308,
+    "dungeon": 319,
     "encounters": 366,
     "rob": 0
   },
@@ -2656,7 +2656,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 24,
-    "acc": 71,
+    "acc": 72,
     "level": 30
   },
   "titles": {
