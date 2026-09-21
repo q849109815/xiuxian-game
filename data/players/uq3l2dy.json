@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990063580,
-  "lastTick": 1789990063580,
+  "lastSeen": 1789990066031,
+  "lastTick": 1789990066031,
   "realm": 4,
   "stage": 1,
-  "exp": 1437848.8530000006,
-  "stone": 30516,
+  "exp": 1521824.3758000005,
+  "stone": 31983,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -65,7 +65,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 17,
+      "count": 18,
       "desc": "炼器材料",
       "id": "i_op7cm1h"
     },
@@ -95,7 +95,7 @@
       "name": "赤炎莲",
       "icon": "🔥",
       "price": 180,
-      "count": 14,
+      "count": 15,
       "desc": "炼丹材料",
       "id": "i_4dx4axl"
     },
@@ -136,20 +136,6 @@
       "hp": 168,
       "crit": 0,
       "mp": 58
-    },
-    {
-      "id": "it_ypi5pkm",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·养魂环",
-      "atk": 28,
-      "def": 20,
-      "hp": 150,
-      "crit": 0,
-      "mp": 58
     }
   ],
   "skills": [],
@@ -169,24 +155,24 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 199490,
-        "kill": 63
+        "exp": 204246,
+        "kill": 64
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 199490,
-        "kill": 63,
+        "exp": 204246,
+        "kill": 64,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
         "熔岩巨人": 13,
-        "b3": 29,
+        "b3": 30,
         "火麒麟": 8,
-        "炎魔": 8
+        "炎魔": 9
       },
       "claimed": []
     }
@@ -222,9 +208,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 63,
+    "kills": 64,
     "deaths": 0,
-    "battles": 63,
+    "battles": 64,
     "breakthrough": 17,
     "offlineMin": 0,
     "meditate": 1,
