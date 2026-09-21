@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790012304285,
-  "lastTick": 1790012304285,
+  "lastSeen": 1790012305813,
+  "lastTick": 1790012305813,
   "realm": 31,
   "stage": 0,
-  "exp": 0,
-  "stone": 2827460719125.0703,
+  "exp": 157162400689.9699,
+  "stone": 2827460660850.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -77,7 +77,7 @@
       "slot": "helmet",
       "q": 4,
       "level": 12,
-      "temper": 4,
+      "temper": 8,
       "name": "神品·玄铁盔",
       "atk": 65,
       "def": 242,
@@ -2547,6 +2547,15 @@
       "exp": 0,
       "stage": 0,
       "apt": 1
+    },
+    {
+      "id": "bs_okcua1v",
+      "ref": "b_fox",
+      "name": "九尾狐",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
     }
   ],
   "activeBeast": 0,
@@ -2571,16 +2580,16 @@
         "arena": 20,
         "dungeon": 249,
         "meditate": 1,
-        "exp": 129754680710,
-        "kill": 1524
+        "exp": 129754689364,
+        "kill": 1525
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129854072804,
-        "kill": 3242,
+        "exp": 129854081458,
+        "kill": 3243,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2601,7 +2610,7 @@
         "禁地守卫": 519,
         "星斗海妖兽": 498,
         "天星宗弟子": 3,
-        "墨蛟": 504
+        "墨蛟": 505
       },
       "claimed": [
         "b2",
@@ -2645,14 +2654,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3242,
+    "kills": 3243,
     "deaths": 65,
-    "battles": 3307,
+    "battles": 3308,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 462,
-    "encounters": 426,
+    "encounters": 427,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -2681,7 +2690,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 3,
+    "acc": 5,
     "level": 30
   },
   "titles": {
