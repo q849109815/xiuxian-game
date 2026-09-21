@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995595524,
-  "lastTick": 1789995595524,
+  "lastSeen": 1789995595918,
+  "lastTick": 1789995595918,
   "realm": 9,
   "stage": 3,
   "exp": 148464305622.76065,
-  "stone": 3303612,
+  "stone": 3304313,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -212,20 +212,6 @@
       "atk": 147,
       "def": 31,
       "hp": 355,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_ykmrgvj",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·灵蛇杖",
-      "atk": 143,
-      "def": 29,
-      "hp": 288,
       "crit": 0,
       "mp": 115
     }
