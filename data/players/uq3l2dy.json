@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789991665594,
-  "lastTick": 1789991665594,
+  "lastSeen": 1789993739068,
+  "lastTick": 1789993739068,
   "realm": 9,
   "stage": 3,
-  "exp": 192651674086.82385,
+  "exp": 0,
   "stone": 337859,
   "equip": {
     "weapon": {
@@ -257,7 +257,7 @@
     "deaths": 0,
     "battles": 317,
     "breakthrough": 36,
-    "offlineMin": 0,
+    "offlineMin": 35,
     "meditate": 1,
     "dungeon": 5,
     "encounters": 36,
