@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009173428,
-  "lastTick": 1790009173428,
+  "lastSeen": 1790009172778,
+  "lastTick": 1790009172778,
   "realm": 31,
   "stage": 0,
-  "exp": 60298746405.7137,
-  "stone": 10921951,
+  "exp": 60298744805.7137,
+  "stone": 10921471,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -2347,7 +2347,7 @@
     "daily": {
       "date": "2026-9-22",
       "prog": {
-        "arena": 8
+        "arena": 4
       },
       "claimed": []
     },
@@ -2365,7 +2365,7 @@
         "火麒麟": 31,
         "炎魔": 53,
         "dungeon": 213,
-        "arena": 28,
+        "arena": 24,
         "九幽冥王": 7,
         "b4": 16,
         "幽魂将": 4,
@@ -2388,11 +2388,11 @@
     "joinedAt": 1789996255530
   },
   "arena": {
-    "score": 560,
-    "wins": 28,
+    "score": 480,
+    "wins": 24,
     "losses": 0,
     "dayDate": "2026-9-22",
-    "fights": 8
+    "fights": 4
   },
   "mail": [],
   "karma": 0,
