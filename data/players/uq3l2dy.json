@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990609317,
-  "lastTick": 1789990609317,
+  "lastSeen": 1789990611384,
+  "lastTick": 1789990611384,
   "realm": 8,
   "stage": 1,
-  "exp": 2549001592.0696692,
-  "stone": 70053,
+  "exp": 3562699640.1448007,
+  "stone": 70488,
   "equip": {
     "weapon": {
       "id": "it_pion6p0",
@@ -118,20 +118,6 @@
       "count": 4,
       "desc": "炼丹材料",
       "id": "i_gw7a1cy"
-    },
-    {
-      "id": "it_x36e9o2",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·聚灵戒",
-      "atk": 66,
-      "def": 26,
-      "hp": 196,
-      "crit": 0,
-      "mp": 91
     },
     {
       "kind": "herb",
