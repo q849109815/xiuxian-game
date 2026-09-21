@@ -293,6 +293,8 @@ const ART = {
   skill: {
     '青元剑诀': 'icon/skill_qingyuan.jpg',
     '梵圣真魔功': 'icon/skill_fansheng.jpg',
+    '大衍决': 'icon/skill_dayan.jpg',
+    '惊蛰十二变': 'icon/skill_jingzhe.jpg',
   },
   /** 货币图标（11_资源货币） */
   cur: {
@@ -301,11 +303,26 @@ const ART = {
     C003: 'icon/stone_high.jpg',
     C004: 'icon/stone_top.jpg',
     C007: 'icon/yuanbao.jpg',
+    C005: 'icon/contrib.jpg',
+  },
+  /** 职业图标（03_职业派系） */
+  cls: {
+    '剑修': 'icon/cls_jian.jpg',
+    '体修': 'icon/cls_ti.jpg',
+    '法修': 'icon/cls_fa.jpg',
+    '魔修': 'icon/cls_fa.jpg',
+  },
+  /** 灵宠头像 */
+  pet: {
+    '噬金虫': 'icon/pet_shijin.jpg',
+    '啼魂兽': 'icon/pet_tihun.jpg',
   },
   item: {
     '掌天瓶': 'item/zhangtianping.jpg',
     '青竹蜂云剑': 'item/qingzhujian.jpg',
+    '虚天鼎': 'item/xutianding.jpg',
     '筑基丹': 'item/zhujidan.jpg',
+    '凝婴丹': 'item/ningyingdan.jpg',
   },
   /** 取场景图（无匹配则回落主背景） */
   sceneOf(name) {
@@ -331,6 +348,18 @@ const ART = {
   faceOf(name) {
     if (!name) return null;
     for (const k in this.face) if (name.indexOf(k) >= 0) return this.base + this.face[k];
+    return null;
+  },
+  /** 职业图标 */
+  clsOf(name) {
+    if (!name) return null;
+    for (const k in this.cls) if (name.indexOf(k) >= 0) return this.base + this.cls[k];
+    return null;
+  },
+  /** 灵宠头像 */
+  petOf(name) {
+    if (!name) return null;
+    for (const k in this.pet) if (name.indexOf(k) >= 0) return this.base + this.pet[k];
     return null;
   },
   /** 功法图标 */
