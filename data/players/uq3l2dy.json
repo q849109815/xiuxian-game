@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790012586565,
-  "lastTick": 1790012586565,
+  "lastSeen": 1790012611554,
+  "lastTick": 1790012611554,
   "realm": 31,
   "stage": 0,
-  "exp": 244166261346.3346,
-  "stone": 2827461064334.0703,
+  "exp": 162777518558.88974,
+  "stone": 2827461074686.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -129,76 +129,6 @@
     }
   },
   "bag": [
-    {
-      "id": "fr_fr_t002",
-      "name": "镇物：缚灵索",
-      "icon": "🔮",
-      "kind": "equip",
-      "q": 1,
-      "slot": "artifact",
-      "base": {
-        "def": 30
-      },
-      "enh": 0,
-      "temp": 0,
-      "fr": true
-    },
-    {
-      "id": "it_jfzg8ms",
-      "kind": "equip",
-      "slot": "bracelet",
-      "q": 3,
-      "level": 12,
-      "temper": 8,
-      "name": "仙器·云锦护腕",
-      "atk": 163,
-      "def": 130,
-      "hp": 1053,
-      "crit": 0.02,
-      "mp": 337
-    },
-    {
-      "id": "fr_fr_t001",
-      "name": "镇物：玄荒钟",
-      "icon": "🔮",
-      "kind": "equip",
-      "q": 1,
-      "slot": "artifact",
-      "base": {
-        "atk": 10
-      },
-      "enh": 0,
-      "temp": 0,
-      "fr": true
-    },
-    {
-      "id": "it_2pf3wb4",
-      "kind": "equip",
-      "slot": "bracelet",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·麒麟腕",
-      "atk": 196,
-      "def": 144,
-      "hp": 718,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_h52s310",
-      "kind": "equip",
-      "slot": "helmet",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·混元盔",
-      "atk": 65,
-      "def": 248,
-      "hp": 1447,
-      "crit": 0,
-      "mp": 337
-    },
     {
       "id": "fr_fr_e206",
       "name": "戒指(各类)",
@@ -1173,7 +1103,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 4,
+      "count": 11,
       "desc": "炼丹材料",
       "id": "i_qv4rncc"
     },
@@ -1183,7 +1113,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 7,
+      "count": 12,
       "desc": "炼器材料",
       "id": "i_kv6q1eo"
     },
@@ -1243,6 +1173,76 @@
       "hp": 550,
       "crit": 0,
       "mp": 331
+    },
+    {
+      "id": "it_za4t7tj",
+      "kind": "equip",
+      "slot": "boots",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·麒麟靴",
+      "atk": 98,
+      "def": 141,
+      "hp": 1053,
+      "crit": 0,
+      "mp": 331
+    },
+    {
+      "id": "it_yeafzd4",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 3,
+      "level": 0,
+      "temper": 0,
+      "name": "仙器·破妄戒",
+      "atk": 235,
+      "def": 57,
+      "hp": 810,
+      "crit": 0.02,
+      "mp": 331
+    },
+    {
+      "id": "it_bewe0j3",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·麒麟铠",
+      "atk": 71,
+      "def": 479,
+      "hp": 2434,
+      "crit": 0,
+      "mp": 331
+    },
+    {
+      "id": "fr_fr_w003",
+      "name": "虚天鼎",
+      "icon": "🍲",
+      "kind": "equip",
+      "q": 4,
+      "slot": "artifact",
+      "base": {
+        "atk": 10
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
+    },
+    {
+      "id": "it_u1y0z33",
+      "kind": "equip",
+      "slot": "bracelet",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·麒麟腕",
+      "atk": 154,
+      "def": 129,
+      "hp": 834,
+      "crit": 0,
+      "mp": 337
     }
   ],
   "skills": [
@@ -2598,16 +2598,16 @@
         "arena": 20,
         "dungeon": 252,
         "meditate": 1,
-        "exp": 129755774656,
-        "kill": 1704
+        "exp": 129755859694,
+        "kill": 1725
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129855166750,
-        "kill": 3422,
+        "exp": 129855251788,
+        "kill": 3443,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2626,12 +2626,12 @@
         "混沌祖龙": 508,
         "天兵": 506,
         "禁地守卫": 553,
-        "星斗海妖兽": 534,
+        "星斗海妖兽": 535,
         "天星宗弟子": 3,
-        "墨蛟": 532,
-        "野狼": 36,
-        "青纹蛇": 23,
-        "灵兔": 23
+        "墨蛟": 533,
+        "野狼": 42,
+        "青纹蛇": 30,
+        "灵兔": 29
       },
       "claimed": [
         "b2",
@@ -2675,9 +2675,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3422,
+    "kills": 3443,
     "deaths": 67,
-    "battles": 3489,
+    "battles": 3510,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
@@ -2711,7 +2711,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 16,
+    "acc": 40,
     "level": 30
   },
   "titles": {
