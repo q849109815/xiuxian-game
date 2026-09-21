@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790011219207,
-  "lastTick": 1790011219207,
+  "lastSeen": 1790011218527,
+  "lastTick": 1790011218527,
   "realm": 31,
   "stage": 0,
-  "exp": 187600433769.4848,
-  "stone": 8505051231774.912,
+  "exp": 140700325323.6136,
+  "stone": 8505051231776.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -131,6 +131,20 @@
     }
   },
   "bag": [
+    {
+      "id": "it_4eek96m",
+      "kind": "equip",
+      "slot": "helmet",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·狻猊盔",
+      "atk": 58,
+      "def": 305,
+      "hp": 1321,
+      "crit": 0,
+      "mp": 337
+    },
     {
       "id": "fr_fr_e201",
       "name": "头盔(各类)",
@@ -459,7 +473,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 75,
+      "count": 73,
       "desc": "炼丹材料",
       "id": "i_tsa30g3"
     },
@@ -1227,20 +1241,6 @@
       "atk": 121,
       "def": 146,
       "hp": 1476,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_mz6nhc9",
-      "kind": "equip",
-      "slot": "necklace",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·养魂链",
-      "atk": 153,
-      "def": 73,
-      "hp": 881,
       "crit": 0,
       "mp": 337
     }
@@ -2517,16 +2517,16 @@
         "arena": 20,
         "dungeon": 92,
         "meditate": 1,
-        "exp": 129741650422,
-        "kill": 682
+        "exp": 129741642484,
+        "kill": 681
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129841042516,
-        "kill": 2400,
+        "exp": 129841034578,
+        "kill": 2399,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2547,7 +2547,7 @@
         "禁地守卫": 239,
         "星斗海妖兽": 215,
         "天星宗弟子": 3,
-        "墨蛟": 225
+        "墨蛟": 224
       },
       "claimed": [
         "b2",
@@ -2591,14 +2591,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 2400,
+    "kills": 2399,
     "deaths": 59,
-    "battles": 2459,
+    "battles": 2458,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 305,
-    "encounters": 330,
+    "encounters": 329,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -2627,7 +2627,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 20,
-    "acc": 88,
+    "acc": 87,
     "level": 13
   },
   "titles": {
@@ -2680,7 +2680,7 @@
       "active": false
     },
     "P011": {
-      "favor": 45,
+      "favor": 25,
       "active": false
     }
   },
