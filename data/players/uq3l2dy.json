@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790012068541,
-  "lastTick": 1790012068541,
+  "lastSeen": 1790012070357,
+  "lastTick": 1790012070357,
   "realm": 31,
   "stage": 0,
-  "exp": 113524655168.94847,
-  "stone": 2827461188929.0703,
+  "exp": 227049296279.89694,
+  "stone": 2827461189701.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -131,20 +131,6 @@
     }
   },
   "bag": [
-    {
-      "id": "it_mgedykd",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 3,
-      "level": 0,
-      "temper": 0,
-      "name": "仙器·聚灵戒",
-      "atk": 249,
-      "def": 74,
-      "hp": 766,
-      "crit": 0.02,
-      "mp": 337
-    },
     {
       "id": "it_2bzt4rt",
       "kind": "equip",
@@ -1243,6 +1229,20 @@
       "enh": 0,
       "temp": 0,
       "fr": true
+    },
+    {
+      "id": "it_q3j0odu",
+      "kind": "equip",
+      "slot": "boots",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·太极履",
+      "atk": 121,
+      "def": 178,
+      "hp": 1218,
+      "crit": 0,
+      "mp": 337
     }
   ],
   "skills": [
@@ -2562,16 +2562,16 @@
         "arena": 20,
         "dungeon": 249,
         "meditate": 1,
-        "exp": 129753167598,
-        "kill": 1327
+        "exp": 129753175684,
+        "kill": 1328
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129852559692,
-        "kill": 3045,
+        "exp": 129852567778,
+        "kill": 3046,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2592,7 +2592,7 @@
         "禁地守卫": 466,
         "星斗海妖兽": 425,
         "天星宗弟子": 3,
-        "墨蛟": 433
+        "墨蛟": 434
       },
       "claimed": [
         "b2",
@@ -2636,9 +2636,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3045,
+    "kills": 3046,
     "deaths": 65,
-    "battles": 3110,
+    "battles": 3111,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
@@ -2672,7 +2672,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 37,
+    "acc": 39,
     "level": 30
   },
   "titles": {
@@ -3216,6 +3216,16 @@
       "L003",
       "L003",
       "L003",
+      "L004",
+      "L004",
+      "L004",
+      "L004",
+      "L004",
+      "L004",
+      "L004",
+      "L004",
+      "L004",
+      "L004",
       "L004",
       "L004",
       "L004",
