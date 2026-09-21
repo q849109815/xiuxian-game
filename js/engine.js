@@ -38,6 +38,7 @@ function newPlayer(name, uid, opt = {}) {
 
 /** 老存档迁移：layer(9层) → stage(4阶)，补齐新字段 */
 function migrate(p) {
+  sanitizeSkills(p);
   if (!p) return p;
   if (p.stage === undefined && p.layer !== undefined) p.stage = Math.min(3, Math.floor((p.layer || 0) / 3));
   delete p.layer;
@@ -223,17 +224,35 @@ function meditate(p) {
   return { ok: true, gain, ups, cd: m.cdSeconds, msg: `闭关得 ${Math.round(gain)} 修为` };
 }
 
+/** 清洗无效功法（配置更换后残留的旧 ID） */
+function sanitizeSkills(p) {
+  const pool = (window.GAME_CONTENT && GAME_CONTENT.skills) || [];
+  if (!pool.length) return;
+  const ids = new Set(pool.map((s) => s.id));
+  p.skills = (p.skills || []).filter((s) => ids.has(s.id));
+  p.equipped = (p.equipped || []).filter((id) => ids.has(id));
+}
+
 /* ---------- 突破 / 渡劫 ---------- */
 function breakthrough(p) {
   const cfg = C();
   if (p.stage !== cfg.stages.length - 1) return { ok: false, msg: '需先修至本境【巅峰】' };
   if (p.realm >= cfg.realms.length - 1) { p.stage = cfg.stages.length - 1; p.exp = 0; return { ok: false, msg: '已登仙境之巅，天道尽头' }; }
+  // 《凡人修仙传》真实突破条件：大境界需备丹药
+  if (window.FRXX && FRXX.loaded) {
+    const chk = FRXX.hasBreakPill(p);
+    if (!chk.ok) {
+      return { ok: false, msg: `需【${chk.need.name}×${chk.need.n}】方可破境（现存 ${chk.own}）`, needPill: chk.need };
+    }
+    if (chk.need) { FRXX.consumePillByName(p, chk.need.name, chk.need.n); p._pillBoost = 0.35; }
+  }
   let rate = Math.max(0.25, cfg.breakthrough.baseRate - p.realm * 0.03);
+  if (p._pillBoost) { rate += p._pillBoost; p._pillBoost = 0; }
   // 渡劫丹
   if (hasItem(p, 'pill_break', 1)) { consume(p, 'pill_break', 1); rate += 0.25; }
   if (Math.random() < rate) {
     p.realm++; p.stage = 0; p.exp = 0;
-    return { ok: true, msg: `渡劫成功！突破至【${cfg.realms[p.realm].name}初期】`, realm: p.realm };
+    return { ok: true, msg: `渡劫成功！突破至【${cfg.realms[p.realm].name}】`, realm: p.realm };
   }
   p.exp = Math.round(p.exp * cfg.breakthrough.failKeepExp + expNeed(p) * 0.3);
   return { ok: false, msg: '天劫降临，突破失败，修为受损', canReincarnate: true };
@@ -249,6 +268,21 @@ function reincarnate(p) {
   fresh.stone = Math.round(p.stone * 0.5);
   fresh.codes = p.codes || [];
   fresh.createdAt = p.createdAt;
+  // 转世不失本心：派系、性情、掌天瓶、仙缘、见闻皆随魂魄同行
+  fresh.faction = p.faction; fresh.trait = p.trait;
+  fresh.bottle = p.bottle || { liquid: 0, acc: 0, level: 1 };
+  fresh.partners = p.partners || {};
+  fresh.storyIdx = p.storyIdx || 0;
+  fresh.mapsSeen = p.mapsSeen || [];
+  fresh.dungeonCleared = p.dungeonCleared || [];
+  fresh.bonusWuxing = (p.bonusWuxing || 0);
+  // 本命功法随身（降为 1 层）
+  if (window.FRXX && FRXX.loaded && p.faction) {
+    const f = FRXX.faction(p.faction);
+    const pool = (window.GAME_CONTENT && GAME_CONTENT.skills) || [];
+    const sk = pool.find((x) => x.name === f.core) || pool[0];
+    if (sk) { fresh.skills = [{ id: sk.id, level: 1 }]; fresh.equipped = [sk.id]; }
+  }
   Object.assign(p, fresh);
   gainExp(p, keep);
   return { ok: true, msg: `转世成功！第 ${life} 世，保留 ${keep} 修为，天赋永久 +${Math.round(life * cfg.bonusPerLife * 100)}%` };
@@ -581,7 +615,7 @@ function caveOutputPerHour(p, type) {
 
 /* ---------- 供 systems.js 使用的桩（本文件先定义，systems.js 覆盖增强） ---------- */
 window.ENGINE = {
-  newPlayer, migrate, activeBeast, beastStats, beastExpNeed, sectBuff, caveOutputPerHour, rootInfo, rollRoot, realmName, expNeed, totalExp, power, attrs,
+  newPlayer, migrate, sanitizeSkills, activeBeast, beastStats, beastExpNeed, sectBuff, caveOutputPerHour, rootInfo, rollRoot, realmName, expNeed, totalExp, power, attrs,
   expPerSec, gainExp, offlineSettle, meditate, meditateCdLeft, breakthrough, reincarnate,
   itemCount, hasItem, consume, addItem, addHerb, addOre, addPill, extraPill,
   equipItem, randItem, enhance, enhanceCost, temper, temperCost, devour, sellItem, usePill,
