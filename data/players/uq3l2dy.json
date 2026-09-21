@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790012918381,
-  "lastTick": 1790012918381,
+  "lastSeen": 1790012920973,
+  "lastTick": 1790012920973,
   "realm": 31,
   "stage": 0,
-  "exp": 81388767587.44487,
-  "stone": 8505059592535.912,
+  "exp": 7760,
+  "stone": 8505059594285.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -1129,7 +1129,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 10,
+      "count": 11,
       "desc": "炼丹材料",
       "id": "i_130mr7h"
     },
@@ -1139,7 +1139,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 10,
+      "count": 12,
       "desc": "炼器材料",
       "id": "i_n8m81o0"
     },
@@ -2604,16 +2604,16 @@
         "arena": 20,
         "dungeon": 301,
         "meditate": 1,
-        "exp": 129758085948,
-        "kill": 1951
+        "exp": 129758100450,
+        "kill": 1953
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129857478042,
-        "kill": 3669,
+        "exp": 129857492544,
+        "kill": 3671,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2634,7 +2634,7 @@
         "禁地守卫": 640,
         "星斗海妖兽": 612,
         "天星宗弟子": 3,
-        "墨蛟": 595,
+        "墨蛟": 597,
         "野狼": 42,
         "青纹蛇": 30,
         "灵兔": 29
@@ -2681,14 +2681,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3669,
+    "kills": 3671,
     "deaths": 72,
-    "battles": 3741,
+    "battles": 3743,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 514,
-    "encounters": 488,
+    "encounters": 489,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -2717,7 +2717,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 77,
+    "acc": 80,
     "level": 30
   },
   "titles": {
