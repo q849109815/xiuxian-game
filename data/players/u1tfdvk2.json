@@ -7,11 +7,11 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789991786458,
-  "lastTick": 1789991786458,
-  "realm": 5,
+  "lastSeen": 1789991800716,
+  "lastTick": 1789991800716,
+  "realm": 6,
   "stage": 0,
-  "exp": 7908430.025703036,
+  "exp": 161582.69034311175,
   "stone": 5862,
   "equip": {
     "weapon": {
@@ -162,7 +162,7 @@
     "daily": {
       "date": "2026-9-21",
       "prog": {
-        "meditate": 1,
+        "meditate": 2,
         "dungeon": 13,
         "arena": 1,
         "exp": 16356,
@@ -172,7 +172,7 @@
     },
     "bounty": {
       "prog": {
-        "meditate": 1,
+        "meditate": 2,
         "dungeon": 13,
         "arena": 1,
         "exp": 16356,
@@ -229,13 +229,13 @@
     "kills": 24,
     "deaths": 0,
     "battles": 24,
-    "breakthrough": 19,
+    "breakthrough": 23,
     "offlineMin": 16,
-    "meditate": 1,
+    "meditate": 2,
     "dungeon": 13,
     "encounters": 3,
     "rob": 0
   },
-  "meditateUntil": 1789989945106,
+  "meditateUntil": 1789992087208,
   "lastChatAt": 1789991570320
 }
