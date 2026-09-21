@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996456145,
-  "lastTick": 1789996456145,
+  "lastSeen": 1789996456595,
+  "lastTick": 1789996456595,
   "realm": 9,
   "stage": 3,
-  "exp": 91236818728.20107,
-  "stone": 8554865,
+  "exp": 121649053317.60143,
+  "stone": 8555426,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -157,20 +157,6 @@
       "def": 41,
       "hp": 267,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_s3i7om8",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·青锋剑",
-      "atk": 134,
-      "def": 45,
-      "hp": 357,
-      "crit": 0,
       "mp": 115
     },
     {
