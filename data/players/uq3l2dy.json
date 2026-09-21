@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790012269814,
-  "lastTick": 1790012269814,
+  "lastSeen": 1790012271398,
+  "lastTick": 1790012271398,
   "realm": 31,
   "stage": 0,
-  "exp": 68829349549.7512,
-  "stone": 2827460958257.0703,
+  "exp": 139751941029.45135,
+  "stone": 2827460956413.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -104,7 +104,7 @@
       "kind": "equip",
       "slot": "bracelet",
       "q": 4,
-      "level": 0,
+      "level": 5,
       "temper": 8,
       "name": "神品·锁金腕",
       "atk": 194,
@@ -1071,7 +1071,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 8,
+      "count": 9,
       "desc": "炼器材料",
       "id": "i_fpil8ni"
     },
@@ -2571,16 +2571,16 @@
         "arena": 20,
         "dungeon": 249,
         "meditate": 1,
-        "exp": 129754455678,
-        "kill": 1495
+        "exp": 129754470676,
+        "kill": 1497
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129853847772,
-        "kill": 3213,
+        "exp": 129853862770,
+        "kill": 3215,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2598,10 +2598,10 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 509,
+        "禁地守卫": 510,
         "星斗海妖兽": 486,
         "天星宗弟子": 3,
-        "墨蛟": 497
+        "墨蛟": 498
       },
       "claimed": [
         "b2",
@@ -2645,9 +2645,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3213,
+    "kills": 3215,
     "deaths": 65,
-    "battles": 3278,
+    "battles": 3280,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
@@ -2681,7 +2681,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 59,
+    "acc": 60,
     "level": 30
   },
   "titles": {
