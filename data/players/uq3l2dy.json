@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996465413,
-  "lastTick": 1789996465413,
+  "lastSeen": 1789996466721,
+  "lastTick": 1789996466721,
   "realm": 9,
   "stage": 3,
-  "exp": 65466,
-  "stone": 8603509,
+  "exp": 62446208702.40579,
+  "stone": 8582043,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -33,7 +33,7 @@
       "kind": "equip",
       "slot": "armor",
       "q": 4,
-      "level": 6,
+      "level": 10,
       "temper": 0,
       "name": "神品·麒麟铠",
       "atk": 44,
@@ -1535,8 +1535,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 73934592,
-        "kill": 1321,
+        "exp": 74002128,
+        "kill": 1322,
         "dungeon": 213,
         "arena": 20
       },
@@ -1550,8 +1550,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 73934592,
-        "kill": 1321,
+        "exp": 74002128,
+        "kill": 1322,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1567,7 +1567,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 392,
-        "混沌祖龙": 382,
+        "混沌祖龙": 383,
         "天兵": 361
       },
       "claimed": [
@@ -1612,9 +1612,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1321,
+    "kills": 1322,
     "deaths": 0,
-    "battles": 1321,
+    "battles": 1322,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
