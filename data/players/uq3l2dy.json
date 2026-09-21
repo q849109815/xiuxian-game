@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789994104746,
-  "lastTick": 1789994104746,
+  "lastSeen": 1789994105830,
+  "lastTick": 1789994105830,
   "realm": 9,
   "stage": 3,
-  "exp": 17514017171.89308,
-  "stone": 1137309,
+  "exp": 35028016929.78616,
+  "stone": 1180947,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -222,6 +222,20 @@
       "atk": 41,
       "def": 123,
       "hp": 952,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_nuwntwb",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·锁子金甲",
+      "atk": 42,
+      "def": 142,
+      "hp": 729,
       "crit": 0,
       "mp": 115
     }
@@ -952,6 +966,42 @@
       "exp": 0,
       "stage": 0,
       "apt": 1
+    },
+    {
+      "id": "bs_tsmzwbx",
+      "ref": "b_dragon",
+      "name": "蛟龙",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_9px4ffg",
+      "ref": "b_qilin",
+      "name": "麒麟",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_ylalurd",
+      "ref": "b_dragon",
+      "name": "蛟龙",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_f1f86da",
+      "ref": "b_qilin",
+      "name": "麒麟",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
     }
   ],
   "activeBeast": 0,
@@ -974,9 +1024,9 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 10556562,
-        "kill": 333,
-        "dungeon": 81,
+        "exp": 10619148,
+        "kill": 334,
+        "dungeon": 85,
         "arena": 20
       },
       "claimed": [
@@ -988,8 +1038,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 10556562,
-        "kill": 333,
+        "exp": 10619148,
+        "kill": 334,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -998,14 +1048,14 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 81,
+        "dungeon": 85,
         "arena": 20,
         "九幽冥王": 7,
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 53,
-        "混沌祖龙": 52,
+        "混沌祖龙": 53,
         "天兵": 42
       },
       "claimed": [
@@ -1049,13 +1099,13 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 333,
+    "kills": 334,
     "deaths": 0,
-    "battles": 333,
+    "battles": 334,
     "breakthrough": 36,
     "offlineMin": 35,
     "meditate": 1,
-    "dungeon": 81,
+    "dungeon": 85,
     "encounters": 38,
     "rob": 0
   },
