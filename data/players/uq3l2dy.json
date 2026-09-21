@@ -7,30 +7,15 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989728722,
-  "lastTick": 1789989728722,
-  "realm": 1,
-  "stage": 3,
-  "exp": 2903.0304000000015,
-  "stone": 536,
+  "lastSeen": 1789989753434,
+  "lastTick": 1789989753434,
+  "realm": 2,
+  "stage": 0,
+  "exp": 9441.272000000004,
+  "stone": 1268,
   "equip": {
     "weapon": null,
-    "armor": null,
-    "ring": null,
-    "talisman": null
-  },
-  "bag": [
-    {
-      "kind": "ore",
-      "ref": "ore_iron",
-      "name": "玄铁",
-      "icon": "⚙️",
-      "price": 50,
-      "count": 1,
-      "desc": "炼器材料",
-      "id": "i_op7cm1h"
-    },
-    {
+    "armor": {
       "id": "it_rjmltm8",
       "kind": "equip",
       "slot": "armor",
@@ -43,6 +28,96 @@
       "hp": 206,
       "crit": 0,
       "mp": 25
+    },
+    "ring": null,
+    "talisman": null
+  },
+  "bag": [
+    {
+      "kind": "ore",
+      "ref": "ore_iron",
+      "name": "玄铁",
+      "icon": "⚙️",
+      "price": 50,
+      "count": 2,
+      "desc": "炼器材料",
+      "id": "i_op7cm1h"
+    },
+    {
+      "id": "it_o3i53gq",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·混元幡",
+      "atk": 45,
+      "def": 6,
+      "hp": 71,
+      "crit": 0,
+      "mp": 25
+    },
+    {
+      "kind": "herb",
+      "ref": "herb_green",
+      "name": "青灵草",
+      "icon": "🌿",
+      "price": 30,
+      "count": 2,
+      "desc": "炼丹材料",
+      "id": "i_xzh1o2k"
+    },
+    {
+      "id": "it_zrfrnan",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·青锋剑",
+      "atk": 41,
+      "def": 10,
+      "hp": 87,
+      "crit": 0,
+      "mp": 34
+    },
+    {
+      "kind": "herb",
+      "ref": "herb_soul",
+      "name": "养魂花",
+      "icon": "🌸",
+      "price": 90,
+      "count": 1,
+      "desc": "炼丹材料",
+      "id": "i_q0unirj"
+    },
+    {
+      "id": "it_bsddf3r",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·玄龟甲",
+      "atk": 10,
+      "def": 36,
+      "hp": 304,
+      "crit": 0,
+      "mp": 34
+    },
+    {
+      "id": "it_5lg2fle",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·玄铁刀",
+      "atk": 60,
+      "def": 13,
+      "hp": 84,
+      "crit": 0,
+      "mp": 34
     }
   ],
   "skills": [],
@@ -62,18 +137,20 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 2900,
-        "kill": 2
+        "exp": 8184,
+        "kill": 6
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 2900,
-        "kill": 2,
+        "exp": 8184,
+        "kill": 6,
         "女鬼": 2,
-        "b2": 2
+        "b2": 6,
+        "僵尸": 3,
+        "尸王": 1
       },
       "claimed": []
     }
@@ -109,10 +186,10 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 2,
+    "kills": 6,
     "deaths": 0,
-    "battles": 2,
-    "breakthrough": 7,
+    "battles": 6,
+    "breakthrough": 8,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 0,
