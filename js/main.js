@@ -57,6 +57,8 @@ window.addEventListener('load', async () => {
     }
   });
 
+  // 玩法扩展初始化
+  setInterval(() => { if (window.P && window.WALLET) { WALLET.init(P); } }, 5000);
   const saved = localStorage.getItem('xx_session');
   if (saved) { const ss = JSON.parse(saved); $('#lgName').value = ss.name; $('#lgPwd').value = ss.pwd || ''; }
 });
@@ -181,6 +183,7 @@ function renderAll() {
 function tick() {
   if (!P) return;
   P.lastSeen = Date.now();
+  if (!P.loginAt) P.loginAt = window.LOGIN_AT || Date.now();
   const ups = ENGINE.gainExp(P, ENGINE.expPerSec(P));
   P.lastTick = Date.now();
   UI.renderHUD(P); UI.renderMeditate(P);
@@ -411,6 +414,7 @@ async function runBattle() {
     UI.pushLog(lg.text, lg.who === 'p' ? 'p' : lg.who === 'b' ? 'sys' : 'm');
   }
 
+  if (window.REALQ) REALQ.add(P, 'explore', 1);
   const rw = ENGINE.battleReward(P, mi, res.win, monster);
   UI.pushLog(res.win ? `✔ ${monster.name} 伏诛！${UI.fmt(rw.exp)} 修为、${UI.fmt(rw.stone)} 灵石${rw.drops.length ? '、' + rw.drops.map((d) => d.name).join('、') : ''}` : `✘ 不敌 ${monster.name}，逃遁（${UI.fmt(rw.exp)} 修为）`, 'sys');
   if (rw.ups > 0) { UI.flashBreakthrough(); UI.toast(`战斗中顿悟，连破 ${rw.ups} 阶！`); UI.renderMaps(P); UI.renderSpots(P); }
@@ -419,6 +423,8 @@ async function runBattle() {
   SYS.taskProgress(P, 'exp', rw.exp);
   if (res.win) {
     SYS.taskProgress(P, 'kill', 1);
+    if (window.FRXX) FRXX.markKill(P, monster.name);
+    if (window.REALQ) REALQ.add(P, 'kill', 1);
     P.tasks.bounty.prog[monster.name] = (P.tasks.bounty.prog[monster.name] || 0) + 1;
     const b = (GAME_SOCIAL.tasks.bounty || []).find((x) => x.map === map.id);
     if (b) P.tasks.bounty.prog[b.id] = (P.tasks.bounty.prog[b.id] || 0) + 1;
@@ -426,6 +432,17 @@ async function runBattle() {
 
   // 奇遇
   const enc = SYS.rollEncounter(P, mi);
+  // 《凡人修仙传》奇遇任务（04_任务系统 Q-E001~E004）
+  if (!enc && window.REALQ) {
+    const eq = REALQ.roll(P);
+    if (eq) {
+      UI.pushLog(`✨ 奇遇【${eq.name}】：${eq.goal}`, 'sys', '#encBox');
+      const r0 = REALQ.claim(P, eq);
+      UI.pushLog(`　→ ${r0.msg}`, 'sys', '#encBox');
+      UI.toast(`奇遇：${eq.name}`);
+      if (window.AUDIO) AUDIO.sfx('gain');
+    }
+  }
   if (enc) {
     UI.pushLog(`${enc.icon} 奇遇：${enc.text}`, 'sys', '#encBox');
     if (enc.type === 'reward') {
