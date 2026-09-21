@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790013446351,
-  "lastTick": 1790013446351,
+  "lastSeen": 1790013448800,
+  "lastTick": 1790013448800,
   "realm": 31,
   "stage": 0,
-  "exp": 7056,
-  "stone": 8505060179853.912,
+  "exp": 251881892873.33765,
+  "stone": 8505060085747.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -119,7 +119,7 @@
       "slot": "boots",
       "q": 3,
       "level": 0,
-      "temper": 1,
+      "temper": 7,
       "name": "仙器·麒麟靴",
       "atk": 120,
       "def": 169,
@@ -173,7 +173,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 81,
+      "count": 82,
       "desc": "炼器材料",
       "id": "i_m1spbrq"
     },
@@ -2643,8 +2643,8 @@
         "arena": 20,
         "dungeon": 301,
         "meditate": 3,
-        "exp": 129761433662,
-        "kill": 2389
+        "exp": 129761449530,
+        "kill": 2391
       },
       "claimed": [
         "d1",
@@ -2656,8 +2656,8 @@
     "bounty": {
       "prog": {
         "meditate": 4,
-        "exp": 129860825756,
-        "kill": 4107,
+        "exp": 129860841624,
+        "kill": 4109,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2675,7 +2675,7 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 792,
+        "禁地守卫": 794,
         "星斗海妖兽": 754,
         "天星宗弟子": 3,
         "墨蛟": 739,
@@ -2725,9 +2725,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 4107,
+    "kills": 4109,
     "deaths": 72,
-    "battles": 4179,
+    "battles": 4181,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 4,
@@ -2762,7 +2762,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 60,
+    "acc": 63,
     "level": 30
   },
   "titles": {
