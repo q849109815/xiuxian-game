@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989828904,
-  "lastTick": 1789989828904,
+  "lastSeen": 1789989830091,
+  "lastTick": 1789989830091,
   "realm": 2,
   "stage": 3,
-  "exp": 35515.15759999999,
-  "stone": 5861,
+  "exp": 39009.85519999999,
+  "stone": 6767,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -90,34 +90,6 @@
       "id": "i_q0unirj"
     },
     {
-      "id": "it_bsddf3r",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·玄龟甲",
-      "atk": 10,
-      "def": 36,
-      "hp": 304,
-      "crit": 0,
-      "mp": 34
-    },
-    {
-      "id": "it_n1838s4",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·太极道衣",
-      "atk": 9,
-      "def": 31,
-      "hp": 282,
-      "crit": 0,
-      "mp": 34
-    },
-    {
       "id": "it_vbtejo3",
       "kind": "equip",
       "slot": "weapon",
@@ -191,18 +163,18 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 36752,
-        "kill": 26
+        "exp": 38114,
+        "kill": 27
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 36752,
-        "kill": 26,
-        "女鬼": 10,
-        "b2": 26,
+        "exp": 38114,
+        "kill": 27,
+        "女鬼": 11,
+        "b2": 27,
         "僵尸": 12,
         "尸王": 4
       },
@@ -240,9 +212,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 26,
+    "kills": 27,
     "deaths": 0,
-    "battles": 26,
+    "battles": 27,
     "breakthrough": 11,
     "offlineMin": 0,
     "meditate": 1,
