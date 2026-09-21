@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790010085062,
-  "lastTick": 1790010085062,
+  "lastSeen": 1790010126570,
+  "lastTick": 1790010126570,
   "realm": 31,
   "stage": 0,
-  "exp": 201765985647.13354,
-  "stone": 8505051747003.912,
+  "exp": 76211183976.53339,
+  "stone": 8505051747217.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -151,7 +151,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 443,
+      "count": 444,
       "desc": "炼丹材料",
       "id": "i_dwghtoq"
     },
@@ -161,9 +161,23 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 88,
+      "count": 90,
       "desc": "炼器材料",
       "id": "i_jdu35bw"
+    },
+    {
+      "id": "it_lyl2doc",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·混元幡",
+      "atk": 634,
+      "def": 56,
+      "hp": 393,
+      "crit": 0,
+      "mp": 325
     }
   ],
   "skills": [
@@ -1347,15 +1361,17 @@
       "prog": {
         "arena": 20,
         "dungeon": 92,
-        "meditate": 1
+        "meditate": 1,
+        "exp": 128852166542,
+        "kill": 1
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 99392094,
-        "kill": 1718,
+        "exp": 128951558636,
+        "kill": 1719,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1372,7 +1388,8 @@
         "深渊魔蛛": 5,
         "星宿仙君": 518,
         "混沌祖龙": 508,
-        "天兵": 506
+        "天兵": 506,
+        "禁地守卫": 1
       },
       "claimed": [
         "b2",
@@ -1416,14 +1433,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1718,
-    "deaths": 0,
-    "battles": 1718,
+    "kills": 1719,
+    "deaths": 6,
+    "battles": 1725,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 305,
-    "encounters": 239,
+    "encounters": 240,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -1452,7 +1469,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 8,
-    "acc": 34,
+    "acc": 76,
     "level": 13
   },
   "titles": {
@@ -1533,5 +1550,19 @@
     "team": null,
     "dm": []
   },
-  "sectSkill": []
+  "sectSkill": [],
+  "rq": {
+    "daily": {
+      "q-d004": 1,
+      "q-d007": 1,
+      "q-d003": 1
+    },
+    "weekly": {},
+    "event": {},
+    "lastDaily": "2026-9-22",
+    "lastWeekly": 2959
+  },
+  "killed": [
+    "禁地守卫"
+  ]
 }
