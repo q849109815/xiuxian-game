@@ -1,0 +1,87 @@
+{
+  "uid": "uoyrx4m",
+  "name": "ly59231405",
+  "pwd": "r5ztu8",
+  "gender": "m",
+  "avatar": "🧙",
+  "root": "earth",
+  "sect": "s_wuji",
+  "createdAt": 1789989442446,
+  "lastSeen": 1789989447942,
+  "lastTick": 1789989447942,
+  "realm": 0,
+  "stage": 0,
+  "exp": 44.198783999999996,
+  "stone": 200,
+  "equip": {
+    "weapon": null,
+    "armor": null,
+    "ring": null,
+    "talisman": null
+  },
+  "bag": [],
+  "skills": [],
+  "equipped": [],
+  "beasts": [],
+  "activeBeast": -1,
+  "riding": false,
+  "cave": {
+    "lv": {},
+    "array": "none",
+    "lastHarvest": 1789989442446,
+    "store": {}
+  },
+  "tasks": {
+    "mainIdx": 0,
+    "daily": {
+      "date": "2026-9-21",
+      "prog": {},
+      "claimed": []
+    },
+    "bounty": {
+      "prog": {},
+      "claimed": []
+    }
+  },
+  "sectInfo": {
+    "id": "s_wuji",
+    "rankIdx": 0,
+    "contrib": 0,
+    "joinedAt": 1789989442446
+  },
+  "arena": {
+    "score": 0,
+    "wins": 0,
+    "losses": 0,
+    "dayDate": "",
+    "fights": 0
+  },
+  "mail": [],
+  "karma": 0,
+  "dao": {
+    "partner": null,
+    "master": null,
+    "apprentices": []
+  },
+  "reinc": 0,
+  "spot": "valley",
+  "buffs": {
+    "pillAtk": 0,
+    "pillExpUntil": 0,
+    "rename": 0
+  },
+  "codes": [],
+  "banned": false,
+  "title": "",
+  "stats": {
+    "kills": 0,
+    "deaths": 0,
+    "battles": 0,
+    "breakthrough": 0,
+    "offlineMin": 0,
+    "meditate": 0,
+    "dungeon": 0,
+    "encounters": 0,
+    "rob": 0
+  }
+}
