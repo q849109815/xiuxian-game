@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790013186566,
-  "lastTick": 1790013186566,
+  "lastSeen": 1790013188756,
+  "lastTick": 1790013188756,
   "realm": 31,
   "stage": 0,
-  "exp": 0,
-  "stone": 8505059993128.912,
+  "exp": 175099220388.865,
+  "stone": 8505059990396.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -129,20 +129,6 @@
     }
   },
   "bag": [
-    {
-      "id": "it_dzrav1v",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·灵蛇杖",
-      "atk": 489,
-      "def": 84,
-      "hp": 632,
-      "crit": 0,
-      "mp": 337
-    },
     {
       "id": "it_c7ewqc2",
       "kind": "equip",
@@ -1140,7 +1126,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 12,
+      "count": 14,
       "desc": "炼器材料",
       "id": "i_m1spbrq"
     },
@@ -1239,6 +1225,20 @@
       "atk": 206,
       "def": 63,
       "hp": 789,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_lltwmrx",
+      "kind": "equip",
+      "slot": "bracelet",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·玄铁护腕",
+      "atk": 180,
+      "def": 131,
+      "hp": 771,
       "crit": 0,
       "mp": 337
     }
@@ -2623,8 +2623,8 @@
         "arena": 20,
         "dungeon": 301,
         "meditate": 2,
-        "exp": 129759769916,
-        "kill": 2171
+        "exp": 129759783868,
+        "kill": 2173
       },
       "claimed": [
         "d1",
@@ -2636,8 +2636,8 @@
     "bounty": {
       "prog": {
         "meditate": 3,
-        "exp": 129859162010,
-        "kill": 3889,
+        "exp": 129859175962,
+        "kill": 3891,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2658,7 +2658,7 @@
         "禁地守卫": 710,
         "星斗海妖兽": 686,
         "天星宗弟子": 3,
-        "墨蛟": 671,
+        "墨蛟": 673,
         "野狼": 42,
         "青纹蛇": 30,
         "灵兔": 29
@@ -2673,7 +2673,7 @@
   "sectInfo": {
     "id": "s_06ixz2",
     "rankIdx": 4,
-    "contrib": 5650,
+    "contrib": 6010,
     "joinedAt": 1789996255530
   },
   "arena": {
@@ -2705,14 +2705,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3889,
+    "kills": 3891,
     "deaths": 72,
-    "battles": 3961,
+    "battles": 3963,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 3,
     "dungeon": 514,
-    "encounters": 515,
+    "encounters": 516,
     "rob": 0
   },
   "meditateUntil": 1790013397690,
@@ -2742,7 +2742,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 71,
+    "acc": 73,
     "level": 30
   },
   "titles": {
