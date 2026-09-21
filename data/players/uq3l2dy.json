@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009685929,
-  "lastTick": 1790009685929,
+  "lastSeen": 1790009689302,
+  "lastTick": 1790009689302,
   "realm": 31,
   "stage": 0,
-  "exp": 198146618260.70642,
-  "stone": 8505051547025.912,
+  "exp": 243872760936.25403,
+  "stone": 8505051547575.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -954,20 +954,6 @@
       "atk": 76,
       "def": 40,
       "hp": 310,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_4pbx9bp",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·太虚戒",
-      "atk": 63,
-      "def": 42,
-      "hp": 343,
       "crit": 0,
       "mp": 115
     },
@@ -2320,7 +2306,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 4,
-    "acc": 6,
+    "acc": 9,
     "level": 13
   },
   "titles": {
