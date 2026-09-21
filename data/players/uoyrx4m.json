@@ -7,11 +7,11 @@
   "root": "earth",
   "sect": "s_wuji",
   "createdAt": 1789989442446,
-  "lastSeen": 1789989531120,
-  "lastTick": 1789989531120,
+  "lastSeen": 1789989535173,
+  "lastTick": 1789989535173,
   "realm": 1,
   "stage": 0,
-  "exp": 0,
+  "exp": 232.848,
   "stone": 200,
   "equip": {
     "weapon": null,
@@ -64,7 +64,7 @@
     "apprentices": []
   },
   "reinc": 0,
-  "spot": "valley",
+  "spot": "vein",
   "buffs": {
     "pillAtk": 0,
     "pillExpUntil": 0,
