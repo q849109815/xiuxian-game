@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009689302,
-  "lastTick": 1790009689302,
+  "lastSeen": 1790009693111,
+  "lastTick": 1790009693111,
   "realm": 31,
   "stage": 0,
-  "exp": 243872760936.25403,
-  "stone": 8505051547575.912,
+  "exp": 304840951170.3175,
+  "stone": 8505051548492.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -982,20 +982,6 @@
       "atk": 146,
       "def": 37,
       "hp": 344,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_au8qqsb",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·锁子金甲",
-      "atk": 36,
-      "def": 127,
-      "hp": 734,
       "crit": 0,
       "mp": 115
     },
@@ -2306,7 +2292,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 4,
-    "acc": 9,
+    "acc": 13,
     "level": 13
   },
   "titles": {
