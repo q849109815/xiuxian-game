@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996447211,
-  "lastTick": 1789996447211,
+  "lastSeen": 1789996450511,
+  "lastTick": 1789996450511,
   "realm": 9,
   "stage": 3,
-  "exp": 182473805456.40213,
-  "stone": 8504656,
+  "exp": 304122863434.00354,
+  "stone": 8519552,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -117,7 +117,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 63,
+      "count": 64,
       "desc": "炼器材料",
       "id": "i_1c42jnp"
     },
@@ -157,20 +157,6 @@
       "def": 41,
       "hp": 267,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_1kaoyv8",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·青锋剑",
-      "atk": 160,
-      "def": 40,
-      "hp": 280,
-      "crit": 0,
       "mp": 115
     },
     {
@@ -1731,8 +1717,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 73122694,
-        "kill": 1308,
+        "exp": 73242314,
+        "kill": 1310,
         "dungeon": 213,
         "arena": 20
       },
@@ -1746,8 +1732,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 73122694,
-        "kill": 1308,
+        "exp": 73242314,
+        "kill": 1310,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1762,7 +1748,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 385,
+        "星宿仙君": 387,
         "混沌祖龙": 377,
         "天兵": 360
       },
@@ -1808,9 +1794,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1308,
+    "kills": 1310,
     "deaths": 0,
-    "battles": 1308,
+    "battles": 1310,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
