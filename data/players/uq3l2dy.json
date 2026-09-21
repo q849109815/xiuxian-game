@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009826565,
-  "lastTick": 1790009826565,
+  "lastSeen": 1790009877558,
+  "lastTick": 1790009877558,
   "realm": 31,
   "stage": 0,
-  "exp": 45604866039.97695,
+  "exp": 182904570702.19055,
   "stone": 8505051562605.912,
   "equip": {
     "weapon": {
@@ -2012,7 +2012,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 5,
-    "acc": 46,
+    "acc": 47,
     "level": 13
   },
   "titles": {
@@ -2063,20 +2063,5 @@
   "sectWh": {
     "items": []
   },
-  "storyIdx": 37,
-  "skin": {
-    "owned": [],
-    "wear": {}
-  },
-  "worm": {
-    "own": [],
-    "cur": null,
-    "feed": {}
-  },
-  "social": {
-    "friends": [],
-    "team": null,
-    "dm": []
-  },
-  "sectSkill": []
+  "storyIdx": 37
 }
