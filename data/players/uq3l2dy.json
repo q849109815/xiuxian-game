@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995536478,
-  "lastTick": 1789995536478,
+  "lastSeen": 1789995536936,
+  "lastTick": 1789995536936,
   "realm": 9,
   "stage": 3,
-  "exp": 185580317716.9508,
-  "stone": 2966647,
+  "exp": 222696402211.14096,
+  "stone": 2973976,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -160,20 +160,6 @@
       "mp": 115
     },
     {
-      "id": "it_ndln6pv",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·太极道衣",
-      "atk": 42,
-      "def": 102,
-      "hp": 762,
-      "crit": 0,
-      "mp": 115
-    },
-    {
       "id": "it_6ma2w0b",
       "kind": "equip",
       "slot": "weapon",
@@ -310,6 +296,20 @@
       "atk": 83,
       "def": 40,
       "hp": 371,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_q1hl2nk",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·聚灵戒",
+      "atk": 60,
+      "def": 32,
+      "hp": 233,
       "crit": 0,
       "mp": 115
     }
@@ -1419,8 +1419,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 28432840,
-        "kill": 611,
+        "exp": 28504486,
+        "kill": 612,
         "dungeon": 213,
         "arena": 20
       },
@@ -1433,8 +1433,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 28432840,
-        "kill": 611,
+        "exp": 28504486,
+        "kill": 612,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1450,7 +1450,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 143,
-        "混沌祖龙": 149,
+        "混沌祖龙": 150,
         "天兵": 133
       },
       "claimed": [
@@ -1494,9 +1494,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 611,
+    "kills": 612,
     "deaths": 0,
-    "battles": 611,
+    "battles": 612,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
