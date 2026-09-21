@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009656131,
-  "lastTick": 1790009656131,
+  "lastSeen": 1790009659513,
+  "lastTick": 1790009659513,
   "realm": 31,
   "stage": 0,
-  "exp": 76210237792.5794,
-  "stone": 8505051541411.912,
+  "exp": 121936380468.12706,
+  "stone": 8505051542652.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -476,20 +476,6 @@
       "atk": 75,
       "def": 36,
       "hp": 295,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_zg7h70o",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·麒麟铠",
-      "atk": 43,
-      "def": 122,
-      "hp": 749,
       "crit": 0,
       "mp": 115
     },
@@ -2432,7 +2418,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 3,
-    "acc": 66,
+    "acc": 69,
     "level": 13
   },
   "titles": {
