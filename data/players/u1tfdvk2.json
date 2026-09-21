@@ -7,11 +7,11 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789992101460,
-  "lastTick": 1789992101460,
+  "lastSeen": 1789992170585,
+  "lastTick": 1789992170585,
   "realm": 8,
-  "stage": 0,
-  "exp": 93342446,
+  "stage": 3,
+  "exp": 14933477201.70903,
   "stone": 466500000,
   "equip": {
     "weapon": {
@@ -658,14 +658,13 @@
     "kills": 71,
     "deaths": 2,
     "battles": 73,
-    "breakthrough": 30,
-    "offlineMin": 16,
+    "breakthrough": 33,
+    "offlineMin": 17,
     "meditate": 2,
     "dungeon": 135,
     "encounters": 16,
     "rob": 0
   },
   "meditateUntil": 1789992087208,
-  "lastChatAt": 1789991570320,
-  "layer": 0
+  "lastChatAt": 1789991570320
 }
