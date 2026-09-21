@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996081355,
-  "lastTick": 1789996081355,
+  "lastSeen": 1789996084086,
+  "lastTick": 1789996084086,
   "realm": 9,
   "stage": 3,
-  "exp": 309300610544.25134,
-  "stone": 5987168,
+  "exp": 30930075062.825134,
+  "stone": 6000294,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -59,20 +59,6 @@
     "talisman": null
   },
   "bag": [
-    {
-      "id": "it_a3vpzcm",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 3,
-      "level": 0,
-      "temper": 0,
-      "name": "仙器·破妄戒",
-      "atk": 61,
-      "def": 32,
-      "hp": 248,
-      "crit": 0.02,
-      "mp": 115
-    },
     {
       "id": "it_e1ogj1n",
       "kind": "equip",
@@ -149,7 +135,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 26,
+      "count": 27,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -159,7 +145,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 10,
+      "count": 11,
       "desc": "炼器材料",
       "id": "i_1c42jnp"
     },
@@ -1348,8 +1334,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 54800186,
-        "kill": 1021,
+        "exp": 54933408,
+        "kill": 1023,
         "dungeon": 213,
         "arena": 20
       },
@@ -1362,8 +1348,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 54800186,
-        "kill": 1021,
+        "exp": 54933408,
+        "kill": 1023,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1379,7 +1365,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 279,
-        "混沌祖龙": 287,
+        "混沌祖龙": 289,
         "天兵": 269
       },
       "claimed": [
@@ -1423,9 +1409,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1021,
+    "kills": 1023,
     "deaths": 0,
-    "battles": 1021,
+    "battles": 1023,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
