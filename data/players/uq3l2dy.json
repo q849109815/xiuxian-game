@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996053757,
-  "lastTick": 1789996053757,
+  "lastSeen": 1789996054190,
+  "lastTick": 1789996054190,
   "realm": 9,
   "stage": 3,
-  "exp": 61860150967.65027,
-  "stone": 5867467,
+  "exp": 92790161674.4754,
+  "stone": 5868253,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -141,20 +141,6 @@
       "def": 33,
       "hp": 313,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_ln9585p",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·锁子金甲",
-      "atk": 44,
-      "def": 119,
-      "hp": 1000,
-      "crit": 0,
       "mp": 115
     },
     {
