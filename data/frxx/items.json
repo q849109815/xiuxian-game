@@ -1,0 +1,1132 @@
+{
+ "forge": [
+  {
+   "id": "fr_w001",
+   "name": "掌天瓶",
+   "icon": "🏺",
+   "slot": "artifact",
+   "q": 4,
+   "cost": {
+    "ore_iron": 10,
+    "ore_fire": 3,
+    "ore_dark": 2,
+    "ore_star": 1
+   },
+   "rate": 0.33999999999999997,
+   "tier": 5,
+   "base": {
+    "atk": 10
+   },
+   "src": "新手剧情获得",
+   "set": "—",
+   "lore": "时间法则+100%，绿液催熟",
+   "fr": true,
+   "frid": "W001"
+  },
+  {
+   "id": "fr_w002",
+   "name": "青竹蜂云剑",
+   "icon": "🗡️",
+   "slot": "weapon",
+   "q": 4,
+   "cost": {
+    "ore_iron": 10,
+    "ore_fire": 3,
+    "ore_dark": 2,
+    "ore_star": 1
+   },
+   "rate": 0.33999999999999997,
+   "tier": 5,
+   "base": {
+    "atk": 80
+   },
+   "src": "天雷竹炼制(本命法宝)",
+   "set": "大庚剑阵(72口)",
+   "lore": "剑伤+80%，72口成套",
+   "fr": true,
+   "frid": "W002"
+  },
+  {
+   "id": "fr_w003",
+   "name": "虚天鼎",
+   "icon": "🍲",
+   "slot": "artifact",
+   "q": 4,
+   "cost": {
+    "ore_iron": 10,
+    "ore_fire": 3,
+    "ore_dark": 2,
+    "ore_star": 1
+   },
+   "rate": 0.33999999999999997,
+   "tier": 5,
+   "base": {
+    "atk": 10
+   },
+   "src": "虚天殿副本",
+   "set": "—",
+   "lore": "炼丹效果+50%，困敌3秒",
+   "fr": true,
+   "frid": "W003"
+  },
+  {
+   "id": "fr_w004",
+   "name": "玄天斩灵剑",
+   "icon": "⚔️",
+   "slot": "weapon",
+   "q": 4,
+   "cost": {
+    "ore_iron": 10,
+    "ore_fire": 3,
+    "ore_dark": 2,
+    "ore_star": 1
+   },
+   "rate": 0.33999999999999997,
+   "tier": 5,
+   "base": {
+    "atk": 150
+   },
+   "src": "地渊副本获得",
+   "set": "—",
+   "lore": "斩神斩魂，全伤害+150%",
+   "fr": true,
+   "frid": "W004"
+  },
+  {
+   "id": "fr_w005",
+   "name": "风雷翅",
+   "icon": "🪽",
+   "slot": "necklace",
+   "q": 3,
+   "cost": {
+    "ore_iron": 8,
+    "ore_fire": 2,
+    "ore_dark": 1,
+    "ore_star": 0
+   },
+   "rate": 0.47,
+   "tier": 4,
+   "base": {
+    "speed": 25
+   },
+   "src": "乱星海副本/天星双圣掉落",
+   "set": "—",
+   "lore": "速度+50%，闪避+20%",
+   "fr": true,
+   "frid": "W005"
+  },
+  {
+   "id": "fr_w006",
+   "name": "元合五极山",
+   "icon": "⛰️",
+   "slot": "armor",
+   "q": 4,
+   "cost": {
+    "ore_iron": 10,
+    "ore_fire": 3,
+    "ore_dark": 2,
+    "ore_star": 1
+   },
+   "rate": 0.33999999999999997,
+   "tier": 5,
+   "base": {
+    "def": 100
+   },
+   "src": "五极山合成",
+   "set": "元合五行套(5件)",
+   "lore": "防御+100%，五行抗性",
+   "fr": true,
+   "frid": "W006"
+  },
+  {
+   "id": "fr_w007",
+   "name": "玄天葫芦",
+   "icon": "🍶",
+   "slot": "artifact",
+   "q": 3,
+   "cost": {
+    "ore_iron": 8,
+    "ore_fire": 2,
+    "ore_dark": 1,
+    "ore_star": 0
+   },
+   "rate": 0.47,
+   "tier": 4,
+   "base": {
+    "atk": 10
+   },
+   "src": "灵界副本获得",
+   "set": "—",
+   "lore": "收摄神魂、魔气吸收",
+   "fr": true,
+   "frid": "W007"
+  },
+  {
+   "id": "fr_w008",
+   "name": "朱雀环",
+   "icon": "🔥",
+   "slot": "necklace",
+   "q": 3,
+   "cost": {
+    "ore_iron": 8,
+    "ore_fire": 2,
+    "ore_dark": 1,
+    "ore_star": 0
+   },
+   "rate": 0.47,
+   "tier": 4,
+   "base": {
+    "atk": 10
+   },
+   "src": "南宫婉本命/血色禁地",
+   "set": "—",
+   "lore": "火属性+40%，攻速+20%",
+   "fr": true,
+   "frid": "W008"
+  },
+  {
+   "id": "fr_w009",
+   "name": "八灵尺",
+   "icon": "📏",
+   "slot": "artifact",
+   "q": 4,
+   "cost": {
+    "ore_iron": 10,
+    "ore_fire": 3,
+    "ore_dark": 2,
+    "ore_star": 1
+   },
+   "rate": 0.33999999999999997,
+   "tier": 5,
+   "base": {
+    "atk": 30
+   },
+   "src": "昆吾山副本",
+   "set": "—",
+   "lore": "全属性+30%，范围控制",
+   "fr": true,
+   "frid": "W009"
+  },
+  {
+   "id": "fr_e001",
+   "name": "青铜剑",
+   "icon": "🗡️",
+   "slot": "weapon",
+   "q": 0,
+   "cost": {
+    "ore_iron": 2,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.86,
+   "tier": 1,
+   "base": {
+    "atk": 10
+   },
+   "src": "新手商店",
+   "set": "—",
+   "lore": "攻击+10",
+   "fr": true,
+   "frid": "E001"
+  },
+  {
+   "id": "fr_e002",
+   "name": "精钢剑",
+   "icon": "🗡️",
+   "slot": "weapon",
+   "q": 1,
+   "cost": {
+    "ore_iron": 4,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.73,
+   "tier": 2,
+   "base": {
+    "atk": 50
+   },
+   "src": "炼气期副本",
+   "set": "—",
+   "lore": "攻击+50",
+   "fr": true,
+   "frid": "E002"
+  },
+  {
+   "id": "fr_e003",
+   "name": "青锋剑",
+   "icon": "🗡️",
+   "slot": "weapon",
+   "q": 2,
+   "cost": {
+    "ore_iron": 6,
+    "ore_fire": 1,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.6,
+   "tier": 3,
+   "base": {
+    "atk": 150
+   },
+   "src": "筑基期副本",
+   "set": "青锋套(4件)",
+   "lore": "攻击+150",
+   "fr": true,
+   "frid": "E003"
+  },
+  {
+   "id": "fr_e004",
+   "name": "玄铁剑",
+   "icon": "🗡️",
+   "slot": "weapon",
+   "q": 2,
+   "cost": {
+    "ore_iron": 6,
+    "ore_fire": 1,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.6,
+   "tier": 3,
+   "base": {
+    "atk": 150,
+    "def": 30
+   },
+   "src": "筑基期副本",
+   "set": "玄铁套(4件)",
+   "lore": "攻击+150，防御+30",
+   "fr": true,
+   "frid": "E004"
+  },
+  {
+   "id": "fr_e005",
+   "name": "紫郢剑",
+   "icon": "🗡️",
+   "slot": "weapon",
+   "q": 3,
+   "cost": {
+    "ore_iron": 8,
+    "ore_fire": 2,
+    "ore_dark": 1,
+    "ore_star": 0
+   },
+   "rate": 0.47,
+   "tier": 4,
+   "base": {
+    "atk": 125
+   },
+   "src": "结丹期副本",
+   "set": "紫郢套(4件)",
+   "lore": "攻击+500",
+   "fr": true,
+   "frid": "E005"
+  },
+  {
+   "id": "fr_e101",
+   "name": "布衣",
+   "icon": "🥋",
+   "slot": "armor",
+   "q": 0,
+   "cost": {
+    "ore_iron": 2,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.86,
+   "tier": 1,
+   "base": {
+    "def": 5
+   },
+   "src": "新手商店",
+   "set": "—",
+   "lore": "防御+5",
+   "fr": true,
+   "frid": "E101"
+  },
+  {
+   "id": "fr_e102",
+   "name": "皮甲",
+   "icon": "🥋",
+   "slot": "armor",
+   "q": 1,
+   "cost": {
+    "ore_iron": 4,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.73,
+   "tier": 2,
+   "base": {
+    "def": 30,
+    "hp": 800
+   },
+   "src": "炼气期副本",
+   "set": "—",
+   "lore": "防御+30，气血+100",
+   "fr": true,
+   "frid": "E102"
+  },
+  {
+   "id": "fr_e103",
+   "name": "青铜甲",
+   "icon": "🥋",
+   "slot": "armor",
+   "q": 2,
+   "cost": {
+    "ore_iron": 6,
+    "ore_fire": 1,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.6,
+   "tier": 3,
+   "base": {
+    "def": 100,
+    "hp": 4000
+   },
+   "src": "筑基期副本",
+   "set": "青铜套(4件)",
+   "lore": "防御+100，气血+500",
+   "fr": true,
+   "frid": "E103"
+  },
+  {
+   "id": "fr_e104",
+   "name": "玄铁甲",
+   "icon": "🥋",
+   "slot": "armor",
+   "q": 2,
+   "cost": {
+    "ore_iron": 6,
+    "ore_fire": 1,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.6,
+   "tier": 3,
+   "base": {
+    "def": 120,
+    "hp": 4800
+   },
+   "src": "筑基期副本",
+   "set": "玄铁套(4件)",
+   "lore": "防御+120，气血+600",
+   "fr": true,
+   "frid": "E104"
+  },
+  {
+   "id": "fr_e105",
+   "name": "天蚕宝衣",
+   "icon": "🥋",
+   "slot": "armor",
+   "q": 3,
+   "cost": {
+    "ore_iron": 8,
+    "ore_fire": 2,
+    "ore_dark": 1,
+    "ore_star": 0
+   },
+   "rate": 0.47,
+   "tier": 4,
+   "base": {
+    "def": 100,
+    "hp": 4000
+   },
+   "src": "结丹期副本",
+   "set": "天蚕套(4件)",
+   "lore": "防御+400，气血+3000",
+   "fr": true,
+   "frid": "E105"
+  },
+  {
+   "id": "fr_e201",
+   "name": "头盔(各类)",
+   "icon": "🪖",
+   "slot": "helmet",
+   "q": 1,
+   "cost": {
+    "ore_iron": 4,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.73,
+   "tier": 2,
+   "base": {
+    "def": 20
+   },
+   "src": "对应等级副本",
+   "set": "对应套装",
+   "lore": "防御+20%基础",
+   "fr": true,
+   "frid": "E201"
+  },
+  {
+   "id": "fr_e202",
+   "name": "护腕(各类)",
+   "icon": "🧤",
+   "slot": "bracelet",
+   "q": 1,
+   "cost": {
+    "ore_iron": 4,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.73,
+   "tier": 2,
+   "base": {
+    "atk": 15
+   },
+   "src": "对应等级副本",
+   "set": "对应套装",
+   "lore": "攻击+15%基础",
+   "fr": true,
+   "frid": "E202"
+  },
+  {
+   "id": "fr_e203",
+   "name": "腰带(各类)",
+   "icon": "🧤",
+   "slot": "bracelet",
+   "q": 1,
+   "cost": {
+    "ore_iron": 4,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.73,
+   "tier": 2,
+   "base": {
+    "hp": 160
+   },
+   "src": "对应等级副本",
+   "set": "对应套装",
+   "lore": "气血+20%基础",
+   "fr": true,
+   "frid": "E203"
+  },
+  {
+   "id": "fr_e204",
+   "name": "裤子(各类)",
+   "icon": "👢",
+   "slot": "boots",
+   "q": 1,
+   "cost": {
+    "ore_iron": 4,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.73,
+   "tier": 2,
+   "base": {
+    "def": 15
+   },
+   "src": "对应等级副本",
+   "set": "对应套装",
+   "lore": "防御+15%基础",
+   "fr": true,
+   "frid": "E204"
+  },
+  {
+   "id": "fr_e205",
+   "name": "鞋子(各类)",
+   "icon": "👢",
+   "slot": "boots",
+   "q": 1,
+   "cost": {
+    "ore_iron": 4,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.73,
+   "tier": 2,
+   "base": {
+    "speed": 5
+   },
+   "src": "对应等级副本",
+   "set": "对应套装",
+   "lore": "速度+10%，闪避+5%",
+   "fr": true,
+   "frid": "E205"
+  },
+  {
+   "id": "fr_e206",
+   "name": "戒指(各类)",
+   "icon": "📿",
+   "slot": "necklace",
+   "q": 1,
+   "cost": {
+    "ore_iron": 4,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.73,
+   "tier": 2,
+   "base": {
+    "atk": 10
+   },
+   "src": "对应等级副本",
+   "set": "对应套装",
+   "lore": "攻击+10%，暴击+5%",
+   "fr": true,
+   "frid": "E206"
+  },
+  {
+   "id": "fr_e207",
+   "name": "项链(各类)",
+   "icon": "📿",
+   "slot": "necklace",
+   "q": 1,
+   "cost": {
+    "ore_iron": 4,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.73,
+   "tier": 2,
+   "base": {
+    "mp": 15,
+    "hp": 80
+   },
+   "src": "对应等级副本",
+   "set": "对应套装",
+   "lore": "灵力+15%，气血+10%",
+   "fr": true,
+   "frid": "E207"
+  },
+  {
+   "id": "fr_t001",
+   "name": "镇物：玄荒钟",
+   "icon": "🔮",
+   "slot": "artifact",
+   "q": 1,
+   "cost": {
+    "ore_iron": 4,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.73,
+   "tier": 2,
+   "base": {
+    "atk": 10
+   },
+   "src": "玄荒古域掉落",
+   "set": "玄荒套(3件)",
+   "lore": "全属性+10%",
+   "fr": true,
+   "frid": "T001"
+  },
+  {
+   "id": "fr_t002",
+   "name": "镇物：缚灵索",
+   "icon": "🔮",
+   "slot": "artifact",
+   "q": 1,
+   "cost": {
+    "ore_iron": 4,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.73,
+   "tier": 2,
+   "base": {
+    "def": 30
+   },
+   "src": "玄荒古域掉落",
+   "set": "玄荒套(3件)",
+   "lore": "控制抗性+30%",
+   "fr": true,
+   "frid": "T002"
+  },
+  {
+   "id": "fr_t003",
+   "name": "镇物：定界盘",
+   "icon": "🔮",
+   "slot": "artifact",
+   "q": 1,
+   "cost": {
+    "ore_iron": 4,
+    "ore_fire": 0,
+    "ore_dark": 0,
+    "ore_star": 0
+   },
+   "rate": 0.73,
+   "tier": 2,
+   "base": {
+    "atk": 10
+   },
+   "src": "玄荒古域掉落",
+   "set": "玄荒套(3件)",
+   "lore": "领域效果+25%",
+   "fr": true,
+   "frid": "T003"
+  }
+ ],
+ "talismans": [
+  {
+   "id": "t001",
+   "name": "敛息符",
+   "fr": true,
+   "frid": "T001",
+   "src": "制符/商店",
+   "dur": "30分钟",
+   "icon": "🕶️",
+   "effect": "dodge",
+   "value": 0.8,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "隐藏气息，降低被发现概率80%"
+  },
+  {
+   "id": "t002",
+   "name": "瞬移符",
+   "fr": true,
+   "frid": "T002",
+   "src": "制符/副本掉落",
+   "dur": "即时",
+   "icon": "💨",
+   "effect": "atk",
+   "value": 0.4,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "瞬间移动50米"
+  },
+  {
+   "id": "t003",
+   "name": "传送符",
+   "fr": true,
+   "frid": "T003",
+   "src": "制符/商店",
+   "dur": "即时",
+   "icon": "🌀",
+   "effect": "flee",
+   "value": 0.4,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "传送回已绑定安全点"
+  },
+  {
+   "id": "t004",
+   "name": "镇魂符",
+   "fr": true,
+   "frid": "T004",
+   "src": "制符/副本",
+   "dur": "10分钟",
+   "icon": "☯️",
+   "effect": "atk",
+   "value": 0.5,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "镇魂压邪，对阴魂伤害+50%"
+  },
+  {
+   "id": "t005",
+   "name": "融灵符",
+   "fr": true,
+   "frid": "T005",
+   "src": "制符/商店",
+   "dur": "1小时",
+   "icon": "🌬️",
+   "effect": "exp",
+   "value": 0.3,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "提升灵气吸收速度+30%"
+  },
+  {
+   "id": "t006",
+   "name": "金刚符",
+   "fr": true,
+   "frid": "T006",
+   "src": "制符/副本",
+   "dur": "5分钟",
+   "icon": "🛡️",
+   "effect": "def",
+   "value": 0.5,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "临时提升防御+50%"
+  },
+  {
+   "id": "t007",
+   "name": "火弹符",
+   "fr": true,
+   "frid": "T007",
+   "src": "制符/商店",
+   "dur": "即时",
+   "icon": "🔥",
+   "effect": "atk",
+   "value": 0.4,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "释放火弹攻击，造成火属性伤害"
+  },
+  {
+   "id": "t008",
+   "name": "冰矛符",
+   "fr": true,
+   "frid": "T008",
+   "src": "制符/副本",
+   "dur": "即时",
+   "icon": "❄️",
+   "effect": "atk",
+   "value": 0.3,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "释放冰矛攻击，减速30%"
+  },
+  {
+   "id": "t009",
+   "name": "护心符",
+   "fr": true,
+   "frid": "T009",
+   "src": "制符/副本",
+   "dur": "即时",
+   "icon": "❤️",
+   "effect": "atk",
+   "value": 0.4,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "抵挡一次致命伤害(上限1000血)"
+  },
+  {
+   "id": "t010",
+   "name": "隐身符",
+   "fr": true,
+   "frid": "T010",
+   "src": "制符/稀有掉落",
+   "dur": "10秒",
+   "icon": "👻",
+   "effect": "dodge",
+   "value": 0.4,
+   "cost": {
+    "herb_green": 2,
+    "ore_iron": 1
+   },
+   "desc": "隐身10秒，移动后显形"
+  }
+ ],
+ "arrays": [
+  {
+   "id": "f001",
+   "name": "聚灵阵",
+   "fr": true,
+   "frid": "F001",
+   "src": "阵法学习/宗门兑换",
+   "dur": "持续生效",
+   "icon": "🌊",
+   "buff": {
+    "exp": 0.5
+   },
+   "effect": "array",
+   "desc": "范围内灵气浓度+50%，修炼加速"
+  },
+  {
+   "id": "f002",
+   "name": "大庚剑阵",
+   "fr": true,
+   "frid": "F002",
+   "src": "剑修本命剑阵",
+   "dur": "战斗中",
+   "icon": "⚔️",
+   "buff": {
+    "atk": 0.5
+   },
+   "effect": "array",
+   "desc": "剑阵攻击，范围伤害+50%"
+  },
+  {
+   "id": "f003",
+   "name": "春黎剑阵",
+   "fr": true,
+   "frid": "F003",
+   "src": "青元剑诀进阶",
+   "dur": "战斗中",
+   "icon": "🌿",
+   "buff": {
+    "atk": 0.5
+   },
+   "effect": "array",
+   "desc": "春黎剑阵，持续范围伤害"
+  },
+  {
+   "id": "f004",
+   "name": "困魔阵",
+   "fr": true,
+   "frid": "F004",
+   "src": "阵法学习/副本",
+   "dur": "持续生效",
+   "icon": "🔒",
+   "buff": {
+    "atk": 0.3
+   },
+   "effect": "array",
+   "desc": "范围内魔物被困，无法移动"
+  },
+  {
+   "id": "f005",
+   "name": "护山大阵",
+   "fr": true,
+   "frid": "F005",
+   "src": "宗门建设",
+   "dur": "持续生效",
+   "icon": "🏯",
+   "buff": {
+    "def": 0.3
+   },
+   "effect": "array",
+   "desc": "宗门/洞府防御大阵"
+  },
+  {
+   "id": "f006",
+   "name": "元磁禁锢阵",
+   "fr": true,
+   "frid": "F006",
+   "src": "元磁神光配套",
+   "dur": "战斗中",
+   "icon": "🧲",
+   "buff": {
+    "atk": 0.3
+   },
+   "effect": "array",
+   "desc": "禁锢对手法宝，使其无法使用"
+  },
+  {
+   "id": "f007",
+   "name": "十方阵",
+   "fr": true,
+   "frid": "F007",
+   "src": "阵法学习/副本",
+   "dur": "持续生效",
+   "icon": "🔯",
+   "buff": {
+    "atk": 0.2,
+    "def": 0.2,
+    "hp": 0.2
+   },
+   "effect": "array",
+   "desc": "十方位叠加，全属性+20%"
+  },
+  {
+   "id": "f008",
+   "name": "两仪微尘阵",
+   "fr": true,
+   "frid": "F008",
+   "src": "灵界高级阵法",
+   "dur": "战斗中",
+   "icon": "☯️",
+   "buff": {
+    "atk": 0.3
+   },
+   "effect": "array",
+   "desc": "小世界阵法，攻防一体"
+  }
+ ],
+ "currencies": [
+  {
+   "id": "c001",
+   "name": "下品灵石",
+   "icon": "💎",
+   "type": "货币",
+   "out": "任务、副本、采集、出售物品",
+   "use": "修炼、购买材料、炼器炼丹",
+   "fr": true
+  },
+  {
+   "id": "c002",
+   "name": "中品灵石",
+   "icon": "💠",
+   "type": "货币",
+   "out": "下品灵石合成、高级副本",
+   "use": "中级修炼、购买中级材料",
+   "fr": true
+  },
+  {
+   "id": "c003",
+   "name": "上品灵石",
+   "icon": "🔷",
+   "type": "货币",
+   "out": "中品灵石合成、高级副本、BOSS掉落",
+   "use": "高级修炼、购买高级材料",
+   "fr": true
+  },
+  {
+   "id": "c004",
+   "name": "极品灵石",
+   "icon": "🔮",
+   "type": "货币",
+   "out": "上品合成、世界BOSS、跨服活动",
+   "use": "顶级修炼、购买顶级材料",
+   "fr": true
+  },
+  {
+   "id": "c005",
+   "name": "宗门贡献",
+   "icon": "🏯",
+   "type": "声望货币",
+   "out": "宗门任务、宗门捐献、宗门BOSS、宗门战",
+   "use": "道藏阁兑换功法、宗门材料、宗门技能",
+   "fr": true
+  },
+  {
+   "id": "c006",
+   "name": "道义币",
+   "icon": "☯️",
+   "type": "声望货币",
+   "out": "联盟战、跨服活动、玄荒古域",
+   "use": "兑换高阶镇物、仙品功法残篇",
+   "fr": true
+  },
+  {
+   "id": "c007",
+   "name": "元宝",
+   "icon": "🪙",
+   "type": "充值货币",
+   "out": "充值、活动奖励、成就",
+   "use": "百炼寻宝、礼包、外观、快速完成",
+   "fr": true
+  },
+  {
+   "id": "c008",
+   "name": "灵玉",
+   "icon": "🟩",
+   "type": "材料货币",
+   "out": "副本掉落、活动、分解装备",
+   "use": "装备镶嵌、属性加成",
+   "fr": true
+  },
+  {
+   "id": "c009",
+   "name": "功法残篇",
+   "icon": "📜",
+   "type": "材料货币",
+   "out": "副本掉落、活动、试炼",
+   "use": "合成高阶功法、功法升级",
+   "fr": true
+  },
+  {
+   "id": "c010",
+   "name": "突破丹碎片",
+   "icon": "🧪",
+   "type": "材料货币",
+   "out": "心魔试炼、副本BOSS",
+   "use": "合成突破丹、境界突破",
+   "fr": true
+  },
+  {
+   "id": "c011",
+   "name": "轮回石",
+   "icon": "♾️",
+   "type": "活动货币",
+   "out": "轮回试炼、限时活动",
+   "use": "轮回商店兑换奖励",
+   "fr": true
+  },
+  {
+   "id": "c012",
+   "name": "通天令",
+   "icon": "🎫",
+   "type": "活动货币",
+   "out": "通天塔、周常任务",
+   "use": "通天商店兑换装备",
+   "fr": true
+  },
+  {
+   "id": "c013",
+   "name": "仙元",
+   "icon": "✨",
+   "type": "仙界货币",
+   "out": "仙界任务、副本、活动",
+   "use": "仙界修炼、购买仙界材料",
+   "fr": true
+  },
+  {
+   "id": "c014",
+   "name": "功勋值",
+   "icon": "🎖️",
+   "type": "声望货币",
+   "out": "天渊城任务、抗魔大战",
+   "use": "天渊城兑换装备、材料",
+   "fr": true
+  },
+  {
+   "id": "c015",
+   "name": "声望(人界)",
+   "icon": "🌟",
+   "type": "声望货币",
+   "out": "主线任务、门派任务",
+   "use": "各门派商店兑换",
+   "fr": true
+  },
+  {
+   "id": "c016",
+   "name": "积分(PVP)",
+   "icon": "🏅",
+   "type": "竞技货币",
+   "out": "比武大会、跨服竞技",
+   "use": "PVP商店兑换称号、装备",
+   "fr": true
+  }
+ ],
+ "equipDrops": [
+  "fr_w001",
+  "fr_w002",
+  "fr_w003",
+  "fr_w004",
+  "fr_w005",
+  "fr_w006",
+  "fr_w007",
+  "fr_w008",
+  "fr_w009",
+  "fr_e001",
+  "fr_e002",
+  "fr_e003",
+  "fr_e004",
+  "fr_e005",
+  "fr_e101",
+  "fr_e102",
+  "fr_e103",
+  "fr_e104",
+  "fr_e105",
+  "fr_e201",
+  "fr_e202",
+  "fr_e203",
+  "fr_e204",
+  "fr_e205",
+  "fr_e206",
+  "fr_e207",
+  "fr_t001",
+  "fr_t002",
+  "fr_t003"
+ ]
+}
