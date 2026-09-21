@@ -7,19 +7,30 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789990252611,
-  "lastTick": 1789990252611,
+  "lastSeen": 1789990265623,
+  "lastTick": 1789990265623,
   "realm": 1,
   "stage": 3,
-  "exp": 1621.4992000000057,
-  "stone": 200,
+  "exp": 3697.533760000005,
+  "stone": 400,
   "equip": {
     "weapon": null,
     "armor": null,
     "ring": null,
     "talisman": null
   },
-  "bag": [],
+  "bag": [
+    {
+      "kind": "herb",
+      "ref": "herb_green",
+      "name": "青灵草",
+      "icon": "🌿",
+      "price": 30,
+      "count": 2,
+      "desc": "炼丹材料",
+      "id": "i_kjgsvit"
+    }
+  ],
   "skills": [],
   "equipped": [],
   "beasts": [],
@@ -36,13 +47,15 @@
     "daily": {
       "date": "2026-9-21",
       "prog": {
-        "meditate": 1
+        "meditate": 1,
+        "dungeon": 1
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
-        "meditate": 1
+        "meditate": 1,
+        "dungeon": 1
       },
       "claimed": []
     }
@@ -79,7 +92,7 @@
     "breakthrough": 7,
     "offlineMin": 0,
     "meditate": 1,
-    "dungeon": 0,
+    "dungeon": 1,
     "encounters": 0,
     "rob": 0
   },
