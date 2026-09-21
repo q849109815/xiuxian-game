@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995800845,
-  "lastTick": 1789995800845,
+  "lastSeen": 1789995803602,
+  "lastTick": 1789995803602,
   "realm": 9,
   "stage": 3,
-  "exp": 61860218771.65027,
-  "stone": 4415671,
+  "exp": 154650373220.12567,
+  "stone": 4430477,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 142,
+      "count": 144,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -251,6 +251,20 @@
       "def": 32,
       "hp": 248,
       "crit": 0.02,
+      "mp": 115
+    },
+    {
+      "id": "it_pdj1j7n",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·玄龟甲",
+      "atk": 33,
+      "def": 131,
+      "hp": 659,
+      "crit": 0,
       "mp": 115
     }
   ],
@@ -1368,8 +1382,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 41038064,
-        "kill": 806,
+        "exp": 41160392,
+        "kill": 808,
         "dungeon": 213,
         "arena": 20
       },
@@ -1382,8 +1396,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 41038064,
-        "kill": 806,
+        "exp": 41160392,
+        "kill": 808,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1398,9 +1412,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 198,
+        "星宿仙君": 199,
         "混沌祖龙": 221,
-        "天兵": 201
+        "天兵": 202
       },
       "claimed": [
         "b2",
@@ -1443,9 +1457,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 806,
+    "kills": 808,
     "deaths": 0,
-    "battles": 806,
+    "battles": 808,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
@@ -1455,5 +1469,5 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 1380
+  "bonusWuxing": 1430
 }
