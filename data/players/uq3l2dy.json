@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996647255,
-  "lastTick": 1789996647255,
+  "lastSeen": 1789996648928,
+  "lastTick": 1789996648928,
   "realm": 9,
   "stage": 3,
-  "exp": 34878886761.11959,
-  "stone": 9186183,
+  "exp": 104636473589.35876,
+  "stone": 9195087,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -89,7 +89,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 86,
+      "count": 87,
       "desc": "炼器材料",
       "id": "i_1c42jnp"
     },
@@ -125,20 +125,6 @@
       "def": 43,
       "hp": 242,
       "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_66wcbse",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·诛仙剑",
-      "atk": 189,
-      "def": 37,
-      "hp": 344,
-      "crit": 0,
       "mp": 115
     }
   ],
@@ -1301,8 +1287,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 83724054,
-        "kill": 1472,
+        "exp": 83781216,
+        "kill": 1473,
         "dungeon": 213,
         "arena": 20
       },
@@ -1316,8 +1302,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 83724054,
-        "kill": 1472,
+        "exp": 83781216,
+        "kill": 1473,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1332,7 +1318,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 448,
+        "星宿仙君": 449,
         "混沌祖龙": 429,
         "天兵": 409
       },
@@ -1378,9 +1364,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1472,
+    "kills": 1473,
     "deaths": 0,
-    "battles": 1472,
+    "battles": 1473,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
