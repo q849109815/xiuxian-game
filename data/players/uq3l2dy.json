@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996490327,
-  "lastTick": 1789996490327,
+  "lastSeen": 1789996491727,
+  "lastTick": 1789996491727,
   "realm": 9,
   "stage": 3,
-  "exp": 104636484371.35876,
-  "stone": 8633499,
+  "exp": 174394071011.59796,
+  "stone": 8642877,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -280,48 +280,6 @@
       "hp": 319,
       "crit": 0.02,
       "mp": 49
-    },
-    {
-      "id": "it_ygm18p5",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 3,
-      "level": 0,
-      "temper": 0,
-      "name": "仙器·养魂环",
-      "atk": 80,
-      "def": 39,
-      "hp": 350,
-      "crit": 0.02,
-      "mp": 115
-    },
-    {
-      "id": "it_3el3pgq",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·破妄戒",
-      "atk": 83,
-      "def": 43,
-      "hp": 311,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_drax8q5",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·混元幡",
-      "atk": 132,
-      "def": 43,
-      "hp": 338,
-      "crit": 0,
-      "mp": 115
     },
     {
       "id": "it_xftbdv9",
@@ -1521,8 +1479,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 75294962,
-        "kill": 1342,
+        "exp": 75351936,
+        "kill": 1343,
         "dungeon": 213,
         "arena": 20
       },
@@ -1536,8 +1494,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 75294962,
-        "kill": 1342,
+        "exp": 75351936,
+        "kill": 1343,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1552,7 +1510,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 401,
+        "星宿仙君": 402,
         "混沌祖龙": 388,
         "天兵": 367
       },
@@ -1598,9 +1556,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1342,
+    "kills": 1343,
     "deaths": 0,
-    "battles": 1342,
+    "battles": 1343,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
