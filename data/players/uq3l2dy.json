@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995869284,
-  "lastTick": 1789995869284,
+  "lastSeen": 1789995871358,
+  "lastTick": 1789995871358,
   "realm": 9,
   "stage": 3,
-  "exp": 340230766847.0765,
-  "stone": 4807437,
+  "exp": 30930068592.825134,
+  "stone": 4819827,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 169,
+      "count": 171,
       "desc": "炼丹材料",
       "id": "i_kb4udf0"
     },
@@ -586,6 +586,34 @@
       "atk": 68,
       "def": 31,
       "hp": 328,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_37bnyus",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·诛仙剑",
+      "atk": 193,
+      "def": 40,
+      "hp": 368,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_ug6h9ek",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·聚灵戒",
+      "atk": 65,
+      "def": 32,
+      "hp": 319,
       "crit": 0,
       "mp": 115
     }
@@ -1713,8 +1741,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 44669342,
-        "kill": 862,
+        "exp": 44788098,
+        "kill": 864,
         "dungeon": 213,
         "arena": 20
       },
@@ -1727,8 +1755,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 44669342,
-        "kill": 862,
+        "exp": 44788098,
+        "kill": 864,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1743,8 +1771,8 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 223,
-        "混沌祖龙": 233,
+        "星宿仙君": 224,
+        "混沌祖龙": 234,
         "天兵": 220
       },
       "claimed": [
@@ -1788,9 +1816,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 862,
+    "kills": 864,
     "deaths": 0,
-    "battles": 862,
+    "battles": 864,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
@@ -1800,5 +1828,5 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 2595
+  "bonusWuxing": 2635
 }
