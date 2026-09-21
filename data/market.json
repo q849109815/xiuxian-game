@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-21T13:02:44.338Z",
+  "updatedAt": "2026-09-21T13:02:49.554Z",
   "list": [
     {
       "id": "mk_bov92b6",
@@ -105,6 +105,27 @@
       },
       "price": 666666,
       "at": 1789995763654
+    },
+    {
+      "id": "mk_9moehqk",
+      "seller": "uq3l2dy",
+      "sellerName": "66666比",
+      "item": {
+        "id": "it_pe6x499",
+        "kind": "equip",
+        "slot": "weapon",
+        "q": 3,
+        "level": 0,
+        "temper": 0,
+        "name": "仙器·混元幡",
+        "atk": 186,
+        "def": 34,
+        "hp": 306,
+        "crit": 0.02,
+        "mp": 115
+      },
+      "price": 666666,
+      "at": 1789995768886
     }
   ]
 }
