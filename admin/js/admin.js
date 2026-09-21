@@ -1,429 +1,607 @@
 /* =========================================================
- * admin.js —— 后台：玩家管理 / 数值配置 / 公告活动 / 数据看板
+ * admin.js —— 凡人修仙 · 管理后台（重构版）
+ * 依赖：../js/api.js（GitHub 读写）、../js/engine.js（战力计算）
  * ========================================================= */
 const A$ = (s) => document.querySelector(s);
 const A$$ = (s) => [...document.querySelectorAll(s)];
 
-let PLAYERS = [];        // { name, obj }
-let CUR = null;          // 当前编辑的玩家对象
-let CFG = null;
+let PLAYERS = [];        // 全部玩家 [{name, obj}]
+let VIEW = [];           // 当前列表视图
+let CUR = null;          // 当前编辑玩家
+let CFG = null;          // game.json
+let CONTENT = null;      // content.json
+let SOCIAL = null;       // social.json
+let CONN = false;
 
+/* ================= 基础工具 ================= */
 function atoast(m, t = '') {
   const d = document.createElement('div');
   d.className = 'toast ' + t; d.textContent = m;
-  A$('#toasts').appendChild(d); setTimeout(() => d.remove(), 2600);
+  A$('#toasts').appendChild(d);
+  setTimeout(() => { d.style.opacity = '0'; setTimeout(() => d.remove(), 300); }, 2600);
+}
+const fmt = (n) => {
+  n = Math.round(n || 0);
+  if (n >= 1e8) return (n / 1e8).toFixed(2) + '亿';
+  if (n >= 1e4) return (n / 1e4).toFixed(1) + '万';
+  return String(n);
+};
+const ago = (t) => {
+  if (!t) return '—';
+  const d = (Date.now() - t) / 1000;
+  if (d < 60) return '刚刚';
+  if (d < 3600) return Math.floor(d / 60) + ' 分钟前';
+  if (d < 86400) return Math.floor(d / 3600) + ' 小时前';
+  return Math.floor(d / 86400) + ' 天前';
+};
+
+/* ================= 侧栏导航 ================= */
+const NAV = [
+  { g: '概览' },
+  { k: 'dash', i: '📊', n: '数据看板' },
+  { k: 'players', i: '👥', n: '玩家管理' },
+  { g: '运营' },
+  { k: 'batch', i: '📮', n: '批量操作' },
+  { k: 'wallet', i: '💰', n: '货币管理' },
+  { k: 'acts', i: '🎯', n: '活动管理' },
+  { k: 'give', i: '🎁', n: '内容发放' },
+  { g: '设置' },
+  { k: 'config', i: '🎛', n: '数值配置' },
+  { k: 'data', i: '🗄', n: '数据维护' },
+  { k: 'sys', i: '⚙️', n: '系统' },
+];
+function renderNav() {
+  A$('#nav').innerHTML = NAV.map((x) => x.g
+    ? `<div class="grp">${x.g}</div>`
+    : `<button data-pg="${x.k}"><span>${x.i}</span>${x.n}</button>`).join('');
+  A$$('#nav [data-pg]').forEach((b) => b.onclick = () => go(b.dataset.pg));
+}
+function go(pg) {
+  A$$('.page').forEach((p) => p.classList.toggle('on', p.dataset.pg === pg));
+  A$$('#nav [data-pg]').forEach((b) => b.classList.toggle('on', b.dataset.pg === pg));
+  const t = NAV.find((x) => x.k === pg);
+  A$('#pgTitle').textContent = t ? t.n : '';
+  A$('#body').scrollTop = 0;
+  if (pg === 'dash') renderDash();
+  if (pg === 'acts') renderActs();
+  if (pg === 'config') loadCfg();
+  if (pg === 'data') renderData();
+  if (pg === 'sys') renderSys();
 }
 
-/* ---------- 鉴权：后台口令（存在仓库 data/config/admin.json，可选） ---------- */
-async function boot() {
-  A$('#repoName').textContent = `${GH.owner}/${GH.repo}`;
-  A$('#epName').textContent = '检测中…';
-  await Net.probe();
-  A$('#epName').textContent = Net.endpoint.replace('https://', '');
-  A$('#netState').innerHTML = Net.online ? '<span style="color:#4ade80">● 已连接</span>' : '<span style="color:#f87171">● 未连接</span>';
-  if (!Net.online) atoast('GitHub 未连通，请检查 Token / 加速地址', 'err');
-  bind();
-  loadAll();
+/* ================= 连接检测 ================= */
+async function checkConn() {
+  const d = A$('#cDot'), t = A$('#cTxt');
+  d.className = 'dot'; t.textContent = '检测中…';
+  try {
+    if (!window.Net || !Net.probe) { throw 0; }
+    const r = await Promise.race([Net.probe(), new Promise((_, j) => setTimeout(() => j(0), 8000))]);
+    CONN = !!(r && r.ok !== false);
+  } catch (e) { CONN = false; }
+  try {
+    const c = await readJSON('data/config/game.json').catch(() => null);
+    CONN = CONN || !!c;
+  } catch (e) {}
+  d.className = 'dot ' + (CONN ? 'on' : 'off');
+  t.textContent = CONN ? '已连接 GitHub' : '离线（读不到仓库数据）';
 }
 
-async function loadAll() {
+/* ================= 载入配置 ================= */
+async function loadCfg() {
   CFG = await readJSON('data/config/game.json') || {};
-  A$('#cfgJson').value = JSON.stringify(CFG, null, 2);
-  const n = await readJSON('data/config/notice.json') || { notice: '', events: {} };
-  A$('#nText').value = n.notice || '';
-  A$('#evExp').checked = !!(n.events || {}).doubleExp;
-  A$('#evStone').checked = !!(n.events || {}).doubleStone;
-  A$('#evName').value = (n.events || {}).eventName || '';
-  A$('#evEnd').value = (n.events || {}).eventEnd || '';
-  await loadPlayers();
-  renderDash();
-  renderMore().catch(() => {});
+  CONTENT = await readJSON('data/config/content.json') || {};
+  SOCIAL = await readJSON('data/config/social.json') || {};
+  renderCfgQuick();
+  try {
+    const n = await readJSON('data/config/notice.json') || {};
+    A$('#nText').value = n.notice || '';
+    A$('#nCodes').value = ((n.giftCodes) || []).join(',');
+  } catch (e) {}
+}
+const QUICK = [
+  ['cultivate.basePerSec', '挂机修为/秒', 1],
+  ['cultivate.offlineMul', '离线倍率', 0.1],
+  ['meditate.gainSec', '闭关获得秒数', 1],
+  ['meditate.cdSec', '闭关冷却(秒)', 1],
+  ['breakthrough.base', '渡劫基础成功率', 0.01],
+  ['enhance.costBase', '强化基础花费', 1],
+  ['enhance.maxLevel', '强化上限', 1],
+  ['reincarnation.keepExp', '转世保留修为比', 0.01],
+];
+function gget(path) { return path.split('.').reduce((o, k) => (o || {})[k], CFG); }
+function gset(path, v) {
+  const ks = path.split('.'); const last = ks.pop();
+  let o = CFG; for (const k of ks) { o[k] = o[k] || {}; o = o[k]; }
+  o[last] = v;
+}
+function renderCfgQuick() {
+  A$('#cfgQuick').innerHTML = QUICK.map(([p, n, step]) =>
+    `<div class="fld"><label>${n}</label>
+      <input class="inp" data-cfg="${p}" type="number" step="${step}" value="${gget(p) ?? 0}"></div>`).join('');
+  A$$('#cfgQuick [data-cfg]').forEach((el) => el.onchange = async () => {
+    gset(el.dataset.cfg, parseFloat(el.value));
+    await writeJSON('data/config/game.json', CFG, 'admin: config ' + el.dataset.cfg);
+    atoast('已保存 ' + el.dataset.cfg, 'ok');
+  });
 }
 
-async function loadPlayers() {
-  const files = await listDir('data/players').catch(() => []);
-  PLAYERS = [];
-  for (const f of files.filter((x) => x.name.endsWith('.json'))) {
-    try {
-      const r = await fetch(`${Net.endpoint}/repos/${GH.owner}/${GH.repo}/contents/${f.path}?ref=${GH.dataBranch}`, {
-        headers: { Authorization: `Bearer ${GH.token}`, Accept: 'application/vnd.github+json' },
-      });
-      const j = await r.json();
-      const obj = JSON.parse(fromB64(j.content.replace(/\n/g, '')));
-      PLAYERS.push({ file: f.name, obj });
-    } catch (e) { /* skip */ }
-  }
-  renderPlayers(PLAYERS);
-}
-
-function realmOf(p) {
-  const rs = (CFG.realms || []);
-  return rs[p.realm] ? `${rs[p.realm].name}${p.layer + 1}层` : '-';
-}
-function powerOf(p) {
-  const b = CFG.baseAttr || { hp: 100, atk: 12, def: 5, crit: .05, critDmg: 1.5, speed: 10 };
-  const g = CFG.growthPerRealm || {};
-  const a = { atk: b.atk + (g.atk || 0) * p.realm, def: b.def + (g.def || 0) * p.realm, hp: b.hp + (g.hp || 0) * p.realm };
-  for (const k of ['weapon', 'armor', 'ring']) {
-    const it = p.equip && p.equip[k]; if (!it) continue;
-    const mul = (CFG.qualities || [{}])[it.q] ? CFG.qualities[it.q].mul : 1;
-    a.atk += (it.atk || 0) * mul; a.def += (it.def || 0) * mul; a.hp += (it.hp || 0) * mul;
-  }
-  return Math.round((a.atk * 3 + a.def * 2 + a.hp * .5 + 40) * (1 + p.realm * .25));
-}
-
-function renderPlayers(list) {
-  A$('#pCount').textContent = `共 ${list.length} 位道友`;
-  A$('#pTable').innerHTML = `<tr><th>道号</th><th>境界</th><th class="num">灵石</th><th class="num">战力</th><th class="num">击杀</th><th>最近在线</th><th></th></tr>` +
-    list.map((x, i) => {
-      const p = x.obj;
-      const mins = Math.round((Date.now() - (p.lastSeen || 0)) / 60000);
-      return `<tr><td>${p.name || '-'}${p.banned ? ' 🚫' : ''}</td><td>${realmOf(p)}</td>
-      <td class="num">${p.stone}</td><td class="num">${powerOf(p)}</td><td class="num">${(p.stats || {}).kills || 0}</td>
-      <td>${mins < 60 ? mins + ' 分钟前' : Math.round(mins / 60) + ' 小时前'}</td>
-      <td><button class="mini" data-edit="${i}">编辑</button></td></tr>`;
-    }).join('');
-  A$$('#pTable [data-edit]').forEach((b) => b.onclick = () => editPlayer(list[+b.dataset.edit]));
-}
-
-function editPlayer(item) {
-  CUR = item;
-  const p = item.obj;
-  A$('#editCard').style.display = '';
-  A$('#editWho').textContent = `${p.name}（${item.file}）`;
-  A$('#fStone').value = p.stone; A$('#fExp').value = Math.round(p.exp);
-  A$('#fRealm').value = p.realm; A$('#fLayer').value = p.layer;
-  A$('#fKills').value = (p.stats || {}).kills || 0;
-  A$('#fBan').value = p.banned ? '1' : '0';
-  A$('#rawJson').value = JSON.stringify(p, null, 2);
-  A$('#editCard').scrollIntoView({ behavior: 'smooth' });
-}
-
-function renderDash() {
+/* ================= 1. 数据看板 ================= */
+async function renderDash() {
+  if (!PLAYERS.length) await loadPlayers(true);
   const ps = PLAYERS.map((x) => x.obj);
   const now = Date.now();
-  const online = ps.filter((p) => now - (p.lastSeen || 0) < 10 * 60000).length;
-  const today = ps.filter((p) => new Date(p.createdAt).toDateString() === new Date().toDateString()).length;
-  const stones = ps.reduce((s, p) => s + (p.stone || 0), 0);
-  const kills = ps.reduce((s, p) => s + ((p.stats || {}).kills || 0), 0);
-  A$('#statGrid').innerHTML = [
-    ['总道友数', ps.length], ['近10分钟在线', online], ['今日新增', today],
-    ['灵石总量', stones], ['总击杀', kills], ['平均战力', ps.length ? Math.round(ps.reduce((s, p) => s + powerOf(p), 0) / ps.length) : 0],
-  ].map(([k, v]) => `<div class="statc"><div class="v">${v}</div><div class="k">${k}</div></div>`).join('');
+  const online = ps.filter((p) => now - (p.lastSeen || 0) < 600000).length;
+  const today = ps.filter((p) => now - (p.lastSeen || 0) < 86400000).length;
+  const totalPower = ps.reduce((s, p) => s + (power(p) || 0), 0);
+  const banned = ps.filter((p) => p.banned).length;
+  A$('#dashStats').innerHTML = [
+    ['👥 总玩家', ps.length, `今日活跃 ${today}`],
+    ['🟢 在线(10分钟内)', online, '实时估算'],
+    ['⚔️ 总战力', fmt(totalPower), `人均 ${fmt(totalPower / Math.max(1, ps.length))}`],
+    ['🚫 封禁中', banned, banned ? '需复查' : '无异常'],
+  ].map(([l, v, e]) => `<div class="stat"><div class="lb">${l}</div>
+    <div class="vl">${v}</div><div class="ex">${e}</div></div>`).join('');
 
+  // 境界分布
+  const realms = (CFG.realms) || [];
   const dist = {};
-  ps.forEach((p) => { const n = realmOf(p).slice(0, 2); dist[n] = (dist[n] || 0) + 1; });
-  const max = Math.max(1, ...Object.values(dist));
-  A$('#realmDist').innerHTML = Object.entries(dist).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
-    `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:13px">
-      <span style="width:52px">${k}</span>
-      <div style="flex:1;height:10px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden">
-        <div style="height:100%;width:${(v / max) * 100}%;background:linear-gradient(90deg,#7ef7c8,#ffd76e)"></div></div>
-      <span style="width:30px;text-align:right;color:var(--jade)">${v}</span></div>`).join('') || '<div class="small">暂无数据</div>';
-
-  A$('#activeList').innerHTML = ps.sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0)).slice(0, 15).map((p) =>
-    `<div class="kv"><span>${p.name} · ${realmOf(p)}</span><b>${Math.round((now - (p.lastSeen || 0)) / 60000)} 分钟前</b></div>`).join('') || '<div class="small">暂无数据</div>';
-}
-
-
-/* ---------- 全服邮件 ---------- */
-async function sendGlobalMail() {
-  const title = A$('#mTitle').value.trim() || '系统邮件';
-  const body = A$('#mBody').value.trim() || '';
-  const rw = { stone: +A$('#mStone').value || 0, exp: +A$('#mExp').value || 0, herb: +A$('#mHerb').value || 0 };
-  const reward = {};
-  for (const k in rw) if (rw[k] > 0) reward[k] = rw[k];
-  if (!confirm(`确认向全部 ${PLAYERS.length} 位道友发送邮件？`)) return;
-  A$('#mailMsg').textContent = '发送中…（每人一次写操作，请耐心）';
-  let ok = 0, fail = 0;
-  for (const item of PLAYERS) {
-    const p = item.obj;
-    if (!Array.isArray(p.mail)) p.mail = [];
-    p.mail.unshift({ id: 'm_' + Math.random().toString(36).slice(2, 9), at: Date.now(), read: false, title, body, reward: Object.keys(reward).length ? reward : null });
-    p.mail = p.mail.slice(0, 30);
-    try { await writeJSON(playerPath(p.uid), p, 'admin mail'); ok++; }
-    catch (e) { fail++; }
-  }
-  A$('#mailMsg').textContent = `完成：成功 ${ok} 位${fail ? `，失败 ${fail} 位（稍后重试）` : ''}`;
-  atoast(`邮件已发送：${ok} 位`, 'ok');
-}
-
-/* ---------- 榜与宗门 ---------- */
-async function renderMore() {
-  try {
-    const d = await readJSON('data/arena_rank.json');
-    A$('#arenaRankBox').innerHTML = (d && d.list && d.list.length)
-      ? d.list.slice(0, 30).map((r, i) => `<div class="kv"><span>${i + 1}. ${r.name} · ${r.realm}</span><b>${r.arena} 分</b></div>`).join('')
-      : '<div class="small">暂无数据</div>';
-  } catch (e) { A$('#arenaRankBox').innerHTML = '<div class="small">暂无数据</div>'; }
-
-  try {
-    const d = await readJSON('data/sects.json');
-    const list = (d && d.list) || [];
-    A$('#sectBox').innerHTML = list.length
-      ? list.map((s) => `<div class="kv"><span>${s.icon || ''} ${s.name}</span><b>${s.members || 0} 人</b></div>`).join('')
-      : '<div class="small">暂无宗门</div>';
-  } catch (e) { A$('#sectBox').innerHTML = '<div class="small">暂无宗门</div>'; }
-
-  try {
-    const d = await readJSON('data/chat.json');
-    const list = (d && d.list) || [];
-    A$('#chatTable').innerHTML = list.length
-      ? '<tr><th>道号</th><th>内容</th><th>时间</th></tr>' + list.slice(0, 40).map((m) => `<tr><td>${m.name}</td><td>${m.text}</td><td>${new Date(m.at).toLocaleString()}</td></tr>`).join('')
-      : '<tr><td class="small">暂无消息</td></tr>';
-  } catch (e) { A('#chatTable').innerHTML = '<tr><td class="small">暂无消息</td></tr>'; }
-}
-
-/* ---------- 事件绑定 ---------- */
-function bind() {
-  A$$('.sidebar button').forEach((b) => b.onclick = () => {
-    A$$('.sidebar button').forEach((x) => x.classList.remove('on')); b.classList.add('on');
-    A$$('[data-pg]').forEach((s) => s.style.display = s.dataset.pg === b.dataset.p ? '' : 'none');
-    if (b.dataset.p === 'more') renderMore();
-    if (b.dataset.p === 'mail') A$('#mailMsg').textContent = `当前玩家数：${PLAYERS.length}`;
+  ps.forEach((p) => {
+    const r = realms[p.realm || 0];
+    const nm = r ? r.name.split(/[一二三四五六七八九十]/)[0] : '未知';
+    dist[nm] = (dist[nm] || 0) + 1;
   });
+  const mx = Math.max(1, ...Object.values(dist));
+  A$('#realmDist').innerHTML = Object.entries(dist).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
+    `<div style="margin-bottom:7px"><div class="row" style="justify-content:space-between">
+      <span class="small">${k}</span><span class="small" style="color:var(--gold)">${v} 人</span></div>
+      <div class="bar"><i style="width:${v / mx * 100}%"></i></div></div>`).join('') || '<div class="empty">暂无数据</div>';
 
-  A$('#btnSearch').onclick = () => {
-    const q = A$('#qUid').value.trim().toLowerCase();
-    renderPlayers(PLAYERS.filter((x) => (x.obj.name || '').toLowerCase().includes(q) || x.file.includes(hashUid(q)) || x.file.includes(q)));
+  // 战力 TOP10
+  A$('#topPower').innerHTML = ps.map((p) => ({ p, w: power(p) || 0 }))
+    .sort((a, b) => b.w - a.w).slice(0, 10).map((x, i) =>
+      `<div class="item"><div class="ic">${['🥇', '🥈', '🥉'][i] || (i + 1)}</div>
+        <div class="info"><div class="nm">${x.p.name}</div>
+        <div class="sub">${realmName(x.p)}　战力 ${fmt(x.w)}</div></div></div>`).join('') || '<div class="empty">暂无数据</div>';
+
+  // 灵根
+  const rd = {};
+  ps.forEach((p) => rd[p.root || '?'] = (rd[p.root || '?'] || 0) + 1);
+  const rmx = Math.max(1, ...Object.values(rd));
+  A$('#rootDist').innerHTML = Object.entries(rd).map(([k, v]) =>
+    `<div style="margin-bottom:7px"><div class="row" style="justify-content:space-between">
+      <span class="small">${k}</span><span class="small" style="color:var(--jade)">${v}</span></div>
+      <div class="bar"><i style="width:${v / rmx * 100}%"></i></div></div>`).join('') || '<div class="empty">暂无</div>';
+
+  // 最近活跃
+  A$('#recentAct').innerHTML = ps.slice().sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0))
+    .slice(0, 8).map((p) => `<div class="item"><div class="ic">${p.avatar || '🧙'}</div>
+      <div class="info"><div class="nm">${p.name}</div><div class="sub">${realmName(p)}</div></div>
+      <div class="act small">${ago(p.lastSeen)}</div></div>`).join('') || '<div class="empty">暂无</div>';
+}
+function realmName(p) {
+  const r = (CFG.realms || [])[p.realm || 0];
+  const s = (CFG.stages || [])[p.stage || 0];
+  return r ? (r.name + (s ? '·' + s : '')) : '?';
+}
+function power(p) {
+  try { return (window.ENGINE && ENGINE.power) ? ENGINE.power(p) : ((p.realm || 0) * 1000 + (p.exp || 0) / 100); }
+  catch (e) { return (p.realm || 0) * 1000; }
+}
+
+/* ================= 2. 玩家管理 ================= */
+async function loadPlayers(silent) {
+  const files = await listDir('data/players').catch(() => []);
+  PLAYERS = [];
+  for (const f of files) {
+    if (f.type !== 'file' || !/\.json$/.test(f.name)) continue;
+    try {
+      const o = await readJSON('data/players/' + f.name);
+      if (o && o.uid) PLAYERS.push({ name: o.name || o.uid, obj: o });
+    } catch (e) {}
+  }
+  if (!silent) atoast(`已载入 ${PLAYERS.length} 位道友`, 'ok');
+  VIEW = PLAYERS.slice();
+  renderTable();
+}
+function sortView(k) {
+  const cmp = {
+    power: (a, b) => power(b.obj) - power(a.obj),
+    realm: (a, b) => (b.obj.realm || 0) - (a.obj.realm || 0),
+    stone: (a, b) => (b.obj.stone || 0) - (a.obj.stone || 0),
+    recent: (a, b) => (b.obj.lastSeen || 0) - (a.obj.lastSeen || 0),
+  }[k] || (() => 0);
+  VIEW = VIEW.slice().sort(cmp);
+  renderTable();
+}
+function renderTable() {
+  A$('#pBody').innerHTML = VIEW.map((x, i) => {
+    const p = x.obj;
+    return `<tr data-i="${i}">
+      <td><b>${p.name || '—'}</b><div class="small mono">${p.uid}</div></td>
+      <td>${realmName(p)}</td>
+      <td>${fmt(power(p))}</td>
+      <td>${fmt(p.stone || 0)}</td>
+      <td>${fmt((p.stats || {}).kills || 0)}</td>
+      <td>${(p.sectInfo || {}).name || '—'}</td>
+      <td>${p.banned ? '<span class="tag r">封禁</span>' : '<span class="tag g">正常</span>'}</td>
+      <td class="small">${ago(p.lastSeen)}</td></tr>`;
+  }).join('') || '<tr><td colspan="8" class="empty">无数据</td></tr>';
+  A$('#pCount').textContent = `共 ${VIEW.length} 位（总数 ${PLAYERS.length}）`;
+  A$$('#pBody tr[data-i]').forEach((tr) => tr.onclick = () => selectPlayer(VIEW[+tr.dataset.i].obj));
+}
+function selectPlayer(p) {
+  CUR = p;
+  A$('#editCard').style.display = '';
+  A$('#editWho').textContent = `${p.name}（${p.uid}）`;
+  A$('#fName').value = p.name || '';
+  A$('#fRealm').value = p.realm || 0;
+  A$('#fStage').value = p.stage || 0;
+  A$('#fExp').value = Math.round(p.exp || 0);
+  A$('#fStone').value = Math.round(p.stone || 0);
+  A$('#fKills').value = (p.stats || {}).kills || 0;
+  A$('#fReinc').value = p.reinc || 0;
+  A$('#fBan').value = p.banned ? '1' : '0';
+  A$('#rawJson').value = JSON.stringify(p, null, 1);
+  A$$('#pBody tr').forEach((tr) => tr.classList.remove('sel'));
+  const idx = VIEW.findIndex((x) => x.obj === p);
+  const tr = A$(`#pBody tr[data-i="${idx}"]`); if (tr) tr.classList.add('sel');
+  try { A$('#editCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+}
+async function savePlayer(p, msg) {
+  await writeJSON(playerPath(p.uid), p, 'admin: ' + msg);
+  atoast('已保存', 'ok');
+}
+
+/* ================= 3. 批量操作 ================= */
+async function sendMailAll() {
+  const title = A$('#mTitle').value.trim();
+  if (!title) return atoast('请填标题', 'err');
+  const give = {
+    stone: +A$('#mStone').value || 0, yuanbao: +A$('#mYb').value || 0,
+    exp: +A$('#mExp').value || 0, merit: +A$('#mMerit').value || 0, rep: +A$('#mRep').value || 0,
   };
-  A$('#btnReload').onclick = async () => { atoast('刷新中…'); await loadPlayers(); renderDash(); atoast('已刷新'); };
+  let ok = 0;
+  for (const x of PLAYERS) {
+    try {
+      x.obj.mail = x.obj.mail || [];
+      x.obj.mail.push({ id: 'm_' + Date.now() + '_' + ok, title,
+        body: A$('#mBody').value || '', give, at: Date.now(), read: false });
+      if (x.obj.mail.length > 50) x.obj.mail.shift();
+      await writeJSON(playerPath(x.obj.uid), x.obj, 'admin mail');
+      ok++;
+    } catch (e) {}
+  }
+  A$('#mailMsg').textContent = `已发给 ${ok} 位`;
+  atoast(`已发送 ${ok} 封`, 'ok');
+}
+async function giveAll() {
+  const g = {
+    stone: +A$('#gStone').value || 0, yuanbao: +A$('#gYb').value || 0,
+    exp: +A$('#gExp').value || 0, contrib: +A$('#gContrib').value || 0, merit: +A$('#gMerit').value || 0,
+  };
+  if (!Object.values(g).some((v) => v)) return atoast('请至少填一项', 'err');
+  let ok = 0;
+  for (const x of PLAYERS) {
+    try {
+      const p = x.obj;
+      p.wallet = p.wallet || {};
+      if (g.stone) { p.stone = (p.stone || 0) + g.stone; p.wallet.C001 = p.stone; }
+      if (g.yuanbao) p.wallet.C007 = (p.wallet.C007 || 0) + g.yuanbao;
+      if (g.contrib) p.wallet.C005 = (p.wallet.C005 || 0) + g.contrib;
+      if (g.merit) p.wallet.C014 = (p.wallet.C014 || 0) + g.merit;
+      if (g.exp && window.ENGINE && ENGINE.gainExp) ENGINE.gainExp(p, g.exp);
+      await writeJSON(playerPath(p.uid), p, 'admin give');
+      ok++;
+    } catch (e) {}
+  }
+  A$('#giveMsg').textContent = `已发放给 ${ok} 位`;
+  atoast(`已发放 ${ok} 位`, 'ok');
+}
+async function setDouble(key) {
+  const n = await readJSON('data/config/notice.json') || {};
+  n.events = n.events || {};
+  ['doubleExp', 'doubleStone', 'doubleDrop'].forEach((k) => n.events[k] = false);
+  if (key) { n.events[key] = true; n.events[key.replace('double', '').toLowerCase() + 'Mul'] = 2; }
+  await writeJSON('data/config/notice.json', n, 'admin: double');
+  atoast(key ? '已开启' : '已全部关闭', 'ok');
+  renderDblState();
+}
+async function renderDblState() {
+  const n = await readJSON('data/config/notice.json').catch(() => null);
+  const e = (n && n.events) || {};
+  A$('#dblState').textContent = '当前：' + ([
+    e.doubleExp ? '双倍修为' : '', e.doubleStone ? '双倍灵石' : '', e.doubleDrop ? '双倍掉落' : ''
+  ].filter(Boolean).join('、') || '无');
+}
 
+/* ================= 4. 货币管理 ================= */
+const CUR16 = [
+  ['C001', '下品灵石'], ['C002', '中品灵石'], ['C003', '上品灵石'], ['C004', '极品灵石'],
+  ['C005', '宗门贡献'], ['C006', '道义币'], ['C007', '元宝'], ['C008', '灵玉'],
+  ['C009', '功法残篇'], ['C010', '突破丹碎片'], ['C011', '轮回石'], ['C012', '通天令'],
+  ['C013', '仙元'], ['C014', '功勋值'], ['C015', '声望'], ['C016', 'PVP积分'],
+];
+function renderWallet(p) {
+  p.wallet = p.wallet || {};
+  A$('#walletGrid').innerHTML = CUR16.map(([id, nm]) => {
+    const v = (id === 'C001') ? (p.stone || p.wallet[id] || 0) : (p.wallet[id] || 0);
+    return `<div class="fld"><label>${nm}</label>
+      <input class="inp" data-cur="${id}" type="number" value="${v}"></div>`;
+  }).join('');
+}
+async function saveWallet() {
+  if (!CUR) return atoast('请先读取玩家', 'err');
+  CUR.wallet = CUR.wallet || {};
+  A$$('#walletGrid [data-cur]').forEach((el) => {
+    const v = Math.max(0, parseInt(el.value || '0', 10) || 0);
+    CUR.wallet[el.dataset.cur] = v;
+    if (el.dataset.cur === 'C001') CUR.stone = v;
+  });
+  await savePlayer(CUR, 'wallet');
+  renderWallet(CUR);
+}
+
+/* ================= 5. 活动管理 ================= */
+async function renderActs(filter) {
+  if (!SOCIAL) SOCIAL = await readJSON('data/config/social.json') || {};
+  const list = (SOCIAL.acts) || [];
+  const f = A$('.pill.on');
+  const cur = filter || (f ? f.dataset.af : 'all');
+  const show = cur === 'all' ? list : list.filter((a) => (a.type || '').indexOf(cur) >= 0);
+  A$('#actList').innerHTML = show.map((a) =>
+    `<div class="item"><div class="ic">${a.icon || '🎯'}</div>
+      <div class="info"><div class="nm">${a.name}
+        <span class="tag ${a.type === '限时活动' ? 'y' : a.type === '常驻活动' ? 'g' : 'b'}">${a.type}</span></div>
+      <div class="sub">${a.content}</div><div class="sub" style="color:var(--jade)">${a.reward}</div>
+      <div class="sub">参与：${a.need}</div></div></div>`).join('') || '<div class="empty">无</div>';
+}
+
+/* ================= 6. 内容发放 ================= */
+async function renderGive() {
+  if (!CONTENT) CONTENT = await readJSON('data/config/content.json') || {};
+  if (!SOCIAL) SOCIAL = await readJSON('data/config/social.json') || {};
+  const type = A$('#gvType').value;
+  const kw = (A$('#gvKw').value || '').trim();
+  let list = [];
+  if (type === 'equip') list = ((CONTENT.forge || {}).recipes || []).filter((x) => x.fr)
+    .map((x) => ({ id: x.id, name: x.name, icon: x.icon, q: x.q, slot: x.slot, base: x.base }));
+  else if (type === 'pill') list = ((CONTENT.alchemy || {}).recipes || [])
+    .map((x) => ({ id: x.id, name: x.name, icon: x.icon || '💊' }));
+  else if (type === 'skill') list = (CONTENT.skills || [])
+    .map((x) => ({ id: x.id, name: x.name, icon: x.icon }));
+  else if (type === 'title') list = (SOCIAL.titles || [])
+    .map((x) => ({ id: x.id, name: x.name, icon: x.icon }));
+  else if (type === 'skin') list = (SOCIAL.skins || [])
+    .map((x) => ({ id: x.id, name: x.name, icon: x.icon }));
+  if (kw) list = list.filter((x) => (x.name || '').indexOf(kw) >= 0);
+  A$('#gvList').innerHTML = list.slice(0, 60).map((x) =>
+    `<div class="item" style="cursor:pointer"><div class="ic">${x.icon || '📦'}</div>
+      <div class="info"><div class="nm">${x.name}</div>
+      <div class="sub">${x.slot || x.q !== undefined ? '品质' + x.q : ''}</div></div>
+      <div class="act"><button class="btn" data-gv="${x.id}">发放</button></div></div>`).join('')
+    || '<div class="empty">无匹配</div>';
+  A$$('#gvList [data-gv]').forEach((b) => b.onclick = () => doGive(type, b.dataset.gv, list));
+}
+function findPlayer(uid) {
+  return PLAYERS.find((x) => x.obj.uid === uid || x.obj.name === uid);
+}
+async function doGive(type, id, list) {
+  const uid = (A$('#gvUid').value || '').trim();
+  const hit = findPlayer(uid);
+  if (!hit) return atoast('未找到该玩家，请先在玩家管理载入', 'err');
+  const p = hit.obj; const it = list.find((x) => x.id === id);
+  p.bag = p.bag || [];
+  if (type === 'equip') p.bag.push({ id: 'g_' + id, name: it.name, icon: it.icon, kind: 'equip',
+    q: it.q || 1, slot: it.slot, base: it.base || {}, enh: 0, temp: 0, fr: true });
+  else if (type === 'pill') p.bag.push({ id: 'g_' + id, name: it.name, icon: it.icon, kind: 'pill', count: 1 });
+  else if (type === 'skill') {
+    p.skills = p.skills || [];
+    if (p.skills.some((s) => s.id === id)) return atoast('已有此功法', 'err');
+    p.skills.push({ id, lv: 1 });
+  } else if (type === 'title') {
+    p.titles = p.titles || { owned: [], cur: null };
+    if (p.titles.owned.indexOf(id) < 0) p.titles.owned.push(id);
+  } else if (type === 'skin') {
+    p.skin = p.skin || { owned: [], wear: {} };
+    if (p.skin.owned.indexOf(id) < 0) p.skin.owned.push(id);
+  }
+  await savePlayer(p, 'give ' + type);
+  atoast(`已发放【${it.name}】给 ${p.name}`, 'ok');
+}
+
+/* ================= 7. 配置 ================= */
+async function loadCfgFile() {
+  const f = A$('#cfgFile').value;
+  const o = await readJSON(f).catch(() => null);
+  A$('#cfgJson').value = o ? JSON.stringify(o, null, 1) : '// 读取失败';
+}
+
+/* ================= 8. 数据维护 ================= */
+async function renderData() {
+  const lb = await readJSON('data/leaderboard.json').catch(() => null);
+  A$('#lbBox').innerHTML = lb
+    ? `<div class="small">更新于 ${ago(lb.at || lb.updatedAt)}</div>
+       <div class="small">条目 ${((lb.list) || []).length} 条</div>`
+    : '<div class="small">尚未生成（等 Actions 首次运行）</div>';
+  const st = await readJSON('data/stats.json').catch(() => null);
+  A$('#stBox').innerHTML = st
+    ? Object.entries(st).filter(([k, v]) => typeof v !== 'object')
+      .map(([k, v]) => `<div class="row" style="justify-content:space-between">
+        <span class="small">${k}</span><b style="color:var(--gold)">${fmt(v)}</b></div>`).join('')
+    : '<div class="small">尚未生成</div>';
+}
+async function buildLb() {
+  const list = PLAYERS.map((x) => ({ name: x.obj.name, uid: x.obj.uid,
+    power: power(x.obj), realm: x.obj.realm || 0, realmName: realmName(x.obj) }))
+    .sort((a, b) => b.power - a.power).slice(0, 100);
+  await writeJSON('data/leaderboard.json', { at: Date.now(), list }, 'admin: build leaderboard');
+  atoast(`排行榜已重建（${list.length} 条）`, 'ok'); renderData();
+}
+async function buildSt() {
+  const ps = PLAYERS.map((x) => x.obj);
+  const st = { at: Date.now(), players: ps.length,
+    power: ps.reduce((s, p) => s + power(p), 0),
+    kills: ps.reduce((s, p) => s + ((p.stats || {}).kills || 0), 0),
+    battles: ps.reduce((s, p) => s + ((p.stats || {}).battles || 0), 0),
+    stone: ps.reduce((s, p) => s + (p.stone || 0), 0) };
+  await writeJSON('data/stats.json', st, 'admin: build stats');
+  atoast('统计已重建', 'ok'); renderData();
+}
+async function backup() {
+  const data = PLAYERS.map((x) => x.obj);
+  const name = `backups/admin_${Date.now()}.json`;
+  await writeJSON(name, { at: Date.now(), count: data.length, players: data }, 'admin: backup');
+  A$('#bkMsg').textContent = `已备份 ${data.length} 位道友 → ${name}`;
+  atoast('备份完成', 'ok');
+}
+
+/* ================= 9. 系统 ================= */
+async function renderSys() {
+  A$('#sysRepo').textContent = `${window.GH ? GH.owner : '?'}/${window.GH ? GH.repo : '?'}`;
+  if (window.GH) A$('#sysExtra').value = (GH.extraEndpoints || []).join('\n');
+  A$('#sysEp').textContent = `当前通道：${(window.GH && GH.best) || '默认 api.github.com'}`;
+}
+
+/* ================= 事件绑定 ================= */
+document.addEventListener('DOMContentLoaded', async () => {
+  renderNav();
+  await checkConn();
+  await loadCfg();
+  await loadPlayers(true);
+  renderDash();
+
+  A$('#btnRefresh').onclick = async () => { await checkConn(); await loadPlayers(true); renderDash(); atoast('已刷新', 'ok'); };
+
+  // 玩家
+  A$('#btnSearch').onclick = () => {
+    const q = (A$('#qUid').value || '').trim();
+    VIEW = q ? PLAYERS.filter((x) => (x.obj.uid || '').indexOf(q) >= 0 || (x.obj.name || '').indexOf(q) >= 0) : PLAYERS.slice();
+    sortView(A$('#qSort').value);
+  };
+  A$('#btnReloadAll').onclick = () => loadPlayers();
+  A$('#qSort').onchange = () => sortView(A$('#qSort').value);
   A$('#btnSaveP').onclick = async () => {
     if (!CUR) return;
-    const p = CUR.obj;
-    p.stone = +A$('#fStone').value; p.exp = +A$('#fExp').value;
-    p.realm = +A$('#fRealm').value; p.layer = Math.min(8, +A$('#fLayer').value);
-    p.stats = p.stats || {}; p.stats.kills = +A$('#fKills').value;
-    p.banned = A$('#fBan').value === '1';
-    await writeJSON(playerPath(p.uid), p, 'admin update ' + p.name);
-    atoast('已保存', 'ok'); await loadPlayers(); renderDash();
-  };
-  A$('#btnSaveRaw').onclick = async () => {
-    if (!CUR) return;
-    try { const obj = JSON.parse(A$('#rawJson').value); await writeJSON(playerPath(obj.uid), obj, 'admin raw update'); atoast('已保存', 'ok'); await loadPlayers(); }
-    catch (e) { atoast('JSON 格式错误', 'err'); }
+    CUR.name = A$('#fName').value.trim() || CUR.name;
+    CUR.realm = Math.max(0, +A$('#fRealm').value || 0);
+    CUR.stage = Math.max(0, Math.min(3, +A$('#fStage').value || 0));
+    CUR.exp = Math.max(0, +A$('#fExp').value || 0);
+    CUR.stone = Math.max(0, +A$('#fStone').value || 0);
+    CUR.stats = CUR.stats || {}; CUR.stats.kills = Math.max(0, +A$('#fKills').value || 0);
+    CUR.reinc = Math.max(0, +A$('#fReinc').value || 0);
+    CUR.banned = A$('#fBan').value === '1';
+    await savePlayer(CUR, 'edit'); renderTable();
   };
   A$('#btnGift').onclick = async () => {
     if (!CUR) return;
-    const p = CUR.obj;
-    const s = +A$('#fStone').value - p.stone, e = +A$('#fExp').value - p.exp;
-    if (s > 0) p.stone += s; if (e > 0) { p.exp += e; }
-    await writeJSON(playerPath(p.uid), p, 'admin gift');
-    atoast(`已发放 ${Math.max(0, s)} 灵石 / ${Math.max(0, e)} 修为`, 'ok');
+    CUR.stone = Math.max(0, +A$('#fStone').value || 0);
+    CUR.exp = Math.max(0, +A$('#fExp').value || 0);
+    if (window.ENGINE && ENGINE.gainExp) ENGINE.gainExp(CUR, 0);
+    await savePlayer(CUR, 'gift');
   };
-  A$('#btnDel').onclick = async () => {
-    if (!CUR || !confirm('确认删除该玩家存档？')) return;
+  A$('#btnDelP').onclick = async () => {
+    if (!CUR) return;
+    if (!confirm(`确定删除【${CUR.name}】的存档？不可恢复。`)) return;
+    await writeJSON(playerPath(CUR.uid), null, 'admin: delete').catch(() => {});
+    atoast('已删除（若 API 不支持删除，请到仓库手动删）', 'ok');
+    await loadPlayers();
+  };
+  A$('#btnFull').onclick = async () => {
+    if (!CUR) return;
+    CUR.lastTick = Date.now(); CUR.lastSeen = Date.now();
+    await savePlayer(CUR, 'full heal'); atoast('已回满', 'ok');
+  };
+  A$('#btnResetTask').onclick = async () => {
+    if (!CUR) return;
+    CUR.tasks = { mainIdx: 0, daily: { date: '', prog: {}, claimed: [] }, bounty: { prog: {}, claimed: [] } };
+    await savePlayer(CUR, 'reset task'); atoast('任务已重置', 'ok');
+  };
+  A$('#btnSaveRaw').onclick = async () => {
     try {
-      const path = playerPath(CUR.obj.uid);
-      const r = await fetch(`${Net.endpoint}/repos/${GH.owner}/${GH.repo}/contents/${path}?ref=${GH.dataBranch}`, { headers: { Authorization: `Bearer ${GH.token}` } });
-      const j = await r.json();
-      await fetch(`${Net.endpoint}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${GH.token}`, Accept: 'application/vnd.github+json' },
-        body: JSON.stringify({ message: 'admin delete', sha: j.sha, branch: GH.dataBranch }),
-      });
-      atoast('已删除', 'ok'); CUR = null; A$('#editCard').style.display = 'none'; await loadPlayers(); renderDash();
-    } catch (e) { atoast('删除失败', 'err'); }
+      const o = JSON.parse(A$('#rawJson').value);
+      await writeJSON(playerPath(o.uid), o, 'admin raw');
+      atoast('已保存', 'ok'); await loadPlayers();
+    } catch (e) { atoast('JSON 格式错误', 'err'); }
   };
 
-  A$('#btnSaveNotice').onclick = async () => {
-    const obj = {
-      notice: A$('#nText').value,
-      events: {
-        doubleExp: A$('#evExp').checked, doubleStone: A$('#evStone').checked,
-        expMul: 2, stoneMul: 2, eventName: A$('#evName').value, eventEnd: A$('#evEnd').value,
-      },
-      updatedAt: new Date().toISOString(),
-    };
-    await writeJSON('data/config/notice.json', obj, 'admin notice');
-    atoast('公告与活动已发布', 'ok');
+  // 批量
+  A$('#btnSendMail').onclick = sendMailAll;
+  A$('#btnGiveAll').onclick = giveAll;
+  A$$('[data-dbl]').forEach((b) => b.onclick = () => setDouble(b.dataset.dbl));
+  A$('#btnUnbanAll').onclick = async () => {
+    let n = 0;
+    for (const x of PLAYERS) if (x.obj.banned) { x.obj.banned = false; await writeJSON(playerPath(x.obj.uid), x.obj, 'admin unban'); n++; }
+    A$('#batchMsg2').textContent = `已解封 ${n} 位`; atoast('完成', 'ok');
+  };
+  A$('#btnClearInactive').onclick = async () => {
+    const old = PLAYERS.filter((x) => Date.now() - (x.obj.lastSeen || 0) > 2592000000);
+    A$('#batchMsg2').textContent = `30 天未上线：${old.length} 位（${old.map((x) => x.obj.name).join('、').slice(0, 80)}）`;
+  };
+  A$('#btnRecalcPower').onclick = async () => {
+    let n = 0;
+    for (const x of PLAYERS) { try { power(x.obj); n++; } catch (e) {} }
+    A$('#batchMsg2').textContent = `已重算 ${n} 位`; atoast('完成', 'ok');
   };
 
-  A$('#btnSaveCfg').onclick = async () => {
-    try { const obj = JSON.parse(A$('#cfgJson').value); await writeJSON('data/config/game.json', obj, 'admin config'); atoast('配置已保存', 'ok'); CFG = obj; renderDash(); }
-    catch (e) { atoast('JSON 格式错误', 'err'); }
+  // 货币
+  A$('#btnWLoad').onclick = async () => {
+    const uid = (A$('#wUid').value || '').trim();
+    const hit = findPlayer(uid);
+    if (!hit) return atoast('未找到', 'err');
+    CUR = hit.obj; renderWallet(CUR);
+    A$('#wWho').textContent = `已载入：${CUR.name}`;
   };
-  A$('#btnLoadCfg').onclick = async () => { CFG = await readJSON('data/config/game.json') || {}; A$('#cfgJson').value = JSON.stringify(CFG, null, 2); atoast('已载入'); };
+  A$('#btnWSave').onclick = saveWallet;
+  A$('#btnWMax').onclick = () => { A$$('#walletGrid [data-cur]').forEach((e) => e.value = 999999); };
+  A$('#btnWZero').onclick = () => { A$$('#walletGrid [data-cur]').forEach((e) => e.value = 0); };
 
-  A$('#btnDispatch').onclick = async () => {
-    try {
-      const r = await fetch(`${Net.endpoint}/repos/${GH.owner}/${GH.repo}/actions/workflows/aggregate.yml/dispatches`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${GH.token}`, Accept: 'application/vnd.github+json' },
-        body: JSON.stringify({ ref: GH.branch }),
-      });
-      A$('#dispatchMsg').textContent = r.status === 204 ? '已触发，约 1 分钟后刷新看板' : '触发失败：' + r.status;
-    } catch (e) { A$('#dispatchMsg').textContent = '触发失败（Token 需 workflow 权限）'; }
-  };
-  A$('#btnClearCache').onclick = () => { localStorage.clear(); atoast('已清除'); };
-
-  A$('#btnSendMail').onclick = sendGlobalMail;
-  A$('#btnClearChat').onclick = async () => {
-    if (!confirm('确认清空世界频道？')) return;
-    await writeJSON('data/chat.json', { updatedAt: new Date().toISOString(), list: [] }, 'admin clear chat');
-    atoast('已清空', 'ok'); renderMore();
-  };
-}
-
-boot();
-
-
-/* ================= 后台扩展：货币 / 活动 / 称号 / 法宝 ================= */
-const ADMINX = {
-  cur: {},   // 当前操作的玩家对象
-
-  async loadPlayer(uid, whoEl, cb) {
-    if (!uid) return atoast('请先填道号', 'err');
-    const r = await API.getPlayer(uid);
-    if (!r || !r.data) { if (whoEl) whoEl.textContent = '未找到该玩家'; return null; }
-    this.cur = r.data;
-    if (whoEl) whoEl.textContent = `已载入：${r.data.name || uid}（${uid}）`;
-    if (cb) cb(r.data);
-    return r.data;
-  },
-
-  /* ---------- 货币 ---------- */
-  CUR_IDS: ['C001','C002','C003','C004','C005','C006','C007','C008','C009','C010','C011','C012','C013','C014','C015','C016'],
-  CUR_NAME: {'C001':'下品灵石','C002':'中品灵石','C003':'上品灵石','C004':'极品灵石','C005':'宗门贡献',
-    'C006':'道义币','C007':'元宝','C008':'灵玉','C009':'功法残篇','C010':'突破丹碎片','C011':'轮回石',
-    'C012':'通天令','C013':'仙元','C014':'功勋值','C015':'声望(人界)','C016':'积分(PVP)'},
-  renderWallet(p) {
-    const g = document.getElementById('walletGrid');
-    if (!g) return;
-    p.wallet = p.wallet || {};
-    g.innerHTML = this.CUR_IDS.map((id) => {
-      const v = (id === 'C001') ? (p.stone || p.wallet[id] || 0) : (p.wallet[id] || 0);
-      return `<div><div class="small">${this.CUR_NAME[id]}</div>
-        <input class="txt" data-cur="${id}" type="number" value="${v}"></div>`;
-    }).join('');
-  },
-  async saveWallet(uid) {
-    if (!this.cur || !this.cur.uid) return atoast('请先读取玩家', 'err');
-    const p = this.cur;
-    p.wallet = p.wallet || {};
-    document.querySelectorAll('#walletGrid [data-cur]').forEach((el) => {
-      const v = Math.max(0, parseInt(el.value || '0', 10));
-      p.wallet[el.dataset.cur] = v;
-      if (el.dataset.cur === 'C001') p.stone = v;
-    });
-    await API.savePlayer(p.uid, p, `admin: wallet ${p.name}`);
-    atoast('货币已保存', 'ok');
-  },
-  async quickGive(uid) {
-    if (!this.cur || !this.cur.uid) return atoast('请先读取玩家', 'err');
-    const p = this.cur; p.wallet = p.wallet || {};
-    const add = (id, el) => { const n = parseInt((document.getElementById(el) || {}).value || '0', 10); if (n) { p.wallet[id] = (p.wallet[id] || 0) + n; if (id === 'C001') p.stone = p.wallet[id]; } };
-    add('C007', 'qYb'); add('C014', 'qMerit'); add('C015', 'qRep');
-    await API.savePlayer(p.uid, p, `admin: give ${p.name}`);
-    atoast('已发放', 'ok'); this.renderWallet(p);
-  },
-
-  /* ---------- 活动 ---------- */
-  async renderActsAdmin() {
-    const box = document.getElementById('actAdminList');
-    if (!box) return;
-    const cfg = await API.getConfig('social');
-    const list = (cfg && cfg.acts) || [];
-    box.innerHTML = list.length ? list.map((a) =>
-      `<div class="item" style="margin-bottom:5px"><div class="ic">${a.icon}</div>
-        <div class="info"><div class="nm">${a.name} <span class="small">${a.type}</span></div>
-        <div class="sub">${a.content}</div><div class="sub" style="color:var(--jade)">${a.reward}</div></div></div>`
-    ).join('') : '<div class="small">未加载到活动配置</div>';
-    const st = document.getElementById('dblState');
-    const nc = await API.getConfig('notice');
-    const ev = (nc && nc.events) || {};
-    if (st) st.textContent = '当前：' + [
-      ev.doubleExp ? '双倍修为✔' : '', ev.doubleStone ? '双倍灵石✔' : '', ev.doubleDrop ? '双倍掉落✔' : ''
-    ].filter(Boolean).join(' ') || '无';
-  },
-  async setDouble(key) {
-    const nc = await API.getConfig('notice');
-    if (!nc) return atoast('读取配置失败', 'err');
-    nc.events = nc.events || {};
-    ['doubleExp','doubleStone','doubleDrop'].forEach((k) => nc.events[k] = false);
-    if (key) { nc.events[key] = true; nc.events[key.replace('double','') + 'Mul'] = 2; }
-    await API.saveConfig('notice', nc, 'admin: double event');
-    atoast(key ? '已开启' : '已全部关闭', 'ok');
-    this.renderActsAdmin();
-  },
-  async batchGive() {
-    const stone = parseInt((document.getElementById('bStone') || {}).value || '0', 10);
-    const yb = parseInt((document.getElementById('bYb') || {}).value || '0', 10);
-    const mt = parseInt((document.getElementById('bMerit') || {}).value || '0', 10);
-    if (!stone && !yb && !mt) return atoast('请填至少一项', 'err');
-    const nc = await API.getConfig('notice');
-    if (!nc) return atoast('读取配置失败', 'err');
-    nc.mails = nc.mails || [];
-    nc.mails.push({
-      id: 'm_' + Date.now(), title: '全服活动奖励',
-      body: `灵石×${stone}　元宝×${yb}　功勋×${mt}`,
-      give: { stone, yuanbao: yb, merit: mt }, at: Date.now(), to: 'all',
-    });
-    await API.saveConfig('notice', nc, 'admin: batch give');
-    document.getElementById('batchMsg').textContent = `已写入全服邮件（共 ${nc.mails.length} 封）`;
-    atoast('已发放，玩家下次登录可见', 'ok');
-  },
-
-  /* ---------- 称号 ---------- */
-  async renderTitlesAdmin(p) {
-    const box = document.getElementById('titleAdminList');
-    if (!box) return;
-    const cfg = await API.getConfig('social');
-    const list = (cfg && cfg.titles) || [];
-    p.titles = p.titles || { owned: [], cur: null };
-    box.innerHTML = list.map((t) => {
-      const owned = p.titles.owned.indexOf(t.id) >= 0;
-      return `<div class="item" style="margin-bottom:5px"><div class="ic">${t.icon}</div>
-        <div class="info"><div class="nm">${t.name}</div><div class="sub">${t.desc}</div></div>
-        <button class="mini" data-tid="${t.id}">${owned ? '撤销' : '授予'}</button></div>`;
-    }).join('');
-    box.querySelectorAll('[data-tid]').forEach((b) => b.onclick = async () => {
-      const id = b.dataset.tid;
-      const i = p.titles.owned.indexOf(id);
-      if (i >= 0) p.titles.owned.splice(i, 1); else p.titles.owned.push(id);
-      await API.savePlayer(p.uid, p, `admin: title ${id}`);
-      atoast('已更新', 'ok'); this.renderTitlesAdmin(p);
-    });
-  },
-
-  /* ---------- 法宝发放 ---------- */
-  async renderEquipAdmin(p) {
-    const g = document.getElementById('equipAdminGrid');
-    if (!g) return;
-    const ct = await API.getConfig('content');
-    const recs = ((ct && ct.forge && ct.forge.recipes) || []).filter((x) => x.fr);
-    g.innerHTML = recs.map((r) =>
-      `<div><button class="ghost" style="width:100%;text-align:left" data-eq="${r.id}">
-        ${r.icon} ${r.name} <span class="small">q${r.q}</span></button></div>`
-    ).join('') || '<div class="small">未加载到法宝数据</div>';
-    g.querySelectorAll('[data-eq]').forEach((b) => b.onclick = async () => {
-      const rec = recs.find((x) => x.id === b.dataset.eq);
-      p.bag = p.bag || [];
-      p.bag.push({ id: 'fr_' + rec.id, name: rec.name, icon: rec.icon, kind: 'equip',
-        q: rec.q, slot: rec.slot, base: rec.base || {}, enh: 0, temp: 0, fr: true });
-      await API.savePlayer(p.uid, p, `admin: give equip ${rec.name}`);
-      atoast(`已发放【${rec.name}】`, 'ok');
-    });
-  },
-};
-window.ADMINX = ADMINX;
-
-/* 绑定后台扩展事件 */
-document.addEventListener('DOMContentLoaded', () => {
-  const q = (s) => document.querySelector(s);
-  const bw = q('#btnWLoad'); if (bw) bw.onclick = () => ADMINX.loadPlayer(q('#wUid').value.trim(), q('#wWho'), (p) => ADMINX.renderWallet(p));
-  const bs = q('#btnWSave'); if (bs) bs.onclick = () => ADMINX.saveWallet();
-  const bg = q('#btnQuickGive'); if (bg) bg.onclick = () => ADMINX.quickGive();
-  const bt = q('#btnTLoad'); if (bt) bt.onclick = () => ADMINX.loadPlayer(q('#tUid').value.trim(), q('#tWho'), (p) => ADMINX.renderTitlesAdmin(p));
-  const be = q('#btnELoad'); if (be) be.onclick = () => ADMINX.loadPlayer(q('#eUid').value.trim(), q('#eWho'), (p) => ADMINX.renderEquipAdmin(p));
-  const de = q('#btnDblExp'); if (de) de.onclick = () => ADMINX.setDouble('doubleExp');
-  const ds = q('#btnDblStone'); if (ds) ds.onclick = () => ADMINX.setDouble('doubleStone');
-  const dd = q('#btnDblDrop'); if (dd) dd.onclick = () => ADMINX.setDouble('doubleDrop');
-  const df = q('#btnDblOff'); if (df) df.onclick = () => ADMINX.setDouble(null);
-  const bb = q('#btnBatchGive'); if (bb) bb.onclick = () => ADMINX.batchGive();
-  // 切到活动页时自动渲染
-  document.querySelectorAll('[data-p]').forEach((b) => b.onclick = () => {
-    if (b.dataset.p === 'acts') ADMINX.renderActsAdmin();
+  // 活动
+  A$$('[data-af]').forEach((b) => b.onclick = () => {
+    A$$('[data-af]').forEach((x) => x.classList.remove('on'));
+    b.classList.add('on'); renderActs(b.dataset.af);
   });
+
+  // 发放
+  A$('#gvType').onchange = renderGive;
+  A$('#btnGvSearch').onclick = renderGive;
+  A$('#gvKw').onkeydown = (e) => { if (e.key === 'Enter') renderGive(); };
+
+  // 配置
+  A$('#btnCfgLoad').onclick = loadCfgFile;
+  A$('#btnCfgSave').onclick = async () => {
+    try {
+      const o = JSON.parse(A$('#cfgJson').value);
+      await writeJSON(A$('#cfgFile').value, o, 'admin config');
+      atoast('配置已保存', 'ok');
+    } catch (e) { atoast('JSON 格式错误', 'err'); }
+  };
+  A$('#btnSaveNotice').onclick = async () => {
+    const n = await readJSON('data/config/notice.json') || {};
+    n.notice = A$('#nText').value;
+    n.giftCodes = A$('#nCodes').value.split(/[,，\s]+/).filter(Boolean);
+    await writeJSON('data/config/notice.json', n, 'admin notice');
+    A$('#noticeMsg').textContent = '已保存，玩家 2 分钟内生效'; atoast('已保存', 'ok');
+  };
+
+  // 数据维护
+  A$('#btnBuildLb').onclick = buildLb;
+  A$('#btnBuildSt').onclick = buildSt;
+  A$('#btnBackup').onclick = backup;
+  A$('#btnClearChat').onclick = async () => { if (!confirm('确定清空世界聊天？')) return;
+    await writeJSON('data/chat.json', { list: [] }, 'admin clear chat'); atoast('已清空', 'ok'); };
+  A$('#btnClearMarket').onclick = async () => { if (!confirm('确定清空寄售行？')) return;
+    await writeJSON('data/market.json', { list: [] }, 'admin clear market'); atoast('已清空', 'ok'); };
+  A$('#btnClearCache').onclick = () => {
+    Object.keys(localStorage).forEach((k) => { if (k.indexOf('xx_') === 0) localStorage.removeItem(k); });
+    atoast('本地缓存已清除', 'ok');
+  };
+
+  // 系统
+  A$('#btnSaveEp').onclick = async () => {
+    const list = A$('#sysExtra').value.split('\n').map((s) => s.trim()).filter(Boolean);
+    if (window.Net && Net.setExtra) Net.setExtra(list);
+    if (window.GH) GH.extraEndpoints = list;
+    localStorage.setItem('xx_extra_ep', JSON.stringify(list));
+    atoast('已保存，正在测速…', 'ok'); await checkConn();
+  };
 });
