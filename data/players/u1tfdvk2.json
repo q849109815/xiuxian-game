@@ -7,12 +7,12 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790018661478,
-  "lastTick": 1790018661478,
+  "lastSeen": 1790018663792,
+  "lastTick": 1790018663792,
   "realm": 5,
   "stage": 0,
-  "exp": 60102.14899145217,
-  "stone": 9900,
+  "exp": 10561.456736486394,
+  "stone": 500,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -62,7 +62,7 @@
   "tasks": {
     "mainIdx": 0,
     "daily": {
-      "date": "2026-9-22",
+      "date": "2026-9-21",
       "prog": {},
       "claimed": []
     },
@@ -101,7 +101,7 @@
     "deaths": 0,
     "battles": 0,
     "breakthrough": 5,
-    "offlineMin": 2,
+    "offlineMin": 1,
     "meditate": 0,
     "dungeon": 0,
     "encounters": 0,
@@ -111,88 +111,11 @@
   "trait": "P003",
   "bottle": {
     "liquid": 7,
-    "acc": 99,
+    "acc": 40,
     "level": 1
   },
   "partners": {},
   "mapsSeen": [],
   "dungeonCleared": [],
-  "storyIdx": 1,
-  "skin": {
-    "owned": [
-      "SK-010",
-      "SK-013",
-      "SK-018",
-      "SK-006",
-      "SK-008"
-    ],
-    "wear": {
-      "翅膀": "SK-010",
-      "坐骑": "SK-013",
-      "环身特效": "SK-018"
-    }
-  },
-  "worm": {
-    "own": [],
-    "cur": null,
-    "feed": {}
-  },
-  "social": {
-    "friends": [],
-    "team": null,
-    "dm": []
-  },
-  "sectSkill": [],
-  "titles": {
-    "owned": [],
-    "cur": null
-  },
-  "wallet": {
-    "c001": 0,
-    "c002": 0,
-    "c003": 0,
-    "c004": 0,
-    "c005": 0,
-    "c006": 0,
-    "c007": 0,
-    "c008": 0,
-    "c009": 0,
-    "c010": 0,
-    "c011": 0,
-    "c012": 0,
-    "c013": 0,
-    "c014": 0,
-    "c015": 0,
-    "c016": 0,
-    "C001": 9900,
-    "C007": 6
-  },
-  "loginAt": 1790018601228,
-  "sectWh": {
-    "items": []
-  },
-  "act": {
-    "sign": {
-      "last": "2026-9-22",
-      "days": 1,
-      "streak": 1
-    },
-    "seven": {
-      "s7_0": 1,
-      "s7_1": 1,
-      "s7_2": 1,
-      "s7_3": 1,
-      "s7_4": 1,
-      "s7_5": 1,
-      "s7_6": 1
-    },
-    "growth": {
-      "g1": 1,
-      "g2": 1
-    },
-    "online": {
-      "claimed": 0
-    },
-    "gifts": {}
-  }
+  "storyIdx": 1
 }
