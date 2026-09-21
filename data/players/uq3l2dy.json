@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789991099157,
-  "lastTick": 1789991099157,
+  "lastSeen": 1789991129408,
+  "lastTick": 1789991129408,
   "realm": 9,
   "stage": 3,
-  "exp": 347351351191.7145,
-  "stone": 158265,
+  "exp": 145663505199.5254,
+  "stone": 171917,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -65,7 +65,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 27,
+      "count": 29,
       "desc": "炼丹材料",
       "id": "i_fhce2n2"
     },
@@ -228,6 +228,20 @@
       "hp": 340,
       "crit": 0,
       "mp": 115
+    },
+    {
+      "id": "it_pm2bhce",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·养魂环",
+      "atk": 78,
+      "def": 38,
+      "hp": 338,
+      "crit": 0,
+      "mp": 115
     }
   ],
   "skills": [
@@ -294,8 +308,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 4940218,
-        "kill": 247,
+        "exp": 5078890,
+        "kill": 249,
         "dungeon": 5,
         "arena": 20
       },
@@ -308,8 +322,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 4940218,
-        "kill": 247,
+        "exp": 5078890,
+        "kill": 249,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -326,7 +340,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 24,
         "混沌祖龙": 21,
-        "天兵": 16
+        "天兵": 18
       },
       "claimed": [
         "b2",
@@ -365,14 +379,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 247,
+    "kills": 249,
     "deaths": 0,
-    "battles": 247,
+    "battles": 249,
     "breakthrough": 36,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 5,
-    "encounters": 26,
+    "encounters": 27,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
