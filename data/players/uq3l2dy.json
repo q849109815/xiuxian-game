@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989920299,
-  "lastTick": 1789989920299,
+  "lastSeen": 1789989925356,
+  "lastTick": 1789989925356,
   "realm": 3,
-  "stage": 2,
-  "exp": 262887.0864000001,
-  "stone": 14985,
+  "stage": 3,
+  "exp": 3163.8072000000975,
+  "stone": 15631,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -65,7 +65,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 13,
+      "count": 14,
       "desc": "炼器材料",
       "id": "i_op7cm1h"
     },
@@ -197,22 +197,22 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 95816,
-        "kill": 43
+        "exp": 101246,
+        "kill": 44
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 95816,
-        "kill": 43,
+        "exp": 101246,
+        "kill": 44,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
-        "熔岩巨人": 6,
-        "b3": 9,
+        "熔岩巨人": 7,
+        "b3": 10,
         "火麒麟": 1,
         "炎魔": 2
       },
@@ -250,10 +250,10 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 43,
+    "kills": 44,
     "deaths": 0,
-    "battles": 43,
-    "breakthrough": 14,
+    "battles": 44,
+    "breakthrough": 15,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 0,
