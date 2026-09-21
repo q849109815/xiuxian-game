@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790011446565,
-  "lastTick": 1790011446565,
+  "lastSeen": 1790011449679,
+  "lastTick": 1790011449679,
   "realm": 31,
   "stage": 0,
-  "exp": 46900108529.8712,
-  "stone": 8505051285946.912,
+  "exp": 187651626075.4848,
+  "stone": 8505059177997.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -751,7 +751,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 34,
+      "count": 35,
       "desc": "炼器材料",
       "id": "i_e3yde46"
     },
@@ -2538,16 +2538,16 @@
         "arena": 20,
         "dungeon": 92,
         "meditate": 1,
-        "exp": 129743105926,
-        "kill": 873
+        "exp": 129743121948,
+        "kill": 875
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129842498020,
-        "kill": 2591,
+        "exp": 129842514042,
+        "kill": 2593,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2565,8 +2565,8 @@
         "星宿仙君": 518,
         "混沌祖龙": 508,
         "天兵": 506,
-        "禁地守卫": 298,
-        "星斗海妖兽": 275,
+        "禁地守卫": 299,
+        "星斗海妖兽": 276,
         "天星宗弟子": 3,
         "墨蛟": 297
       },
@@ -2612,14 +2612,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 2591,
+    "kills": 2593,
     "deaths": 59,
-    "battles": 2650,
+    "battles": 2652,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 305,
-    "encounters": 353,
+    "encounters": 354,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -2642,13 +2642,13 @@
     "c014": 0,
     "c015": 0,
     "c016": 0,
-    "C001": 8505051497997.912,
-    "C007": 311
+    "C001": 8505059177997.912,
+    "C007": 337
   },
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 23,
-    "acc": 46,
+    "acc": 49,
     "level": 13
   },
   "titles": {
@@ -2692,7 +2692,10 @@
     "online": {
       "claimed": 5
     },
-    "gifts": {}
+    "gifts": {
+      "gift_27": 1,
+      "gift_24": 1
+    }
   },
   "codexSeen": {},
   "partners": {
