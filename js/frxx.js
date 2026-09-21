@@ -229,4 +229,89 @@ const FRXX = {
   storyChapter(i) { return this.story[i] || null; },
 };
 
+
+/* =========================================================
+ * 美术资源映射（assets/ 目录）
+ * ========================================================= */
+const ART = {
+  base: 'assets/',
+  scene: {
+    main: 'scene/main_bg.jpg',
+    // 地图名 → 场景图（按资料 12_地图势力 的篇目归属）
+    '七玄门': 'scene/qixuanmen.jpg',
+    '黄枫谷': 'scene/huangfenggu.jpg',
+    '血色禁地': 'scene/xuese.jpg',
+    '天渊城': 'scene/tianyuan.jpg',
+    '落云宗': 'scene/huangfenggu.jpg',
+    '乱星海(外海)': 'scene/main_bg.jpg',
+    '乱星海(内海)': 'scene/main_bg.jpg',
+    '虚天殿': 'scene/xuese.jpg',
+    '坠魔谷': 'scene/xuese.jpg',
+    '昆吾山': 'scene/tianyuan.jpg',
+    '地渊': 'scene/tianyuan.jpg',
+    '广寒界': 'scene/main_bg.jpg',
+    '北寒仙域': 'scene/tianyuan.jpg',
+    '青牛镇五里沟': 'scene/qixuanmen.jpg',
+    '越国都城': 'scene/qixuanmen.jpg',
+  },
+  char: {
+    '韩立': 'char/hanli.jpg',
+    '南宫婉': 'char/nangongwan.jpg',
+    '墨大夫': 'char/modafu.jpg',
+    '银月': 'char/yinyue.jpg',
+    '紫灵': 'char/nangongwan.jpg',
+    '元瑶': 'char/yinyue.jpg',
+    '厉飞雨': 'char/hanli.jpg',
+    '李化元': 'char/modafu.jpg',
+    '玄骨上人': 'char/modafu.jpg',
+    '古或今': 'char/modafu.jpg',
+    '蟹道人': 'char/hanli.jpg',
+  },
+  item: {
+    '掌天瓶': 'item/zhangtianping.jpg',
+  },
+  /** 取场景图（无匹配则回落主背景） */
+  sceneOf(name) {
+    if (!name) return this.base + this.scene.main;
+    for (const k in this.scene) {
+      if (k === 'main') continue;
+      if (name.indexOf(k) >= 0) return this.base + this.scene[k];
+    }
+    return this.base + this.scene.main;
+  },
+  /** 取角色立绘 */
+  charOf(name) {
+    if (!name) return null;
+    for (const k in this.char) if (name.indexOf(k) >= 0) return this.base + this.char[k];
+    return null;
+  },
+  itemOf(name) {
+    if (!name) return null;
+    for (const k in this.item) if (name.indexOf(k) >= 0) return this.base + this.item[k];
+    return null;
+  },
+};
+
+/* =========================================================
+ * 音频场景调度（按当前界面/地图自动切曲）
+ * ========================================================= */
+const AUDIO_SCENE = {
+  /** 根据当前面板决定曲目 */
+  trackFor(win, mapName) {
+    if (win === 'fight') return 'battle';
+    if (win === 'dungeon') return 'dungeon';
+    if (win === 'story') return 'town';
+    if (mapName) {
+      const n = String(mapName);
+      if (n.indexOf('禁地') >= 0 || n.indexOf('魔') >= 0 || n.indexOf('地渊') >= 0) return 'dungeon';
+      if (n.indexOf('乱星海') >= 0 || n.indexOf('草原') >= 0 || n.indexOf('域') >= 0) return 'wild';
+    }
+    return 'town';
+  },
+  /** 渡劫专用 */
+  trial() { AUDIO.play('trial'); },
+};
+
+window.ART = ART;
+window.AUDIO_SCENE = AUDIO_SCENE;
 window.FRXX = FRXX;
