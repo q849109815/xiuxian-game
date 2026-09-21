@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990977825,
-  "lastTick": 1789990977825,
+  "lastSeen": 1789991007828,
+  "lastTick": 1789991007828,
   "realm": 9,
   "stage": 3,
-  "exp": 321885808152.1401,
-  "stone": 39959,
+  "exp": 291327073187.05084,
+  "stone": 75279,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -65,7 +65,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 23,
+      "count": 25,
       "desc": "炼丹材料",
       "id": "i_fhce2n2"
     },
@@ -85,7 +85,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 4,
+      "count": 5,
       "desc": "炼器材料",
       "id": "i_ckq27h0"
     },
@@ -142,6 +142,20 @@
       "atk": 158,
       "def": 37,
       "hp": 360,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_9kepqza",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·玄龟甲",
+      "atk": 41,
+      "def": 145,
+      "hp": 896,
       "crit": 0,
       "mp": 115
     }
@@ -210,8 +224,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 3847044,
-        "kill": 230,
+        "exp": 4187762,
+        "kill": 235,
         "dungeon": 5,
         "arena": 20
       },
@@ -224,8 +238,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 3847044,
-        "kill": 230,
+        "exp": 4187762,
+        "kill": 235,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -240,9 +254,9 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 19,
-        "混沌祖龙": 14,
-        "天兵": 11
+        "星宿仙君": 21,
+        "混沌祖龙": 16,
+        "天兵": 12
       },
       "claimed": [
         "b2",
@@ -281,9 +295,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 230,
+    "kills": 235,
     "deaths": 0,
-    "battles": 230,
+    "battles": 235,
     "breakthrough": 36,
     "offlineMin": 0,
     "meditate": 1,
