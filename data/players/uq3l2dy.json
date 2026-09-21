@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790010437479,
-  "lastTick": 1790010437479,
+  "lastSeen": 1790010442711,
+  "lastTick": 1790010442711,
   "realm": 31,
   "stage": 0,
-  "exp": 27665642090.37045,
-  "stone": 8505051515351.912,
+  "exp": 206839771668.4084,
+  "stone": 8505051427638.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -78,7 +78,7 @@
       "kind": "equip",
       "slot": "helmet",
       "q": 4,
-      "level": 0,
+      "level": 12,
       "temper": 8,
       "name": "神品·混元盔",
       "atk": 81,
@@ -181,7 +181,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 482,
+      "count": 483,
       "desc": "炼丹材料",
       "id": "i_dwghtoq"
     },
@@ -503,6 +503,34 @@
       "hp": 1423,
       "crit": 0,
       "mp": 337
+    },
+    {
+      "id": "it_kj70hvv",
+      "kind": "equip",
+      "slot": "bracelet",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·太极腕",
+      "atk": 137,
+      "def": 174,
+      "hp": 917,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "fr_fr_w005",
+      "name": "风雷翅",
+      "icon": "🪽",
+      "kind": "equip",
+      "q": 3,
+      "slot": "necklace",
+      "base": {
+        "speed": 25
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
     }
   ],
   "skills": [
@@ -1687,16 +1715,16 @@
         "arena": 20,
         "dungeon": 92,
         "meditate": 1,
-        "exp": 129736301724,
-        "kill": 78
+        "exp": 129736329910,
+        "kill": 82
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129835693818,
-        "kill": 1796,
+        "exp": 129835722004,
+        "kill": 1800,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1715,9 +1743,9 @@
         "混沌祖龙": 508,
         "天兵": 506,
         "禁地守卫": 25,
-        "星斗海妖兽": 25,
+        "星斗海妖兽": 28,
         "天星宗弟子": 3,
-        "墨蛟": 25
+        "墨蛟": 26
       },
       "claimed": [
         "b2",
@@ -1761,14 +1789,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1796,
+    "kills": 1800,
     "deaths": 51,
-    "battles": 1847,
+    "battles": 1851,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 305,
-    "encounters": 250,
+    "encounters": 251,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -1797,7 +1825,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 12,
-    "acc": 26,
+    "acc": 32,
     "level": 13
   },
   "titles": {
