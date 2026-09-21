@@ -7,12 +7,12 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789992290585,
-  "lastTick": 1789992290585,
+  "lastSeen": 1789992317643,
+  "lastTick": 1789992317643,
   "realm": 9,
   "stage": 2,
-  "exp": 52482511207.87645,
-  "stone": 466464670,
+  "exp": 195271859674.59247,
+  "stone": 466471404,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
@@ -576,8 +576,8 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 20,
-        "exp": 240748,
-        "kill": 71
+        "exp": 312344,
+        "kill": 72
       },
       "claimed": [
         "d1",
@@ -590,8 +590,8 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 20,
-        "exp": 240748,
-        "kill": 71,
+        "exp": 312344,
+        "kill": 72,
         "火麒麟": 18,
         "b3": 43,
         "采药童子": 9,
@@ -603,7 +603,8 @@
         "女鬼": 2,
         "僵尸": 2,
         "熔岩巨人": 13,
-        "炎魔": 12
+        "炎魔": 12,
+        "混沌祖龙": 1
       },
       "claimed": [
         "b1",
@@ -655,9 +656,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 71,
+    "kills": 72,
     "deaths": 2,
-    "battles": 73,
+    "battles": 74,
     "breakthrough": 35,
     "offlineMin": 17,
     "meditate": 2,
