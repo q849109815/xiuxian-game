@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790012526565,
-  "lastTick": 1790012526565,
+  "lastSeen": 1790012556565,
+  "lastTick": 1790012556565,
   "realm": 31,
   "stage": 0,
-  "exp": 244166258256.3346,
-  "stone": 2827461041032.0703,
+  "exp": 244166257896.3346,
+  "stone": 2827461051992.0703,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -130,106 +130,6 @@
   },
   "bag": [
     {
-      "id": "it_9uua6ts",
-      "kind": "equip",
-      "slot": "bracelet",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·玄铁护腕",
-      "atk": 178,
-      "def": 152,
-      "hp": 1036,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_wd5044v",
-      "kind": "equip",
-      "slot": "necklace",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·养魂链",
-      "atk": 149,
-      "def": 72,
-      "hp": 867,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_yvsx7zz",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·聚灵戒",
-      "atk": 177,
-      "def": 85,
-      "hp": 704,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "fr_fr_w005",
-      "name": "风雷翅",
-      "icon": "🪽",
-      "kind": "equip",
-      "q": 3,
-      "slot": "necklace",
-      "base": {
-        "speed": 25
-      },
-      "enh": 0,
-      "temp": 0,
-      "fr": true,
-      "temper": 8,
-      "level": 12
-    },
-    {
-      "id": "it_5746a45",
-      "kind": "equip",
-      "slot": "necklace",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·聚灵珠",
-      "atk": 172,
-      "def": 67,
-      "hp": 849,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_ub1g1lx",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·云锦袍",
-      "atk": 75,
-      "def": 411,
-      "hp": 3456,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_j4l1e9p",
-      "kind": "equip",
-      "slot": "necklace",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·阴阳环",
-      "atk": 160,
-      "def": 85,
-      "hp": 1051,
-      "crit": 0,
-      "mp": 337
-    },
-    {
       "id": "it_vf204h9",
       "kind": "equip",
       "slot": "boots",
@@ -319,7 +219,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 99,
+      "count": 107,
       "desc": "炼丹材料",
       "id": "i_64h6svt"
     },
@@ -343,7 +243,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 57,
+      "count": 64,
       "desc": "炼器材料",
       "id": "i_fpil8ni"
     },
@@ -1242,6 +1142,104 @@
       "atk": 80,
       "def": 167,
       "hp": 1330,
+      "crit": 0,
+      "mp": 331
+    },
+    {
+      "id": "it_8h2o6bu",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·麒麟铠",
+      "atk": 65,
+      "def": 476,
+      "hp": 2392,
+      "crit": 0,
+      "mp": 331
+    },
+    {
+      "id": "fr_fr_w003",
+      "name": "虚天鼎",
+      "icon": "🍲",
+      "kind": "equip",
+      "q": 4,
+      "slot": "artifact",
+      "base": {
+        "atk": 10
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
+    },
+    {
+      "id": "it_vq3khbi",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·太虚戒",
+      "atk": 162,
+      "def": 80,
+      "hp": 858,
+      "crit": 0,
+      "mp": 331
+    },
+    {
+      "id": "fr_fr_w007",
+      "name": "玄天葫芦",
+      "icon": "🍶",
+      "kind": "equip",
+      "q": 3,
+      "slot": "artifact",
+      "base": {
+        "atk": 10
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
+    },
+    {
+      "id": "it_vlsxnv1",
+      "kind": "equip",
+      "slot": "boots",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·踏云靴",
+      "atk": 83,
+      "def": 137,
+      "hp": 984,
+      "crit": 0,
+      "mp": 331
+    },
+    {
+      "id": "it_t2lo4zk",
+      "kind": "equip",
+      "slot": "bracelet",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·太极腕",
+      "atk": 177,
+      "def": 139,
+      "hp": 776,
+      "crit": 0,
+      "mp": 331
+    },
+    {
+      "id": "it_8z2d8za",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·麒麟铠",
+      "atk": 57,
+      "def": 384,
+      "hp": 3359,
       "crit": 0,
       "mp": 331
     }
@@ -2566,6 +2564,15 @@
       "exp": 0,
       "stage": 0,
       "apt": 1
+    },
+    {
+      "id": "bs_444l6rv",
+      "ref": "b_phoenix",
+      "name": "青鸾",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
     }
   ],
   "activeBeast": 0,
@@ -2590,16 +2597,16 @@
         "arena": 20,
         "dungeon": 252,
         "meditate": 1,
-        "exp": 129755582700,
-        "kill": 1653
+        "exp": 129755676990,
+        "kill": 1678
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "exp": 129854974794,
-        "kill": 3371,
+        "exp": 129855069084,
+        "kill": 3396,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -2621,9 +2628,9 @@
         "星斗海妖兽": 534,
         "天星宗弟子": 3,
         "墨蛟": 532,
-        "野狼": 16,
-        "青纹蛇": 8,
-        "灵兔": 7
+        "野狼": 23,
+        "青纹蛇": 16,
+        "灵兔": 17
       },
       "claimed": [
         "b2",
@@ -2667,14 +2674,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 3371,
+    "kills": 3396,
     "deaths": 67,
-    "battles": 3438,
+    "battles": 3463,
     "breakthrough": 58,
     "offlineMin": 243,
     "meditate": 2,
     "dungeon": 465,
-    "encounters": 449,
+    "encounters": 451,
     "rob": 0
   },
   "meditateUntil": 1790009904285,
@@ -2703,7 +2710,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 27,
-    "acc": 46,
+    "acc": 76,
     "level": 30
   },
   "titles": {
