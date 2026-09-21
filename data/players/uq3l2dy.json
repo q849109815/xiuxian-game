@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996549806,
-  "lastTick": 1789996549806,
+  "lastSeen": 1789996550339,
+  "lastTick": 1789996550339,
   "realm": 9,
   "stage": 3,
-  "exp": 99822942477.54163,
-  "stone": 8681351,
+  "exp": 131265099880.34732,
+  "stone": 8642728,
   "equip": {
     "weapon": {
       "id": "it_4s7eib2",
@@ -20,7 +20,7 @@
       "slot": "weapon",
       "q": 4,
       "level": 12,
-      "temper": 6,
+      "temper": 7,
       "name": "神品·诛仙剑",
       "atk": 130,
       "def": 43,
@@ -127,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 86,
+      "count": 87,
       "desc": "炼器材料",
       "id": "i_bkbhegu"
     },
@@ -446,6 +446,20 @@
       "atk": 66,
       "def": 29,
       "hp": 303,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_muk85cf",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·灵蛇杖",
+      "atk": 157,
+      "def": 41,
+      "hp": 269,
       "crit": 0,
       "mp": 115
     }
@@ -1600,8 +1614,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 78441762,
-        "kill": 1390,
+        "exp": 78502188,
+        "kill": 1391,
         "dungeon": 213,
         "arena": 20
       },
@@ -1615,8 +1629,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 78441762,
-        "kill": 1390,
+        "exp": 78502188,
+        "kill": 1391,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1632,7 +1646,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 423,
-        "混沌祖龙": 400,
+        "混沌祖龙": 401,
         "天兵": 381
       },
       "claimed": [
@@ -1677,9 +1691,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1390,
+    "kills": 1391,
     "deaths": 0,
-    "battles": 1390,
+    "battles": 1391,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
