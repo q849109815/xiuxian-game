@@ -7,19 +7,19 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996521193,
-  "lastTick": 1789996521193,
+  "lastSeen": 1789996522483,
+  "lastTick": 1789996522483,
   "realm": 9,
   "stage": 3,
-  "exp": 60942,
-  "stone": 8824781,
+  "exp": 22156399945.825073,
+  "stone": 8824832,
   "equip": {
     "weapon": {
       "id": "it_33hcivs",
       "kind": "equip",
       "slot": "weapon",
       "q": 3,
-      "level": 1,
+      "level": 8,
       "temper": 0,
       "name": "仙器·灵蛇杖",
       "atk": 201,
@@ -117,7 +117,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 76,
+      "count": 77,
       "desc": "炼器材料",
       "id": "i_1c42jnp"
     },
@@ -1521,8 +1521,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 77001822,
-        "kill": 1368,
+        "exp": 77074878,
+        "kill": 1369,
         "dungeon": 213,
         "arena": 20
       },
@@ -1536,8 +1536,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 77001822,
-        "kill": 1368,
+        "exp": 77074878,
+        "kill": 1369,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1552,7 +1552,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 413,
+        "星宿仙君": 414,
         "混沌祖龙": 394,
         "天兵": 375
       },
@@ -1598,9 +1598,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1368,
+    "kills": 1369,
     "deaths": 0,
-    "battles": 1368,
+    "battles": 1369,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
