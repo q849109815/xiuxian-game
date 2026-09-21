@@ -7,11 +7,11 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790008163791,
-  "lastTick": 1790008163791,
+  "lastSeen": 1790008214906,
+  "lastTick": 1790008214906,
   "realm": 4,
   "stage": 0,
-  "exp": 31047.763444966444,
+  "exp": 35996.43650746885,
   "stone": 500,
   "equip": {
     "weapon": null,
@@ -62,7 +62,7 @@
   "tasks": {
     "mainIdx": 0,
     "daily": {
-      "date": "2026-9-21",
+      "date": "2026-9-22",
       "prog": {},
       "claimed": []
     },
@@ -101,7 +101,7 @@
     "deaths": 0,
     "battles": 0,
     "breakthrough": 4,
-    "offlineMin": 1,
+    "offlineMin": 2,
     "meditate": 0,
     "dungeon": 0,
     "encounters": 0,
