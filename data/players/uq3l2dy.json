@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990199007,
-  "lastTick": 1789990199007,
+  "lastSeen": 1789990200091,
+  "lastTick": 1789990200091,
   "realm": 4,
   "stage": 3,
-  "exp": 2621978.2156000044,
-  "stone": 14007,
+  "exp": 2668250.4901000042,
+  "stone": 14999,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -65,7 +65,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 23,
+      "count": 24,
       "desc": "炼器材料",
       "id": "i_op7cm1h"
     },
@@ -291,8 +291,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 340562,
-        "kill": 90,
+        "exp": 345020,
+        "kill": 91,
         "dungeon": 4
       },
       "claimed": []
@@ -300,14 +300,14 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 340562,
-        "kill": 90,
+        "exp": 345020,
+        "kill": 91,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
-        "熔岩巨人": 23,
-        "b3": 56,
+        "熔岩巨人": 24,
+        "b3": 57,
         "火麒麟": 11,
         "炎魔": 22,
         "dungeon": 4
@@ -318,7 +318,7 @@
   "sectInfo": {
     "id": "s_qingyun",
     "rankIdx": 0,
-    "contrib": 505,
+    "contrib": 565,
     "joinedAt": 1789989635634
   },
   "arena": {
@@ -346,9 +346,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 90,
+    "kills": 91,
     "deaths": 0,
-    "battles": 90,
+    "battles": 91,
     "breakthrough": 19,
     "offlineMin": 0,
     "meditate": 1,
