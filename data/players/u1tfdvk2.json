@@ -7,8 +7,8 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790003121304,
-  "lastTick": 1790003121304,
+  "lastSeen": 1790003123258,
+  "lastTick": 1790003123258,
   "realm": 0,
   "stage": 0,
   "exp": 0,
@@ -41,7 +41,7 @@
   "tasks": {
     "mainIdx": 0,
     "daily": {
-      "date": "",
+      "date": "2026-9-21",
       "prog": {},
       "claimed": []
     },
