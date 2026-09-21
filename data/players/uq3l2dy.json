@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990325974,
-  "lastTick": 1789990325974,
+  "lastSeen": 1789990326893,
+  "lastTick": 1789990326893,
   "realm": 5,
   "stage": 1,
-  "exp": 9433388.241950002,
+  "exp": 9668852.856500002,
   "stone": 95999,
   "equip": {
     "weapon": {
@@ -452,7 +452,8 @@
   "equipped": [
     "sk_art_shield",
     "sk_art_thunder",
-    "sk_art_drain"
+    "sk_art_drain",
+    "sk_heart_basic"
   ],
   "beasts": [],
   "activeBeast": -1,
