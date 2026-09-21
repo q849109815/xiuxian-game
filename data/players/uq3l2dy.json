@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009880295,
-  "lastTick": 1790009880295,
+  "lastSeen": 1790009886566,
+  "lastTick": 1790009886566,
   "realm": 31,
   "stage": 0,
-  "exp": 228024330199.88474,
-  "stone": 8505051577262.912,
+  "exp": 45604866039.97695,
+  "stone": 8505051578159.912,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -350,20 +350,6 @@
       "atk": 56,
       "def": 37,
       "hp": 231,
-      "crit": 0,
-      "mp": 115
-    },
-    {
-      "id": "it_2ffm7s9",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·青锋剑",
-      "atk": 204,
-      "def": 39,
-      "hp": 297,
       "crit": 0,
       "mp": 115
     },
@@ -1732,7 +1718,7 @@
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 6,
-    "acc": 9,
+    "acc": 16,
     "level": 13
   },
   "titles": {
