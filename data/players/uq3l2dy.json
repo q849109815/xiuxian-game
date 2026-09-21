@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789991581097,
-  "lastTick": 1789991581097,
+  "lastSeen": 1789991582814,
+  "lastTick": 1789991582814,
   "realm": 9,
   "stage": 3,
-  "exp": 29277252270.462917,
-  "stone": 206858,
+  "exp": 45969627799.595535,
+  "stone": 175389,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -48,7 +48,7 @@
       "slot": "ring",
       "q": 4,
       "level": 12,
-      "temper": 6,
+      "temper": 8,
       "name": "神品·太虚戒",
       "atk": 79,
       "def": 40,
@@ -85,7 +85,7 @@
       "name": "星陨铁",
       "icon": "⭐",
       "price": 1000,
-      "count": 24,
+      "count": 25,
       "desc": "炼器材料",
       "id": "i_ckq27h0"
     },
@@ -448,8 +448,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 8191956,
-        "kill": 297,
+        "exp": 8262038,
+        "kill": 298,
         "dungeon": 5,
         "arena": 20
       },
@@ -462,8 +462,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 8191956,
-        "kill": 297,
+        "exp": 8262038,
+        "kill": 298,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -479,7 +479,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 41,
-        "混沌祖龙": 37,
+        "混沌祖龙": 38,
         "天兵": 33
       },
       "claimed": [
@@ -519,9 +519,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 297,
+    "kills": 298,
     "deaths": 0,
-    "battles": 297,
+    "battles": 298,
     "breakthrough": 36,
     "offlineMin": 0,
     "meditate": 1,
