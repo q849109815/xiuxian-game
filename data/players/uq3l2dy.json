@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990947821,
-  "lastTick": 1789990947821,
+  "lastSeen": 1789990955553,
+  "lastTick": 1789990955553,
   "realm": 9,
   "stage": 3,
-  "exp": 0,
-  "stone": 167878,
+  "exp": 75378309136.02011,
+  "stone": 106432,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -167,7 +167,7 @@
   "cave": {
     "lv": {
       "farm": 10,
-      "array": 8,
+      "array": 9,
       "garden": 3
     },
     "array": "spirit",
@@ -180,8 +180,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 3519522,
-        "kill": 225,
+        "exp": 3583194,
+        "kill": 226,
         "dungeon": 5,
         "arena": 20
       },
@@ -194,8 +194,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 3519522,
-        "kill": 225,
+        "exp": 3583194,
+        "kill": 226,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -211,7 +211,7 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 17,
-        "混沌祖龙": 11,
+        "混沌祖龙": 12,
         "天兵": 11
       },
       "claimed": [
@@ -251,9 +251,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 225,
+    "kills": 226,
     "deaths": 0,
-    "battles": 225,
+    "battles": 226,
     "breakthrough": 36,
     "offlineMin": 0,
     "meditate": 1,
