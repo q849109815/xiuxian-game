@@ -7,19 +7,19 @@
   "root": "water",
   "sect": "s_wuji",
   "createdAt": 1789989403736,
-  "lastSeen": 1789992031668,
-  "lastTick": 1789992031668,
+  "lastSeen": 1789992040065,
+  "lastTick": 1789992040065,
   "realm": 7,
   "stage": 0,
-  "exp": 110337100.4093824,
-  "stone": 8595,
+  "exp": 679237424.3327605,
+  "stone": 9109,
   "equip": {
     "weapon": {
       "id": "it_llxcthx",
       "kind": "equip",
       "slot": "weapon",
       "q": 0,
-      "level": 0,
+      "level": 1,
       "temper": 0,
       "name": "凡品·玄铁刀",
       "atk": 113,
@@ -478,8 +478,8 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 20,
-        "exp": 155242,
-        "kill": 55
+        "exp": 160386,
+        "kill": 56
       },
       "claimed": [
         "d1",
@@ -492,10 +492,10 @@
         "meditate": 2,
         "dungeon": 135,
         "arena": 20,
-        "exp": 155242,
-        "kill": 55,
+        "exp": 160386,
+        "kill": 56,
         "火麒麟": 13,
-        "b3": 27,
+        "b3": 28,
         "采药童子": 9,
         "b1": 23,
         "竹叶蛇": 9,
@@ -505,7 +505,7 @@
         "女鬼": 2,
         "僵尸": 2,
         "熔岩巨人": 6,
-        "炎魔": 8
+        "炎魔": 9
       },
       "claimed": [
         "b1",
@@ -557,9 +557,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 55,
+    "kills": 56,
     "deaths": 2,
-    "battles": 57,
+    "battles": 58,
     "breakthrough": 26,
     "offlineMin": 16,
     "meditate": 2,
