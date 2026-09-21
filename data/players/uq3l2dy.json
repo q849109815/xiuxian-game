@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789994219153,
-  "lastTick": 1789994219153,
+  "lastSeen": 1789994220487,
+  "lastTick": 1789994220487,
   "realm": 9,
   "stage": 3,
-  "exp": 175137953358.9308,
-  "stone": 1693487,
+  "exp": 192651799324.82385,
+  "stone": 1700683,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -75,7 +75,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 29,
+      "count": 30,
       "desc": "炼器材料",
       "id": "i_frp5ygh"
     },
@@ -232,6 +232,20 @@
       "atk": 179,
       "def": 29,
       "hp": 248,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_6tedwgv",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·锁子金甲",
+      "atk": 33,
+      "def": 109,
+      "hp": 839,
       "crit": 0,
       "mp": 115
     }
@@ -1299,8 +1313,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 12694228,
-        "kill": 367,
+        "exp": 12763022,
+        "kill": 368,
         "dungeon": 115,
         "arena": 20
       },
@@ -1313,8 +1327,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 12694228,
-        "kill": 367,
+        "exp": 12763022,
+        "kill": 368,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1331,7 +1345,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 62,
         "混沌祖龙": 64,
-        "天兵": 55
+        "天兵": 56
       },
       "claimed": [
         "b2",
@@ -1374,9 +1388,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 367,
+    "kills": 368,
     "deaths": 0,
-    "battles": 367,
+    "battles": 368,
     "breakthrough": 36,
     "offlineMin": 35,
     "meditate": 1,
@@ -1386,5 +1400,5 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 145
+  "bonusWuxing": 165
 }
