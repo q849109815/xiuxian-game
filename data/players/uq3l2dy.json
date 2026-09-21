@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990955553,
-  "lastTick": 1789990955553,
+  "lastSeen": 1789990956520,
+  "lastTick": 1789990956520,
   "realm": 9,
   "stage": 3,
-  "exp": 75378309136.02011,
-  "stone": 106432,
+  "exp": 86583183461.75284,
+  "stone": 104682,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -168,7 +168,7 @@
     "lv": {
       "farm": 10,
       "array": 9,
-      "garden": 3
+      "garden": 4
     },
     "array": "spirit",
     "lastHarvest": 1789989635634,
