@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990500915,
-  "lastTick": 1789990500915,
+  "lastSeen": 1789990502020,
+  "lastTick": 1789990502020,
   "realm": 6,
-  "stage": 2,
-  "exp": 234157568.92375803,
-  "stone": 43382,
+  "stage": 3,
+  "exp": 1521329.8424841762,
+  "stone": 43920,
   "equip": {
     "weapon": {
       "id": "it_pion6p0",
@@ -98,20 +98,6 @@
       "count": 20,
       "desc": "炼器材料",
       "id": "i_qg53eix"
-    },
-    {
-      "id": "it_zztjtam",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·混元幡",
-      "atk": 102,
-      "def": 24,
-      "hp": 217,
-      "crit": 0,
-      "mp": 82
     },
     {
       "kind": "ore",
@@ -260,7 +246,7 @@
     "kills": 173,
     "deaths": 0,
     "battles": 173,
-    "breakthrough": 25,
+    "breakthrough": 26,
     "offlineMin": 0,
     "meditate": 1,
     "dungeon": 4,
