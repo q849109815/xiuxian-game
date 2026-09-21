@@ -1,12 +1,14 @@
 {
-  "updatedAt": "2026-09-21T10:21:11.665Z",
-  "total": 0,
-  "online10m": 0,
-  "online1h": 0,
-  "dau": 0,
-  "newToday": 0,
-  "new7d": 0,
-  "totalStone": 0,
-  "totalKills": 0,
-  "realmDist": {}
+  "updatedAt": "2026-09-21T10:33:31.070Z",
+  "total": 1,
+  "online10m": 1,
+  "online1h": 1,
+  "dau": 1,
+  "newToday": 1,
+  "new7d": 1,
+  "totalStone": 196,
+  "totalKills": 8,
+  "realmDist": {
+    "炼虚": 1
+  }
 }
