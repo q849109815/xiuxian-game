@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990383537,
-  "lastTick": 1789990383537,
+  "lastSeen": 1789990384504,
+  "lastTick": 1789990384504,
   "realm": 5,
   "stage": 2,
-  "exp": 11558931.402969254,
-  "stone": 11630,
+  "exp": 11896045.26325467,
+  "stone": 12250,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -98,34 +98,6 @@
       "count": 14,
       "desc": "炼器材料",
       "id": "i_qg53eix"
-    },
-    {
-      "id": "it_ka02ss2",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·太虚戒",
-      "atk": 42,
-      "def": 22,
-      "hp": 127,
-      "crit": 0,
-      "mp": 58
-    },
-    {
-      "id": "it_blc4zh8",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·混元幡",
-      "atk": 70,
-      "def": 14,
-      "hp": 136,
-      "crit": 0,
-      "mp": 58
     },
     {
       "id": "it_k3giscb",
