@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995626474,
-  "lastTick": 1789995626474,
+  "lastSeen": 1789995629573,
+  "lastTick": 1789995629573,
   "realm": 9,
   "stage": 3,
-  "exp": 185580322850.9508,
-  "stone": 3477456,
+  "exp": 296928569433.5213,
+  "stone": 3498836,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -334,6 +334,20 @@
       "atk": 193,
       "def": 28,
       "hp": 303,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_nle03rh",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·云锦袍",
+      "atk": 31,
+      "def": 92,
+      "hp": 664,
       "crit": 0,
       "mp": 115
     }
@@ -1443,8 +1457,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 32924686,
-        "kill": 680,
+        "exp": 33132724,
+        "kill": 683,
         "dungeon": 213,
         "arena": 20
       },
@@ -1457,8 +1471,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 32924686,
-        "kill": 680,
+        "exp": 33132724,
+        "kill": 683,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1475,7 +1489,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 160,
         "混沌祖龙": 174,
-        "天兵": 160
+        "天兵": 163
       },
       "claimed": [
         "b2",
@@ -1518,9 +1532,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 680,
+    "kills": 683,
     "deaths": 0,
-    "battles": 680,
+    "battles": 683,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
@@ -1530,5 +1544,5 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 590
+  "bonusWuxing": 650
 }
