@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990381811,
-  "lastTick": 1789990381811,
+  "lastSeen": 1789990383537,
+  "lastTick": 1789990383537,
   "realm": 5,
   "stage": 2,
-  "exp": 11216499.542683838,
-  "stone": 8824,
+  "exp": 11558931.402969254,
+  "stone": 11630,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -65,7 +65,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 37,
+      "count": 38,
       "desc": "炼器材料",
       "id": "i_op7cm1h"
     },
@@ -98,76 +98,6 @@
       "count": 14,
       "desc": "炼器材料",
       "id": "i_qg53eix"
-    },
-    {
-      "id": "it_zzft4qi",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·云锦袍",
-      "atk": 19,
-      "def": 58,
-      "hp": 328,
-      "crit": 0,
-      "mp": 58
-    },
-    {
-      "id": "it_e16kmmh",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·诛仙剑",
-      "atk": 72,
-      "def": 15,
-      "hp": 172,
-      "crit": 0,
-      "mp": 58
-    },
-    {
-      "id": "it_0izla2n",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·阴阳环",
-      "atk": 33,
-      "def": 20,
-      "hp": 158,
-      "crit": 0,
-      "mp": 58
-    },
-    {
-      "id": "it_6920msl",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·破妄戒",
-      "atk": 33,
-      "def": 18,
-      "hp": 148,
-      "crit": 0,
-      "mp": 58
-    },
-    {
-      "id": "it_h2p6hu5",
-      "kind": "equip",
-      "slot": "armor",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·太极道衣",
-      "atk": 16,
-      "def": 66,
-      "hp": 346,
-      "crit": 0,
-      "mp": 58
     },
     {
       "id": "it_ka02ss2",
@@ -420,6 +350,20 @@
       "hp": 395,
       "crit": 0,
       "mp": 67
+    },
+    {
+      "id": "it_4uukezz",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·麒麟铠",
+      "atk": 18,
+      "def": 54,
+      "hp": 414,
+      "crit": 0,
+      "mp": 67
     }
   ],
   "skills": [
@@ -474,8 +418,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 630268,
-        "kill": 146,
+        "exp": 635586,
+        "kill": 147,
         "dungeon": 4,
         "arena": 1
       },
@@ -488,16 +432,16 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 630268,
-        "kill": 146,
+        "exp": 635586,
+        "kill": 147,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
         "熔岩巨人": 44,
-        "b3": 112,
+        "b3": 113,
         "火麒麟": 24,
-        "炎魔": 44,
+        "炎魔": 45,
         "dungeon": 4,
         "arena": 1
       },
@@ -538,9 +482,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 146,
+    "kills": 147,
     "deaths": 0,
-    "battles": 146,
+    "battles": 147,
     "breakthrough": 22,
     "offlineMin": 0,
     "meditate": 1,
