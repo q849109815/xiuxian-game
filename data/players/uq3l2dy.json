@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789994226871,
-  "lastTick": 1789994226871,
+  "lastSeen": 1789994229589,
+  "lastTick": 1789994229589,
   "realm": 9,
   "stage": 3,
-  "exp": 315248376624.0753,
-  "stone": 1719030,
+  "exp": 350275996561.86145,
+  "stone": 1726720,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -75,7 +75,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 30,
+      "count": 31,
       "desc": "炼器材料",
       "id": "i_frp5ygh"
     },
@@ -152,16 +152,16 @@
       "mp": 115
     },
     {
-      "id": "it_6tedwgv",
+      "id": "it_1fdspxy",
       "kind": "equip",
-      "slot": "armor",
-      "q": 0,
+      "slot": "weapon",
+      "q": 1,
       "level": 0,
       "temper": 0,
-      "name": "凡品·锁子金甲",
-      "atk": 33,
-      "def": 109,
-      "hp": 839,
+      "name": "灵器·混元幡",
+      "atk": 176,
+      "def": 34,
+      "hp": 333,
       "crit": 0,
       "mp": 115
     }
@@ -1229,8 +1229,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 12900118,
-        "kill": 370,
+        "exp": 12965712,
+        "kill": 371,
         "dungeon": 115,
         "arena": 20
       },
@@ -1243,8 +1243,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 12900118,
-        "kill": 370,
+        "exp": 12965712,
+        "kill": 371,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1261,7 +1261,7 @@
         "深渊魔蛛": 5,
         "星宿仙君": 63,
         "混沌祖龙": 65,
-        "天兵": 56
+        "天兵": 57
       },
       "claimed": [
         "b2",
@@ -1304,9 +1304,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 370,
+    "kills": 371,
     "deaths": 0,
-    "battles": 370,
+    "battles": 371,
     "breakthrough": 36,
     "offlineMin": 35,
     "meditate": 1,
@@ -1316,5 +1316,5 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 200
+  "bonusWuxing": 220
 }
