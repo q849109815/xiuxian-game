@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789995851490,
-  "lastTick": 1789995851490,
+  "lastSeen": 1789995852605,
+  "lastTick": 1789995852605,
   "realm": 9,
   "stage": 3,
-  "exp": 154650303420.12567,
-  "stone": 4705493,
+  "exp": 185580380640.9508,
+  "stone": 4713303,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -474,6 +474,20 @@
       "atk": 82,
       "def": 43,
       "hp": 261,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_aszck0u",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·聚灵戒",
+      "atk": 69,
+      "def": 35,
+      "hp": 316,
       "crit": 0,
       "mp": 115
     }
@@ -1601,8 +1615,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 43753052,
-        "kill": 848,
+        "exp": 43819566,
+        "kill": 849,
         "dungeon": 213,
         "arena": 20
       },
@@ -1615,8 +1629,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 43753052,
-        "kill": 848,
+        "exp": 43819566,
+        "kill": 849,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1631,7 +1645,7 @@
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 218,
+        "星宿仙君": 219,
         "混沌祖龙": 231,
         "天兵": 213
       },
@@ -1676,9 +1690,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 848,
+    "kills": 849,
     "deaths": 0,
-    "battles": 848,
+    "battles": 849,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
@@ -1688,5 +1702,5 @@
   },
   "meditateUntil": 1789989945650,
   "lastChatAt": 1789993785456,
-  "bonusWuxing": 2280
+  "bonusWuxing": 2300
 }
