@@ -7,12 +7,12 @@
   "root": "water",
   "sect": null,
   "createdAt": 1789989403736,
-  "lastSeen": 1789991672559,
-  "lastTick": 1789991672559,
+  "lastSeen": 1789991675397,
+  "lastTick": 1789991675397,
   "realm": 4,
   "stage": 3,
-  "exp": 2642544.873707517,
-  "stone": 5584,
+  "exp": 2809253.394987517,
+  "stone": 5632,
   "equip": {
     "weapon": {
       "id": "it_vzsn2ay",
@@ -152,8 +152,8 @@
         "meditate": 1,
         "dungeon": 13,
         "arena": 1,
-        "exp": 13488,
-        "kill": 18
+        "exp": 14020,
+        "kill": 19
       },
       "claimed": []
     },
@@ -162,14 +162,14 @@
         "meditate": 1,
         "dungeon": 13,
         "arena": 1,
-        "exp": 13488,
-        "kill": 18,
+        "exp": 14020,
+        "kill": 19,
         "火麒麟": 1,
         "b3": 1,
         "采药童子": 7,
-        "b1": 17,
+        "b1": 18,
         "竹叶蛇": 6,
-        "野兔精": 4
+        "野兔精": 5
       },
       "claimed": []
     }
@@ -213,9 +213,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 18,
+    "kills": 19,
     "deaths": 0,
-    "battles": 18,
+    "battles": 19,
     "breakthrough": 18,
     "offlineMin": 14,
     "meditate": 1,
