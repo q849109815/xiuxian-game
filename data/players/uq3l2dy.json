@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1789996300664,
-  "lastTick": 1789996300664,
+  "lastSeen": 1789996303060,
+  "lastTick": 1789996303060,
   "realm": 9,
   "stage": 3,
-  "exp": 123128557371.10081,
-  "stone": 7148468,
+  "exp": 215474898114.92642,
+  "stone": 7159350,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -107,7 +107,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 107,
+      "count": 108,
       "desc": "炼丹材料",
       "id": "i_f90s0wq"
     },
@@ -127,7 +127,7 @@
       "name": "冥铁",
       "icon": "🔷",
       "price": 380,
-      "count": 44,
+      "count": 45,
       "desc": "炼器材料",
       "id": "i_bkbhegu"
     },
@@ -1735,8 +1735,8 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 65625538,
-        "kill": 1191,
+        "exp": 65742262,
+        "kill": 1193,
         "dungeon": 213,
         "arena": 20
       },
@@ -1749,8 +1749,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 65625538,
-        "kill": 1191,
+        "exp": 65742262,
+        "kill": 1193,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -1766,8 +1766,8 @@
         "幽魂将": 4,
         "深渊魔蛛": 5,
         "星宿仙君": 342,
-        "混沌祖龙": 342,
-        "天兵": 321
+        "混沌祖龙": 343,
+        "天兵": 322
       },
       "claimed": [
         "b2",
@@ -1778,7 +1778,7 @@
   "sectInfo": {
     "id": "s_06ixz2",
     "rankIdx": 4,
-    "contrib": 4300,
+    "contrib": 4620,
     "joinedAt": 1789996255530
   },
   "arena": {
@@ -1810,14 +1810,14 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 1191,
+    "kills": 1193,
     "deaths": 0,
-    "battles": 1191,
+    "battles": 1193,
     "breakthrough": 36,
     "offlineMin": 45,
     "meditate": 1,
     "dungeon": 213,
-    "encounters": 154,
+    "encounters": 155,
     "rob": 0
   },
   "meditateUntil": 1789989945650,
