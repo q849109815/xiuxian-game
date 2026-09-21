@@ -1,0 +1,26 @@
+{
+  "updatedAt": "2026-09-21T11:23:34.845Z",
+  "list": [
+    {
+      "id": "mk_bov92b6",
+      "seller": "uq3l2dy",
+      "sellerName": "66666比",
+      "item": {
+        "id": "it_rjmltm8",
+        "kind": "equip",
+        "slot": "armor",
+        "q": 2,
+        "level": 0,
+        "temper": 0,
+        "name": "宝器·云锦袍",
+        "atk": 7,
+        "def": 20,
+        "hp": 206,
+        "crit": 0,
+        "mp": 25
+      },
+      "price": 99999999999999,
+      "at": 1789989814194
+    }
+  ]
+}
