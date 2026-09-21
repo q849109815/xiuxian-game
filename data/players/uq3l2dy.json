@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789994087943,
-  "lastTick": 1789994087943,
+  "lastSeen": 1789994090127,
+  "lastTick": 1789994090127,
   "realm": 9,
   "stage": 3,
-  "exp": 87569462401.46541,
-  "stone": 667287,
+  "exp": 122597244561.25157,
+  "stone": 710401,
   "equip": {
     "weapon": {
       "id": "it_xqx6woj",
@@ -65,7 +65,7 @@
       "name": "不死药",
       "icon": "🌟",
       "price": 900,
-      "count": 65,
+      "count": 66,
       "desc": "炼丹材料",
       "id": "i_fhce2n2"
     },
@@ -180,6 +180,20 @@
       "atk": 44,
       "def": 143,
       "hp": 825,
+      "crit": 0,
+      "mp": 115
+    },
+    {
+      "id": "it_1hk0bdf",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·破妄戒",
+      "atk": 78,
+      "def": 41,
+      "hp": 291,
       "crit": 0,
       "mp": 115
     }
@@ -469,6 +483,42 @@
       "exp": 0,
       "stage": 0,
       "apt": 1
+    },
+    {
+      "id": "bs_kc6spde",
+      "ref": "b_dragon",
+      "name": "蛟龙",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_mo263oz",
+      "ref": "b_phoenix",
+      "name": "青鸾",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_im03qq0",
+      "ref": "b_qilin",
+      "name": "麒麟",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
+    },
+    {
+      "id": "bs_bbb2i2d",
+      "ref": "b_tiger",
+      "name": "白额虎王",
+      "level": 1,
+      "exp": 0,
+      "stage": 0,
+      "apt": 1
     }
   ],
   "activeBeast": 0,
@@ -491,9 +541,9 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 10298080,
-        "kill": 329,
-        "dungeon": 32,
+        "exp": 10365896,
+        "kill": 330,
+        "dungeon": 36,
         "arena": 20
       },
       "claimed": [
@@ -505,8 +555,8 @@
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 10298080,
-        "kill": 329,
+        "exp": 10365896,
+        "kill": 330,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
@@ -515,13 +565,13 @@
         "b3": 136,
         "火麒麟": 31,
         "炎魔": 53,
-        "dungeon": 32,
+        "dungeon": 36,
         "arena": 20,
         "九幽冥王": 7,
         "b4": 16,
         "幽魂将": 4,
         "深渊魔蛛": 5,
-        "星宿仙君": 51,
+        "星宿仙君": 52,
         "混沌祖龙": 51,
         "天兵": 41
       },
@@ -566,13 +616,13 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 329,
+    "kills": 330,
     "deaths": 0,
-    "battles": 329,
+    "battles": 330,
     "breakthrough": 36,
     "offlineMin": 35,
     "meditate": 1,
-    "dungeon": 32,
+    "dungeon": 36,
     "encounters": 38,
     "rob": 0
   },
