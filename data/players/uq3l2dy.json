@@ -7,11 +7,11 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789989638724,
-  "lastTick": 1789989638724,
-  "realm": 0,
+  "lastSeen": 1789989645651,
+  "lastTick": 1789989645651,
+  "realm": 1,
   "stage": 0,
-  "exp": 0,
+  "exp": 322.28639999999973,
   "stone": 200,
   "equip": {
     "weapon": null,
@@ -35,11 +35,15 @@
     "mainIdx": 0,
     "daily": {
       "date": "2026-9-21",
-      "prog": {},
+      "prog": {
+        "meditate": 1
+      },
       "claimed": []
     },
     "bounty": {
-      "prog": {},
+      "prog": {
+        "meditate": 1
+      },
       "claimed": []
     }
   },
@@ -77,11 +81,12 @@
     "kills": 0,
     "deaths": 0,
     "battles": 0,
-    "breakthrough": 0,
+    "breakthrough": 4,
     "offlineMin": 0,
-    "meditate": 0,
+    "meditate": 1,
     "dungeon": 0,
     "encounters": 0,
     "rob": 0
-  }
+  },
+  "meditateUntil": 1789989945650
 }
