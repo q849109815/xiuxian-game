@@ -93,6 +93,11 @@
     "perAtk": 0.06,
     "perRealm": 5.5
   },
+  "meditate": {
+    "cdSeconds": 300,
+    "gainSeconds": 180,
+    "stoneCostBase": 0
+  },
   "breakthrough": {
     "baseRate": 0.85,
     "failKeepExp": 0.5,
