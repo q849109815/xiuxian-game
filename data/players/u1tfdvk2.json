@@ -3,11 +3,11 @@
   "name": "q849109815",
   "pwd": "iz2s4w",
   "createdAt": 1789986590023,
-  "lastSeen": 1789986975835,
-  "lastTick": 1789986975835,
+  "lastSeen": 1789986977452,
+  "lastTick": 1789986977452,
   "realm": 8,
   "layer": 2,
-  "exp": 386837958.0026517,
+  "exp": 399699750.8626517,
   "stone": 196,
   "equip": {
     "weapon": null,
@@ -55,9 +55,9 @@
   },
   "stats": {
     "kills": 8,
-    "deaths": 19,
+    "deaths": 20,
     "breakthrough": 74,
-    "battles": 27,
+    "battles": 28,
     "offlineMin": 0
   },
   "codes": [],
