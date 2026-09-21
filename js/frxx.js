@@ -251,36 +251,61 @@ const ART = {
     main: 'scene/main_bg.jpg',
     // 地图名 → 场景图（按资料 12_地图势力 的篇目归属）
     '七玄门': 'scene/qixuanmen.jpg',
+    '青牛镇': 'scene/qixuanmen.jpg',
+    '越国都城': 'scene/qixuanmen.jpg',
     '黄枫谷': 'scene/huangfenggu.jpg',
-    '血色禁地': 'scene/xuese.jpg',
-    '天渊城': 'scene/tianyuan.jpg',
     '落云宗': 'scene/huangfenggu.jpg',
-    '乱星海(外海)': 'scene/main_bg.jpg',
-    '乱星海(内海)': 'scene/main_bg.jpg',
-    '虚天殿': 'scene/xuese.jpg',
+    '血色禁地': 'scene/xuese.jpg',
     '坠魔谷': 'scene/xuese.jpg',
+    '乱星海': 'scene/luanxinghai.jpg',
+    '虚天殿': 'scene/xutiandian.jpg',
+    '天渊城': 'scene/tianyuan.jpg',
     '昆吾山': 'scene/tianyuan.jpg',
     '地渊': 'scene/tianyuan.jpg',
-    '广寒界': 'scene/main_bg.jpg',
-    '北寒仙域': 'scene/tianyuan.jpg',
-    '青牛镇五里沟': 'scene/qixuanmen.jpg',
-    '越国都城': 'scene/qixuanmen.jpg',
+    '北寒仙域': 'scene/beihan.jpg',
+    '黑土仙域': 'scene/beihan.jpg',
+    '仙界': 'scene/beihan.jpg',
+    '广寒界': 'scene/luanxinghai.jpg',
+    '慕兰草原': 'scene/tianyuan.jpg',
   },
   char: {
     '韩立': 'char/hanli.jpg',
     '南宫婉': 'char/nangongwan.jpg',
     '墨大夫': 'char/modafu.jpg',
     '银月': 'char/yinyue.jpg',
-    '紫灵': 'char/nangongwan.jpg',
-    '元瑶': 'char/yinyue.jpg',
+    '紫灵': 'char/ziling.jpg',
+    '元瑶': 'char/yuanyao.jpg',
     '厉飞雨': 'char/hanli.jpg',
     '李化元': 'char/modafu.jpg',
     '玄骨上人': 'char/modafu.jpg',
     '古或今': 'char/modafu.jpg',
     '蟹道人': 'char/hanli.jpg',
+    '陈巧倩': 'char/yuanyao.jpg',
+    '慕沛灵': 'char/yuanyao.jpg',
+  },
+  /** 头像（列表 / 好友 / 聊天） */
+  face: {
+    '韩立': 'icon/face_hanli.jpg',
+    '南宫婉': 'icon/face_nangongwan.jpg',
+    '紫灵': 'icon/face_ziling.jpg',
+  },
+  /** 功法图标 */
+  skill: {
+    '青元剑诀': 'icon/skill_qingyuan.jpg',
+    '梵圣真魔功': 'icon/skill_fansheng.jpg',
+  },
+  /** 货币图标（11_资源货币） */
+  cur: {
+    C001: 'icon/stone_low.jpg',
+    C002: 'icon/stone_mid.jpg',
+    C003: 'icon/stone_high.jpg',
+    C004: 'icon/stone_top.jpg',
+    C007: 'icon/yuanbao.jpg',
   },
   item: {
     '掌天瓶': 'item/zhangtianping.jpg',
+    '青竹蜂云剑': 'item/qingzhujian.jpg',
+    '筑基丹': 'item/zhujidan.jpg',
   },
   /** 取场景图（无匹配则回落主背景） */
   sceneOf(name) {
@@ -301,6 +326,28 @@ const ART = {
     if (!name) return null;
     for (const k in this.item) if (name.indexOf(k) >= 0) return this.base + this.item[k];
     return null;
+  },
+  /** 头像 */
+  faceOf(name) {
+    if (!name) return null;
+    for (const k in this.face) if (name.indexOf(k) >= 0) return this.base + this.face[k];
+    return null;
+  },
+  /** 功法图标 */
+  skillOf(name) {
+    if (!name) return null;
+    for (const k in this.skill) if (name.indexOf(k) >= 0) return this.base + this.skill[k];
+    return null;
+  },
+  /** 货币图标 */
+  curOf(id) {
+    const v = this.cur[id];
+    return v ? this.base + v : null;
+  },
+  /** 生成 img 标签，失败回落 emoji */
+  img(url, emoji, cls) {
+    if (!url) return emoji || '';
+    return '<img src="' + url + '" class="' + (cls || 'artimg') + '" alt="" onerror="this.outerHTML=\'' + (emoji || '') + '\'">';
   },
 };
 
