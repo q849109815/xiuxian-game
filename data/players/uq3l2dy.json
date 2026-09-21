@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_06ixz2",
   "createdAt": 1789989635634,
-  "lastSeen": 1790009244476,
-  "lastTick": 1790009244476,
+  "lastSeen": 1790009258206,
+  "lastTick": 1790009258206,
   "realm": 31,
   "stage": 0,
-  "exp": 137178428026.64294,
-  "stone": 10924479,
+  "exp": 15242048058.515882,
+  "stone": 10921191,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -2442,12 +2442,12 @@
     "c014": 0,
     "c015": 0,
     "c016": 0,
-    "C001": 10920991
+    "C001": 10921191
   },
   "loginAt": 1790009125477,
   "bottle": {
     "liquid": 0,
-    "acc": 118,
+    "acc": 132,
     "level": 1
   },
   "titles": {
@@ -2463,5 +2463,18 @@
       "ti10"
     ],
     "cur": "ti10"
+  },
+  "act": {
+    "sign": {
+      "last": "2026-9-22",
+      "days": 1,
+      "streak": 1
+    },
+    "seven": {},
+    "growth": {},
+    "online": {
+      "claimed": 0
+    },
+    "gifts": {}
   }
 }
