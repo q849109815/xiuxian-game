@@ -663,6 +663,7 @@ const TOOLS = [
   { k: 'partner', i: '🌸', n: '仙缘' },
   { k: 'codex', i: '📚', n: '图鉴' },
   { k: 'act', i: '🎯', n: '活动' },
+  { k: 'skin', i: '👗', n: '时装' },
   { k: 'title', i: '🎖️', n: '称号' },
   { k: 'social', i: '💬', n: '交游' },
   { k: 'set', i: '⚙️', n: '系统' },
@@ -699,6 +700,10 @@ function openWin(k) {
   if (k === 'act') UI.renderActs(window.P);
   if (k === 'title') UI.renderTitles(window.P);
   if (k === 'sect') UI.renderSectEx(window.P);
+  if (k === 'skin') UI.renderSkins(window.P);
+  if (k === 'beast') UI.renderWorms(window.P);
+  if (k === 'social') UI.renderSocialX(window.P);
+  if (k === 'market') UI.renderAuction(window.P);
   return k;
 }
 function closeWin() {
@@ -1404,6 +1409,179 @@ function renderSectEx(p) {
   };
 }
 
+
+/* ---------- 时装 / 外观 ---------- */
+function renderSkins(p) {
+  if (!p || !window.SKIN) return;
+  const list = SKIN.check(p);
+  const put = (id, type) => {
+    const box = $(id); if (!box) return;
+    const arr = list.filter((x) => x.type === type);
+    box.innerHTML = arr.map((sk) => {
+      const on = p.skin.wear[type] === sk.id;
+      const cost = 500 * Math.pow(3, Math.floor(sk.realm / 4));
+      const clsOk = sk.cls === '通用' || sk.cls === (p.faction || '') || !(p.faction);
+      return `<div class="compitem ${on ? 'on' : ''} ${sk.owned ? '' : 'lock'}" data-sk="${sk.id}">
+        <div class="cface">${sk.icon}</div>
+        <div class="cinfo"><div class="cnm">${sk.name} ${on ? '<span style="color:var(--jade)">穿戴中</span>' : ''}</div>
+        <div class="csub">${sk.cls}｜${sk.desc}</div>
+        <div class="csub" style="color:var(--gold)">${Object.entries(sk.buff || {}).map(([k, v]) =>
+          ({ atk: '攻', def: '防', hp: '气血', mp: '灵力', speed: '身法', dodge: '闪避', exp: '修为' }[k] || k) + '+' + Math.round(v * 100) + '%').join(' ')}</div>
+        ${sk.owned ? '' : `<div class="csub">${clsOk ? (sk.realmOk ? '💎 ' + fmtN(cost) + ' 解锁' : '需境界不足') : '职业不符'}</div>`}
+        </div></div>`;
+    }).join('');
+    box.querySelectorAll('[data-sk]').forEach((el) => el.onclick = () => {
+      const id2 = el.dataset.sk;
+      const owned = (p.skin.owned || []).indexOf(id2) >= 0;
+      let r;
+      if (!owned) {
+        if (!SKIN.check(p).find((x) => x.id === id2).realmOk) { r = { ok: false, msg: '境界不足' }; }
+        else r = SKIN.unlock(p, id2);
+      } else r = SKIN.wear(p, id2);
+      toast(r.msg, r.ok ? 'ok' : 'err'); renderSkins(p); renderMini(p); renderAttrs(p); save();
+    });
+  };
+  put('#skinShizhuang', '时装'); put('#skinWing', '翅膀');
+  put('#skinMount', '坐骑'); put('#skinAura', '环身特效');
+
+  const w = $('#skinWearing');
+  if (w) w.innerHTML = SKIN.wearing(p).map((x) =>
+    `<div class="item"><div class="ic">${x.icon}</div><div class="info">
+      <div class="nm">${x.type}</div><div class="sub">${x.name}</div></div></div>`).join('');
+  const b = $('#skinBuff');
+  if (b) {
+    const bf = SKIN.buff(p);
+    b.innerHTML = Object.keys(bf).length
+      ? Object.entries(bf).map(([k, v]) => `<div class="kv"><span>{{atk:'攻击',def:'防御',hp:'气血',mp:'灵力',speed:'身法',dodge:'闪避',exp:'修为'}[k]||k}</span><b>+${Math.round(v * 100)}%</b></div>`).join('').replace('{{', '{').replace('}}', '}').replace(/'/g, "'")
+      : '<div class="small">未穿戴任何外观</div>';
+    // 简单重渲染避免模板问题
+    b.innerHTML = Object.entries(bf).map(([k, v]) => {
+      const nm = { atk: '攻击', def: '防御', hp: '气血', mp: '灵力', speed: '身法', dodge: '闪避', exp: '修为' }[k] || k;
+      return `<div class="kv"><span>${nm}</span><b>+${Math.round(v * 100)}%</b></div>`;
+    }).join('') || '<div class="small">未穿戴任何外观</div>';
+  }
+}
+
+/* ---------- 灵虫 ---------- */
+function renderWorms(p) {
+  if (!p || !window.WORM) return;
+  WORM.init(p);
+  const box = $('#wormList');
+  if (box) box.innerHTML = WORM.list().map((w) => {
+    const n = WORM.count(p, w.id);
+    const on = p.worm.cur === w.id;
+    const canEvo = w.evolve && n >= (w.needCount || 30);
+    return `<div class="compitem ${on ? 'on' : ''} ${n ? '' : 'lock'}" data-wm="${w.id}">
+      <div class="cface">${w.icon}</div>
+      <div class="cinfo"><div class="cnm">${w.name} ${n ? '×' + n : ''} ${on ? '<span style="color:var(--jade)">出战中</span>' : ''}</div>
+      <div class="csub">${w.q}｜${w.skill}｜${w.desc}</div>
+      <div class="csub" style="color:var(--gold)">${Object.entries(w.buff || {}).map(([k, v]) => ({ atk: '攻', mp: '灵力', speed: '身法' }[k] || k) + '+' + Math.round(v * 100) + '%').join(' ')}（数量越多越强）</div>
+      </div></div>
+      <div style="display:flex;gap:6px;margin:-4px 0 8px">
+        <button class="mini" data-wmg="${w.id}">获得一只</button>
+        <button class="mini" data-wms="${w.id}" ${n ? '' : 'disabled'}>${on ? '收回' : '出战'}</button>
+        ${w.evolve ? `<button class="mini" data-wme="${w.id}" ${canEvo ? '' : 'disabled'}>进化(需${w.needCount})</button>` : ''}
+      </div>`;
+  }).join('');
+  const q = (sel, fn) => $$('#wormList ' + sel).forEach((b) => b.onclick = () => { const r = fn(b); toast(r.msg, r.ok ? 'ok' : 'err'); renderWorms(p); renderMini(p); save(); });
+  q('[data-wmg]', (b) => WORM.gain(p, b.dataset.wmg, 1));
+  q('[data-wms]', (b) => WORM.set(p, b.dataset.wms));
+  q('[data-wme]', (b) => WORM.evolve(p, b.dataset.wme));
+  const c = $('#wormCur');
+  if (c) {
+    const id = p.worm.cur;
+    const w = id ? WORM.list().find((x) => x.id === id) : null;
+    const bf = WORM.buff(p);
+    c.innerHTML = w ? `<div class="nm">${w.icon} ${w.name} ×${WORM.count(p, id)}</div>
+      <div class="small">${Object.entries(bf).map(([k, v]) => ({ atk: '攻', mp: '灵力', speed: '身法' }[k] || k) + '+' + Math.round(v * 100) + '%').join(' ')}</div>`
+      : '<div class="small">未出战灵虫</div>';
+  }
+}
+
+/* ---------- 好友 / 组队 / 私聊 ---------- */
+function renderSocialX(p) {
+  if (!p || !window.SOCIALX) return;
+  SOCIALX.init(p);
+  // 好友
+  const c = $('#friendCount'); if (c) c.textContent = `（${p.social.friends.length}/50）`;
+  const fl = $('#friendList');
+  if (fl) fl.innerHTML = p.social.friends.length ? p.social.friends.map((f) =>
+    `<div class="item"><div class="ic">🙂</div><div class="info">
+      <div class="nm">${f.name}</div><div class="sub">${f.uid}</div></div>
+      <button class="mini" data-fd="${f.uid}">删除</button></div>`).join('') : '<div class="small">暂无好友，添加道友可获得攻击加成</div>';
+  $$('#friendList [data-fd]').forEach((b) => b.onclick = () => {
+    const r = SOCIALX.delFriend(p, b.dataset.fd); toast(r.msg); renderSocialX(p); renderAttrs(p); save();
+  });
+  const af = $('#btnAddFriend');
+  if (af) af.onclick = () => {
+    const uid = ($('#friendUid').value || '').trim();
+    if (!uid) return toast('请输入道号', 'err');
+    const r = SOCIALX.addFriend(p, uid, uid); toast(r.msg, r.ok ? 'ok' : 'err'); renderSocialX(p); renderAttrs(p); save();
+  };
+  // 组队
+  const tb = $('#teamBox');
+  if (tb) {
+    const t = p.social.team;
+    tb.innerHTML = t ? `<div class="nm">队伍（队长 ${t.lead}） ${t.members.length}/5 人</div>` +
+      t.members.map((m) => `<div class="item"><div class="ic">🧑‍🤝‍🧑</div><div class="info">
+        <div class="nm">${m.name}</div><div class="sub">战力 ${fmt(m.power || 0)}</div></div></div>`).join('')
+      : '<div class="small">尚未组队，组队可获得攻防加成</div>';
+  }
+  const ct = $('#btnCreateTeam'); if (ct) ct.onclick = () => { const r = SOCIALX.createTeam(p); toast(r.msg); renderSocialX(p); renderAttrs(p); save(); };
+  const iv = $('#btnInviteMate'); if (iv) iv.onclick = () => {
+    const n = (prompt('邀请的道友名', '散修道友') || '').trim();
+    if (!n) return;
+    const r = SOCIALX.joinTeam(p, n, Math.round(((window.ENGINE && ENGINE.power(p)) || 100) * (0.3 + Math.random() * 0.5)));
+    toast(r.msg, r.ok ? 'ok' : 'err'); renderSocialX(p); renderAttrs(p); save();
+  };
+  const lv = $('#btnLeaveTeam'); if (lv) lv.onclick = () => { p.social.team = null; toast('已解散队伍'); renderSocialX(p); renderAttrs(p); save(); };
+  // 私聊
+  const dm = $('#dmBox');
+  if (dm) dm.innerHTML = (p.social.dm || []).slice(-20).reverse().map((m) =>
+    `<p><b>${m.from}</b> → ${m.to}：${m.text}</p>`).join('') || '<p class="sys">暂无消息</p>';
+  const sd = $('#btnSendDM');
+  if (sd) sd.onclick = () => {
+    const to = ($('#dmTo').value || '').trim(), tx = ($('#dmText').value || '').trim();
+    if (!to || !tx) return toast('请填写对方与内容', 'err');
+    const r = SOCIALX.sendDM(p, to, tx); toast(r.msg); $('#dmText').value = ''; renderSocialX(p); save();
+  };
+}
+
+/* ---------- 拍卖行 ---------- */
+function renderAuction(p) {
+  if (!p || !window.AUCTION) return;
+  const sel = $('#aucItem');
+  if (sel) {
+    const eqs = (p.bag || []).filter((x) => x.kind === 'equip' || x.fr);
+    sel.innerHTML = eqs.length ? eqs.map((x, i) =>
+      `<option value="${i}">${x.icon} ${x.name}${x.enh ? ' +' + x.enh : ''}</option>`).join('')
+      : '<option value="">（背包无可上架物品）</option>';
+  }
+  const bs = $('#btnAucSell');
+  if (bs) bs.onclick = () => {
+    const i = parseInt(($('#aucItem') || {}).value, 10);
+    const price = parseInt(($('#aucPrice') || {}).value || '0', 10);
+    const eqs = (p.bag || []).filter((x) => x.kind === 'equip' || x.fr);
+    if (isNaN(i) || !eqs[i]) return toast('请选择物品', 'err');
+    const r = AUCTION.sell(p, eqs[i], price);
+    toast(r.msg, r.ok ? 'ok' : 'err'); renderAuction(p); renderBag(p); renderHUD(p); save();
+  };
+  const box = $('#aucList');
+  if (box) {
+    const list = AUCTION.board(p);
+    box.innerHTML = list.length ? list.map((e, i) =>
+      `<div class="item"><div class="ic">${(e.item || {}).icon || '📦'}</div>
+        <div class="info"><div class="nm">${(e.item || {}).name}</div>
+        <div class="sub">${fmt(e.price)} 灵石${e.sys ? '（系统寄售）' : '（我的挂单）'}</div></div>
+        ${e.sys ? `<button class="mini" data-aub="${i}">购买</button>` : '<span class="small">挂单中</span>'}</div>`).join('')
+      : '<div class="small">暂无拍品</div>';
+    $$('#aucList [data-aub]').forEach((b) => b.onclick = () => {
+      const r = AUCTION.buy(p, list[+b.dataset.aub]);
+      toast(r.msg, r.ok ? 'ok' : 'err'); renderAuction(p); renderBag(p); renderHUD(p); save();
+    });
+  }
+}
+
 window.UI = {
   initBackground, toast, fmt, timeAgo, startQi, flashBreakthrough,
   renderHUD, renderMeditate, renderAttrs, renderSpots, renderMaps, renderDungeons,
@@ -1414,6 +1592,7 @@ window.UI = {
   renderEquipDetail, renderBagDetail, renderSkillDetail, slotDef,
   renderBottle, renderPartners, renderCodex, renderCreateFaction, renderTraitDesc,
   setScene, renderActs, renderTitles, renderSectEx,
+  renderSkins, renderWorms, renderSocialX, renderAuction,
   get CUR_WIN() { return CUR_WIN; },
   setFighters, floatNum, boom, shake, hitAnim, hpBar, pushLog, clearLog,
   get curMap() { return CUR_MAP; }, set curMap(v) { CUR_MAP = v; },
