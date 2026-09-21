@@ -1131,7 +1131,7 @@ function renderPartners(p) {
   const card = (c) => {
     const qc = c.q.includes('仙') ? 4 : c.q.includes('极') ? 3 : c.q.includes('上') ? 2 : c.q.includes('中') ? 1 : 0;
     return `<div class="compitem ${PARTNER_SEL === c.id ? 'on' : ''} ${c.unlocked ? '' : 'lock'}" data-cid="${c.id}">
-      <div class="cface q${qc}">${c.unlocked ? (c.type.includes('灵虫') ? '🐛' : c.type.includes('灵兽') ? '🐾' : c.type.includes('反派') ? '😈' : '🌸') : '🔒'}</div>
+      <div class="cface q${qc}">${(function(){ const emo = c.unlocked ? (c.type.includes('灵虫') ? '🐛' : c.type.includes('灵兽') ? '🐾' : c.type.includes('反派') ? '😈' : '🌸') : '🔒'; const u = (window.ART && c.unlocked) ? (ART.faceOf(c.name) || ART.charOf(c.name)) : null; return u ? '<img src="'+u+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.outerHTML=\'' + emo + '\'">' : emo; })()}</div>
       <div class="cinfo"><div class="cnm">${c.name}${c.active ? ' <span style="color:var(--jade)">出战</span>' : ''}</div>
       <div class="csub">${c.q} · ${c.type}${c.unlocked ? ` · 好感 ${c.favor}` : ' · 未结缘'}</div>
       <div class="bar" style="height:9px;margin-top:3px"><i style="width:${c.favor}%"></i><span style="font-size:9px">${c.bonus.desc}</span></div></div>
@@ -1422,7 +1422,7 @@ function renderSkins(p) {
       const cost = 500 * Math.pow(3, Math.floor(sk.realm / 4));
       const clsOk = sk.cls === '通用' || sk.cls === (p.faction || '') || !(p.faction);
       return `<div class="compitem ${on ? 'on' : ''} ${sk.owned ? '' : 'lock'}" data-sk="${sk.id}">
-        <div class="cface">${sk.icon}</div>
+        <div class="cface">${(function(){ const u=(window.ART)?ART.skillOf(sk.name):null; return u? '<img src="'+u+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.outerHTML=\'' + sk.icon + '\'">' : sk.icon; })()}</div>
         <div class="cinfo"><div class="cnm">${sk.name} ${on ? '<span style="color:var(--jade)">穿戴中</span>' : ''}</div>
         <div class="csub">${sk.cls}｜${sk.desc}</div>
         <div class="csub" style="color:var(--gold)">${Object.entries(sk.buff || {}).map(([k, v]) =>
