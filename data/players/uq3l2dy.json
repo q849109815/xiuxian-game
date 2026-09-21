@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990124979,
-  "lastTick": 1789990124979,
+  "lastSeen": 1789990126847,
+  "lastTick": 1789990126847,
   "realm": 4,
   "stage": 2,
-  "exp": 2337299.0864000013,
-  "stone": 39290,
+  "exp": 2417704.530200002,
+  "stone": 22514,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -197,7 +197,7 @@
   "skills": [
     {
       "id": "sk_art_shield",
-      "level": 7,
+      "level": 9,
       "exp": 0
     }
   ],
