@@ -7,12 +7,12 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790009862799,
-  "lastTick": 1790009862799,
+  "lastSeen": 1790009865205,
+  "lastTick": 1790009865205,
   "realm": 5,
   "stage": 0,
-  "exp": 527.753590604807,
-  "stone": 1000,
+  "exp": 8238.493988684808,
+  "stone": 3700,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -111,7 +111,7 @@
   "trait": "P003",
   "bottle": {
     "liquid": 6,
-    "acc": 218,
+    "acc": 221,
     "level": 1
   },
   "partners": {},
@@ -154,7 +154,7 @@
     "c014": 0,
     "c015": 0,
     "c016": 0,
-    "C001": 1000
+    "C001": 3700
   },
   "loginAt": 1790009818804,
   "lastChatAt": 1790009843908,
@@ -165,7 +165,10 @@
       "streak": 1
     },
     "seven": {
-      "s7_0": 1
+      "s7_0": 1,
+      "s7_1": 1,
+      "s7_2": 1,
+      "s7_3": 1
     },
     "growth": {},
     "online": {
