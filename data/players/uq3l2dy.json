@@ -7,12 +7,12 @@
   "root": "fire",
   "sect": "s_qingyun",
   "createdAt": 1789989635634,
-  "lastSeen": 1789990058580,
-  "lastTick": 1789990058580,
+  "lastSeen": 1789990059996,
+  "lastTick": 1789990059996,
   "realm": 4,
   "stage": 1,
-  "exp": 1235142.0460000008,
-  "stone": 27818,
+  "exp": 1279409.8074000007,
+  "stone": 29036,
   "equip": {
     "weapon": {
       "id": "it_zrfrnan",
@@ -95,37 +95,9 @@
       "name": "赤炎莲",
       "icon": "🔥",
       "price": 180,
-      "count": 13,
+      "count": 14,
       "desc": "炼丹材料",
       "id": "i_4dx4axl"
-    },
-    {
-      "id": "it_fd52wal",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·聚灵戒",
-      "atk": 32,
-      "def": 19,
-      "hp": 104,
-      "crit": 0,
-      "mp": 49
-    },
-    {
-      "id": "it_dh0vesv",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 1,
-      "level": 0,
-      "temper": 0,
-      "name": "灵器·破妄戒",
-      "atk": 29,
-      "def": 13,
-      "hp": 153,
-      "crit": 0,
-      "mp": 49
     },
     {
       "kind": "ore",
@@ -220,6 +192,20 @@
       "hp": 168,
       "crit": 0,
       "mp": 58
+    },
+    {
+      "id": "it_ypi5pkm",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·养魂环",
+      "atk": 28,
+      "def": 20,
+      "hp": 150,
+      "crit": 0,
+      "mp": 58
     }
   ],
   "skills": [],
@@ -239,22 +225,22 @@
       "date": "2026-9-21",
       "prog": {
         "meditate": 1,
-        "exp": 194832,
-        "kill": 62
+        "exp": 199490,
+        "kill": 63
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 1,
-        "exp": 194832,
-        "kill": 62,
+        "exp": 199490,
+        "kill": 63,
         "女鬼": 13,
         "b2": 34,
         "僵尸": 15,
         "尸王": 6,
-        "熔岩巨人": 12,
-        "b3": 28,
+        "熔岩巨人": 13,
+        "b3": 29,
         "火麒麟": 8,
         "炎魔": 8
       },
@@ -292,9 +278,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 62,
+    "kills": 63,
     "deaths": 0,
-    "battles": 62,
+    "battles": 63,
     "breakthrough": 17,
     "offlineMin": 0,
     "meditate": 1,
