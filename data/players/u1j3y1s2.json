@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790040223429,
-  "lastTick": 1790040223429,
-  "realm": 23,
+  "lastSeen": 1790040225213,
+  "lastTick": 1790040225213,
+  "realm": 24,
   "stage": 0,
-  "exp": 1005470728.7809558,
-  "stone": 361387148,
+  "exp": 3930427394.091607,
+  "stone": 758842047,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -26,7 +26,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 37,
+      "count": 40,
       "desc": "炼器材料",
       "id": "i_w0lydih"
     },
@@ -46,7 +46,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 62,
+      "count": 67,
       "desc": "炼丹材料",
       "id": "i_ugyldlf"
     }
@@ -124,7 +124,7 @@
     "kills": 0,
     "deaths": 0,
     "battles": 0,
-    "breakthrough": 23,
+    "breakthrough": 24,
     "offlineMin": 0,
     "meditate": 0,
     "dungeon": 0,
@@ -135,7 +135,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 1,
-    "acc": 135,
+    "acc": 136,
     "level": 2
   },
   "partners": {},
@@ -200,7 +200,7 @@
     },
     "gifts": {}
   },
-  "storyIdx": 23,
+  "storyIdx": 24,
   "rq": {
     "daily": {
       "q-d005": 3
