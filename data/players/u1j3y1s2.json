@@ -905,7 +905,7 @@
     "rename": 0
   },
   "codes": [],
-  "banned": true,
+  "banned": false,
   "title": "",
   "stats": {
     "kills": 155,
