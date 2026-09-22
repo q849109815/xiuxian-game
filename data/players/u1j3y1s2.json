@@ -7,11 +7,11 @@
   "root": "mixed",
   "sect": null,
   "createdAt": 1790039820957,
-  "lastSeen": 1790039854176,
-  "lastTick": 1790039854176,
+  "lastSeen": 1790039874769,
+  "lastTick": 1790039874769,
   "realm": 0,
   "stage": 0,
-  "exp": 201.96,
+  "exp": 336.6000000000003,
   "stone": 200,
   "equip": {
     "weapon": null,
@@ -42,11 +42,15 @@
     "mainIdx": 0,
     "daily": {
       "date": "2026-9-22",
-      "prog": {},
+      "prog": {
+        "arena": 1
+      },
       "claimed": []
     },
     "bounty": {
-      "prog": {},
+      "prog": {
+        "arena": 1
+      },
       "claimed": []
     }
   },
@@ -54,9 +58,9 @@
   "arena": {
     "score": 0,
     "wins": 0,
-    "losses": 0,
-    "dayDate": "",
-    "fights": 0
+    "losses": 1,
+    "dayDate": "2026-9-22",
+    "fights": 1
   },
   "mail": [],
   "karma": 0,
@@ -90,7 +94,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 0,
-    "acc": 30,
+    "acc": 50,
     "level": 1
   },
   "partners": {},
