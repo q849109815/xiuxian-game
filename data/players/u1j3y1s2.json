@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790040169807,
-  "lastTick": 1790040169807,
+  "lastSeen": 1790040170866,
+  "lastTick": 1790040170866,
   "realm": 2,
   "stage": 0,
-  "exp": 1959.0199999999677,
-  "stone": 1534,
+  "exp": 11982.520799999967,
+  "stone": 4534,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -45,6 +45,11 @@
     {
       "id": "sk002",
       "level": 5
+    },
+    {
+      "id": "sk_art_slash",
+      "level": 1,
+      "exp": 0
     }
   ],
   "equipped": [
@@ -60,7 +65,7 @@
     "store": {}
   },
   "tasks": {
-    "mainIdx": 2,
+    "mainIdx": 3,
     "daily": {
       "date": "2026-9-22",
       "prog": {
@@ -120,7 +125,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 1,
-    "acc": 81,
+    "acc": 82,
     "level": 2
   },
   "partners": {},
