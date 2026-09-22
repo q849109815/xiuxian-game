@@ -79,7 +79,15 @@
     </div>
   </div>
 
-  <!-- 右上角：地图 / 活动 -->
+  <!-- 左上玩家信息（图32：头像 + Lv + 战力 + VIP） -->
+  <div class="pl-info" id="plInfo">
+    <div class="pl-av"><img id="plAvImg" src="assets/char/hanli.jpg" alt=""><i id="plAvLv">1</i></div>
+    <div class="pl-txt">
+      <div class="pl-nm" id="plName">道号</div>
+      <div class="pl-pw"><span class="pw-ic">⚔</span><b id="plPower">0</b><span class="vip" id="plVip">VIP0</span></div>
+    </div>
+  </div>
+  <!-- 右上角：地图 / 活动 / 排行 -->
   <div class="topright">
     <button class="tr-btn" id="btnMap">🗺️</button>
     <button class="tr-btn" id="btnAct">🎪</button>
@@ -131,10 +139,15 @@
   <!-- 底部聊天 -->
   <div class="chatbar"><div class="ch-scroll" id="chScroll"></div></div>
 
-  <!-- 右下主按钮圆盘 -->
-  <div class="wheel" id="wheel">
-    <button class="wh-main" id="whMain"><span>修</span></button>
-    <div class="wh-items" id="whItems"></div>
+  <!-- 底部主功能栏（图32：角色/炼器/至宝/洞府/仙术/化灵/伙伴） -->
+  <div class="botnav" id="botnav">
+    <button class="bn-item" data-p="role"><i class="bn-ic">🧙</i><span>角色</span></button>
+    <button class="bn-item" data-p="forge"><i class="bn-ic">⚒️</i><span>炼器</span></button>
+    <button class="bn-item" data-p="treasure"><i class="bn-ic">🔮</i><span>至宝</span></button>
+    <button class="bn-item" data-p="cave"><i class="bn-ic">🏠</i><span>洞府</span></button>
+    <button class="bn-item" data-p="skill"><i class="bn-ic">🌀</i><span>仙术</span></button>
+    <button class="bn-item" data-p="pet"><i class="bn-ic">🐾</i><span>化灵</span></button>
+    <button class="bn-item" data-p="partner"><i class="bn-ic">👥</i><span>伙伴</span></button>
   </div>
 
   <!-- 面板容器 -->
