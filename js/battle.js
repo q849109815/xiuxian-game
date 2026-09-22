@@ -193,7 +193,7 @@ const BT = {
     p.stats.battles = (p.stats.battles || 0) + 1;
     p.stats.kills = (p.stats.kills || 0) + 1;
     // 掉落
-    const stone = Math.round(E.stonePerMin(p.realm) * (12 + Math.random() * 18));
+    const stone = Math.round(EX.stonePerMin(p.realm) * (12 + Math.random() * 18));
     const exp = Math.round(EX.expPerMin(p.realm) * (18 + Math.random() * 25));
     p.stone += stone;
     const up = E.gainExp(p, exp);
