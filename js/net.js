@@ -37,6 +37,11 @@ const EPS = [
 const LS = { best: 'ss_best', dead: 'ss_dead', cache: 'ss_cache_', queue: 'ss_queue', net: 'ss_net' };
 
 let BEST = localStorage.getItem(LS.best) || '';
+// 恢复自定义加速地址（后台/设置里保存的）
+try {
+  const ex = JSON.parse(localStorage.getItem('ss_extra') || '[]');
+  if (Array.isArray(ex) && ex.length) GH.extra = ex;
+} catch (e) {}
 let DEAD = {};                       // { ep: expireAt }，3 分钟后自动复活
 try { DEAD = JSON.parse(localStorage.getItem(LS.dead) || '{}'); } catch (e) { DEAD = {}; }
 let QUEUE = [];
@@ -75,32 +80,58 @@ async function fetchT(url, opt = {}, timeout = 8000) {
 async function probe() {
   if (probing) return probing;
   probing = (async () => {
-    const list = allEps();
-    const test = async (ep) => {
+    // 直接用「真实读写」判定：GET contents 是最权威的连通性检查
+    const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
+    const test = async (ep, ms) => {
       const t0 = performance.now();
-      const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
-      // 优先 rate_limit，反代不支持则退回仓库查询
-      let r = await fetchT(`${ep}/rate_limit`, { headers: H }, 6000).catch(() => null);
-      if (!r || (!r.ok && r.status !== 401 && r.status !== 403)) {
-        r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}`, { headers: H }, 6000).catch(() => null);
-      }
-      if (!r) throw new Error('no response');
-      if (!r.ok && r.status !== 401 && r.status !== 403) throw new Error('status ' + r.status);
-      return { ep, ms: performance.now() - t0 };
+      const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/data/config/core.json`,
+        { headers: H }, ms).catch(() => null);
+      if (!r) throw new Error('no-response');
+      // 200 = 通；401/403 = 网络通但凭据问题（也算通）；404 = 通但路径不在
+      if (r.ok || [401, 403, 404].includes(r.status)) return { ep, ms: performance.now() - t0, st: r.status };
+      throw new Error('status ' + r.status);
     };
-    const res = await Promise.allSettled(list.map(test));
-    const ok = res.filter((x) => x.status === 'fulfilled').map((x) => x.value).sort((a, b) => a.ms - b.ms);
-    if (ok.length) {
-      BEST = ok[0].ep; ONLINE = true;
-      localStorage.setItem(LS.best, BEST);
-      localStorage.setItem(LS.net, 'online');
-      return BEST;
+    // 分两轮：第一轮 3.5s 快速筛（官方 + 已缓存最优 + 自定义），第二轮 7s 全量兜底
+    const prio = [...(BEST ? [BEST] : []), 'https://api.github.com', ...GH.extra];
+    const seen = new Set(); const round1 = prio.filter((e) => e && !seen.has(e) && seen.add(e));
+    const round2 = allEps().filter((e) => !round1.includes(e));
+
+    for (const [list, ms] of [[round1, 3500], [round2, 7000]]) {
+      if (!list.length) continue;
+      const res = await Promise.allSettled(list.map((ep) => test(ep, ms)));
+      const ok = res.filter((x) => x.status === 'fulfilled').map((x) => x.value).sort((a, b) => a.ms - b.ms);
+      if (ok.length) {
+        BEST = ok[0].ep; ONLINE = true;
+        try { localStorage.setItem(LS.best, BEST); localStorage.setItem(LS.net, 'online'); } catch (e) {}
+        return BEST;
+      }
     }
     ONLINE = false;
-    localStorage.setItem(LS.net, 'offline');
+    try { localStorage.setItem(LS.net, 'offline'); } catch (e) {}
     return null;
-  })().finally(() => { setTimeout(() => (probing = null), 60000); });
+  })().finally(() => { setTimeout(() => (probing = null), 30000); });
   return probing;
+}
+
+/** 逐端点诊断（后台用）：返回每个端点的连通状态 */
+async function diagnose() {
+  const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
+  const list = [...(BEST ? [BEST] : []), 'https://api.github.com', ...GH.extra,
+    ...EPS.filter((e) => e !== BEST && e !== 'https://api.github.com')];
+  const seen = new Set();
+  const uniq = list.filter((e) => e && !seen.has(e) && seen.add(e));
+  const out = [];
+  await Promise.all(uniq.map(async (ep) => {
+    const t0 = performance.now();
+    let st = '超时', ok = false;
+    try {
+      const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/data/config/core.json`, { headers: H }, 6000);
+      st = 'HTTP ' + r.status;
+      ok = r.ok || [401, 403, 404].includes(r.status);
+    } catch (e) { st = '失败'; }
+    out.push({ ep, ok, ms: Math.round(performance.now() - t0), st });
+  }));
+  return out.sort((a, b) => (b.ok - a.ok) || (a.ms - b.ms));
 }
 
 /* ---------------- 统一请求 ---------------- */
@@ -155,6 +186,7 @@ const Net = {
   get endpoint() { return BEST || EPS[0]; },
   get queueLen() { return QUEUE.length; },
 
+  diagnose,
   async init() {
     await probe();
     this.startDaemon();
