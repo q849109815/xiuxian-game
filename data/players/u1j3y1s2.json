@@ -7,11 +7,11 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790040341399,
-  "lastTick": 1790040341399,
+  "lastSeen": 1790040342842,
+  "lastTick": 1790040342842,
   "realm": 31,
   "stage": 0,
-  "exp": 8073925201.699387,
+  "exp": 8162649575.344435,
   "stone": 8505046409182,
   "equip": {
     "weapon": null,
@@ -137,7 +137,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 1,
-    "acc": 253,
+    "acc": 254,
     "level": 2
   },
   "partners": {},
