@@ -1,23 +1,26 @@
 {
-  "updatedAt": "2026-09-21T23:33:58.535Z",
-  "total": 4,
+  "updatedAt": "2026-09-22T01:49:30.779Z",
+  "total": 5,
   "online10m": 1,
-  "dau": 4,
-  "newToday": 4,
-  "new7d": 4,
-  "totalStone": 8505059615932,
-  "totalKills": 4418,
+  "dau": 5,
+  "newToday": 5,
+  "new7d": 5,
+  "totalStone": 11332484443309.07,
+  "totalKills": 4456,
   "realmDist": {
-    "炼虚": 1,
+    "?": 1,
+    "真仙": 1,
     "金丹": 2,
     "筑基": 1
   },
   "rootDist": {
+    "mixed": 1,
     "metal": 2,
     "earth": 1,
     "fire": 1
   },
   "sectDist": {
+    "s_qingyun": 1,
     "散修": 1,
     "s_wuji": 2,
     "s_06ixz2": 1
