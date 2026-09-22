@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": null,
   "createdAt": 1790039820957,
-  "lastSeen": 1790039974175,
-  "lastTick": 1790039974176,
+  "lastSeen": 1790039981265,
+  "lastTick": 1790039981265,
   "realm": 0,
   "stage": 0,
-  "exp": 1009.7999999999989,
-  "stone": 200,
+  "exp": 2356.9239999999986,
+  "stone": 700,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -94,7 +94,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 0,
-    "acc": 150,
+    "acc": 157,
     "level": 1
   },
   "partners": {},
@@ -117,7 +117,7 @@
     "c014": 0,
     "c015": 0,
     "c016": 0,
-    "C001": 200
+    "C001": 700
   },
   "skin": {
     "owned": [
@@ -145,11 +145,14 @@
   "loginAt": 1790039825175,
   "act": {
     "sign": {
-      "last": 0,
-      "days": 0,
-      "streak": 0
+      "last": "2026-9-22",
+      "days": 1,
+      "streak": 1,
+      "at": 1790039974207
     },
-    "seven": {},
+    "seven": {
+      "s7_0": 1
+    },
     "growth": {},
     "online": {
       "claimed": 0
