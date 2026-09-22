@@ -7,11 +7,11 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790036626177,
-  "lastTick": 1790036626177,
+  "lastSeen": 1790036663791,
+  "lastTick": 1790036663791,
   "realm": 5,
   "stage": 0,
-  "exp": 64699.938932966485,
+  "exp": 61635.49654448648,
   "stone": 500,
   "equip": {
     "weapon": null,
@@ -62,7 +62,7 @@
   "tasks": {
     "mainIdx": 0,
     "daily": {
-      "date": "2026-9-22",
+      "date": "2026-9-21",
       "prog": {},
       "claimed": []
     },
@@ -111,50 +111,11 @@
   "trait": "P003",
   "bottle": {
     "liquid": 7,
-    "acc": 76,
+    "acc": 58,
     "level": 1
   },
   "partners": {},
   "mapsSeen": [],
   "dungeonCleared": [],
-  "storyIdx": 1,
-  "skin": {
-    "owned": [],
-    "wear": {}
-  },
-  "worm": {
-    "own": [],
-    "cur": null,
-    "feed": {}
-  },
-  "social": {
-    "friends": [],
-    "team": null,
-    "dm": []
-  },
-  "sectSkill": [],
-  "titles": {
-    "owned": [],
-    "cur": null
-  },
-  "wallet": {
-    "c001": 0,
-    "c002": 0,
-    "c003": 0,
-    "c004": 0,
-    "c005": 0,
-    "c006": 0,
-    "c007": 0,
-    "c008": 0,
-    "c009": 0,
-    "c010": 0,
-    "c011": 0,
-    "c012": 0,
-    "c013": 0,
-    "c014": 0,
-    "c015": 0,
-    "c016": 0,
-    "C001": 500
-  },
-  "loginAt": 1790036607474
+  "storyIdx": 1
 }
