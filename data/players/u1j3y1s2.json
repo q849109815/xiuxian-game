@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790042102308,
-  "lastTick": 1790042102308,
+  "lastSeen": 1790042108382,
+  "lastTick": 1790042108382,
   "realm": 31,
   "stage": 0,
-  "exp": 102736611448.69865,
-  "stone": 2827424749868.0703,
+  "exp": 124751536473.13411,
+  "stone": 2827424749652.0703,
   "equip": {
     "weapon": {
       "id": "it_a4frt4b",
@@ -107,7 +107,7 @@
       "slot": "boots",
       "q": 2,
       "level": 0,
-      "temper": 0,
+      "temper": 1,
       "name": "宝器·追风靴",
       "atk": 88,
       "def": 181,
@@ -809,7 +809,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 6,
-    "acc": 3,
+    "acc": 9,
     "level": 30
   },
   "partners": {},
