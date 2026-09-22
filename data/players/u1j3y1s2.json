@@ -7,11 +7,11 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790040324740,
-  "lastTick": 1790040324740,
+  "lastSeen": 1790040326965,
+  "lastTick": 1790040326965,
   "realm": 31,
   "stage": 0,
-  "exp": 6565609049.733568,
+  "exp": 6743057797.023664,
   "stone": 8505046408582,
   "equip": {
     "weapon": null,
@@ -29,16 +29,6 @@
       "count": 88,
       "desc": "炼器材料",
       "id": "i_w0lydih"
-    },
-    {
-      "kind": "pill",
-      "ref": "pill_hp",
-      "name": "回气丹",
-      "icon": "🔴",
-      "desc": "战斗中恢复 30% 气血",
-      "price": 80,
-      "count": 1,
-      "id": "i_8rn4rlp"
     },
     {
       "kind": "herb",
@@ -147,7 +137,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 1,
-    "acc": 236,
+    "acc": 238,
     "level": 2
   },
   "partners": {},
