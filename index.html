@@ -101,53 +101,47 @@
     <div class="tsk-goal" id="tskGoal">—</div>
   </div>
 
-  <!-- 中央战斗/挂机区 -->
+  <!-- 中央战斗区（图32：多角色 vs 多怪，海面场景） -->
   <div class="center">
-    <div class="boss-stage" id="bossStage">
-      <div class="boss-halo"></div>
-      <div class="boss-fig" id="bossFig">🐍</div>
-      <div class="boss-shadow"></div>
-      <div class="boss-hpwrap"><div class="boss-hp"><i id="bossHp"></i></div><div class="boss-nm" id="bossNm">—</div></div>
-    </div>
+    <div class="btl-scene" id="btlScene"></div>
+
+    <!-- 敌方阵列 -->
+    <div class="foe-line" id="foeLine"></div>
+
+    <!-- 我方阵列 -->
+    <div class="ally-line" id="allyLine"></div>
+
+    <!-- 伤害飘字层 -->
     <div class="dmg-layer" id="dmgLayer"></div>
-    <div class="hero-stage" id="heroStage">
-      <div class="hero-halo"></div>
-      <div class="hero-fig" id="heroFig">🧙</div>
-      <div class="hero-shadow"></div>
-    </div>
-    <div class="hero-bars">
-      <div class="hpb"><i id="heroHp"></i><span>气血</span></div>
-      <div class="mpb"><i id="heroMp"></i><span>灵力</span></div>
+
+    <!-- 战斗信息条 -->
+    <div class="btl-info" id="btlInfo">
+      <span class="bi-t" id="biTimer">00:00</span>
+      <span class="bi-r" id="biRound">—</span>
     </div>
   </div>
 
-  <!-- 战斗技能栏 -->
+  <!-- 战斗技能栏（图32：普攻 + 4神通 + 灵宠 + 傀儡） -->
   <div class="skillbar" id="skillbar">
     <button class="sk-btn atk" id="skAtk"><span>⚔</span><em>普攻</em></button>
-    <button class="sk-btn" data-sk="0"><span>1</span></button>
-    <button class="sk-btn" data-sk="1"><span>2</span></button>
-    <button class="sk-btn" data-sk="2"><span>3</span></button>
-    <button class="sk-btn" data-sk="3"><span>4</span></button>
-    <button class="sk-btn pet" id="skPet"><span>🐛</span><em>灵宠</em></button>
-    <button class="sk-btn pup" id="skPup"><span>🗿</span><em>傀儡</em></button>
+    <button class="sk-btn" data-sk="0"><span>1</span><i class="cd" id="cd0"></i></button>
+    <button class="sk-btn" data-sk="1"><span>2</span><i class="cd" id="cd1"></i></button>
+    <button class="sk-btn" data-sk="2"><span>3</span><i class="cd" id="cd2"></i></button>
+    <button class="sk-btn" data-sk="3"><span>4</span><i class="cd" id="cd3"></i></button>
+    <button class="sk-btn pet" id="skPet"><span>🐛</span><em>灵宠</em><i class="cd" id="cdPet"></i></button>
+    <button class="sk-btn pup" id="skPup"><span>🗿</span><em>傀儡</em><i class="cd" id="cdPup"></i></button>
   </div>
+
+  <!-- 战斗控制（图32：自动 / 升级 / 倍速 / 逃跑） -->
   <div class="btl-top">
-    <button class="bt-btn" id="btnAuto">自动</button>
+    <button class="bt-btn auto on" id="btnAuto">自动</button>
+    <button class="bt-btn" id="btnSpeed" data-sp="1">×1</button>
     <button class="bt-btn" id="btnFlee">逃跑</button>
   </div>
 
-  <!-- 底部聊天 -->
-  <div class="chatbar"><div class="ch-scroll" id="chScroll"></div></div>
-
-  <!-- 底部主功能栏（图32：角色/炼器/至宝/洞府/仙术/化灵/伙伴） -->
-  <div class="botnav" id="botnav">
-    <button class="bn-item" data-p="role"><i class="bn-ic">🧙</i><span>角色</span></button>
-    <button class="bn-item" data-p="forge"><i class="bn-ic">⚒️</i><span>炼器</span></button>
-    <button class="bn-item" data-p="treasure"><i class="bn-ic">🔮</i><span>至宝</span></button>
-    <button class="bn-item" data-p="cave"><i class="bn-ic">🏠</i><span>洞府</span></button>
-    <button class="bn-item" data-p="skill"><i class="bn-ic">🌀</i><span>仙术</span></button>
-    <button class="bn-item" data-p="pet"><i class="bn-ic">🐾</i><span>化灵</span></button>
-    <button class="bn-item" data-p="partner"><i class="bn-ic">👥</i><span>伙伴</span></button>
+  <!-- 升级提示（图32右上） -->
+  <div class="lvlup" id="lvlup" style="display:none">
+    <i>⬆</i><span>可升级</span>
   </div>
 
   <!-- 面板容器 -->
