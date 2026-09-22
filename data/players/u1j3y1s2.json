@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": null,
   "createdAt": 1790039820957,
-  "lastSeen": 1790040123037,
-  "lastTick": 1790040123037,
+  "lastSeen": 1790040126508,
+  "lastTick": 1790040126508,
   "realm": 1,
   "stage": 0,
-  "exp": 6264.155999999983,
-  "stone": 1200,
+  "exp": 6313.768799999982,
+  "stone": 534,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -44,7 +44,7 @@
   "skills": [
     {
       "id": "sk002",
-      "level": 3
+      "level": 5
     }
   ],
   "equipped": [
@@ -115,7 +115,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 1,
-    "acc": 34,
+    "acc": 38,
     "level": 2
   },
   "partners": {},
