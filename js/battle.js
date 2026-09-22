@@ -1,20 +1,30 @@
 /* =========================================================
- * battle.js —— 即时制战斗（伪3D 动作 + 伤害飘字 + 自动战斗）
+ * battle.js —— 即时制 ARPG 战斗引擎（多单位同屏 / 自动出手 / 伤害飘字）
  * 资料依据：22_玩法操作指南 第1条「战斗操作」
+ * 参考界面：截图32（海面多角色 vs 多怪，持续飘伤害数字，自动/升级控件）
+ *
+ * 设计要点：
+ *  - 不是回合制：所有单位按各自攻速独立计时，到点自动出手
+ *  - 我方阵列：主角 + 出战伙伴 + 灵宠 + 傀儡（最多4个）
+ *  - 敌方阵列：1~3 只（普通1只 / 精英2只 / BOSS 1只+2小怪）
+ *  - 主循环 tick(dtSec) 推进，玩家点技能为「立即释放」
  * ========================================================= */
 
 const BT = {
   on: false,
-  foe: null,          // {name,icon,hp,maxHp,atk,def,root,w,type,drop}
-  auto: false,
-  timer: null,
-  autoT: null,
-  cd: [0, 0, 0, 0],   // 技能冷却（秒）
-  petUsed: false,
-  puppetUsed: false,
+  auto: true,          // 即时制默认自动战斗
+  speed: 1,            // 战斗倍速（1/2/3）
+  allies: [],          // 我方单位
+  foes: [],            // 敌方单位
+  cd: [0, 0, 0, 0],    // 主角技能冷却
+  petCd: 0,
+  pupCd: 0,
   _p: null,
   _cb: null,
+  _t: 0,               // 已战斗时长
+  _tickTimer: null,
 
+  /* ---------- 图标 ---------- */
   iconFor(name) {
     const s = String(name || '');
     if (s.indexOf('蛇') >= 0) return '🐍';
@@ -44,225 +54,342 @@ const BT = {
     return '水';
   },
 
+  /* ---------- 构造单位 ---------- */
+  mkUnit(o) {
+    return {
+      id: o.id, name: o.name, icon: o.icon || '👹', img: o.img || '',
+      side: o.side,                    // 'me' | 'foe'
+      hp: o.hp, maxHp: o.maxHp,
+      atk: o.atk, def: o.def,
+      crit: o.crit || 0.05, dodge: o.dodge || 0.02, hit: o.hit === undefined ? 0.9 : o.hit,
+      speed: o.speed || 10,            // 身法：越大出手越快
+      atkInt: o.atkInt || 1.0,         // 攻击间隔（秒）
+      timer: Math.random() * 0.5,      // 出手计时（错开）
+      root: o.root || '金',
+      dead: false,
+      isHero: !!o.isHero, isPet: !!o.isPet, isPup: !!o.isPup, isMate: !!o.isMate,
+      drop: o.drop || '', type: o.type || '野怪',
+    };
+  },
+
   /* ---------- 开始战斗 ---------- */
   start(p, foeDef, opt) {
-    this.stop(false);
+    this.stop(true);
     opt = opt || {};
     this._p = p;
     this._cb = opt.cb || null;
-    const mul = opt.mul || 1;
+    this._t = 0;
+    this.cd = [0, 0, 0, 0];
+    this.petCd = 0; this.pupCd = 0;
+
     const scale = Math.pow(1.75, p.realm);
+    const mul = opt.mul || 1;
     const a = E.attrs(p);
-    this.foe = {
-      name: foeDef.name || foeDef.n || '妖兽',
-      icon: foeDef.icon || this.iconFor(foeDef.name || foeDef.n || ''),
-      root: this.rootOf(foeDef),
-      w: this.rootOf(foeDef),
-      maxHp: Math.round((400 * scale + 200) * mul),
-      atk: Math.round((a.atk * 0.55 + 40 * scale) * mul),
-      def: Math.round((a.def * 0.5 + 20 * scale) * mul),
-      sense: 30 * scale,
-      crit: 0.04, dodge: 0.02, hit: 0.9,
-      speed: 8 + p.realm,
-      drop: foeDef.drop || foeDef.掉落 || '',
-      type: foeDef.type || '野怪',
+
+    /* --- 我方阵列 --- */
+    this.allies = [];
+    // 1. 主角
+    this.allies.push(this.mkUnit({
+      id: 'hero', name: p.name, icon: p.avatar || '🧙',
+      img: 'assets/char/' + (p.face || 'hanli') + '.jpg',
+      side: 'me', hp: E.maxHp(p), maxHp: E.maxHp(p),
+      atk: a.atk, def: a.def, crit: a.crit, dodge: a.dodge, hit: 0.92,
+      speed: a.speed || 10, atkInt: Math.max(0.45, 1.25 - (a.speed || 10) / 40),
+      root: p.root || '金', isHero: true,
+    }));
+    // 2. 出战伙伴（最多2）
+    const mates = (p.partners || []).filter((x) => x.out).slice(0, 2);
+    mates.forEach((m, i) => {
+      const lv = m.lv || 1;
+      this.allies.push(this.mkUnit({
+        id: 'mate' + i, name: m.n || m.name || '道友', icon: '👤',
+        side: 'me', hp: Math.round(a.hp * 0.6 * (1 + lv * 0.1)), maxHp: Math.round(a.hp * 0.6 * (1 + lv * 0.1)),
+        atk: Math.round(a.atk * 0.55 * (1 + lv * 0.08)), def: Math.round(a.def * 0.7),
+        crit: 0.05, dodge: 0.03, hit: 0.88, speed: 9 + i, atkInt: 1.5 - lv * 0.02,
+        root: '金', isMate: true,
+      }));
+    });
+    // 3. 灵宠
+    if (p.petOut && (p.pets || []).length) {
+      const pt = p.pets.find((x) => x.out) || p.pets[0];
+      if (pt) {
+        const lv = pt.lv || 1;
+        this.allies.push(this.mkUnit({
+          id: 'pet', name: pt.n || pt.name || '灵宠', icon: '🐾',
+          side: 'me', hp: Math.round(a.hp * 0.45 * (1 + lv * 0.12)), maxHp: Math.round(a.hp * 0.45 * (1 + lv * 0.12)),
+          atk: Math.round(a.atk * 0.4 * (1 + lv * 0.1)), def: Math.round(a.def * 0.5),
+          crit: 0.08, dodge: 0.06, hit: 0.9, speed: 12, atkInt: 1.1,
+          root: '木', isPet: true,
+        }));
+      }
+    }
+    // 4. 傀儡
+    if (p.pupOut && (p.puppets || []).length) {
+      const pu = p.puppets[0];
+      if (pu) {
+        this.allies.push(this.mkUnit({
+          id: 'pup', name: pu.n || pu.name || '傀儡', icon: '🗿',
+          side: 'me', hp: Math.round(a.hp * 0.7), maxHp: Math.round(a.hp * 0.7),
+          atk: Math.round(a.atk * 0.5), def: Math.round(a.def * 1.3),
+          crit: 0.03, dodge: 0.01, hit: 0.95, speed: 6, atkInt: 1.9,
+          root: '土', isPup: true,
+        }));
+      }
+    }
+
+    /* --- 敌方阵列 --- */
+    this.foes = [];
+    const mkFoe = (def, idx, isBoss) => {
+      const bm = isBoss ? 1.9 : (idx === 0 ? 1 : 0.78);
+      return this.mkUnit({
+        id: 'foe' + idx, name: def.name || def.n || '妖兽',
+        icon: def.icon || this.iconFor(def.name || def.n || ''),
+        side: 'foe',
+        hp: Math.round((400 * scale + 200) * mul * bm), maxHp: Math.round((400 * scale + 200) * mul * bm),
+        atk: Math.round((a.atk * 0.55 + 40 * scale) * mul * bm),
+        def: Math.round((a.def * 0.5 + 20 * scale) * bm),
+        crit: isBoss ? 0.08 : 0.04, dodge: 0.02, hit: 0.9,
+        speed: 8 + p.realm, atkInt: isBoss ? 1.5 : 1.25,
+        root: this.rootOf(def), drop: def.drop || def.掉落 || '',
+        type: isBoss ? 'BOSS' : (def.type || '野怪'),
+      });
     };
-    this.foe.hp = this.foe.maxHp;
+    const isBoss = opt.boss || /王|主|首领|母|魔/.test(foeDef.name || '');
+    this.foes.push(mkFoe(foeDef, 0, isBoss));
+    if (opt.adds) {
+      const pool = (CFG.core.monsters || []).filter((m) => (m.name || m.n) !== (foeDef.name || foeDef.n));
+      for (let i = 0; i < opt.adds && i < pool.length; i++) {
+        this.foes.push(mkFoe(pool[Math.floor(Math.random() * pool.length)], i + 1, false));
+      }
+    }
+
+    this.on = true;
+    // 主角满血满蓝起战
     if (p.hp <= 0) p.hp = E.maxHp(p);
     if (p.mp <= 0) p.mp = E.maxMp(p);
-    this.on = true;
-    this.cd = [0, 0, 0, 0];
-    this.petUsed = false;
-    this.puppetUsed = false;
-    if (UI && UI.showBattle) UI.showBattle(this.foe);
-    return this.foe;
+
+    if (UI && UI.showBattle) UI.showBattle(this);
+    this.startTick();
+    return { allies: this.allies, foes: this.foes };
   },
 
-  stop(silent) {
-    this.on = false;
-    if (this.timer) { clearInterval(this.timer); this.timer = null; }
-    if (this.autoT) { clearInterval(this.autoT); this.autoT = null; }
-    if (!silent && UI && UI.hideBattle) UI.hideBattle();
+  /* ---------- 主循环（即时制核心） ---------- */
+  startTick() {
+    this.stopTick();
+    let last = Date.now();
+    this._tickTimer = setInterval(() => {
+      if (!this.on) return;
+      const now = Date.now();
+      const dt = Math.min(0.25, (now - last) / 1000) * this.speed;
+      last = now;
+      this.tick(dt);
+    }, 100);
+  },
+  stopTick() { if (this._tickTimer) { clearInterval(this._tickTimer); this._tickTimer = null; } },
+
+  tick(dt) {
+    if (!this.on) return;
+    this._t += dt;
+    const p = this._p;
+
+    // 技能冷却
+    for (let i = 0; i < 4; i++) if (this.cd[i] > 0) this.cd[i] = Math.max(0, this.cd[i] - dt);
+    if (this.petCd > 0) this.petCd = Math.max(0, this.petCd - dt);
+    if (this.pupCd > 0) this.pupCd = Math.max(0, this.pupCd - dt);
+
+    // 自动释放技能（自动战斗时）
+    if (this.auto) {
+      for (let i = 0; i < 4; i++) {
+        const slotId = (p.equipped || [])[i];
+        if (!slotId) continue;
+        const sk = (EX.skills || []).find((x) => x.id === slotId);
+        if (!sk) continue;
+        if (this.cd[i] <= 0 && (p.mp || 0) >= (sk.cost || 0)) { this.skill(i, true); break; }
+      }
+    }
+
+    // 所有存活单位按攻速出手
+    const all = this.allies.concat(this.foes).filter((u) => !u.dead);
+    for (const u of all) {
+      u.timer += dt;
+      if (u.timer >= u.atkInt) {
+        u.timer = 0;
+        this.unitAct(u);
+        if (!this.on) return;
+      }
+    }
+
+    if (UI && UI.updateBattle) UI.updateBattle();
   },
 
-  /* ---------- 玩家行动 ---------- */
-  /** 普攻 */
+  /** 单个单位出手 */
+  unitAct(u) {
+    const p = this._p;
+    if (u.side === 'me') {
+      const targets = this.foes.filter((x) => !x.dead);
+      if (!targets.length) return;
+      const tg = targets[0];   // 优先打第一个（可改为最低血）
+      const r = E.calcDamage(u, tg, 1.0, u.root);
+      this.hit(tg, r, u);
+    } else {
+      // 敌方随机打我方一个（优先主角）
+      const targets = this.allies.filter((x) => !x.dead);
+      if (!targets.length) return;
+      let tg = targets.find((x) => x.isHero) || targets[Math.floor(Math.random() * targets.length)];
+      // 20% 概率打其他单位
+      if (targets.length > 1 && Math.random() < 0.25) tg = targets[Math.floor(Math.random() * targets.length)];
+      const r = E.calcDamage(u, tg, 0.85, u.root);
+      this.hit(tg, r, u);
+    }
+  },
+
+  /** 结算一次打击 */
+  hit(target, r, from) {
+    if (!target || target.dead) return;
+    if (r.dodge) {
+      if (UI) UI.floatText('闪避', 'miss', target.side === 'foe' ? 70 : 30, target.side === 'foe' ? 30 : 62);
+      return;
+    }
+    target.hp -= r.dmg;
+    if (UI && UI.hitFx) UI.hitFx(target, r.dmg, r.crit, r.counter, from);
+    // 主角血量同步回存档
+    const hero = this.allies.find((x) => x.isHero);
+    if (hero) { this._p.hp = Math.max(0, hero.hp); }
+    if (target.hp <= 0) { target.hp = 0; target.dead = true; }
+    this.checkEnd();
+  },
+
+  checkEnd() {
+    if (!this.on) return;
+    if (!this.foes.some((x) => !x.dead)) { this.win(); return; }
+    if (!this.allies.some((x) => !x.dead)) { this.lose(); return; }
+  },
+
+  /* ---------- 玩家操作 ---------- */
+  /** 手动普攻（立即出手，重置主角计时） */
   attack() {
-    if (!this.on || !this._p) return;
-    const p = this._p;
-    const r = E.calcDamage(p, this.foe, 1.0, p.root);
-    this.applyToFoe(r);
-    this.heroAct();
-    this.afterPlayer();
+    if (!this.on) return;
+    const hero = this.allies.find((x) => x.isHero && !x.dead);
+    if (!hero) return;
+    hero.timer = hero.atkInt;   // 立即触发
+    this.unitAct(hero);
+    if (UI && UI.heroLunge) UI.heroLunge();
   },
 
-  /** 技能槽 0-3 */
-  skill(i) {
+  /** 释放技能槽 0-3 */
+  skill(i, silent) {
     if (!this.on || !this._p) return;
     const p = this._p;
-    const slotId = p.equipped[i];
-    if (!slotId) { UI.toast('该槽位未装配神通', 'err'); return; }
-    const sk = EX.skills.find((x) => x.id === slotId);
+    const hero = this.allies.find((x) => x.isHero && !x.dead);
+    if (!hero) return;
+    const slotId = (p.equipped || [])[i];
+    if (!slotId) { if (!silent && UI) UI.toast('该槽位未装配神通', 'err'); return; }
+    const sk = (EX.skills || []).find((x) => x.id === slotId);
     if (!sk) return;
-    if (this.cd[i] > 0) { UI.toast('【' + sk.n + '】冷却中 ' + this.cd[i].toFixed(1) + 's', 'err'); return; }
-    if ((p.mp || 0) < sk.cost) { UI.toast('灵力不足', 'err'); return; }
-    p.mp -= sk.cost;
-    this.cd[i] = sk.cd;
-    const r = E.calcDamage(p, this.foe, sk.mul, sk.w);
-    this.applyToFoe(r, sk);
-    this.heroAct();
-    UI.floatSkill(sk.n, sk.w);
-    this.afterPlayer();
+    if (this.cd[i] > 0) { if (!silent && UI) UI.toast('【' + (sk.n || sk.name) + '】冷却中 ' + this.cd[i].toFixed(1) + 's', 'err'); return; }
+    if ((p.mp || 0) < (sk.cost || 0)) { if (!silent && UI) UI.toast('灵力不足', 'err'); return; }
+    p.mp -= (sk.cost || 0);
+    this.cd[i] = sk.cd || 4;
+    const tg = this.foes.filter((x) => !x.dead)[0];
+    if (tg) {
+      const r = E.calcDamage(hero, tg, sk.mul || 1.6, sk.w || sk.root || hero.root);
+      // 群体技能：打全部
+      if (sk.aoe) {
+        this.foes.filter((x) => !x.dead).forEach((t) => {
+          const rr = E.calcDamage(hero, t, sk.mul || 1.6, sk.w || sk.root || hero.root);
+          this.hit(t, rr, hero);
+        });
+      } else this.hit(tg, r, hero);
+      if (UI && UI.floatSkill) UI.floatSkill(sk.n || sk.name, sk.w);
+    }
+    hero.timer = 0;
+    if (UI && UI.heroLunge) UI.heroLunge();
   },
 
-  /** 灵宠助战 */
+  /** 灵宠技 */
   pet() {
-    if (!this.on || !this._p) return;
-    const p = this._p;
-    if (!p.petOut) { UI.toast('未设置出战灵宠', 'err'); return; }
-    if (this.petUsed) { UI.toast('灵宠本场已助战', 'err'); return; }
-    this.petUsed = true;
-    const pet = (p.pets || []).find((x) => x.id === p.petOut);
-    const times = pet && pet.evo === '虫王' ? 5 : 3;
-    let sum = 0;
-    for (let i = 0; i < times; i++) {
-      const r = E.calcDamage(p, this.foe, 0.85, '金');
-      sum += r.dodge ? 0 : r.dmg;
-      if (i === 0) this.applyToFoe(r);
-    }
-    UI.floatText('灵宠虫潮 ' + E.fmt(sum), 'heal', 60, 30);
-    UI.fx('虫潮');
-    this.afterPlayer();
+    if (!this.on) return;
+    if (this.petCd > 0) { if (UI) UI.toast('灵宠冷却中', 'err'); return; }
+    const pet = this.allies.find((x) => x.isPet && !x.dead);
+    if (!pet) { if (UI) UI.toast('未出战灵宠', 'err'); return; }
+    this.petCd = 12;
+    const tg = this.foes.filter((x) => !x.dead)[0];
+    if (tg) { const r = E.calcDamage(pet, tg, 2.2, pet.root); this.hit(tg, r, pet); }
+    if (UI && UI.floatSkill) UI.floatSkill('灵宠助战', '木');
   },
 
-  /** 傀儡助战 */
+  /** 傀儡技 */
   puppet() {
-    if (!this.on || !this._p) return;
-    const p = this._p;
-    if (!p.puppetOut) { UI.toast('未设置出战傀儡', 'err'); return; }
-    if (this.puppetUsed) { UI.toast('傀儡本场已助战', 'err'); return; }
-    this.puppetUsed = true;
-    const r = E.calcDamage(p, this.foe, 3.2, '土');
-    this.applyToFoe(r);
-    UI.floatText('曲魂·煞力 ' + E.fmt(r.dmg), 'crit', 40, 30);
-    UI.fx('傀儡');
-    this.afterPlayer();
+    if (!this.on) return;
+    if (this.pupCd > 0) { if (UI) UI.toast('傀儡冷却中', 'err'); return; }
+    const pup = this.allies.find((x) => x.isPup && !x.dead);
+    if (!pup) { if (UI) UI.toast('未出战傀儡', 'err'); return; }
+    this.pupCd = 18;
+    const tg = this.foes.filter((x) => !x.dead)[0];
+    if (tg) { const r = E.calcDamage(pup, tg, 2.8, pup.root); this.hit(tg, r, pup); }
+    if (UI && UI.floatSkill) UI.floatSkill('傀儡护主', '土');
   },
 
-  /* ---------- 内部 ---------- */
-  applyToFoe(r, sk) {
-    if (r.dodge) { UI.floatText('闪避', 'miss', 70, 26); return; }
-    this.foe.hp -= r.dmg;
-    UI.hitFoe(r.dmg, r.crit, r.counter);
-    if (this.foe.hp <= 0) this.foe.hp = 0;
+  setAuto(v) {
+    this.auto = !!v;
+    if (UI && UI.updateAuto) UI.updateAuto(this.auto);
   },
-
-  heroAct() {
-    UI.heroLunge();
-    UI.fx('剑影');
-  },
-
-  afterPlayer() {
-    UI.updateBattle();
-    if (this.foe.hp <= 0) { setTimeout(() => this.win(), 420); return; }
-    // 敌人反击（延迟）
-    setTimeout(() => { if (this.on) this.foeAct(); }, 620);
-  },
-
-  foeAct() {
-    if (!this.on || !this._p) return;
-    const p = this._p;
-    const r = E.calcDamage(this.foe, p, 0.85, this.foe.w);
-    if (r.dodge) { UI.floatText('闪避', 'miss', 30, 74); }
-    else {
-      p.hp -= r.dmg;
-      UI.hitHero(r.dmg, r.crit);
-      if (p.hp <= 0) p.hp = 0;
-    }
-    UI.bossLunge();
-    UI.updateBattle();
-    if (p.hp <= 0) setTimeout(() => this.lose(), 400);
+  setSpeed(v) { this.speed = v || 1; },
+  flee() {
+    if (!this.on) return;
+    this.on = false;
+    this.stopTick();
+    if (UI && UI.battleResult) UI.battleResult('flee');
+    if (UI && UI.hideBattle) UI.hideBattle();
+    if (this._cb) this._cb('flee');
   },
 
   /* ---------- 结束 ---------- */
   win() {
     if (!this.on) return;
-    const p = this._p;
-    const foe = this.foe;
     this.on = false;
-    p.stats.battles = (p.stats.battles || 0) + 1;
-    p.stats.kills = (p.stats.kills || 0) + 1;
-    // 掉落
-    const stone = Math.round(EX.stonePerMin(p.realm) * (12 + Math.random() * 18));
-    const exp = Math.round(EX.expPerMin(p.realm) * (18 + Math.random() * 25));
-    p.stone += stone;
+    this.stopTick();
+    const p = this._p;
+    const mins = 6 + Math.random() * 6;
+    const exp = Math.round(EX.expPerMin(p.realm) * mins);
+    const stone = Math.round(EX.stonePerMin(p.realm) * mins);
     const up = E.gainExp(p, exp);
-    // 材料掉落
+    p.stone += stone;
+    p.stats.battles = (p.stats.battles || 0) + 1;
+    p.stats.kills = (p.stats.kills || 0) + this.foes.length;
+    // 掉落
     const drops = [];
-    const pool = (CFG.core.items || []).filter((x) => ['材料', '灵草', '丹药'].indexOf(x.type) >= 0);
-    if (pool.length && Math.random() < 0.55) {
-      const it = pool[Math.floor(Math.random() * pool.length)];
-      E.addItem(p, it.name, 1);
-      drops.push(it.name + '×1');
-    }
-    if (Math.random() < 0.12) { drops.push('妖丹×1'); E.addItem(p, '妖丹', 1); }
-    UI.battleResult(true, { stone, exp, up, drops, name: foe.name });
-    if (this._cb) { const cb = this._cb; this._cb = null; cb(true); }
-    this.stop(true);
-    setTimeout(() => UI.hideBattle(), 900);
+    this.foes.forEach((f) => {
+      if (f.drop && Math.random() < 0.5) { E.addItem(p, f.drop, 1); drops.push(f.drop); }
+    });
+    if (UI && UI.battleResult) UI.battleResult('win', { exp, stone, drops, up });
+    if (UI && UI.hideBattle) UI.hideBattle();
+    if (this._cb) this._cb('win', { exp, stone, drops });
   },
 
   lose() {
     if (!this.on) return;
-    const p = this._p;
     this.on = false;
-    p.stats.battles = (p.stats.battles || 0) + 1;
-    p.stats.deaths = (p.stats.deaths || 0) + 1;
-    p.hp = Math.round(E.maxHp(p) * 0.35);
-    p.mp = Math.round(E.maxMp(p) * 0.5);
-    UI.battleResult(false, { name: this.foe.name });
-    if (this._cb) { const cb = this._cb; this._cb = null; cb(false); }
-    this.stop(true);
-    setTimeout(() => UI.hideBattle(), 900);
+    this.stopTick();
+    const p = this._p;
+    p.hp = Math.max(1, Math.round(E.maxHp(p) * 0.1));
+    p.mp = 0;
+    if (UI && UI.battleResult) UI.battleResult('lose');
+    if (UI && UI.hideBattle) UI.hideBattle();
+    if (this._cb) this._cb('lose');
   },
 
-  flee() {
-    if (!this.on) return;
-    UI.toast('成功脱离战斗', 'ok');
-    this.stop(true);
-    UI.hideBattle();
+  stop(silent) {
+    this.on = false;
+    this.stopTick();
+    this.allies = []; this.foes = [];
+    if (!silent && UI && UI.hideBattle) UI.hideBattle();
   },
 
-  /* ---------- 自动战斗 ---------- */
-  setAuto(v) {
-    this.auto = v;
-    if (this.autoT) { clearInterval(this.autoT); this.autoT = null; }
-    if (v && this.on) {
-      this.autoT = setInterval(() => {
-        if (!this.on) { clearInterval(this.autoT); this.autoT = null; return; }
-        if (this.foe && this.foe.hp <= 0) return;
-        // 优先放可用技能，否则普攻
-        for (let i = 0; i < 4; i++) {
-          const id = this._p.equipped[i];
-          if (!id) continue;
-          const sk = EX.skills.find((x) => x.id === id);
-          if (sk && this.cd[i] <= 0 && (this._p.mp || 0) >= sk.cost) { this.skill(i); return; }
-        }
-        this.attack();
-      }, 900);
-    }
-    UI.updateAuto(v);
+  /** 兼容旧接口 */
+  get foe() {
+    return this.foes.find((x) => !x.dead) || this.foes[0] || null;
   },
-
-  /* ---------- 冷却 tick ---------- */
-  startCdTimer() {
-    if (this.timer) return;
-    this.timer = setInterval(() => {
-      for (let i = 0; i < 4; i++) if (this.cd[i] > 0) this.cd[i] = Math.max(0, this.cd[i] - 0.1);
-      UI.updateCd(this.cd);
-    }, 100);
-  },
-  stopCdTimer() { if (this.timer) { clearInterval(this.timer); this.timer = null; } },
 };
 
 window.BT = BT;
