@@ -245,20 +245,34 @@ function bindGame() {
     BT.setAuto(!BT.auto);
     UI.toast(BT.auto ? '自动战斗开启' : '自动战斗关闭', 'ok');
   };
+  // 倍速切换（图32）
+  const spBtn = $('#btnSpeed');
+  if (spBtn) spBtn.onclick = () => {
+    const cur = +spBtn.dataset.sp || 1;
+    const nx = cur >= 3 ? 1 : cur + 1;
+    spBtn.dataset.sp = nx; spBtn.textContent = '×' + nx;
+    BT.setSpeed(nx);
+    UI.toast('战斗速度 ×' + nx, 'ok');
+  };
   $('#btnFlee').onclick = () => { if (BT.on) BT.flee(); };
+  // 升级提示点击 → 打开境界面板
+  const lu = $('#lvlup');
+  if (lu) lu.onclick = () => UI.open('realm');
 
   // 无敌挂机：不在战斗时点普攻开始打野
   $('#scene').onclick = () => { if (!BT.on) startWild(); };
 }
 
-/* 开始打野怪 */
+/* 开始打野怪（即时制：可能带小弟） */
 function startWild() {
   if (!P || BT.on) return;
   const pool = CFG.wildByRealm(P.realm);
   if (!pool.length) return UI.toast('暂无可挑战妖兽', 'err');
   const m = pool[Math.floor(Math.random() * pool.length)];
-  BT.start(P, m, { mul: 1 });
-  UI.chat('遭遇【' + m.name + '】', true);
+  // 20% 概率遭遇精英（带 1-2 只小怪）
+  const adds = Math.random() < 0.2 ? (1 + Math.floor(Math.random() * 2)) : 0;
+  BT.start(P, m, { mul: 1, adds });
+  UI.chat(adds ? `遭遇【${m.name}】及 ${adds} 只随从` : '遭遇【' + m.name + '】', true);
 }
 
 /* ================= 右下圆盘菜单 ================= */
