@@ -7,12 +7,12 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790039634914,
-  "lastTick": 1790039634914,
+  "lastSeen": 1790039707879,
+  "lastTick": 1790039707879,
   "realm": 7,
   "stage": 0,
-  "exp": 205338.98164021978,
-  "stone": 200,
+  "exp": 174529.57061327505,
+  "stone": 700,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -63,15 +63,11 @@
     "mainIdx": 1,
     "daily": {
       "date": "2026-9-22",
-      "prog": {
-        "meditate": 1
-      },
+      "prog": {},
       "claimed": []
     },
     "bounty": {
-      "prog": {
-        "meditate": 1
-      },
+      "prog": {},
       "claimed": []
     }
   },
@@ -106,7 +102,7 @@
     "battles": 0,
     "breakthrough": 7,
     "offlineMin": 1,
-    "meditate": 1,
+    "meditate": 0,
     "dungeon": 0,
     "encounters": 0,
     "rob": 0
@@ -115,7 +111,7 @@
   "trait": "P003",
   "bottle": {
     "liquid": 8,
-    "acc": 36,
+    "acc": 87,
     "level": 1
   },
   "partners": {},
@@ -126,8 +122,7 @@
     "owned": [
       "SK-010",
       "SK-013",
-      "SK-018",
-      "SK-001"
+      "SK-018"
     ],
     "wear": {}
   },
@@ -166,9 +161,7 @@
     "c014": 0,
     "c015": 0,
     "c016": 0,
-    "C001": 200
+    "C001": 500
   },
-  "loginAt": 1790038877486,
-  "codexSeen": {},
-  "meditateUntil": 1790039628355
+  "loginAt": 1790038877486
 }
