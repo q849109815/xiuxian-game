@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790042072309,
-  "lastTick": 1790042072309,
+  "lastSeen": 1790042091157,
+  "lastTick": 1790042091157,
   "realm": 31,
   "stage": 0,
-  "exp": 321018959710.3642,
-  "stone": 2827424669094.0703,
+  "exp": 58706614259.82777,
+  "stone": 2827424707436.0703,
   "equip": {
     "weapon": {
       "id": "it_a4frt4b",
@@ -137,7 +137,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 141,
+      "count": 142,
       "desc": "炼器材料",
       "id": "i_w0lydih"
     },
@@ -745,8 +745,8 @@
       "prog": {
         "arena": 2,
         "dungeon": 18,
-        "exp": 26064762329,
-        "kill": 152
+        "exp": 26356731368,
+        "kill": 153
       },
       "claimed": []
     },
@@ -754,11 +754,12 @@
       "prog": {
         "arena": 2,
         "dungeon": 18,
-        "exp": 26064762329,
-        "kill": 152,
+        "exp": 26356731368,
+        "kill": 153,
         "墨蛟": 56,
         "星斗海妖兽": 51,
-        "禁地守卫": 45
+        "禁地守卫": 45,
+        "守卫": 1
       },
       "claimed": []
     }
@@ -794,9 +795,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 152,
-    "deaths": 6,
-    "battles": 158,
+    "kills": 153,
+    "deaths": 7,
+    "battles": 160,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
@@ -808,7 +809,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 5,
-    "acc": 63,
+    "acc": 81,
     "level": 30
   },
   "partners": {},
@@ -920,6 +921,7 @@
   "killed": [
     "墨蛟",
     "星斗海妖兽",
-    "禁地守卫"
+    "禁地守卫",
+    "守卫"
   ]
 }
