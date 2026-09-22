@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790040364197,
-  "lastTick": 1790040364197,
+  "lastSeen": 1790040383338,
+  "lastTick": 1790040383338,
   "realm": 31,
   "stage": 0,
-  "exp": 10114585795.535494,
-  "stone": 8505046409182,
+  "exp": 11800398894.791409,
+  "stone": 8505046421182,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -75,7 +75,7 @@
     "store": {}
   },
   "tasks": {
-    "mainIdx": 3,
+    "mainIdx": 4,
     "daily": {
       "date": "2026-9-22",
       "prog": {
@@ -137,7 +137,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 2,
-    "acc": 12,
+    "acc": 31,
     "level": 2
   },
   "partners": {},
