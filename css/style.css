@@ -601,3 +601,153 @@ img{display:block;max-width:100%}
     border-radius:16px 16px 0 0;border:1px solid var(--line)}
   .pn-mask{background:rgba(4,8,20,.8)}
 }
+
+/* =========================================================
+ * 按截图复刻：左上玩家信息 / 底部导航 / 角色立绘 / 称号 / 个性
+ * ========================================================= */
+:root{
+  --neb:#0a1330; --gold1:#ffd76a; --gold2:#f0a020; --red1:#ff4d6d;
+  --cy:#5ce8ff; --pp:#b06cff;
+}
+
+/* ---------- 左上玩家信息（图32） ---------- */
+.pl-info{position:absolute;top:52px;left:8px;z-index:30;display:flex;align-items:center;gap:7px;
+  padding:4px 10px 4px 4px;border-radius:24px;
+  background:linear-gradient(90deg,rgba(12,20,48,.9),rgba(12,20,48,.5));
+  border:1px solid rgba(255,208,106,.35);box-shadow:0 2px 10px rgba(0,0,0,.5)}
+.pl-av{position:relative;width:38px;height:38px;border-radius:50%;overflow:hidden;flex:0 0 auto;
+  border:2px solid var(--gold1);box-shadow:0 0 10px rgba(255,208,106,.5)}
+.pl-av img{width:100%;height:100%;object-fit:cover}
+.pl-av i{position:absolute;right:-1px;bottom:-1px;font-style:normal;font-size:9px;font-weight:800;
+  background:var(--gold1);color:#2a1a00;padding:0 3px;border-radius:3px;line-height:11px}
+.pl-txt{min-width:0}
+.pl-nm{font-size:11.5px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px}
+.pl-pw{display:flex;align-items:center;gap:3px;margin-top:1px}
+.pl-pw .pw-ic{font-size:9px}
+.pl-pw b{font-size:11px;color:var(--gold1);font-variant-numeric:tabular-nums}
+.pl-pw .vip{font-size:8.5px;background:linear-gradient(135deg,#ff9a3c,#ff4d6d);color:#fff;
+  padding:0 4px;border-radius:3px;font-weight:700;margin-left:2px}
+
+/* ---------- 底部主功能栏（图32） ---------- */
+.botnav{position:absolute;left:0;right:0;bottom:0;z-index:40;display:flex;
+  padding:5px 2px calc(5px + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(0deg,rgba(6,10,26,.98),rgba(6,10,26,.75));
+  border-top:1px solid rgba(255,208,106,.25)}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;
+  padding:4px 0;position:relative}
+.bn-ic{font-size:19px;font-style:normal;filter:drop-shadow(0 2px 4px rgba(0,0,0,.7))}
+.bn-item span{font-size:9.5px;color:#c8d4f5;letter-spacing:.5px}
+.bn-item:active{transform:scale(.9)}
+.bn-item.on .bn-ic{filter:drop-shadow(0 0 8px var(--gold1))}
+.bn-item.on span{color:var(--gold1);font-weight:700}
+.bn-item .dot{position:absolute;top:2px;right:18%;width:6px;height:6px;border-radius:50%;
+  background:var(--red1);box-shadow:0 0 5px var(--red1)}
+
+/* ---------- 角色界面（图31：中央大立绘 + 左右装备槽） ---------- */
+.role-hero{position:relative;height:230px;margin:2px 0 6px;
+  display:flex;align-items:flex-end;justify-content:center;overflow:visible}
+.role-hero .rh-bg{position:absolute;inset:0;border-radius:12px;
+  background:radial-gradient(ellipse at 50% 62%,rgba(60,90,190,.42),transparent 62%),
+             radial-gradient(circle at 50% 30%,rgba(176,108,255,.22),transparent 55%);
+  border:1px solid rgba(120,160,255,.18)}
+.role-hero .rh-ring{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);
+  width:130px;height:34px;border-radius:50%;
+  background:radial-gradient(ellipse,rgba(92,232,255,.5),transparent 70%);
+  animation:rhRing 3.2s ease-in-out infinite}
+@keyframes rhRing{0%,100%{transform:translateX(-50%) scale(1);opacity:.55}50%{transform:translateX(-50%) scale(1.12);opacity:.85}}
+.role-hero img.rh-fig{position:relative;z-index:3;height:205px;width:auto;object-fit:contain;
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.75));animation:rhFloat 3.4s ease-in-out infinite}
+@keyframes rhFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.role-hero .rh-pw{position:absolute;top:7px;left:50%;transform:translateX(-50%);z-index:4;
+  font-size:12px;color:#fff;text-shadow:0 2px 6px #000;letter-spacing:1px}
+.role-hero .rh-pw b{color:var(--gold1);font-size:16px;font-weight:800}
+
+/* 左右装备槽（图31） */
+.eq3{display:flex;align-items:center;gap:5px;margin:4px 0}
+.eq3-col{flex:0 0 62px;display:flex;flex-direction:column;gap:5px}
+.eq3-mid{flex:1;text-align:center}
+.eq-cell{position:relative;aspect-ratio:1;border-radius:9px;
+  background:linear-gradient(135deg,rgba(30,44,92,.85),rgba(14,22,52,.9));
+  border:1px solid rgba(120,160,255,.3);display:flex;align-items:center;justify-content:center;
+  font-size:22px;overflow:hidden}
+.eq-cell.on{border-color:var(--gold1);box-shadow:0 0 10px rgba(255,208,106,.35) inset}
+.eq-cell .qtag{position:absolute;left:1px;top:1px;font-size:8px;padding:0 2px;border-radius:2px;color:#2a1a00;font-weight:800}
+.eq-cell .lv{position:absolute;right:1px;top:1px;font-size:9px;color:var(--gold1);font-weight:800;text-shadow:0 1px 2px #000}
+.eq-cell img{width:78%;height:78%;object-fit:contain}
+
+/* 中部圆形按钮（神识/御宠/仙霓神衣/幻化/收集） */
+.midbtns{display:flex;justify-content:center;gap:8px;margin:8px 0;flex-wrap:wrap}
+.mb{width:50px;text-align:center}
+.mb i{display:flex;align-items:center;justify-content:center;width:42px;height:42px;margin:0 auto;
+  border-radius:50%;font-size:20px;font-style:normal;position:relative;
+  background:linear-gradient(135deg,rgba(40,60,120,.9),rgba(20,32,70,.95));
+  border:1px solid rgba(120,160,255,.35);box-shadow:0 3px 8px rgba(0,0,0,.5)}
+.mb i.hot{border-color:var(--gold1);box-shadow:0 0 12px rgba(255,208,106,.5)}
+.mb i em{position:absolute;right:-2px;top:-2px;font-style:normal;font-size:8px;background:var(--red1);
+  color:#fff;border-radius:6px;padding:0 3px;font-weight:700}
+.mb span{display:block;font-size:9px;color:#a9b6d8;margin-top:2px}
+
+/* 一键装备（黄色） */
+.btn-yellow{width:100%;padding:11px;border-radius:9px;font-size:14px;font-weight:800;letter-spacing:2px;
+  color:#3a2600;background:linear-gradient(180deg,#ffe9a0,#ffc93c 55%,#f0a020);
+  border:none;box-shadow:0 4px 12px rgba(240,160,32,.4)}
+.btn-yellow:active{transform:scale(.97)}
+
+/* 分类标签（首饰/神兵/时装/法器/套装） */
+.cats{display:flex;gap:6px;margin:8px 0;overflow-x:auto;padding-bottom:2px}
+.cat{flex:0 0 auto;padding:5px 13px;border-radius:16px;font-size:11.5px;white-space:nowrap;
+  background:rgba(20,32,70,.7);border:1px solid rgba(120,160,255,.25);color:#a9b6d8}
+.cat.on{background:linear-gradient(135deg,var(--gold1),var(--gold2));color:#2a1a00;font-weight:800;border-color:transparent}
+
+/* ---------- 称号界面（图29） ---------- */
+.tt-power{text-align:center;padding:6px 0 2px;font-size:11px;color:#9aa8cc}
+.tt-power b{font-size:26px;color:var(--gold1);font-weight:800;text-shadow:0 0 14px rgba(255,208,106,.6)}
+.tt-card{position:relative;display:flex;align-items:center;gap:9px;padding:9px 10px;margin-bottom:7px;
+  border-radius:10px;overflow:hidden;
+  background:linear-gradient(100deg,rgba(24,36,84,.92),rgba(12,20,48,.92));
+  border:1px solid rgba(120,160,255,.22)}
+.tt-card.on{border-color:var(--gold1);box-shadow:0 0 14px rgba(255,208,106,.28)}
+.tt-card .shine{position:absolute;top:0;left:-60%;width:40%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.16),transparent);
+  animation:ttShine 3.5s ease-in-out infinite}
+@keyframes ttShine{0%{left:-60%}55%,100%{left:130%}}
+.tt-nm{flex:0 0 96px;font-size:13.5px;font-weight:800;letter-spacing:1px;position:relative;z-index:2;
+  background:linear-gradient(180deg,#fff,var(--gold1) 50%,#ff8a3c);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.7))}
+.tt-buff{flex:1;font-size:10px;color:#9fe8b8;line-height:1.45;position:relative;z-index:2}
+.tt-buff i{font-style:normal;display:inline-block;margin-right:6px;color:var(--cy)}
+.tt-cond{font-size:9.5px;color:var(--txt3);margin-top:2px}
+.tt-act{flex:0 0 auto;position:relative;z-index:2;padding:5px 12px;border-radius:14px;font-size:11px;font-weight:700;
+  background:linear-gradient(135deg,var(--gold1),var(--gold2));color:#2a1a00}
+.tt-act.gray{background:rgba(120,140,190,.25);color:#8b97bd;border:1px solid rgba(120,160,255,.2)}
+.tt-act.on{background:linear-gradient(135deg,#7ae8ff,var(--cy));color:#003040}
+.tt-tabs{display:flex;gap:6px;margin:8px 0}
+.tt-tabs .cat{flex:1;text-align:center}
+
+/* ---------- 个性界面（图30） ---------- */
+.ps-stage{position:relative;height:150px;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 45%,rgba(92,232,255,.2),transparent 55%),
+             radial-gradient(circle at 50% 50%,rgba(176,108,255,.28),transparent 60%);margin-bottom:6px}
+.ps-ring{position:relative;width:104px;height:104px;border-radius:50%;overflow:hidden;
+  border:3px solid var(--gold1);box-shadow:0 0 18px rgba(255,208,106,.45),0 0 40px rgba(92,232,255,.3)}
+.ps-ring img{width:100%;height:100%;object-fit:cover}
+.ps-swirl{position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  background:conic-gradient(from 0deg,transparent,rgba(92,232,255,.35),transparent 40%);
+  animation:psSpin 6s linear infinite}
+@keyframes psSpin{to{transform:rotate(360deg)}}
+.ps-meta{text-align:center;margin-bottom:8px}
+.ps-meta .nm{font-size:13px;font-weight:700;color:var(--gold1);letter-spacing:1px}
+.ps-meta .sub{font-size:10px;color:#9aa8cc;margin-top:2px}
+.ps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.ps-cell{position:relative;aspect-ratio:1;border-radius:9px;overflow:hidden;
+  background:linear-gradient(135deg,rgba(30,44,92,.8),rgba(14,22,52,.9));
+  border:1px solid rgba(120,160,255,.25);display:flex;align-items:center;justify-content:center}
+.ps-cell img{width:100%;height:100%;object-fit:cover}
+.ps-cell.on{border-color:var(--gold1);box-shadow:0 0 12px rgba(255,208,106,.5)}
+.ps-cell .lk{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(4,8,20,.62);font-size:17px}
+.ps-cell .nmb{position:absolute;left:0;right:0;bottom:0;font-size:8px;text-align:center;
+  background:rgba(4,8,20,.75);color:#c8d4f5;padding:1px 0}
+.ps-adv{width:100%;margin-top:9px;padding:10px;border-radius:9px;font-size:13px;font-weight:800;letter-spacing:3px;
+  color:#3a2600;background:linear-gradient(180deg,#ffe9a0,#ffc93c 55%,#f0a020)}
