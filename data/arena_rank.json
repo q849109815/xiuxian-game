@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-21T23:33:57.652Z",
+  "updatedAt": "2026-09-22T01:49:29.865Z",
   "list": [
     {
       "uid": "uq3l2dy",
@@ -18,18 +18,34 @@
       "reinc": 0
     },
     {
+      "uid": "u1j3y1s2",
+      "name": "gcm199202",
+      "avatar": "🧙",
+      "realm": "?初期",
+      "realmIdx": 31,
+      "power": 99370,
+      "stone": 2827424827677.0703,
+      "kills": 38,
+      "arena": 0,
+      "sect": "s_qingyun",
+      "root": "mixed",
+      "lastSeen": 1790041753531,
+      "createdAt": 1790039820957,
+      "reinc": 0
+    },
+    {
       "uid": "u1tfdvk2",
       "name": "q849109815",
       "avatar": "🧙",
-      "realm": "炼虚初期",
-      "realmIdx": 5,
-      "power": 2298,
-      "stone": 500,
+      "realm": "真仙初期",
+      "realmIdx": 9,
+      "power": 5610,
+      "stone": 200,
       "kills": 0,
       "arena": 0,
       "sect": null,
       "root": "metal",
-      "lastSeen": 1790033603793,
+      "lastSeen": 1790040331002,
       "createdAt": 1790003121304,
       "reinc": 0
     },
