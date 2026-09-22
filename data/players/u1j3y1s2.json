@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041782817,
-  "lastTick": 1790041782817,
+  "lastSeen": 1790041783557,
+  "lastTick": 1790041783557,
   "realm": 31,
   "stage": 0,
-  "exp": 65816068571.12445,
-  "stone": 2827424847317.0703,
+  "exp": 66075733791.79224,
+  "stone": 2827424846583.0703,
   "equip": {
     "weapon": {
       "id": "fr_fr_w002",
@@ -27,7 +27,7 @@
       "enh": 0,
       "temp": 0,
       "fr": true,
-      "temper": 1
+      "temper": 2
     },
     "armor": {
       "id": "it_limcshl",
@@ -419,7 +419,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 2,
-    "acc": 44,
+    "acc": 45,
     "level": 30
   },
   "partners": {},
