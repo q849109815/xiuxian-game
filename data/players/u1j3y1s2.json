@@ -7,11 +7,11 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041922310,
-  "lastTick": 1790041922310,
+  "lastSeen": 1790041925765,
+  "lastTick": 1790041925765,
   "realm": 31,
   "stage": 0,
-  "exp": 92771419891.31244,
+  "exp": 103952643340.66872,
   "stone": 2827424644950.0703,
   "equip": {
     "weapon": {
@@ -88,16 +88,16 @@
       "temper": 1
     },
     "boots": {
-      "id": "it_1jz9egx",
+      "id": "it_8trk7ec",
       "kind": "equip",
       "slot": "boots",
       "q": 2,
       "level": 0,
       "temper": 0,
-      "name": "宝器·踏云靴",
-      "atk": 122,
-      "def": 189,
-      "hp": 1478,
+      "name": "宝器·追风靴",
+      "atk": 88,
+      "def": 181,
+      "hp": 1275,
       "crit": 0,
       "mp": 337
     }
@@ -547,20 +547,6 @@
       "mp": 337
     },
     {
-      "id": "it_8trk7ec",
-      "kind": "equip",
-      "slot": "boots",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·追风靴",
-      "atk": 88,
-      "def": 181,
-      "hp": 1275,
-      "crit": 0,
-      "mp": 337
-    },
-    {
       "id": "it_bfytjti",
       "kind": "equip",
       "slot": "boots",
@@ -728,6 +714,20 @@
       "hp": 1741,
       "crit": 0,
       "mp": 337
+    },
+    {
+      "id": "it_1jz9egx",
+      "kind": "equip",
+      "slot": "boots",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·踏云靴",
+      "atk": 122,
+      "def": 189,
+      "hp": 1478,
+      "crit": 0,
+      "mp": 337
     }
   ],
   "skills": [
@@ -838,7 +838,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 4,
-    "acc": 4,
+    "acc": 7,
     "level": 30
   },
   "partners": {},
