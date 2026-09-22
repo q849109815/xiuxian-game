@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790042012313,
-  "lastTick": 1790042012313,
+  "lastSeen": 1790042017203,
+  "lastTick": 1790042017203,
   "realm": 31,
   "stage": 0,
-  "exp": 104538788224.74928,
-  "stone": 2827424644950.0703,
+  "exp": 119215404907.70625,
+  "stone": 2827424646102.0703,
   "equip": {
     "weapon": {
       "id": "it_a4frt4b",
@@ -518,20 +518,6 @@
       "mp": 337
     },
     {
-      "id": "it_bfytjti",
-      "kind": "equip",
-      "slot": "boots",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·踏云靴",
-      "atk": 102,
-      "def": 158,
-      "hp": 1431,
-      "crit": 0,
-      "mp": 337
-    },
-    {
       "id": "it_c6v743a",
       "kind": "equip",
       "slot": "armor",
@@ -822,7 +808,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 5,
-    "acc": 4,
+    "acc": 8,
     "level": 30
   },
   "partners": {},
