@@ -1,679 +1,355 @@
 /* =========================================================
- * engine.js v2 —— 角色 / 属性 / 境界 / 修炼 / 战斗 / 物品
- * 数据全部来自云端 data/config/*.json
+ * engine.js —— 核心数值引擎
+ * 玩家数据模型 / 属性 / 战力 / 五行克制 / 境界突破
  * ========================================================= */
 
-const C = () => window.GAME_CONFIG;
-const CT = () => window.GAME_CONTENT || {};
-const SC = () => window.GAME_SOCIAL || {};
+const E = {
+  /* ============ 创建角色 ============ */
+  newPlayer(uid, name, pwd, opt) {
+    const root = opt.root || '金';
+    const g = EX.roots.find((x) => x.k === root) || EX.roots[0];
+    return {
+      uid, name, pwd: this.hash(pwd),
+      avatar: opt.avatar || '🧙', avatarId: 'a1',
+      gender: opt.gender || 'm',
+      root, rootName: g.n,
+      realm: 0, layer: 0, exp: 0,          // 境界/小层/当前层修为
+      hp: 0, mp: 0,                        // 当前气血灵力（0=满）
+      stone: 200, jade: 0,
+      createdAt: Date.now(), lastSeen: Date.now(),
+      bag: [],                             // {id,uid?,n,cnt,type,q,slot,atk,def,hp,lv}
+      equip: {},                           // {slotKey: item}
+      skills: ['S1'],                      // 已学神通
+      equipped: ['S1', null, null, null],  // 技能栏 1-4
+      pets: [],                            // 灵宠
+      petOut: null,
+      puppets: [],                         // 傀儡
+      puppetOut: null,
+      partners: [],                        // 伙伴
+      titles: ['T01'], titleCur: 'T01',
+      avatars: ['a1'],
+      cave: { lv: { field: 1, array: 1, close: 1, alchemy: 1, forge: 1 }, last: 0, seeds: [] },
+      quest: { main: 0, done: [], side: [], bounty: [] },
+      stats: { kills: 0, deaths: 0, battles: 0, breaks: 0, encounter: 0, dungeon: 0, online: 0 },
+      sect: null,
+      map: 'M1',
+      lastTick: Date.now(),
+      mail: [],
+      autoFight: false,
+    };
+  },
 
-function newPlayer(name, uid, opt = {}) {
-  return {
-    uid, name, pwd: null,
-    gender: opt.gender || 'm',
-    avatar: opt.avatar || '🧙',
-    root: opt.root || 'mixed',
-    sect: opt.sect || null,
-    createdAt: Date.now(), lastSeen: Date.now(), lastTick: Date.now(),
-    realm: 0, stage: 0, exp: 0,
-    stone: 200,
-    equip: { weapon: null, armor: null, ring: null, talisman: null },
-    bag: [],
-    skills: [], equipped: [],
-    beasts: [], activeBeast: -1, riding: false,
-    cave: { lv: {}, array: 'none', lastHarvest: Date.now(), store: {} },
-    tasks: { mainIdx: 0, daily: { date: '', prog: {}, claimed: [] }, bounty: { prog: {}, claimed: [] } },
-    sectInfo: null,
-    arena: { score: 0, wins: 0, losses: 0, dayDate: '', fights: 0 },
-    mail: [],
-    karma: 0,
-    dao: { partner: null, master: null, apprentices: [] },
-    reinc: 0,
-    spot: 'valley',
-    buffs: { pillAtk: 0, pillExpUntil: 0, rename: 0 },
-    codes: [], banned: false, title: '',
-    stats: { kills: 0, deaths: 0, battles: 0, breakthrough: 0, offlineMin: 0, meditate: 0, dungeon: 0, encounters: 0, rob: 0 },
-  };
-}
+  hash(s) {
+    let h = 0;
+    for (let i = 0; i < String(s).length; i++) { h = ((h << 5) - h) + String(s).charCodeAt(i); h |= 0; }
+    return (h >>> 0).toString(36);
+  },
 
-/** 老存档迁移：layer(9层) → stage(4阶)，补齐新字段 */
-function migrate(p) {
-  sanitizeSkills(p);
-  if (!p) return p;
-  if (p.stage === undefined && p.layer !== undefined) p.stage = Math.min(3, Math.floor((p.layer || 0) / 3));
-  delete p.layer;
-  const d = newPlayer(p.name || '无名', p.uid);
-  for (const k in d) if (p[k] === undefined) p[k] = d[k];
-  if (!p.cave) p.cave = d.cave;
-  if (!p.cave.lv) p.cave.lv = {};
-  if (!p.cave.store) p.cave.store = {};
-  if (!p.tasks) p.tasks = d.tasks;
-  if (!p.arena) p.arena = d.arena;
-  if (!p.dao) p.dao = d.dao;
-  if (!p.buffs) p.buffs = d.buffs;
-  if (!p.stats) p.stats = d.stats;
-  if (!p.equip) p.equip = d.equip;
-  if (p.equip.talisman === undefined) p.equip.talisman = null;
-  if (!Array.isArray(p.mail)) p.mail = [];
-  if (!Array.isArray(p.skills)) p.skills = [];
-  if (!Array.isArray(p.equipped)) p.equipped = [];
-  if (!Array.isArray(p.beasts)) p.beasts = [];
-  if (!p.root) p.root = 'mixed';
-  if (!p.spot) p.spot = 'valley';
-  if (p.reinc === undefined) p.reinc = 0;
-  if (p.karma === undefined) p.karma = 0;
-  return p;
-}
+  /* ============ 属性计算 ============ */
+  attrs(p) {
+    if (!p) return { ...EX.baseAttr, power: 0 };
+    const r = EX.realmMul(p.realm);
+    const rm = CFG.realm(p.realm);
+    const bonus = rm.bonus || {};
+    const all = 1 + (bonus.all || 0);
 
-/* ---------- 灵根 ---------- */
-function rootInfo(p) {
-  const rs = C().roots;
-  return rs.find((r) => r.id === p.root) || rs.find((r) => r.id === 'mixed');
-}
-function rollRoot() {
-  const cfg = C(), w = cfg.rootWeights || {};
-  const ids = cfg.roots.map((r) => r.id);
-  const total = ids.reduce((s, id) => s + (w[id] || 1), 0);
-  let r = Math.random() * total;
-  for (const id of ids) { r -= (w[id] || 1); if (r <= 0) return id; }
-  return 'mixed';
-}
+    let a = {
+      hp: EX.baseAttr.hp * r * all,
+      mp: EX.baseAttr.mp * r * all,
+      atk: EX.baseAttr.atk * r * all,
+      def: EX.baseAttr.def * r * all,
+      sense: EX.baseAttr.sense * r * all,
+      speed: EX.baseAttr.speed * (1 + p.realm * 0.1),
+      crit: EX.baseAttr.crit + p.realm * 0.004,
+      dodge: EX.baseAttr.dodge + p.realm * 0.003,
+      hit: EX.baseAttr.hit,
+    };
+    // 境界专属加成
+    if (bonus.atk) a.atk *= (1 + bonus.atk);
+    if (bonus.def) a.def *= (1 + bonus.def);
+    if (bonus.mp) a.mp *= (1 + bonus.mp);
+    if (bonus.sense) a.sense *= (1 + bonus.sense);
 
-/* ---------- 境界 ---------- */
-function realmName(p) {
-  const r = C().realms[p.realm];
-  return `${r.name}${C().stages[p.stage]}`;
-}
-function expNeed(p) {
-  const rs = C().realms, r = rs[p.realm];
-  return Math.round(r.expBase * Math.pow(r.expGrowth, p.realm * C().stages.length + p.stage));
-}
-function totalExp(p) {
-  let e = p.exp || 0;
-  const rs = C().realms, N = C().stages.length;
-  for (let i = 0; i < p.realm; i++) e += N * rs[i].expBase * Math.pow(rs[i].expGrowth, i * N + N / 2);
-  return Math.round(e);
-}
-function power(p) {
-  const a = attrs(p);
-  return Math.round((a.atk * 3 + a.def * 2.4 + a.hp * 0.5 + a.mp * 0.3 + a.crit * 220 + a.critDmg * 60 + a.speed * 4) * (1 + p.realm * 0.28));
-}
+    // 灵根加成
+    const rk = p.root;
+    if (rk === '金') a.atk *= 1.12;
+    else if (rk === '土') { a.def *= 1.12; a.hp *= 1.1; }
+    else if (rk === '水') { a.mp *= 1.15; a.sense *= 1.12; }
+    else if (rk === '火') a.atk *= 1.1, a.crit += 0.03;
+    else if (rk === '木') a.hp *= 1.12;
 
-/* ---------- 属性 ---------- */
-function attrs(p) {
-  const cfg = C(), b = cfg.baseAttr;
-  const gr = cfg.growthPerRealm, gs = cfg.growthPerStage;
-  const a = {};
-  for (const k in b) a[k] = b[k] + (gr[k] || 0) * p.realm + (gs[k] || 0) * p.stage;
-
-  // 灵根
-  const rt = rootInfo(p);
-  a.atk *= (rt.atkMul || 1); a.def *= (rt.defMul || 1); a.hp *= 1 + ((rt.expMul || 1) - 1) * 0.3;
-  a.luck = rt.luck || 1;
-
-  // 功法被动（含灵根适配度）
-  const pass = skillPassive(p);
-  for (const k in pass) {
-    if (k === 'exp') continue;
-    a[k] = (a[k] || 0) * (1 + pass[k]) + (pass['flat_' + k] || 0);
-  }
-
-  // 宗门
-  const sb = sectBuff(p);
-  for (const k in sb) if (k !== 'alchemyRate' && k !== 'forgeRate' && k !== 'rob') a[k] = (a[k] || 0) * (1 + sb[k]);
-
-  // 洞府阵法
-  const arr = (cfg.cave.arrays || []).find((x) => x.id === (p.cave && p.cave.array));
-  if (arr && arr.buff) for (const k in arr.buff) if (k !== 'exp') a[k] = (a[k] || 0) * (1 + arr.buff[k]);
-
-  // 装备（强化 + 淬灵）
-  for (const slot of cfg.slots) {
-    const it = p.equip[slot.key];
-    if (!it) continue;
-    const mul = cfg.qualities[it.q].mul * (1 + (it.level || 0) * cfg.enhance.attrPerLevel) * (1 + (it.temper || 0) * cfg.temper.attrPerLevel);
-    a.hp += (it.hp || 0) * mul; a.atk += (it.atk || 0) * mul; a.def += (it.def || 0) * mul;
-    a.crit += (it.crit || 0); a.mp += (it.mp || 0) * mul;
-  }
-
-  // 出战灵兽（继承主人部分属性）
-  const bt = activeBeast(p);
-  if (bt) {
-    const s = beastStats(bt);
-    a.hp += s.hp * 0.5; a.atk += s.atk * 0.6; a.def += s.def * 0.5; a.mp += s.mp * 0.3;
-  }
-
-  // 转世加成
-  if (p.reinc > 0) { const m = 1 + p.reinc * C().reincarnation.bonusPerLife; a.hp *= m; a.atk *= m; a.def *= m; }
-
-  if (p.buffs && p.buffs.pillAtk > Date.now()) a.atk *= 1.25;
-  a.critDmg = a.critDmg || 1.5;
-  for (const k of ['hp', 'mp', 'atk', 'def']) a[k] = Math.round(a[k]);
-  a.speed = +a.speed.toFixed(1);
-  return a;
-}
-
-/* ---------- 修炼 ---------- */
-function expPerSec(p) {
-  const cfg = C();
-  let s = cfg.cultivate.basePerSec + attrs(p).atk * cfg.cultivate.perAtk;
-  s *= Math.pow(cfg.cultivate.perRealm, p.realm);
-  s *= (rootInfo(p).expMul || 1);
-  // 修炼地点
-  const spot = (cfg.cultivateSpots || []).find((x) => x.id === p.spot) || cfg.cultivateSpots[0];
-  if (spot) s *= spot.expMul;
-  // 洞府聚灵阵
-  const lv = (p.cave && p.cave.lv && p.cave.lv.array) || 0;
-  s *= 1 + lv * 0.06;
-  const arr = (cfg.cave.arrays || []).find((x) => x.id === (p.cave && p.cave.array));
-  if (arr && arr.buff && arr.buff.exp) s *= 1 + arr.buff.exp;
-  // 功法被动
-  const pass = skillPassive(p);
-  if (pass.exp) s *= 1 + pass.exp;
-  // 道侣 / 师徒
-  if (p.dao && p.dao.partner) s *= 1 + ((SC().relations || {}).daoLvBonus || {}).exp || 0.15;
-  if (p.dao && p.dao.master) s *= 1 + (((SC().relations || {}).masterBonus || {}).exp || 0.1);
-  if (p.buffs && p.buffs.pillExpUntil > Date.now()) s *= 1.5;
-  const ev = window.NOTICE && window.NOTICE.events;
-  if (ev && ev.doubleExp) s *= (ev.expMul || 2);
-  return s;
-}
-
-function gainExp(p, amount) {
-  p.exp += amount;
-  let ups = 0;
-  const N = C().stages.length;
-  while (p.exp >= expNeed(p)) {
-    p.exp -= expNeed(p);
-    p.stage++;
-    if (p.stage >= N) {
-      p.stage = 0; p.realm++;
-      if (p.realm >= C().realms.length) { p.realm = C().realms.length - 1; p.stage = N - 1; p.exp = 0; break; }
+    // 装备
+    for (const k in (p.equip || {})) {
+      const it = p.equip[k];
+      if (!it) continue;
+      const m = 1 + (it.lv || 0) * 0.12;
+      a.atk += (it.atk || 0) * m;
+      a.def += (it.def || 0) * m;
+      a.hp += (it.hp || 0) * m;
+      a.mp += (it.mp || 0) * m || 0;
+      a.sense += (it.sense || 0) * m || 0;
     }
-    ups++;
-  }
-  p.stats.breakthrough = (p.stats.breakthrough || 0) + ups;
-  return ups;
-}
-
-/** 离线结算（含洞府产出） */
-function offlineSettle(p) {
-  const now = Date.now();
-  let sec = (now - (p.lastTick || now)) / 1000;
-  const max = C().offlineMaxHours * 3600;
-  if (sec < 5) { p.lastTick = now; return { exp: 0, seconds: 0, ups: 0 }; }
-  if (sec > max) sec = max;
-  const gained = expPerSec(p) * sec;
-  const ups = gainExp(p, gained);
-  p.stats.offlineMin = Math.round((p.stats.offlineMin || 0) + sec / 60);
-  p.lastTick = now;
-  return { exp: gained, seconds: sec, ups };
-}
-
-/* ---------- 闭关（带冷却） ---------- */
-function meditateCdLeft(p) {
-  return Math.max(0, Math.ceil(((p.meditateUntil || 0) - Date.now()) / 1000));
-}
-function meditate(p) {
-  const m = C().meditate || { cdSeconds: 300, gainSeconds: 180 };
-  const left = meditateCdLeft(p);
-  if (left > 0) return { ok: false, msg: `心神未复，还需调息 ${Math.floor(left / 60)}分${left % 60}秒`, left };
-  const gain = expPerSec(p) * m.gainSeconds;
-  const ups = gainExp(p, gain);
-  p.meditateUntil = Date.now() + m.cdSeconds * 1000;
-  p.stats.meditate = (p.stats.meditate || 0) + 1;
-  return { ok: true, gain, ups, cd: m.cdSeconds, msg: `闭关得 ${Math.round(gain)} 修为` };
-}
-
-/** 清洗无效功法（配置更换后残留的旧 ID） */
-function sanitizeSkills(p) {
-  const pool = (window.GAME_CONTENT && GAME_CONTENT.skills) || [];
-  if (!pool.length) return;
-  const ids = new Set(pool.map((s) => s.id));
-  p.skills = (p.skills || []).filter((s) => ids.has(s.id));
-  p.equipped = (p.equipped || []).filter((id) => ids.has(id));
-}
-
-/* ---------- 突破 / 渡劫 ---------- */
-function breakthrough(p) {
-  const cfg = C();
-  if (p.stage !== cfg.stages.length - 1) return { ok: false, msg: '需先修至本境【巅峰】' };
-  if (p.realm >= cfg.realms.length - 1) { p.stage = cfg.stages.length - 1; p.exp = 0; return { ok: false, msg: '已登仙境之巅，天道尽头' }; }
-  // 《凡人修仙传》真实突破条件：大境界需备丹药
-  if (window.FRXX && FRXX.loaded) {
-    const chk = FRXX.hasBreakPill(p);
-    if (!chk.ok) {
-      return { ok: false, msg: `需【${chk.need.name}×${chk.need.n}】方可破境（现存 ${chk.own}）`, needPill: chk.need };
+    // 功法/法宝加成（已装备的法宝类）
+    for (const sk of (p.skills || [])) {
+      const d = CFG.skillById(sk);
+      if (!d) continue;
+      if ((d.eff || '').indexOf('剑伤') >= 0) a.atk *= 1.3;
+      if ((d.eff || '').indexOf('神识') >= 0) a.sense *= 1.4;
+      if ((d.eff || '').indexOf('法力') >= 0) a.mp *= 1.5;
+      if ((d.eff || '').indexOf('神魂') >= 0) a.sense *= 1.5;
+      if ((d.eff || '').indexOf('全属性') >= 0) { a.atk *= 1.3; a.def *= 1.3; a.hp *= 1.3; a.mp *= 1.3; }
+      if ((d.eff || '').indexOf('遁速') >= 0) a.speed *= 1.3;
+      if ((d.eff || '').indexOf('防御') >= 0) a.def *= 1.15;
+      if ((d.eff || '').indexOf('攻击') >= 0) a.atk *= 1.1;
+      if ((d.eff || '').indexOf('修炼速度') >= 0) a.speed *= 1.05;
     }
-    if (chk.need) { FRXX.consumePillByName(p, chk.need.name, chk.need.n); p._pillBoost = 0.35; }
-  }
-  let rate = Math.max(0.25, cfg.breakthrough.baseRate - p.realm * 0.03);
-  if (p._pillBoost) { rate += p._pillBoost; p._pillBoost = 0; }
-  // 渡劫丹
-  if (hasItem(p, 'pill_break', 1)) { consume(p, 'pill_break', 1); rate += 0.25; }
-  if (Math.random() < rate) {
-    p.realm++; p.stage = 0; p.exp = 0;
-    return { ok: true, msg: `渡劫成功！突破至【${cfg.realms[p.realm].name}】`, realm: p.realm };
-  }
-  p.exp = Math.round(p.exp * cfg.breakthrough.failKeepExp + expNeed(p) * 0.3);
-  return { ok: false, msg: '天劫降临，突破失败，修为受损', canReincarnate: true };
-}
-
-function reincarnate(p) {
-  const cfg = C().reincarnation;
-  const keep = Math.round(totalExp(p) * cfg.keepRatio);
-  const life = (p.reinc || 0) + 1;
-  const fresh = newPlayer(p.name, p.uid, { gender: p.gender, avatar: p.avatar, root: p.root, sect: p.sect });
-  fresh.pwd = p.pwd;
-  fresh.reinc = life;
-  fresh.stone = Math.round(p.stone * 0.5);
-  fresh.codes = p.codes || [];
-  fresh.createdAt = p.createdAt;
-  // 转世不失本心：派系、性情、掌天瓶、仙缘、见闻皆随魂魄同行
-  fresh.faction = p.faction; fresh.trait = p.trait;
-  fresh.bottle = p.bottle || { liquid: 0, acc: 0, level: 1 };
-  fresh.partners = p.partners || {};
-  fresh.storyIdx = p.storyIdx || 0;
-  fresh.mapsSeen = p.mapsSeen || [];
-  fresh.dungeonCleared = p.dungeonCleared || [];
-  fresh.bonusWuxing = (p.bonusWuxing || 0);
-  // 本命功法随身（降为 1 层）
-  if (window.FRXX && FRXX.loaded && p.faction) {
-    const f = FRXX.faction(p.faction);
-    const pool = (window.GAME_CONTENT && GAME_CONTENT.skills) || [];
-    const sk = pool.find((x) => x.name === f.core) || pool[0];
-    if (sk) { fresh.skills = [{ id: sk.id, level: 1 }]; fresh.equipped = [sk.id]; }
-  }
-  Object.assign(p, fresh);
-  gainExp(p, keep);
-  return { ok: true, msg: `转世成功！第 ${life} 世，保留 ${keep} 修为，天赋永久 +${Math.round(life * cfg.bonusPerLife * 100)}%` };
-}
-
-/* ---------- 物品 ---------- */
-function itemCount(p, ref) {
-  let n = 0;
-  for (const it of p.bag) if ((it.ref || it.id) === ref) n += (it.count || 1);
-  return n;
-}
-function hasItem(p, ref, n = 1) { return itemCount(p, ref) >= n; }
-function consume(p, ref, n = 1) {
-  let need = n;
-  for (let i = p.bag.length - 1; i >= 0 && need > 0; i--) {
-    const it = p.bag[i];
-    if ((it.ref || it.id) !== ref) continue;
-    const c = it.count || 1;
-    if (c <= need) { p.bag.splice(i, 1); need -= c; }
-    else { it.count = c - need; need = 0; }
-  }
-  return need === 0;
-}
-function addItem(p, item) {
-  if (item.count) {
-    const ex = p.bag.find((x) => (x.ref || x.id) === (item.ref || item.id));
-    if (ex) { ex.count = (ex.count || 1) + item.count; return ex; }
-  }
-  if (p.bag.length >= 80) p.bag.shift();
-  if (!item.id) item.id = 'i_' + Math.random().toString(36).slice(2, 9);
-  p.bag.push(item);
-  return item;
-}
-function addHerb(p, ref, n = 1) {
-  const h = (CT().herbs || []).find((x) => x.id === ref);
-  if (!h) return null;
-  return addItem(p, { kind: 'herb', ref, name: h.name, icon: h.icon, price: h.price, count: n, desc: '炼丹材料' });
-}
-function addOre(p, ref, n = 1) {
-  const o = (CT().ores || []).find((x) => x.id === ref);
-  if (!o) return null;
-  return addItem(p, { kind: 'ore', ref, name: o.name, icon: o.icon, price: o.price, count: n, desc: '炼器材料' });
-}
-function addPill(p, ref, n = 1) {
-  const cfg = C();
-  const pl = (cfg.pills || []).find((x) => x.id === ref) || extraPill(ref);
-  if (!pl) return null;
-  return addItem(p, { kind: 'pill', ref, name: pl.name, icon: pl.icon, desc: pl.desc, price: pl.price || 100, count: n });
-}
-function extraPill(ref) {
-  const map = {
-    pill_break: { name: '渡劫丹', icon: '💊', desc: '突破成功率 +25%', price: 600 },
-    pill_root: { name: '洗髓丹', icon: '🧬', desc: '可重洗灵根', price: 2000 },
-    pill_zen: { name: '悟道金丹', icon: '🌟', desc: '永久悟性 +5', price: 5000 },
-  };
-  return map[ref];
-}
-
-/* ---------- 装备 ---------- */
-/** 真实法宝掉落（《凡人修仙传》07_法宝装备） */
-function randFrEquip(realmIdx) {
-  const pool = ((window.GAME_CONTENT && GAME_CONTENT.equipDrops) || []).map((id) => {
-    const r = ((window.GAME_CONTENT && GAME_CONTENT.forge && GAME_CONTENT.forge.recipes) || []).find((x) => x.id === id);
-    return r ? { id, name: r.name, icon: r.icon, q: r.q, slot: r.slot } : null;
-  }).filter(Boolean);
-  if (!pool.length) return null;
-  // 按境界筛选：只允许掉落不高于自身境界太多阶的
-  const cap = Math.min(4, Math.floor(realmIdx / 6));
-  const ok = pool.filter((x) => x.q <= cap + 1);
-  const list = ok.length ? ok : pool;
-  return list[Math.floor(Math.random() * list.length)];
-}
-
-function randItem(mapIndex, realmIdx) {
-  const cfg = C();
-  const qRoll = Math.random();
-  let q = 0;
-  if (qRoll > 0.985) q = 4; else if (qRoll > 0.93) q = 3; else if (qRoll > 0.75) q = 2; else if (qRoll > 0.45) q = 1;
-  const pool = cfg.slots.filter((s) => s.key !== 'artifact');
-  const slot = pool[Math.floor(Math.random() * pool.length)];
-  const scale = 1 + realmIdx * 0.9 + mapIndex * 0.6;
-  const names = {
-    weapon: ['青锋剑', '玄铁刀', '灵蛇杖', '诛仙剑', '混元幡'],
-    armor: ['玄龟甲', '云锦袍', '锁子金甲', '太极道衣', '麒麟铠'],
-    helmet: ['紫金冠', '玄铁盔', '玉清冠', '狻猊盔', '混元盔'],
-    necklace: ['养魂链', '聚灵珠', '破妄链', '阴阳环', '太虚锁'],
-    bracelet: ['玄铁护腕', '云锦护腕', '锁金腕', '太极腕', '麒麟腕'],
-    boots: ['踏云靴', '玄铁靴', '追风靴', '太极履', '麒麟靴'],
-    ring: ['聚灵戒', '养魂环', '破妄戒', '阴阳环', '太虚戒'],
-    artifact: ['混元幡', '山河印', '定海珠', '焚天塔', '太极图'],
-  };
-  const nmArr = names[slot.key] || names.weapon;
-  const nm = nmArr[Math.floor(Math.random() * nmArr.length)];
-  return {
-    id: 'it_' + Math.random().toString(36).slice(2, 9), kind: 'equip', slot: slot.key, q, level: 0, temper: 0,
-    name: `${cfg.qualities[q].name}·${nm}`,
-    atk: Math.round(({ weapon: 16, artifact: 12, ring: 6, bracelet: 5, helmet: 2, armor: 2, boots: 3, necklace: 4 }[slot.key] || 3) * scale * (0.8 + Math.random() * 0.5)),
-    def: Math.round(({ armor: 12, helmet: 8, boots: 5, bracelet: 4, weapon: 2, artifact: 3, ring: 2, necklace: 2 }[slot.key] || 3) * scale * (0.8 + Math.random() * 0.5)),
-    hp: Math.round(({ armor: 80, helmet: 45, boots: 35, bracelet: 25, weapon: 15, artifact: 30, ring: 20, necklace: 25 }[slot.key] || 25) * scale * (0.8 + Math.random() * 0.5)),
-    crit: q >= 3 ? 0.02 : 0, mp: Math.round(10 * scale),
-  };
-}
-function equipItem(p, item) {
-  const old = p.equip[item.slot];
-  p.equip[item.slot] = item;
-  p.bag = p.bag.filter((x) => x.id !== item.id);
-  if (old) p.bag.push(old);
-}
-function enhanceCost(item) {
-  const cfg = C();
-  return Math.round(cfg.enhance.costBase * Math.pow(cfg.enhance.costGrowth, item.level || 0) * cfg.qualities[item.q].mul);
-}
-function temperCost(item) {
-  const cfg = C();
-  return Math.round(cfg.temper.costBase * Math.pow(cfg.temper.costGrowth, item.temper || 0) * cfg.qualities[item.q].mul);
-}
-function enhance(p, item) {
-  const cfg = C();
-  if ((item.level || 0) >= cfg.enhance.maxLevel) return { ok: false, msg: '已达最高强化等级' };
-  const cost = enhanceCost(item);
-  if (p.stone < cost) return { ok: false, msg: `灵石不足（需 ${cost}）` };
-  p.stone -= cost;
-  if (Math.random() < 1 - (item.level || 0) * 0.06) { item.level = (item.level || 0) + 1; return { ok: true, msg: `强化成功！${item.name} +${item.level}` }; }
-  return { ok: false, msg: '强化失败，灵石消散' };
-}
-function temper(p, item) {
-  const cfg = C();
-  if ((item.temper || 0) >= cfg.temper.maxLevel) return { ok: false, msg: '已达最高淬灵等级' };
-  const cost = temperCost(item);
-  if (p.stone < cost) return { ok: false, msg: `灵石不足（需 ${cost}）` };
-  p.stone -= cost;
-  if (Math.random() < 1 - (item.temper || 0) * 0.1) { item.temper = (item.temper || 0) + 1; return { ok: true, msg: `淬灵成功！${item.name} 淬灵+${item.temper}` }; }
-  return { ok: false, msg: '淬灵失败，宝光黯淡' };
-}
-function devour(p, target, foodId) {
-  const idx = p.bag.findIndex((x) => x.id === foodId);
-  if (idx < 0) return { ok: false, msg: '材料不存在' };
-  const food = p.bag[idx];
-  const cfg = C();
-  const gain = cfg.devour.expPerQuality * ((food.q || 0) + 1) + (food.level || 0) * 2;
-  p.bag.splice(idx, 1);
-  const cost = Math.round(cfg.devour.levelPerStage * (1 + (target.level || 0)) * 40);
-  if (p.stone < cost) return { ok: false, msg: `灵石不足（炼化需 ${cost}）` };
-  p.stone -= cost;
-  if ((target.level || 0) < cfg.enhance.maxLevel && Math.random() < 0.7) {
-    target.level = (target.level || 0) + 1;
-    return { ok: true, msg: `炼化 ${food.name}，${target.name} 强化至 +${target.level}` };
-  }
-  return { ok: true, msg: `炼化 ${food.name}，宝物汲取了灵韵（+${gain} 经验）`, exp: gain };
-}
-function sellItem(p, item) {
-  const cfg = C();
-  let price = 60;
-  if (item.kind === 'mat' || item.kind === 'herb' || item.kind === 'ore') price = (item.price || 50) * (item.count || 1);
-  else if (item.kind === 'pill') price = (item.price || 100) * (item.count || 1);
-  else price = Math.round((60 + (item.atk || 0) * 2 + (item.def || 0) * 2 + (item.hp || 0) * 0.4) * cfg.qualities[item.q || 0].mul * (1 + (item.level || 0) * 0.3 + (item.temper || 0) * 0.4));
-  p.stone += price;
-  p.bag = p.bag.filter((x) => x.id !== item.id);
-  return price;
-}
-function usePill(p, pill) {
-  const id = pill.ref || pill.id;
-  if (id === 'pill_hp') return { ok: false, msg: '战斗中自动使用' };
-  if (id === 'pill_atk') p.buffs.pillAtk = Date.now() + 10 * 60 * 1000;
-  if (id === 'pill_exp') p.buffs.pillExpUntil = Date.now() + 30 * 60 * 1000;
-  if (id === 'pill_break') return { ok: false, msg: '渡劫时自动消耗' };
-  if (id === 'pill_root') { const r = rollRoot(); p.root = r; return { ok: true, msg: `洗髓成功，灵根变为【${rootInfo(p).name}】`, reroll: true }; }
-  if (id === 'pill_zen') { p.bonusWuxing = (p.bonusWuxing || 0) + 5; return { ok: true, msg: '悟道金丹下肚，悟性永久 +5' }; }
-  p.bag = p.bag.filter((x) => x.id !== pill.id);
-  return { ok: true, msg: `服用${pill.name}，药力发作！` };
-}
-
-/* ---------- 战斗 ---------- */
-function pickActiveSkill(p, mp, cdMap) {
-  const ct = CT();
-  const list = (p.equipped || []).map((id) => (ct.skills || []).find((s) => s.id === id)).filter((s) => s && s.active);
-  const ready = list.filter((s) => (s.active.mp || 0) <= mp && !(cdMap || {})[s.id]);
-  if (!ready.length) return null;
-  ready.sort((a, b) => (b.active.mult || 1) - (a.active.mult || 1));
-  return ready[0];
-}
-
-function battle(player, monster, mapIndex, opt = {}) {
-  const a = attrs(player);
-  let php = a.hp, mhp = monster.hp, mp = a.mp;
-  let round = 0, healUsed = false, shield = 0, burn = 0, slow = 0;
-  const cdMap = {}, logs = [];
-  const beast = activeBeast(player);
-  const bs = beast ? beastStats(beast) : null;
-
-  const hitRoll = (attackerHit, targetDodge) => Math.random() < Math.max(0.35, Math.min(0.98, attackerHit - targetDodge));
-  const dmg = (atk, def, crit, critDmg, anticrit, mustCrit) => {
-    const base = atk * (0.9 + Math.random() * 0.25) - def * 0.32;
-    let v = Math.max(1, Math.round(base));
-    let isCrit = mustCrit || (Math.random() < Math.max(0, crit - (anticrit || 0)));
-    if (isCrit) v = Math.round(v * critDmg);
-    return { v, isCrit };
-  };
-
-  while (round < 30 && php > 0 && mhp > 0) {
-    round++;
-    for (const k in cdMap) if (cdMap[k] > 0) cdMap[k]--;
-    const first = (a.speed * (1 - slow)) >= monster.speed;
-    const turns = first ? ['p', 'b', 'm'] : ['m', 'p', 'b'];
-
-    for (const who of turns) {
-      if (php <= 0 || mhp <= 0) break;
-      if (who === 'p') {
-        const sk = pickActiveSkill(player, mp, cdMap);
-        if (sk) {
-          mp -= sk.active.mp || 0;
-          cdMap[sk.id] = sk.active.cd || 2;
-          const d = dmg(a.atk * (sk.active.mult || 1), monster.def, a.crit, a.critDmg, 0, sk.active.mustCrit);
-          mhp -= d.v;
-          if (sk.active.lifesteal) php = Math.min(a.hp, php + d.v * sk.active.lifesteal);
-          if (sk.active.shield) shield = Math.round(a.hp * sk.active.shield);
-          if (sk.active.heal) php = Math.min(a.hp, php + a.hp * sk.active.heal);
-          if (sk.active.burn) burn = sk.active.burn;
-          if (sk.active.slow) slow = sk.active.slow;
-          logs.push({ who: 'p', skill: sk.name, text: `施展【${sk.name}】，对${monster.name}造成 ${d.v} 伤害`, crit: d.isCrit, mhp });
-        } else {
-          if (!hitRoll(a.hit, monster.dodge || 0.05)) { logs.push({ who: 'p', miss: true, text: `你的一击被${monster.name}闪开` }); }
-          else {
-            const d = dmg(a.atk, monster.def, a.crit, a.critDmg, 0, false);
-            mhp -= d.v;
-            logs.push({ who: 'p', text: `你挥出神通，对${monster.name}造成 ${d.v} 伤害`, crit: d.isCrit, mhp });
-          }
-        }
-      } else if (who === 'b') {
-        if (!bs) continue;
-        const d = dmg(bs.atk * (bs.skillMult || 1.4), monster.def, 0.06, 1.5, 0, Math.random() < 0.2);
-        mhp -= d.v;
-        logs.push({ who: 'b', beast: bs.name, text: `灵兽 ${bs.name} 施展【${bs.skill}】，造成 ${d.v} 伤害`, crit: d.isCrit, mhp });
-      } else {
-        if (!hitRoll(0.9, a.dodge)) { logs.push({ who: 'm', miss: true, text: `${monster.name}的攻击被你闪过` }); }
-        else {
-          const d = dmg(monster.atk, a.def, 0.05, 1.4, a.anticrit, false);
-          let v = d.v;
-          if (shield > 0) { const abs = Math.min(shield, v); shield -= abs; v -= abs; }
-          php -= v;
-          logs.push({ who: 'm', text: `${monster.name}反击，你受到 ${v} 点伤害`, php });
-          if (!healUsed && php < a.hp * 0.35) {
-            const idx = player.bag.findIndex((x) => (x.ref || x.id) === 'pill_hp');
-            if (idx >= 0) {
-              player.bag[idx].count = (player.bag[idx].count || 1) - 1;
-              if (player.bag[idx].count <= 0) player.bag.splice(idx, 1);
-              php = Math.min(a.hp, php + a.hp * 0.3); healUsed = true;
-              logs.push({ who: 'p', text: '你服下回气丹，气血回升！', heal: true, php });
-            }
-          }
-        }
+    // 灵宠出战
+    if (p.petOut) {
+      const pet = (p.pets || []).find((x) => x.id === p.petOut);
+      if (pet) {
+        const m = 1 + (pet.lv || 1) * 0.15;
+        a.atk += 30 * m; a.hp += 200 * m;
+        if (pet.evo === '虫王') a.atk *= 1.25;
       }
     }
-    if (burn > 0 && mhp > 0) { const bd = Math.round(monster.hp * burn); mhp -= bd; logs.push({ who: 'p', text: `灼烧持续，${monster.name} 损失 ${bd} 气血`, burn: true, mhp }); }
-  }
-  return { win: mhp <= 0, php: Math.max(0, Math.round(php)), mhp: Math.max(0, Math.round(mhp)), round, logs, mp: Math.max(0, Math.round(mp)) };
-}
-
-function battleReward(p, mapIndex, win, monster) {
-  const cfg = C();
-  const map = cfg.maps[mapIndex];
-  const ev = window.NOTICE && window.NOTICE.events;
-  let stone = 0, exp = 0, drops = [], ups = 0;
-  if (win) {
-    stone = Math.round(map.stone * (0.85 + Math.random() * 0.3));
-    exp = Math.round(map.exp * (0.85 + Math.random() * 0.3));
-    if (ev && ev.doubleStone) stone *= (ev.stoneMul || 2);
-    if (ev && ev.doubleExp) exp *= (ev.expMul || 2);
-    const rt = rootInfo(p);
-    p.stone += stone; ups = gainExp(p, exp);
-    p.stats.kills++;
-    if (Math.random() < map.dropRate) drops.push(addItem(p, randItem(mapIndex, p.realm)));
-    // 真实法宝（稀有）
-    if (Math.random() < 0.05) {
-      const fe = randFrEquip(p.realm);
-      if (fe) {
-        const rec = ((window.GAME_CONTENT && GAME_CONTENT.forge && GAME_CONTENT.forge.recipes) || []).find((x) => x.id === fe.id);
-        if (rec) drops.push(addItem(p, { id: 'fr_' + fe.id, name: fe.name, icon: fe.icon, kind: 'equip', q: fe.q, slot: fe.slot, base: rec.base || {}, enh: 0, temp: 0, fr: true }));
-      }
+    // 傀儡出战
+    if (p.puppetOut) {
+      const pu = (p.puppets || []).find((x) => x.id === p.puppetOut);
+      if (pu) { a.atk += 80 * (1 + (pu.lv || 1) * 0.2); a.def += 40; }
     }
-    if (map.herbs && Math.random() < 0.45) drops.push(addHerb(p, map.herbs[Math.floor(Math.random() * map.herbs.length)], 1));
-    if (map.ores && Math.random() < 0.35) drops.push(addOre(p, map.ores[Math.floor(Math.random() * map.ores.length)], 1));
-  } else {
-    p.stats.deaths++;
-    exp = Math.round(map.exp * 0.1); ups = gainExp(p, exp);
-  }
-  p.stats.battles++;
-  return { stone, exp, drops, ups };
-}
+    // 称号
+    const t = EX.titles.find((x) => x.id === p.titleCur);
+    if (t) for (const k in (t.buff || {})) {
+      if (k === 'all') { a.atk *= (1 + t.buff[k]); a.def *= (1 + t.buff[k]); a.hp *= (1 + t.buff[k]); a.mp *= (1 + t.buff[k]); }
+      else if (k === 'crit') a.crit += t.buff[k];
+      else if (a[k] !== undefined) a[k] *= (1 + t.buff[k]);
+    }
+    // 洞府聚灵阵
+    const cl = (p.cave && p.cave.lv && p.cave.lv.array) || 1;
+    a.mp *= (1 + cl * 0.05);
+    return a;
+  },
 
-function redeemCode(p, code) {
-  const cfg = C();
-  const key = String(code || '').trim().toUpperCase();
-  const g = cfg.giftCodes[key];
-  if (!g) return { ok: false, msg: '礼包码无效' };
-  if ((p.codes || []).includes(key)) return { ok: false, msg: '该礼包码已领取' };
-  p.codes = p.codes || []; p.codes.push(key);
-  if (g.stone) p.stone += g.stone;
-  if (g.exp) gainExp(p, g.exp);
-  if (g.herb) addHerb(p, 'herb_green', g.herb);
-  return { ok: true, msg: `领取成功：${g.desc}` };
-}
+  power(p) {
+    const a = this.attrs(p);
+    return Math.round(a.atk * 2.4 + a.def * 2.8 + a.hp * 0.35 + a.mp * 0.5 + a.sense * 1.2 + a.crit * 800 + a.speed * 12);
+  },
 
+  maxHp(p) { return Math.round(this.attrs(p).hp); },
+  maxMp(p) { return Math.round(this.attrs(p).mp); },
 
-/* ---------- 灵兽 ---------- */
-function activeBeast(p) {
-  const i = p.activeBeast;
-  if (i === undefined || i === null || i < 0) return null;
-  return p.beasts[i] || null;
-}
-function beastStats(b) {
-  const ct = CT(), cfg = ct.beast || {};
-  const base = (ct.beasts || []).find((x) => x.id === b.ref) || ct.beasts[0];
-  const lv = b.level || 1;
-  const apt = b.apt || cfg.aptBase || 1;
-  const stageMul = 1 + (b.stage || 0) * 0.45;
-  return {
-    name: b.name || base.name, skill: base.skill, skillMult: base.skillMult,
-    hp: Math.round(base.hp * apt * stageMul + (base.growHp || 5) * lv),
-    atk: Math.round((base.atk + (base.growAtk || 1) * lv) * apt * stageMul),
-    def: Math.round(base.def * apt * stageMul),
-    mp: 20 + lv * 5,
-    speed: base.speed,
-    ride: !!base.ride,
-  };
-}
-function beastExpNeed(b) {
-  const cfg = CT().beast || {};
-  return Math.round((cfg.levelExpBase || 50) * Math.pow(cfg.levelExpGrowth || 1.35, (b.level || 1) - 1));
-}
+  /* ============ 五行克制 ============ */
+  /** 返回伤害倍率：克制1.35，被克0.75，其余1 */
+  counterMul(atkW, defW) {
+    if (!atkW || !defW) return 1;
+    if (EX.counter[atkW] === defW) return 1.35;
+    if (EX.counter[defW] === atkW) return 0.75;
+    return 1;
+  },
 
-/* ---------- 宗门 / 洞府增益 ---------- */
-function sectBuff(p) {
-  const s = (SC().sects || []).find((x) => x.id === p.sect);
-  if (!s) return {};
-  const info = p.sectInfo || {};
-  const rankIdx = info.rankIdx || 0;
-  const mul = 1 + rankIdx * 0.12;
-  const out = {};
-  for (const k in (s.buff || {})) out[k] = s.buff[k] * mul;
-  return out;
-}
-function caveOutputPerHour(p, type) {
-  const cfg = C().cave.buildings || [];
-  let sum = 0;
-  for (const b of cfg) {
-    if (b.outType !== type) continue;
-    sum += (p.cave.lv[b.id] || 0) * b.outPerHour;
-  }
-  return sum;
-}
+  /* ============ 伤害计算 ============ */
+  /** defP 可以是玩家，也可以是战斗体(foe)；战斗体直接用自身数值 */
+  foeAttrs(d) {
+    if (!d) return { hp: 1, mp: 0, atk: 0, def: 0, sense: 0, speed: 0, crit: 0, dodge: 0, hit: 0.9 };
+    if (d.maxHp !== undefined) return {      // 战斗体
+      hp: d.maxHp || 1, mp: d.sense || 0, atk: d.atk || 0, def: d.def || 0,
+      sense: d.sense || 0, speed: d.speed || 0, crit: d.crit || 0,
+      dodge: d.dodge || 0, hit: d.hit === undefined ? 0.9 : d.hit,
+    };
+    return this.attrs(d);                     // 玩家
+  },
 
-/* ---------- 供 systems.js 使用的桩（本文件先定义，systems.js 覆盖增强） ---------- */
-window.ENGINE = {
-  newPlayer, migrate, sanitizeSkills, activeBeast, beastStats, beastExpNeed, sectBuff, caveOutputPerHour, rootInfo, rollRoot, realmName, expNeed, totalExp, power, attrs,
-  expPerSec, gainExp, offlineSettle, meditate, meditateCdLeft, breakthrough, reincarnate,
-  itemCount, hasItem, consume, addItem, addHerb, addOre, addPill, extraPill,
-  equipItem, randItem, enhance, enhanceCost, temper, temperCost, devour, sellItem, usePill,
-  pickActiveSkill, battle, battleReward, redeemCode,
+  calcDamage(atkP, defP, mul, skillW) {
+    const A = this.attrs(atkP), D = this.foeAttrs(defP);
+    const cw = this.counterMul(skillW, defP ? defP.root : null);
+    let dmg = A.atk * (mul || 1) * cw;
+    // 防御减伤
+    dmg *= (1 - Math.min(0.62, D.def / (D.def + 900)));
+    // 暴击
+    const crit = Math.random() < A.crit;
+    if (crit) dmg *= 1.85;
+    // 闪避
+    const dodge = Math.random() < (D.dodge || 0);
+    // 浮动
+    dmg *= 0.9 + Math.random() * 0.2;
+    return { dmg: Math.max(1, Math.round(dmg)), crit, dodge, counter: cw };
+  },
+
+  /* ============ 修为与境界 ============ */
+  expNeed(p) { return EX.expNeed(p.realm, p.layer); },
+  layerMax(p) { return EX.layerCount(p.realm); },
+
+  /** 加修为，自动升级小层 */
+  gainExp(p, n) {
+    p.exp += n;
+    let up = 0;
+    let guard = 0;
+    const maxL = this.layerMax(p);
+    while (guard++ < 200) {
+      const need = this.expNeed(p);
+      // 已到本境界最高层且修为已满 → 停满，不再计入升级（避免「修为精进」刷屏）
+      if (p.layer >= maxL - 1 && p.exp >= need) { p.exp = need; break; }
+      if (p.exp < need) break;
+      p.exp -= need;
+      p.layer++;
+      up++;
+      if (p.layer >= maxL) { p.layer = maxL - 1; p.exp = need; break; }
+    }
+    return up;
+  },
+
+  /** 是否已圆满（可突破） */
+  isFull(p) {
+    return p.layer >= this.layerMax(p) - 1 && p.exp >= this.expNeed(p) * 0.999;
+  },
+
+  /** 突破到大境界：需丹药 + 心魔/渡劫 */
+  canBreak(p) {
+    if (!this.isFull(p)) return { ok: false, msg: '修为未圆满' };
+    if (p.realm >= CFG.realmCount - 1) return { ok: false, msg: '已至顶峰' };
+    const rm = CFG.realm(p.realm);
+    const cond = rm.breakCond || '';
+    // 找需要的丹药（突破条件里含"丹"）
+    let needPill = null;
+    const mm = cond.match(/([\u4e00-\u9fa5]+丹)/);
+    if (mm) needPill = mm[1];
+    if (needPill) {
+      const own = (p.bag || []).some((x) => (x.n || '').indexOf(needPill) >= 0);
+      if (!own) return { ok: false, msg: '需要【' + needPill + '】（炼丹/副本获取）', pill: needPill };
+    }
+    return { ok: true, msg: '可以突破', pill: needPill };
+  },
+
+  doBreak(p) {
+    const c = this.canBreak(p);
+    if (!c.ok) return c;
+    // 消耗丹药
+    if (c.pill) {
+      const i = (p.bag || []).findIndex((x) => (x.n || '').indexOf(c.pill) >= 0);
+      if (i >= 0) { p.bag[i].cnt--; if (p.bag[i].cnt <= 0) p.bag.splice(i, 1); }
+    }
+    // 成功率：基础 + 丹药加成
+    let rate = 0.55;
+    if (c.pill === '降尘丹') rate += 0.2;
+    if (c.pill === '凝婴丹') rate += 0.15;
+    rate = Math.min(0.95, rate);
+    const win = Math.random() < rate;
+    if (win) {
+      p.realm++; p.layer = 0; p.exp = 0;
+      p.stats.breaks = (p.stats.breaks || 0) + 1;
+      p.hp = 0; p.mp = 0;
+      // 解锁奖励
+      const rm = CFG.realm(p.realm);
+      return { ok: true, msg: '突破成功！晋升【' + rm.name + '】', unlock: rm.unlock, realm: p.realm };
+    }
+    // 失败惩罚
+    const rm = CFG.realm(p.realm);
+    const pen = rm.failPenalty || '';
+    if (pen.indexOf('重创') >= 0 || pen.indexOf('跌落') >= 0) {
+      p.exp = Math.round(p.exp * 0.5);
+      if (p.realm > 0 && Math.random() < 0.3) { p.realm--; p.layer = EX.layerCount(p.realm) - 1; p.exp = Math.round(EX.expNeed(p.realm, p.layer) * 0.8); }
+      return { ok: false, msg: '渡劫失败，身受重创，修为大损', hard: true };
+    }
+    p.exp = Math.round(p.exp * 0.7);
+    return { ok: false, msg: '突破失败，修为受损（' + Math.round(rate * 100) + '% 成功率）' };
+  },
+
+  /* ============ 背包 ============ */
+  addItem(p, name, cnt, extra) {
+    cnt = cnt || 1;
+    const def = CFG.itemByName(name) || {};
+    const ex = (p.bag || []).find((x) => x.n === name && !x.lv);
+    if (ex && def.type !== '装备') { ex.cnt += cnt; return ex; }
+    const it = {
+      n: name, cnt, type: def.type || extra?.type || '材料',
+      q: def.q || extra?.q || '下品',
+      icon: extra?.icon || this.iconFor(def.type),
+      atk: extra?.atk || 0, def: extra?.def || 0, hp: extra?.hp || 0,
+      mp: extra?.mp || 0, sense: extra?.sense || 0,
+      slot: extra?.slot || null, lv: 0,
+    };
+    p.bag = p.bag || [];
+    p.bag.push(it);
+    if (p.bag.length > 120) p.bag.shift();
+    return it;
+  },
+
+  iconFor(type) {
+    const m = { '丹药': '💊', '灵草': '🌿', '材料': '🪨', '货币': '💎', '法宝': '🔮', '符箓': '📜', '装备': '⚔️', '功法': '📕', '道具': '🎒' };
+    return m[type] || '📦';
+  },
+
+  hasItem(p, name, cnt) {
+    const it = (p.bag || []).find((x) => x.n === name);
+    return it && (it.cnt || 0) >= (cnt || 1);
+  },
+  useItem(p, name, cnt) {
+    const it = (p.bag || []).find((x) => x.n === name);
+    if (!it) return false;
+    it.cnt -= (cnt || 1);
+    if (it.cnt <= 0) p.bag.splice(p.bag.indexOf(it), 1);
+    return true;
+  },
+
+  /* ============ 装备 ============ */
+  equipItem(p, idx) {
+    const it = p.bag[idx];
+    if (!it || !it.slot) return { ok: false, msg: '不可装备' };
+    const old = p.equip[it.slot];
+    p.equip[it.slot] = it;
+    p.bag.splice(idx, 1);
+    if (old) p.bag.push(old);
+    return { ok: true, msg: '已装备【' + it.n + '】' };
+  },
+  unequip(p, slot) {
+    const it = p.equip[slot];
+    if (!it) return { ok: false, msg: '空槽位' };
+    delete p.equip[slot];
+    p.bag.push(it);
+    return { ok: true, msg: '已卸下' };
+  },
+
+  /* ============ 任务 ============ */
+  curMain(p) {
+    const list = CFG.mainQuests();
+    return list[Math.min(p.quest.main, list.length - 1)];
+  },
+  mainProgress(p) {
+    const list = CFG.mainQuests();
+    return { cur: Math.min(p.quest.main, list.length), total: list.length, done: p.quest.main >= list.length };
+  },
+
+  /* ============ 离线收益 ============ */
+  offline(p, minutes) {
+    minutes = Math.min(minutes, 720);
+    if (minutes < 1) return null;
+    const exp = Math.round(EX.expPerMin(p.realm) * minutes * 0.6);
+    const stone = Math.round(EX.stonePerMin(p.realm) * minutes * 0.6);
+    const up = this.gainExp(p, exp);
+    p.stone += stone;
+    return { exp, stone, up, minutes };
+  },
+
+  /* ============ 每秒 tick ============ */
+  tick(p, dtSec) {
+    const m = dtSec / 60;
+    const caveMul = 1 + ((p.cave?.lv?.array || 1) - 1) * 0.1;
+    const exp = EX.expPerMin(p.realm) * m * caveMul;
+    const up = this.gainExp(p, exp);
+    p.stone += EX.stonePerMin(p.realm) * m;
+    p.lastTick = Date.now();
+    // 灵力自然回复
+    if (p.mp < this.maxMp(p)) p.mp = Math.min(this.maxMp(p), p.mp + this.maxMp(p) * 0.02 * dtSec);
+    if (p.hp < this.maxHp(p)) p.hp = Math.min(this.maxHp(p), p.hp + this.maxHp(p) * 0.01 * dtSec);
+    return up;
+  },
+
+  fmt(n) {
+    n = Math.round(n || 0);
+    if (n >= 1e8) return (n / 1e8).toFixed(2) + '亿';
+    if (n >= 1e4) return (n / 1e4).toFixed(2) + '万';
+    return '' + n;
+  },
 };
 
-
-/* ===== 扩展加成汇总：时装 / 灵虫 / 好友 / 组队 / 宗门技能 / 称号 ===== */
-function applyExtBuffs(a, p) {
-  const o = {};
-  const merge = (b) => { for (const k in (b || {})) o[k] = (o[k] || 0) + b[k]; };
-  try {
-    if (window.SKIN) merge(SKIN.buff(p));
-    if (window.WORM) merge(WORM.buff(p));
-    if (window.SOCIALX) { merge(SOCIALX.friendBuff(p)); merge(SOCIALX.teamBuff(p)); }
-    if (window.SECTSKILL) merge(SECTSKILL.buff(p));
-    if (window.TITLE) merge(TITLE.buff(p));
-  } catch (e) {}
-  if (!Object.keys(o).length) return a;
-  const m = (k) => 1 + (o[k] || 0);
-  return Object.assign({}, a, {
-    atk: Math.round((a.atk || 0) * m('atk')),
-    def: Math.round((a.def || 0) * m('def')),
-    hp: Math.round((a.hp || 0) * m('hp')),
-    mp: Math.round((a.mp || 0) * m('mp')),
-    speed: Math.round((a.speed || 0) * m('speed')),
-    dodge: (a.dodge || 0) + (o.dodge || 0),
-  });
-}
-// 包装 ENGINE.attrs，使外观/灵虫/好友/组队/宗门技能/称号 加成生效
-(function () {
-  const raw = attrs;
-  const wrapped = function (p) { return applyExtBuffs(raw(p), p); };
-  if (typeof window !== 'undefined') {
-    if (window.ENGINE && window.ENGINE.attrs) window.ENGINE.attrs = wrapped;
-    if (window.ENGINE) window.ENGINE.attrsRaw = raw;
-    window.attrs = wrapped;
-  }
-})();
+window.E = E;
