@@ -7,12 +7,12 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790038908491,
-  "lastTick": 1790038908491,
+  "lastSeen": 1790038909273,
+  "lastTick": 1790038909273,
   "realm": 6,
   "stage": 0,
-  "exp": 157.5511138560978,
-  "stone": 500,
+  "exp": 457.5511138560978,
+  "stone": 700,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -60,7 +60,7 @@
     "store": {}
   },
   "tasks": {
-    "mainIdx": 0,
+    "mainIdx": 1,
     "daily": {
       "date": "2026-9-22",
       "prog": {},
@@ -111,7 +111,7 @@
   "trait": "P003",
   "bottle": {
     "liquid": 7,
-    "acc": 133,
+    "acc": 134,
     "level": 1
   },
   "partners": {},
