@@ -7,28 +7,26 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041802310,
-  "lastTick": 1790041802310,
+  "lastSeen": 1790041805445,
+  "lastTick": 1790041805445,
   "realm": 31,
   "stage": 0,
-  "exp": 71204731330.501,
-  "stone": 2827424853121.0703,
+  "exp": 72016280941.84117,
+  "stone": 2827424854927.0703,
   "equip": {
     "weapon": {
-      "id": "fr_fr_w002",
-      "name": "青竹蜂云剑",
-      "icon": "🗡️",
+      "id": "it_a4frt4b",
       "kind": "equip",
-      "q": 4,
       "slot": "weapon",
-      "base": {
-        "atk": 80
-      },
-      "enh": 0,
-      "temp": 0,
-      "fr": true,
-      "temper": 3,
-      "level": 4
+      "q": 3,
+      "level": 0,
+      "temper": 0,
+      "name": "仙器·诛仙剑",
+      "atk": 569,
+      "def": 78,
+      "hp": 650,
+      "crit": 0.02,
+      "mp": 337
     },
     "armor": {
       "id": "it_limcshl",
@@ -82,7 +80,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 112,
+      "count": 114,
       "desc": "炼器材料",
       "id": "i_w0lydih"
     },
@@ -266,20 +264,6 @@
       "mp": 337
     },
     {
-      "id": "it_a4frt4b",
-      "kind": "equip",
-      "slot": "weapon",
-      "q": 3,
-      "level": 0,
-      "temper": 0,
-      "name": "仙器·诛仙剑",
-      "atk": 569,
-      "def": 78,
-      "hp": 650,
-      "crit": 0.02,
-      "mp": 337
-    },
-    {
       "id": "it_ny8ed69",
       "kind": "equip",
       "slot": "boots",
@@ -362,6 +346,36 @@
       "enh": 0,
       "temp": 0,
       "fr": true
+    },
+    {
+      "id": "fr_fr_t003",
+      "name": "镇物：定界盘",
+      "icon": "🔮",
+      "kind": "equip",
+      "q": 1,
+      "slot": "artifact",
+      "base": {
+        "atk": 10
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
+    },
+    {
+      "id": "fr_fr_w002",
+      "name": "青竹蜂云剑",
+      "icon": "🗡️",
+      "kind": "equip",
+      "q": 4,
+      "slot": "weapon",
+      "base": {
+        "atk": 80
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true,
+      "temper": 3,
+      "level": 4
     }
   ],
   "skills": [
@@ -409,8 +423,8 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064198213,
-        "kill": 78
+        "exp": 26064212661,
+        "kill": 80
       },
       "claimed": []
     },
@@ -418,9 +432,9 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064198213,
-        "kill": 78,
-        "墨蛟": 31,
+        "exp": 26064212661,
+        "kill": 80,
+        "墨蛟": 33,
         "星斗海妖兽": 25,
         "禁地守卫": 22
       },
@@ -458,9 +472,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 78,
+    "kills": 80,
     "deaths": 6,
-    "battles": 84,
+    "battles": 86,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
@@ -472,7 +486,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 2,
-    "acc": 64,
+    "acc": 67,
     "level": 30
   },
   "partners": {},
