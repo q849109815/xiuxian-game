@@ -11,8 +11,8 @@
   "lastTick": 1790013816566,
   "realm": 1,
   "stage": 0,
-  "exp": 325074767479,
-  "stone": 8505059614432,
+  "exp": 0,
+  "stone": 0,
   "equip": {
     "weapon": {
       "id": "it_3bzo41y",
@@ -2773,7 +2773,7 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 4418,
+    "kills": 0,
     "deaths": 72,
     "battles": 4490,
     "breakthrough": 58,
