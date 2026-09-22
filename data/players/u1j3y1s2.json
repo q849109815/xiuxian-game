@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790040304176,
-  "lastTick": 1790040304176,
+  "lastSeen": 1790040309956,
+  "lastTick": 1790040309956,
   "realm": 31,
   "stage": 0,
-  "exp": 4791116176.832605,
-  "stone": 8505046406782,
+  "exp": 5234738945.057846,
+  "stone": 8505046407082,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -46,7 +46,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 144,
+      "count": 146,
       "desc": "炼丹材料",
       "id": "i_ugyldlf"
     },
@@ -89,13 +89,15 @@
     "daily": {
       "date": "2026-9-22",
       "prog": {
-        "arena": 2
+        "arena": 2,
+        "dungeon": 1
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
-        "arena": 2
+        "arena": 2,
+        "dungeon": 1
       },
       "claimed": []
     }
@@ -137,7 +139,7 @@
     "breakthrough": 31,
     "offlineMin": 0,
     "meditate": 0,
-    "dungeon": 0,
+    "dungeon": 1,
     "encounters": 0,
     "rob": 0
   },
@@ -145,12 +147,14 @@
   "trait": "P002",
   "bottle": {
     "liquid": 1,
-    "acc": 216,
+    "acc": 221,
     "level": 2
   },
   "partners": {},
   "mapsSeen": [],
-  "dungeonCleared": [],
+  "dungeonCleared": [
+    "D103"
+  ],
   "wallet": {
     "c001": 0,
     "c002": 0,
@@ -224,7 +228,11 @@
     "daily": {
       "q-d005": 3
     },
-    "weekly": {},
+    "weekly": {
+      "q-w001": 1,
+      "q-w002": 1,
+      "q-w003": 1
+    },
     "event": {},
     "lastDaily": "2026-9-22",
     "lastWeekly": 2959
