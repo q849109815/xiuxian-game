@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041789380,
-  "lastTick": 1790041789380,
+  "lastSeen": 1790041802310,
+  "lastTick": 1790041802310,
   "realm": 31,
   "stage": 0,
-  "exp": 67687994356.02696,
-  "stone": 2827424843648.0703,
+  "exp": 71204731330.501,
+  "stone": 2827424853121.0703,
   "equip": {
     "weapon": {
       "id": "fr_fr_w002",
@@ -82,7 +82,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 109,
+      "count": 112,
       "desc": "炼器材料",
       "id": "i_w0lydih"
     },
@@ -92,7 +92,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 198,
+      "count": 205,
       "desc": "炼丹材料",
       "id": "i_ugyldlf"
     },
@@ -334,6 +334,34 @@
       "hp": 1478,
       "crit": 0,
       "mp": 337
+    },
+    {
+      "id": "fr_fr_e206",
+      "name": "戒指(各类)",
+      "icon": "📿",
+      "kind": "equip",
+      "q": 1,
+      "slot": "necklace",
+      "base": {
+        "atk": 10
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
+    },
+    {
+      "id": "fr_fr_t003",
+      "name": "镇物：定界盘",
+      "icon": "🔮",
+      "kind": "equip",
+      "q": 1,
+      "slot": "artifact",
+      "base": {
+        "atk": 10
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
     }
   ],
   "skills": [
@@ -381,8 +409,8 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064113875,
-        "kill": 67
+        "exp": 26064198213,
+        "kill": 78
       },
       "claimed": []
     },
@@ -390,11 +418,11 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064113875,
-        "kill": 67,
-        "墨蛟": 27,
-        "星斗海妖兽": 20,
-        "禁地守卫": 20
+        "exp": 26064198213,
+        "kill": 78,
+        "墨蛟": 31,
+        "星斗海妖兽": 25,
+        "禁地守卫": 22
       },
       "claimed": []
     }
@@ -430,21 +458,21 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 67,
+    "kills": 78,
     "deaths": 6,
-    "battles": 73,
+    "battles": 84,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
     "dungeon": 8,
-    "encounters": 11,
+    "encounters": 12,
     "rob": 0
   },
   "faction": "C001",
   "trait": "P002",
   "bottle": {
     "liquid": 2,
-    "acc": 51,
+    "acc": 64,
     "level": 30
   },
   "partners": {},
