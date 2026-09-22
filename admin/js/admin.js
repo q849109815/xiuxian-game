@@ -1,711 +1,653 @@
 /* =========================================================
- * admin.js —— 凡人修仙 · 管理后台（重构版）
- * 依赖：../js/api.js（GitHub 读写）、../js/engine.js（战力计算）
+ * admin.js —— 星海飞驰管理后台
  * ========================================================= */
-const A$ = (s) => document.querySelector(s);
-const A$$ = (s) => [...document.querySelectorAll(s)];
+const PWD = 'fj19941224';
+const D = (s) => document.querySelector(s);
+const DD = (s) => Array.from(document.querySelectorAll(s));
 
-let PLAYERS = [];        // 全部玩家 [{name, obj}]
-let VIEW = [];           // 当前列表视图
-let CUR = null;          // 当前编辑玩家
-let CFG = null;          // game.json
-let CONTENT = null;      // content.json
-let SOCIAL = null;       // social.json
-let CONN = false;
+let PLIST = [], CUR = null, PG = 'dash';
 
-/* ================= 基础工具 ================= */
-function atoast(m, t = '') {
+function toast(m, t) {
   const d = document.createElement('div');
-  d.className = 'toast ' + t; d.textContent = m;
-  A$('#toasts').appendChild(d);
-  setTimeout(() => { d.style.opacity = '0'; setTimeout(() => d.remove(), 300); }, 2600);
-}
-const fmt = (n) => {
-  n = Math.round(n || 0);
-  if (n >= 1e8) return (n / 1e8).toFixed(2) + '亿';
-  if (n >= 1e4) return (n / 1e4).toFixed(1) + '万';
-  return String(n);
-};
-const ago = (t) => {
-  if (!t) return '—';
-  const d = (Date.now() - t) / 1000;
-  if (d < 60) return '刚刚';
-  if (d < 3600) return Math.floor(d / 60) + ' 分钟前';
-  if (d < 86400) return Math.floor(d / 3600) + ' 小时前';
-  return Math.floor(d / 86400) + ' 天前';
-};
-
-/* ================= 侧栏导航 ================= */
-const NAV = [
-  { g: '概览' },
-  { k: 'dash', i: '📊', n: '数据看板' },
-  { k: 'players', i: '👥', n: '玩家管理' },
-  { g: '运营' },
-  { k: 'batch', i: '📮', n: '批量操作' },
-  { k: 'wallet', i: '💰', n: '货币管理' },
-  { k: 'acts', i: '🎯', n: '活动管理' },
-  { k: 'give', i: '🎁', n: '内容发放' },
-  { k: 'chat', i: '💬', n: '聊天日志' },
-  { k: 'sect', i: '🏯', n: '宗门管理' },
-  { g: '设置' },
-  { k: 'config', i: '🎛', n: '数值配置' },
-  { k: 'data', i: '🗄', n: '数据维护' },
-  { k: 'sys', i: '⚙️', n: '系统' },
-];
-function renderNav() {
-  A$('#nav').innerHTML = NAV.map((x) => x.g
-    ? `<div class="grp">${x.g}</div>`
-    : `<button data-pg="${x.k}"><span>${x.i}</span>${x.n}</button>`).join('');
-  A$$('#nav [data-pg]').forEach((b) => b.onclick = () => { go(b.dataset.pg); closeSide(); });
-}
-function go(pg) {
-  A$$('.page').forEach((p) => p.classList.toggle('on', p.dataset.pg === pg));
-  A$$('#nav [data-pg]').forEach((b) => b.classList.toggle('on', b.dataset.pg === pg));
-  const t = NAV.find((x) => x.k === pg);
-  A$('#pgTitle').textContent = t ? t.n : '';
-  A$('#body').scrollTop = 0;
-  if (pg === 'dash') renderDash();
-  if (pg === 'acts') renderActs();
-  if (pg === 'config') loadCfg();
-  if (pg === 'data') renderData();
-  if (pg === 'sys') renderSys();
-  if (pg === 'chat') renderChat();
-  if (pg === 'sect') renderSectAdmin();
+  d.className = 'toast ' + (t || ''); d.textContent = m;
+  D('#admToasts').appendChild(d);
+  setTimeout(() => { d.style.opacity = '0'; d.style.transition = '.3s'; setTimeout(() => d.remove(), 300); }, 2000);
 }
 
-/* ================= 连接检测 ================= */
-async function checkConn() {
-  const d = A$('#cDot'), t = A$('#cTxt');
-  d.className = 'dot'; t.textContent = '检测中…';
-  try {
-    if (!window.Net || !Net.probe) { throw 0; }
-    const r = await Promise.race([Net.probe(), new Promise((_, j) => setTimeout(() => j(0), 8000))]);
-    CONN = !!(r && r.ok !== false);
-  } catch (e) { CONN = false; }
-  try {
-    const c = await readJSON('data/config/game.json').catch(() => null);
-    CONN = CONN || !!c;
-  } catch (e) {}
-  d.className = 'dot ' + (CONN ? 'on' : 'off');
-  t.textContent = CONN ? '已连接 GitHub' : '离线（读不到仓库数据）';
+/* ============ 登录 ============ */
+window.addEventListener('load', async () => {
+  D('#alBtn').onclick = () => {
+    if (D('#alPwd').value !== PWD) return toast('口令有误', 'err');
+    D('#admLogin').classList.add('off');
+    D('#admMain').classList.add('on');
+    initAdmin();
+  };
+  D('#alPwd').addEventListener('keydown', (e) => { if (e.key === 'Enter') D('#alBtn').click(); });
+  await Net.init().catch(() => {});
+  D('#alNet').textContent = (Net.online ? '● 已连接 ' : '○ 离线 ') + Net.endpoint.replace('https://', '');
+});
+
+async function initAdmin() {
+  await CFG.load().catch(() => {});
+  D('#atNet').textContent = Net.online ? '●' : '○';
+  D('#atNet').classList.toggle('off', !Net.online);
+  bindNav();
+  loadPlayers();
+  render();
 }
 
-/* ================= 载入配置 ================= */
-async function loadCfg() {
-  CFG = await readJSON('data/config/game.json') || {};
-  CONTENT = await readJSON('data/config/content.json') || {};
-  SOCIAL = await readJSON('data/config/social.json') || {};
-  renderCfgQuick();
-  try {
-    const n = await readJSON('data/config/notice.json') || {};
-    A$('#nText').value = n.notice || '';
-    A$('#nCodes').value = ((n.giftCodes) || []).join(',');
-  } catch (e) {}
-}
-const QUICK = [
-  ['cultivate.basePerSec', '挂机修为/秒', 1],
-  ['cultivate.offlineMul', '离线倍率', 0.1],
-  ['meditate.gainSec', '闭关获得秒数', 1],
-  ['meditate.cdSec', '闭关冷却(秒)', 1],
-  ['breakthrough.base', '渡劫基础成功率', 0.01],
-  ['enhance.costBase', '强化基础花费', 1],
-  ['enhance.maxLevel', '强化上限', 1],
-  ['reincarnation.keepExp', '转世保留修为比', 0.01],
-];
-function gget(path) { return path.split('.').reduce((o, k) => (o || {})[k], CFG); }
-function gset(path, v) {
-  const ks = path.split('.'); const last = ks.pop();
-  let o = CFG; for (const k of ks) { o[k] = o[k] || {}; o = o[k]; }
-  o[last] = v;
-}
-function renderCfgQuick() {
-  A$('#cfgQuick').innerHTML = QUICK.map(([p, n, step]) =>
-    `<div class="fld"><label>${n}</label>
-      <input class="inp" data-cfg="${p}" type="number" step="${step}" value="${gget(p) ?? 0}"></div>`).join('');
-  A$$('#cfgQuick [data-cfg]').forEach((el) => el.onchange = async () => {
-    gset(el.dataset.cfg, parseFloat(el.value));
-    await writeJSON('data/config/game.json', CFG, 'admin: config ' + el.dataset.cfg);
-    atoast('已保存 ' + el.dataset.cfg, 'ok');
+function bindNav() {
+  DD('.an-it').forEach((b) => b.onclick = () => {
+    PG = b.dataset.pg;
+    DD('.an-it').forEach((x) => x.classList.toggle('on', x.dataset.pg === PG));
+    D('#atTitle').textContent = b.querySelector('span').textContent;
+    D('#admNav').classList.remove('on'); D('#admMask').classList.remove('on');
+    if (PG === 'players' || PG === 'dash') loadPlayers();
+    render();
   });
+  D('#atMenu').onclick = () => { D('#admNav').classList.toggle('on'); D('#admMask').classList.toggle('on'); };
+  D('#admMask').onclick = () => { D('#admNav').classList.remove('on'); D('#admMask').classList.remove('on'); };
 }
 
-/* ================= 1. 数据看板 ================= */
-async function renderDash() {
-  if (!PLAYERS.length) await loadPlayers(true);
-  const ps = PLAYERS.map((x) => x.obj);
-  const now = Date.now();
-  const online = ps.filter((p) => now - (p.lastSeen || 0) < 600000).length;
-  const today = ps.filter((p) => now - (p.lastSeen || 0) < 86400000).length;
-  const totalPower = ps.reduce((s, p) => s + (power(p) || 0), 0);
-  const banned = ps.filter((p) => p.banned).length;
-  A$('#dashStats').innerHTML = [
-    ['👥 总玩家', ps.length, `今日活跃 ${today}`],
-    ['🟢 在线(10分钟内)', online, '实时估算'],
-    ['⚔️ 总战力', fmt(totalPower), `人均 ${fmt(totalPower / Math.max(1, ps.length))}`],
-    ['🚫 封禁中', banned, banned ? '需复查' : '无异常'],
-  ].map(([l, v, e]) => `<div class="stat"><div class="lb">${l}</div>
-    <div class="vl">${v}</div><div class="ex">${e}</div></div>`).join('');
-
-  // 境界分布
-  const realms = (CFG.realms) || [];
-  const dist = {};
-  ps.forEach((p) => {
-    const r = realms[p.realm || 0];
-    const nm = r ? r.name.split(/[一二三四五六七八九十]/)[0] : '未知';
-    dist[nm] = (dist[nm] || 0) + 1;
-  });
-  const mx = Math.max(1, ...Object.values(dist));
-  A$('#realmDist').innerHTML = Object.entries(dist).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
-    `<div style="margin-bottom:7px"><div class="row" style="justify-content:space-between">
-      <span class="small">${k}</span><span class="small" style="color:var(--gold)">${v} 人</span></div>
-      <div class="bar"><i style="width:${v / mx * 100}%"></i></div></div>`).join('') || '<div class="empty">暂无数据</div>';
-
-  // 战力 TOP10
-  A$('#topPower').innerHTML = ps.map((p) => ({ p, w: power(p) || 0 }))
-    .sort((a, b) => b.w - a.w).slice(0, 10).map((x, i) =>
-      `<div class="item"><div class="ic">${['🥇', '🥈', '🥉'][i] || (i + 1)}</div>
-        <div class="info"><div class="nm">${x.p.name}</div>
-        <div class="sub">${realmName(x.p)}　战力 ${fmt(x.w)}</div></div></div>`).join('') || '<div class="empty">暂无数据</div>';
-
-  // 灵根
-  const rd = {};
-  ps.forEach((p) => rd[p.root || '?'] = (rd[p.root || '?'] || 0) + 1);
-  const rmx = Math.max(1, ...Object.values(rd));
-  A$('#rootDist').innerHTML = Object.entries(rd).map(([k, v]) =>
-    `<div style="margin-bottom:7px"><div class="row" style="justify-content:space-between">
-      <span class="small">${k}</span><span class="small" style="color:var(--jade)">${v}</span></div>
-      <div class="bar"><i style="width:${v / rmx * 100}%"></i></div></div>`).join('') || '<div class="empty">暂无</div>';
-
-  // 最近活跃
-  A$('#recentAct').innerHTML = ps.slice().sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0))
-    .slice(0, 8).map((p) => `<div class="item"><div class="ic">${p.avatar || '🧙'}</div>
-      <div class="info"><div class="nm">${p.name}</div><div class="sub">${realmName(p)}</div></div>
-      <div class="act small">${ago(p.lastSeen)}</div></div>`).join('') || '<div class="empty">暂无</div>';
-}
-function realmName(p) {
-  const r = (CFG.realms || [])[p.realm || 0];
-  const s = (CFG.stages || [])[p.stage || 0];
-  return r ? (r.name + (s ? '·' + s : '')) : '?';
-}
-function power(p) {
-  try { return (window.ENGINE && ENGINE.power) ? ENGINE.power(p) : ((p.realm || 0) * 1000 + (p.exp || 0) / 100); }
-  catch (e) { return (p.realm || 0) * 1000; }
-}
-
-/* ================= 2. 玩家管理 ================= */
-async function loadPlayers(silent) {
-  const files = await listDir('data/players').catch(() => []);
-  PLAYERS = [];
+async function loadPlayers() {
+  const names = await Net.list('data/ss/players');
+  PLIST = [];
+  const files = (names || []).filter((x) => x.endsWith('.json')).slice(0, 60);
   for (const f of files) {
-    if (f.type !== 'file' || !/\.json$/.test(f.name)) continue;
-    try {
-      const o = await readJSON('data/players/' + f.name);
-      if (o && o.uid) PLAYERS.push({ name: o.name || o.uid, obj: o });
-    } catch (e) {}
+    try { const r = await Net.read('data/ss/players/' + f); if (r && r.data) PLIST.push(r.data); } catch (e) {}
   }
-  if (!silent) atoast(`已载入 ${PLAYERS.length} 位道友`, 'ok');
-  VIEW = PLAYERS.slice();
-  renderTable();
+  PLIST.sort((a, b) => (b.realm || 0) - (a.realm || 0));
 }
-function sortView(k) {
-  const cmp = {
-    power: (a, b) => power(b.obj) - power(a.obj),
-    realm: (a, b) => (b.obj.realm || 0) - (a.obj.realm || 0),
-    stone: (a, b) => (b.obj.stone || 0) - (a.obj.stone || 0),
-    recent: (a, b) => (b.obj.lastSeen || 0) - (a.obj.lastSeen || 0),
-  }[k] || (() => 0);
-  VIEW = VIEW.slice().sort(cmp);
-  renderTable();
+
+function render() { const f = PAGES[PG]; if (f) D('#admBody').innerHTML = f(); bindPage(); }
+
+function bindPage() {
+  const f = BINDS[PG]; if (f) f();
 }
-function renderTable() {
-  A$('#pBody').innerHTML = VIEW.map((x, i) => {
-    const p = x.obj;
-    return `<tr data-i="${i}">
-      <td><b>${p.name || '—'}</b><div class="small mono">${p.uid}</div></td>
-      <td>${realmName(p)}</td>
-      <td>${fmt(power(p))}</td>
-      <td>${fmt(p.stone || 0)}</td>
-      <td>${fmt((p.stats || {}).kills || 0)}</td>
-      <td>${(p.sectInfo || {}).name || '—'}</td>
-      <td>${p.banned ? '<span class="tag r">封禁</span>' : '<span class="tag g">正常</span>'}</td>
-      <td class="small">${ago(p.lastSeen)}</td></tr>`;
-  }).join('') || '<tr><td colspan="8" class="empty">无数据</td></tr>';
-  A$('#pCount').textContent = `共 ${VIEW.length} 位（总数 ${PLAYERS.length}）`;
-  A$$('#pBody tr[data-i]').forEach((tr) => tr.onclick = () => selectPlayer(VIEW[+tr.dataset.i].obj));
-  // 手机端卡片视图
-  const pc = A$('#pCards');
-  if (pc) {
-    pc.innerHTML = VIEW.map((x, i) => {
-      const p = x.obj;
-      return `<div class="pcard" data-i="${i}">
-        <div class="r1"><div class="av">${p.avatar || '🧙'}</div>
-          <div class="nm">${p.name || '—'}</div>
-          ${p.banned ? '<span class="tag r">封禁</span>' : '<span class="tag g">正常</span>'}</div>
-        <div class="r2">
-          <span>${realmName(p)}</span><span>战力 ${fmt(power(p))}</span>
-          <span>💎 ${fmt(p.stone || 0)}</span><span>击杀 ${fmt((p.stats || {}).kills || 0)}</span>
-          <span>${(p.sectInfo || {}).name || '无宗门'}</span></div>
-        <div class="r3">${p.uid} · ${ago(p.lastSeen)}</div></div>`;
-    }).join('') || '<div class="empty">无数据</div>';
-    A$$('#pCards .pcard').forEach((c) => c.onclick = () => {
-      selectPlayer(VIEW[+c.dataset.i].obj);
-      closeSide();
+
+const playerPath = (p) => 'data/ss/players/' + p.uid + '.json';
+async function saveP(p) {
+  const ok = await Net.write(playerPath(p), p, '[admin] 修改 ' + p.name);
+  toast(ok ? '已保存【' + p.name + '】' : '保存失败（已排队）', ok ? 'ok' : 'err');
+}
+
+/* ============================================================
+ * 页面
+ * ========================================================== */
+const PAGES = {
+  dash() {
+    if (!PLIST.length) return '<div class="empty"><div class="ic">👥</div>暂无玩家数据</div>';
+    const total = PLIST.length;
+    const online = PLIST.filter((p) => Date.now() - (p.lastSeen || 0) < 600000).length;
+    const sumStone = PLIST.reduce((s, p) => s + (p.stone || 0), 0);
+    const avgRealm = (PLIST.reduce((s, p) => s + (p.realm || 0), 0) / total).toFixed(1);
+    // 境界分布
+    const dist = {};
+    PLIST.forEach((p) => { const n = CFG.realmName(p.realm || 0); dist[n] = (dist[n] || 0) + 1; });
+    const dk = Object.keys(dist);
+    const maxD = Math.max(...Object.values(dist), 1);
+    // 战力 TOP
+    const top = PLIST.slice().sort((a, b) => E.power(b) - E.power(a)).slice(0, 10);
+    return `
+    <div class="grid g4">
+      <div class="stat"><div class="v">${total}</div><div class="l">总玩家</div></div>
+      <div class="stat"><div class="v">${online}</div><div class="l">10分钟内活跃</div></div>
+      <div class="stat"><div class="v">${E.fmt(sumStone)}</div><div class="l">灵石总量</div></div>
+      <div class="stat"><div class="v">${avgRealm}</div><div class="l">平均境界序</div></div>
+    </div>
+    <div class="card">
+      <div class="card-t">境界分布</div>
+      <div class="bchart">
+        ${dk.map((k) => `<div class="bc"><b>${dist[k]}</b><i style="height:${dist[k] / maxD * 78}px"></i><span>${k}</span></div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">战力 TOP10</div>
+      ${top.map((p, i) => `<div class="pl-item" data-sel="${p.uid}">
+        <div class="pl-av">${p.avatar || '🧙'}</div>
+        <div class="pl-info"><div class="pl-nm">${i + 1}. ${p.name}</div>
+        <div class="pl-sub">${CFG.realmName(p.realm || 0)} ${EX.layerName(p.realm || 0, p.layer || 0)}</div></div>
+        <div><span class="tag y">${E.fmt(E.power(p))}</span></div>
+      </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-t">灵根分布</div>
+      ${Object.entries(PLIST.reduce((m, p) => { m[p.rootName || p.root] = (m[p.rootName || p.root] || 0) + 1; return m; }, {}))
+        .map(([k, v]) => `<div class="kv"><span>${k}</span><b>${v} 人</b></div>`).join('')}
+    </div>`;
+  },
+
+  players() {
+    return `
+    <div class="card">
+      <div class="card-t">玩家列表 <span class="sub">${PLIST.length} 人</span></div>
+      <input class="inp" id="plSearch" placeholder="搜索道号 / UID">
+      <button class="btn c blk" id="plBtnSearch">搜索</button>
+    </div>
+    <div id="plList">
+      ${PLIST.length ? PLIST.map((p) => `
+        <div class="pl-item" data-sel="${p.uid}">
+          <div class="pl-av">${p.avatar || '🧙'}</div>
+          <div class="pl-info">
+            <div class="pl-nm">${p.name} ${p.ban ? '<span class="tag r">封禁</span>' : ''}</div>
+            <div class="pl-sub">${CFG.realmName(p.realm || 0)} ${EX.layerName(p.realm || 0, p.layer || 0)} · 战力 ${E.fmt(E.power(p))}</div>
+            <div class="pl-tags">
+              <span class="tag y">💎${E.fmt(p.stone || 0)}</span>
+              <span class="tag b">🪙${E.fmt(p.jade || 0)}</span>
+              <span class="tag g">击杀${p.stats?.kills || 0}</span>
+              <span class="tag">${p.sect ? p.sect.n : '无仙盟'}</span>
+            </div>
+            <div class="pl-sub" style="margin-top:3px;color:var(--txt3)">UID:${p.uid} · ${new Date(p.lastSeen || 0).toLocaleString()}</div>
+          </div>
+        </div>`).join('') : '<div class="empty"><div class="ic">👥</div>暂无玩家（先去游戏创建角色）</div>'}
+    </div>
+    <div id="plEdit"></div>`;
+  },
+
+  batch() {
+    return `
+    <div class="card">
+      <div class="card-t">📮 全服邮件 <span class="sub">发给所有玩家</span></div>
+      <div class="lbl">标题</div>
+      <input class="inp" id="mTitle" value="仙门通告" placeholder="邮件标题">
+      <div class="lbl">内容</div>
+      <input class="inp" id="mBody" value="感谢各位道友的支持！" placeholder="邮件正文">
+      <div class="lbl">附件（可选）</div>
+      <div class="grid g4">
+        <div><div class="lbl">灵石</div><input class="inp" id="mStone" type="number" value="0"></div>
+        <div><div class="lbl">仙玉</div><input class="inp" id="mJade" type="number" value="0"></div>
+        <div><div class="lbl">修为(分)</div><input class="inp" id="mExp" type="number" value="0"></div>
+        <div><div class="lbl">物品名</div><input class="inp" id="mItem" placeholder="如：筑基丹"></div>
+      </div>
+      <button class="btn p blk" id="btnSendMail">📮 发给全服（${PLIST.length} 人）</button>
+    </div>
+    <div class="card">
+      <div class="card-t">⚡ 全服双倍开关</div>
+      <div class="grid g3">
+        <button class="btn c" data-dbl="exp">修为双倍</button>
+        <button class="btn c" data-dbl="stone">灵石双倍</button>
+        <button class="btn c" data-dbl="drop">掉落双倍</button>
+      </div>
+      <div class="lbl" id="dblState">当前：读取中…</div>
+    </div>
+    <div class="card">
+      <div class="card-t">🔧 批量维护</div>
+      <div class="grid g2">
+        <button class="btn" id="btnUnbanAll">解封全体</button>
+        <button class="btn" id="btnHealAll">全服回满气血</button>
+        <button class="btn" id="btnRecalc">重算全服战力</button>
+        <button class="btn d" id="btnCleanInactive">清理30天未活跃</button>
+      </div>
+    </div>`;
+  },
+
+  currency() {
+    if (!CUR) return `<div class="card">
+      <div class="card-t">💰 货币管理</div>
+      <input class="inp" id="curUid" placeholder="输入玩家 UID 或 道号">
+      <button class="btn c blk" id="btnCurLoad">读取玩家</button>
+      <div class="lbl">提示：UID 可在「玩家管理」列表查看</div></div>`;
+    const p = CUR;
+    return `
+    <div class="card">
+      <div class="card-t">💰 ${p.name} <span class="sub">UID:${p.uid}</span></div>
+      <div class="kv"><span>灵石</span><b class="up">${E.fmt(p.stone || 0)}</b></div>
+      <div class="kv"><span>仙玉</span><b>${E.fmt(p.jade || 0)}</b></div>
+      <div class="grid g2">
+        <div><div class="lbl">灵石</div><input class="inp" id="cStone" type="number" value="${p.stone || 0}"></div>
+        <div><div class="lbl">仙玉</div><input class="inp" id="cJade" type="number" value="${p.jade || 0}"></div>
+      </div>
+      <button class="btn p blk" id="btnCurSave">保存货币</button>
+      <div class="grid g2" style="margin-top:8px">
+        <button class="btn c" id="btnCurMax">一键全满(9999万)</button>
+        <button class="btn d" id="btnCurZero">一键清零</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">资源</div>
+      <div class="kv"><span>境界</span><b>${CFG.realmName(p.realm || 0)} ${EX.layerName(p.realm || 0, p.layer || 0)}</b></div>
+      <div class="kv"><span>修为</span><b>${E.fmt(p.exp || 0)}</b></div>
+      <div class="kv"><span>战力</span><b class="up">${E.fmt(E.power(p))}</b></div>
+      <div class="grid g2">
+        <div><div class="lbl">境界序号(0-14)</div><input class="inp" id="cRealm" type="number" value="${p.realm || 0}"></div>
+        <div><div class="lbl">小层</div><input class="inp" id="cLayer" type="number" value="${p.layer || 0}"></div>
+      </div>
+      <button class="btn p blk" id="btnRealmSave">保存境界</button>
+    </div>`;
+  },
+
+  grant() {
+    if (!CUR) return `<div class="card">
+      <div class="card-t">🎁 内容发放</div>
+      <input class="inp" id="gUid" placeholder="输入玩家 UID 或 道号">
+      <button class="btn c blk" id="btnGLoad">读取玩家</button></div>`;
+    const p = CUR;
+    const cats = {
+      '法宝': (CFG.core.skills || []).filter((x) => x.type === '法宝'),
+      '功法': (CFG.core.skills || []).filter((x) => ['主修功法', '剑诀', '神识功法', '入门心法', '遁术', '神魂功法', '剑阵'].includes(x.type)),
+      '丹药': (CFG.core.items || []).filter((x) => x.type === '丹药'),
+      '装备': (CFG.core.skills || []).filter((x) => x.type === '装备'),
+      '灵宠': (CFG.core.pets || []).filter((x) => ['灵宠', '灵虫'].includes(x.type)),
+      '傀儡': (CFG.core.pets || []).filter((x) => x.type === '傀儡'),
+      '伙伴': (CFG.core.partners || []).filter((x) => ['伙伴', '主角'].includes(x.type)),
+      '称号': EX.titles,
+    };
+    return `
+    <div class="card">
+      <div class="card-t">🎁 发给 ${p.name} <span class="sub">直接入库</span></div>
+      <div class="lbl">类别</div>
+      <select class="sel" id="gCat">${Object.keys(cats).map((k) => `<option>${k}</option>`).join('')}</select>
+      <div class="lbl">搜索</div>
+      <input class="inp" id="gSearch" placeholder="输入名称筛选">
+      <div id="gList" style="max-height:320px;overflow-y:auto;margin-top:8px"></div>
+    </div>`;
+  },
+
+  titles() {
+    if (!CUR) return `<div class="card">
+      <div class="card-t">🎖️ 称号管理</div>
+      <input class="inp" id="tUid" placeholder="输入玩家 UID 或 道号">
+      <button class="btn c blk" id="btnTLoad">读取玩家</button></div>`;
+    const p = CUR;
+    return `<div class="card">
+      <div class="card-t">🎖️ ${p.name} 的称号</div>
+      ${EX.titles.map((t) => {
+        const own = (p.titles || []).includes(t.id);
+        return `<div class="pl-item" style="${own ? '' : 'opacity:.5'}">
+          <div class="pl-info"><div class="pl-nm">${t.n} ${p.titleCur === t.id ? '<span class="tag y">当前</span>' : own ? '<span class="tag g">拥有</span>' : ''}</div>
+          <div class="pl-sub">${Object.entries(t.buff || {}).map(([k, v]) => k + '+' + Math.round(v * 100) + '%').join(' ')} · ${t.cond}</div></div>
+          <button class="btn sm ${own ? 'd' : 'c'}" data-tt="${t.id}">${own ? '撤销' : '授予'}</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  },
+
+  story() {
+    const st = CFG.core.story || [];
+    return `<div class="card">
+      <div class="card-t">📖 剧情任务大纲 <span class="sub">${st.length} 条（只读）</span></div>
+      <div class="lbl">资料来源：20_剧情任务大纲</div>
+    </div>
+    ${st.map((s) => `<div class="pl-item">
+      <div class="pl-info"><div class="pl-nm">${s.id} ${s.name} <span class="tag b">${s.chapter}</span></div>
+      <div class="pl-sub">${s.desc || ''}</div>
+      <div class="pl-sub" style="color:var(--gold)">奖励：${s.reward || ''} · 需：${s.need || ''}</div></div>
+    </div>`).join('')}`;
+  },
+
+  config() {
+    return `
+    <div class="card">
+      <div class="card-t">🎛️ 常用数值</div>
+      <div class="lbl">挂机修为倍率（当前 1.0）</div>
+      <input class="inp" id="cfExpRate" type="number" step="0.1" value="1.0">
+      <div class="lbl">挂机灵石倍率（当前 1.0）</div>
+      <input class="inp" id="cfStoneRate" type="number" step="0.1" value="1.0">
+      <div class="lbl">突破基础成功率（当前 0.55）</div>
+      <input class="inp" id="cfBreakRate" type="number" step="0.05" value="0.55">
+      <button class="btn p blk" id="btnCfgSave">保存数值配置</button>
+      <div class="lbl">说明：修改后写入 data/ss/config.json，游戏端需在设置里刷新（暂为预留）</div>
+    </div>
+    <div class="card">
+      <div class="card-t">📢 全服公告</div>
+      <input class="inp" id="cfNotice" placeholder="公告内容">
+      <button class="btn c blk" id="btnNotice">发布公告</button>
+    </div>`;
+  },
+
+  data() {
+    return `
+    <div class="card">
+      <div class="card-t">🗄️ 数据维护</div>
+      <div class="grid g2">
+        <button class="btn c" id="btnRebuild">重建排行榜</button>
+        <button class="btn c" id="btnBackup">全服备份</button>
+        <button class="btn" id="btnClearLb">清空排行榜</button>
+        <button class="btn d" id="btnWipe">清空全部存档</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">📊 数据统计</div>
+      <div class="kv"><span>玩家总数</span><b>${PLIST.length}</b></div>
+      <div class="kv"><span>存档路径</span><b style="font-size:11px">data/ss/players/</b></div>
+      <div class="kv"><span>排行榜</span><b style="font-size:11px">data/ss/leaderboard.json</b></div>
+      <div class="kv"><span>仓库</span><b style="font-size:11px">${GH.owner}/${GH.repo}</b></div>
+    </div>`;
+  },
+
+  sys() {
+    const st = Net.online
+      ? '<span style="color:#7ae89a">● 已连接</span>'
+      : '<span style="color:#ff8fa4">○ 离线（读不到仓库数据）</span>';
+    return `
+    <div class="card">
+      <div class="card-t">🌐 网络状态</div>
+      <div class="kv"><span>状态</span><b>${st}</b></div>
+      <div class="kv"><span>当前端点</span><b style="font-size:11px">${Net.endpoint.replace('https://', '')}</b></div>
+      <div class="kv"><span>待上传</span><b>${Net.queueLen}</b></div>
+      <div class="kv"><span>仓库</span><b style="font-size:11px">${GH.owner}/${GH.repo}</b></div>
+      <button class="btn blk" id="btnReNet">重新检测</button>
+      <button class="btn blk" id="btnDiag">逐端点诊断</button>
+      <button class="btn blk" id="btnFlush">立即补传</button>
+      <div class="lbl">离线常见原因：① 国内访问 api.github.com 被墙/很慢 ② Token 过期或权限不足 ③ 浏览器插件拦截。点「逐端点诊断」看哪个通道能通。</div>
+    </div>
+    <div class="card">
+      <div class="card-t">🔬 端点诊断结果</div>
+      <div id="diagBox"><div class="lbl">点上方「逐端点诊断」开始测试全部通道…</div></div>
+    </div>
+    <div class="card">
+      <div class="card-t">🚀 自定义加速地址（推荐）</div>
+      <div class="lbl">部署 Cloudflare Worker 后把地址填这里，可彻底解决国内连不上 GitHub 的问题。</div>
+      <textarea class="inp" id="sysEps" rows="3" placeholder="https://xxx.workers.dev">${(GH.extra || []).join('\n')}</textarea>
+      <button class="btn c blk" id="btnSaveEps">保存加速地址</button>
+      <details style="margin-top:8px">
+        <summary class="lbl" style="cursor:pointer;color:var(--cy)">▶ 展开：Cloudflare Worker 部署步骤（3分钟）</summary>
+        <div class="lbl" style="margin-top:6px;line-height:1.7">
+          1. 注册 <b>dash.cloudflare.com</b>（邮箱即可，不用域名不用绑卡）<br>
+          2. 左侧 <b>Workers &amp; Pages</b> → <b>Create</b> → <b>Create Worker</b><br>
+          3. 名字填 <b>xx-proxy</b> → 点 <b>Deploy</b><br>
+          4. 点 <b>Edit code</b>，左边代码<b>全删</b>，粘贴下面这段 → <b>Save and Deploy</b><br>
+          5. 复制顶部 <b>https://xx-proxy.你的账号.workers.dev</b>，填到上面输入框 → 保存
+        </div>
+        <textarea class="inp" rows="10" readonly style="font-size:10px;font-family:monospace">export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    if (url.pathname === '/' || url.pathname === '') {
+      return new Response('OK', { headers: { 'content-type': 'text/plain' } });
+    }
+    let auth = request.headers.get('authorization');
+    if ((!auth || auth.replace('Bearer','').trim() === '') && env.GH_TOKEN) auth = 'Bearer ' + env.GH_TOKEN;
+    const headers = new Headers();
+    for (const k of ['accept','content-type','x-github-api-version','user-agent']) {
+      const v = request.headers.get(k); if (v) headers.set(k, v);
+    }
+    if (auth) headers.set('authorization', auth);
+    const init = { method: request.method, headers };
+    if (['POST','PUT','PATCH','DELETE'].includes(request.method)) init.body = await request.text();
+    const target = 'https://api.github.com' + url.pathname + url.search;
+    const res = await fetch(target, init);
+    const body = await res.text();
+    return new Response(body, {
+      status: res.status,
+      headers: {
+        'content-type': res.headers.get('content-type') || 'application/json',
+        'access-control-allow-origin': '*',
+        'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+        'access-control-allow-headers': '*',
+      },
     });
   }
-  syncSel();
-}
-function syncSel() {
-  const idx = CUR ? VIEW.findIndex((x) => x.obj === CUR) : -1;
-  A$$('#pBody tr').forEach((tr) => tr.classList.toggle('sel', +tr.dataset.i === idx));
-  A$$('#pCards .pcard').forEach((c) => c.classList.toggle('sel', +c.dataset.i === idx));
-}
-function openSide() { A$('#side').classList.add('open'); A$('#mask').classList.add('show'); }
-function closeSide() { A$('#side').classList.remove('open'); A$('#mask').classList.remove('show'); }
+};</textarea>
+        <div class="lbl" style="margin-top:6px">可选：在 Worker 的 <b>Settings → Variables → Add secret</b> 里加 <b>GH_TOKEN</b>（值=你的 GitHub Token），这样前端就不暴露 Token 了。</div>
+      </details>
+    </div>
+    <div class="card">
+      <div class="card-t">🔑 账号</div>
+      <div class="kv"><span>管理口令</span><b>******</b></div>
+      <div class="lbl">修改口令请编辑 admin/js/admin.js 的 PWD 常量</div>
+      <button class="btn d blk" id="btnLogout">退出后台</button>
+    </div>`;
+  },
+};
 
-function selectPlayer(p) {
-  CUR = p;
-  A$('#editCard').style.display = '';
-  A$('#editWho').textContent = `${p.name}（${p.uid}）`;
-  A$('#fName').value = p.name || '';
-  A$('#fRealm').value = p.realm || 0;
-  A$('#fStage').value = p.stage || 0;
-  A$('#fExp').value = Math.round(p.exp || 0);
-  A$('#fStone').value = Math.round(p.stone || 0);
-  A$('#fKills').value = (p.stats || {}).kills || 0;
-  A$('#fReinc').value = p.reinc || 0;
-  A$('#fBan').value = p.banned ? '1' : '0';
-  A$('#rawJson').value = JSON.stringify(p, null, 1);
-  syncSel();
-  try { A$('#editCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
-}
-async function savePlayer(p, msg) {
-  await writeJSON(playerPath(p.uid), p, 'admin: ' + msg);
-  atoast('已保存', 'ok');
-}
+/* ============================================================
+ * 绑定
+ * ========================================================== */
+const BINDS = {
+  players() {
+    const sel = (uid) => {
+      CUR = PLIST.find((p) => p.uid === uid) || null;
+      const box = D('#plEdit');
+      if (!CUR) { box.innerHTML = ''; return; }
+      const p = CUR;
+      box.innerHTML = `<div class="card">
+        <div class="card-t">编辑 ${p.name} <span class="sub">UID:${p.uid}</span></div>
+        <div class="lbl">道号</div><input class="inp" id="eName" value="${p.name}">
+        <div class="lbl">境界序号(0-14) / 小层</div>
+        <div class="grid g2">
+          <input class="inp" id="eRealm" type="number" value="${p.realm || 0}">
+          <input class="inp" id="eLayer" type="number" value="${p.layer || 0}">
+        </div>
+        <div class="lbl">灵石 / 仙玉</div>
+        <div class="grid g2">
+          <input class="inp" id="eStone" type="number" value="${p.stone || 0}">
+          <input class="inp" id="eJade" type="number" value="${p.jade || 0}">
+        </div>
+        <div class="grid g2">
+          <button class="btn p" id="btnESave">保存</button>
+          <button class="btn c" id="btnEHeal">回满气血</button>
+          <button class="btn" id="btnEBan">${p.ban ? '解封' : '封禁'}</button>
+          <button class="btn d" id="btnEDel">删除存档</button>
+        </div>
+      </div>`;
+      D('#btnESave').onclick = () => {
+        p.name = D('#eName').value || p.name;
+        p.realm = Math.max(0, Math.min(14, +D('#eRealm').value || 0));
+        p.layer = Math.max(0, +D('#eLayer').value || 0);
+        p.stone = Math.max(0, +D('#eStone').value || 0);
+        p.jade = Math.max(0, +D('#eJade').value || 0);
+        saveP(p); loadPlayers().then(() => render());
+      };
+      D('#btnEHeal').onclick = () => { p.hp = E.maxHp(p); p.mp = E.maxMp(p); saveP(p); };
+      D('#btnEBan').onclick = () => { p.ban = !p.ban; saveP(p); render(); };
+      D('#btnEDel').onclick = () => { if (confirm('确定删除【' + p.name + '】的存档？')) { toast('删除需手动在仓库操作', 'err'); } };
+      DD('.pl-item').forEach((x) => x.classList.toggle('on', x.dataset.sel === uid));
+    };
+    const doSearch = () => {
+      const k = (D('#plSearch').value || '').trim().toLowerCase();
+      if (!k) return;
+      const hit = PLIST.find((p) => (p.name || '').toLowerCase().includes(k) || (p.uid || '').includes(k));
+      if (hit) { sel(hit.uid); toast('已选中【' + hit.name + '】', 'ok'); }
+      else toast('未找到', 'err');
+    };
+    DD('[data-sel]').forEach((b) => b.onclick = () => sel(b.dataset.sel));
+    const s = D('#btnPlSearch') || D('#btnPlSearch');
+    if (D('#plSearch')) D('#plSearch').addEventListener('keydown', (e) => { if (e.key === 'Enter') doSearch(); });
+    const bs = document.getElementById('plBtnSearch');
+    if (bs) bs.onclick = doSearch;
+  },
 
-/* ================= 3. 批量操作 ================= */
-async function sendMailAll() {
-  const title = A$('#mTitle').value.trim();
-  if (!title) return atoast('请填标题', 'err');
-  const give = {
-    stone: +A$('#mStone').value || 0, yuanbao: +A$('#mYb').value || 0,
-    exp: +A$('#mExp').value || 0, merit: +A$('#mMerit').value || 0, rep: +A$('#mRep').value || 0,
-  };
-  let ok = 0;
-  for (const x of PLAYERS) {
-    try {
-      x.obj.mail = x.obj.mail || [];
-      x.obj.mail.push({ id: 'm_' + Date.now() + '_' + ok, title,
-        body: A$('#mBody').value || '', give, at: Date.now(), read: false });
-      if (x.obj.mail.length > 50) x.obj.mail.shift();
-      await writeJSON(playerPath(x.obj.uid), x.obj, 'admin mail');
-      ok++;
-    } catch (e) {}
-  }
-  A$('#mailMsg').textContent = `已发给 ${ok} 位`;
-  atoast(`已发送 ${ok} 封`, 'ok');
-}
-async function giveAll() {
-  const g = {
-    stone: +A$('#gStone').value || 0, yuanbao: +A$('#gYb').value || 0,
-    exp: +A$('#gExp').value || 0, contrib: +A$('#gContrib').value || 0, merit: +A$('#gMerit').value || 0,
-  };
-  if (!Object.values(g).some((v) => v)) return atoast('请至少填一项', 'err');
-  let ok = 0;
-  for (const x of PLAYERS) {
-    try {
-      const p = x.obj;
-      p.wallet = p.wallet || {};
-      if (g.stone) { p.stone = (p.stone || 0) + g.stone; p.wallet.C001 = p.stone; }
-      if (g.yuanbao) p.wallet.C007 = (p.wallet.C007 || 0) + g.yuanbao;
-      if (g.contrib) p.wallet.C005 = (p.wallet.C005 || 0) + g.contrib;
-      if (g.merit) p.wallet.C014 = (p.wallet.C014 || 0) + g.merit;
-      if (g.exp && window.ENGINE && ENGINE.gainExp) ENGINE.gainExp(p, g.exp);
-      await writeJSON(playerPath(p.uid), p, 'admin give');
-      ok++;
-    } catch (e) {}
-  }
-  A$('#giveMsg').textContent = `已发放给 ${ok} 位`;
-  atoast(`已发放 ${ok} 位`, 'ok');
-}
-async function setDouble(key) {
-  const n = await readJSON('data/config/notice.json') || {};
-  n.events = n.events || {};
-  ['doubleExp', 'doubleStone', 'doubleDrop'].forEach((k) => n.events[k] = false);
-  if (key) { n.events[key] = true; n.events[key.replace('double', '').toLowerCase() + 'Mul'] = 2; }
-  await writeJSON('data/config/notice.json', n, 'admin: double');
-  atoast(key ? '已开启' : '已全部关闭', 'ok');
-  renderDblState();
-}
-async function renderDblState() {
-  const n = await readJSON('data/config/notice.json').catch(() => null);
-  const e = (n && n.events) || {};
-  A$('#dblState').textContent = '当前：' + ([
-    e.doubleExp ? '双倍修为' : '', e.doubleStone ? '双倍灵石' : '', e.doubleDrop ? '双倍掉落' : ''
-  ].filter(Boolean).join('、') || '无');
-}
+  batch() {
+    const mail = D('#btnSendMail');
+    if (mail) mail.onclick = async () => {
+      const t = D('#mTitle').value || '仙门通告';
+      const b = D('#mBody').value || '';
+      const stone = +D('#mStone').value || 0, jade = +D('#mJade').value || 0;
+      const exp = +D('#mExp').value || 0, item = D('#mItem').value.trim();
+      let n = 0;
+      for (const p of PLIST) {
+        p.mail = p.mail || [];
+        p.mail.unshift({ title: t, body: b, stone, jade, exp, item, at: Date.now(), read: false });
+        if (p.mail.length > 20) p.mail.length = 20;
+        if (await Net.write(playerPath(p), p, '[admin] 邮件 ' + t)) n++;
+        await new Promise((r) => setTimeout(r, 1200));
+      }
+      toast('已发送 ' + n + '/' + PLIST.length + ' 封', n ? 'ok' : 'err');
+    };
+    DD('[data-dbl]').forEach((b) => b.onclick = async () => {
+      const k = b.dataset.dbl;
+      const r = await Net.read('data/ss/config.json');
+      const c = (r && r.data) || {};
+      c.double = c.double || {};
+      c.double[k] = !c.double[k];
+      await Net.write('data/ss/config.json', c, '[admin] 双倍 ' + k);
+      toast(k + ' 双倍：' + (c.double[k] ? '开启' : '关闭'), 'ok');
+      render();
+    });
+    const u = D('#btnUnbanAll');
+    if (u) u.onclick = async () => { let n = 0; for (const p of PLIST) if (p.ban) { p.ban = false; if (await Net.write(playerPath(p), p, '[admin] 解封')) n++; await new Promise(r => setTimeout(r, 1200)); } toast('解封 ' + n + ' 人', 'ok'); };
+    const h = D('#btnHealAll');
+    if (h) h.onclick = async () => { let n = 0; for (const p of PLIST) { p.hp = E.maxHp(p); p.mp = E.maxMp(p); if (await Net.write(playerPath(p), p, '[admin] 回满')) n++; await new Promise(r => setTimeout(r, 1200)); } toast('回满 ' + n + ' 人', 'ok'); };
+    const c = D('#btnCleanInactive');
+    if (c) c.onclick = () => toast('请手动清理（安全起见未开放批量删除）', 'err');
+    const st = D('#dblState');
+    if (st) Net.read('data/ss/config.json').then((r) => {
+      const d = (r && r.data && r.data.double) || {};
+      st.textContent = '当前：修为' + (d.exp ? '✔' : '✘') + ' 灵石' + (d.stone ? '✔' : '✘') + ' 掉落' + (d.drop ? '✔' : '✘');
+    });
+  },
 
-/* ================= 4. 货币管理 ================= */
-const CUR16 = [
-  ['C001', '下品灵石'], ['C002', '中品灵石'], ['C003', '上品灵石'], ['C004', '极品灵石'],
-  ['C005', '宗门贡献'], ['C006', '道义币'], ['C007', '元宝'], ['C008', '灵玉'],
-  ['C009', '功法残篇'], ['C010', '突破丹碎片'], ['C011', '轮回石'], ['C012', '通天令'],
-  ['C013', '仙元'], ['C014', '功勋值'], ['C015', '声望'], ['C016', 'PVP积分'],
-];
-function renderWallet(p) {
-  p.wallet = p.wallet || {};
-  A$('#walletGrid').innerHTML = CUR16.map(([id, nm]) => {
-    const v = (id === 'C001') ? (p.stone || p.wallet[id] || 0) : (p.wallet[id] || 0);
-    return `<div class="fld"><label>${nm}</label>
-      <input class="inp" data-cur="${id}" type="number" value="${v}"></div>`;
-  }).join('');
-}
-async function saveWallet() {
-  if (!CUR) return atoast('请先读取玩家', 'err');
-  CUR.wallet = CUR.wallet || {};
-  A$$('#walletGrid [data-cur]').forEach((el) => {
-    const v = Math.max(0, parseInt(el.value || '0', 10) || 0);
-    CUR.wallet[el.dataset.cur] = v;
-    if (el.dataset.cur === 'C001') CUR.stone = v;
-  });
-  await savePlayer(CUR, 'wallet');
-  renderWallet(CUR);
-}
+  currency() {
+    const l = D('#btnCurLoad') || document.getElementById('btnCurLoad');
+    if (l) l.onclick = () => {
+      const k = (D('#curUid').value || '').trim();
+      CUR = PLIST.find((p) => p.uid === k || p.name === k);
+      if (!CUR) return toast('未找到玩家', 'err');
+      render();
+    };
+    const s = document.getElementById('btnCurSave');
+    if (s) s.onclick = () => {
+      CUR.stone = Math.max(0, +D('#cStone').value || 0);
+      CUR.jade = Math.max(0, +D('#cJade').value || 0);
+      saveP(CUR);
+    };
+    const m = document.getElementById('btnCurMax');
+    if (m) m.onclick = () => { CUR.stone = 99990000; CUR.jade = 999900; saveP(CUR); render(); };
+    const z = document.getElementById('btnCurZero');
+    if (z) z.onclick = () => { CUR.stone = 0; CUR.jade = 0; saveP(CUR); render(); };
+    const rs = document.getElementById('btnRealmSave');
+    if (rs) rs.onclick = () => {
+      CUR.realm = Math.max(0, Math.min(14, +D('#cRealm').value || 0));
+      CUR.layer = Math.max(0, +D('#cLayer').value || 0);
+      CUR.exp = 0; saveP(CUR);
+    };
+  },
 
-/* ================= 5. 活动管理 ================= */
-async function renderActs(filter) {
-  if (!SOCIAL) SOCIAL = await readJSON('data/config/social.json') || {};
-  const list = (SOCIAL.acts) || [];
-  const f = A$('.pill.on');
-  const cur = filter || (f ? f.dataset.af : 'all');
-  const show = cur === 'all' ? list : list.filter((a) => (a.type || '').indexOf(cur) >= 0);
-  A$('#actList').innerHTML = show.map((a) =>
-    `<div class="item"><div class="ic">${a.icon || '🎯'}</div>
-      <div class="info"><div class="nm">${a.name}
-        <span class="tag ${a.type === '限时活动' ? 'y' : a.type === '常驻活动' ? 'g' : 'b'}">${a.type}</span></div>
-      <div class="sub">${a.content}</div><div class="sub" style="color:var(--jade)">${a.reward}</div>
-      <div class="sub">参与：${a.need}</div></div></div>`).join('') || '<div class="empty">无</div>';
-}
+  grant() {
+    const l = document.getElementById('btnGLoad');
+    if (l) l.onclick = () => {
+      const k = (D('#gUid').value || '').trim();
+      CUR = PLIST.find((p) => p.uid === k || p.name === k);
+      if (!CUR) return toast('未找到玩家', 'err');
+      render();
+    };
+    const draw = () => {
+      const cat = D('#gCat').value;
+      const kw = (D('#gSearch').value || '').trim();
+      const cats = {
+        '法宝': (CFG.core.skills || []).filter((x) => x.type === '法宝'),
+        '功法': (CFG.core.skills || []).filter((x) => ['主修功法', '剑诀', '神识功法', '入门心法', '遁术', '神魂功法', '剑阵'].includes(x.type)),
+        '丹药': (CFG.core.items || []).filter((x) => x.type === '丹药'),
+        '装备': (CFG.core.skills || []).filter((x) => x.type === '装备'),
+        '灵宠': (CFG.core.pets || []).filter((x) => ['灵宠', '灵虫'].includes(x.type)),
+        '傀儡': (CFG.core.pets || []).filter((x) => x.type === '傀儡'),
+        '伙伴': (CFG.core.partners || []).filter((x) => ['伙伴', '主角'].includes(x.type)),
+        '称号': EX.titles,
+      };
+      let list = cats[cat] || [];
+      if (kw) list = list.filter((x) => (x.name || x.n || '').includes(kw));
+      const box = D('#gList');
+      box.innerHTML = list.slice(0, 40).map((x) => {
+        const nm = x.name || x.n;
+        return `<div class="pl-item"><div class="pl-info"><div class="pl-nm">${nm} ${x.q ? `<span class="tag y">${x.q}</span>` : ''}</div>
+          <div class="pl-sub">${x.eff || x.skill || x.cond || ''}</div></div>
+          <button class="btn sm c" data-give="${nm}">发放</button></div>`;
+      }).join('') || '<div class="empty">无匹配</div>';
+      DD('[data-give]').forEach((b) => b.onclick = () => {
+        const nm = b.dataset.give;
+        const p = CUR;
+        if (cat === '称号') { const t = EX.titles.find((x) => x.n === nm); (p.titles = p.titles || []).push(t.id); }
+        else if (cat === '灵宠') { (p.pets = p.pets || []).push({ id: x_id(nm, CFG.core.pets), n: nm, lv: 1, type: '灵宠' }); }
+        else if (cat === '傀儡') { (p.puppets = p.puppets || []).push({ id: x_id(nm, CFG.core.pets), n: nm, lv: 1, dur: 100 }); }
+        else if (cat === '伙伴') { (p.partners = p.partners || []).push({ id: x_id(nm, CFG.core.partners), n: nm, q: 'SSR', star: 1 }); }
+        else if (cat === '功法') { (p.skills = p.skills || []).push(x_id(nm, CFG.core.skills)); }
+        else E.addItem(p, nm, 1);
+        saveP(p);
+      });
+    };
+    if (D('#gCat')) { D('#gCat').onchange = draw; D('#gSearch').oninput = draw; draw(); }
+  },
 
-/* ================= 6. 内容发放 ================= */
-async function renderGive() {
-  if (!CONTENT) CONTENT = await readJSON('data/config/content.json') || {};
-  if (!SOCIAL) SOCIAL = await readJSON('data/config/social.json') || {};
-  const type = A$('#gvType').value;
-  const kw = (A$('#gvKw').value || '').trim();
-  let list = [];
-  if (type === 'equip') list = ((CONTENT.forge || {}).recipes || []).filter((x) => x.fr)
-    .map((x) => ({ id: x.id, name: x.name, icon: x.icon, q: x.q, slot: x.slot, base: x.base }));
-  else if (type === 'pill') list = ((CONTENT.alchemy || {}).recipes || [])
-    .map((x) => ({ id: x.id, name: x.name, icon: x.icon || '💊' }));
-  else if (type === 'skill') list = (CONTENT.skills || [])
-    .map((x) => ({ id: x.id, name: x.name, icon: x.icon }));
-  else if (type === 'title') list = (SOCIAL.titles || [])
-    .map((x) => ({ id: x.id, name: x.name, icon: x.icon }));
-  else if (type === 'skin') list = (SOCIAL.skins || [])
-    .map((x) => ({ id: x.id, name: x.name, icon: x.icon }));
-  if (kw) list = list.filter((x) => (x.name || '').indexOf(kw) >= 0);
-  A$('#gvList').innerHTML = list.slice(0, 60).map((x) =>
-    `<div class="item" style="cursor:pointer"><div class="ic">${x.icon || '📦'}</div>
-      <div class="info"><div class="nm">${x.name}</div>
-      <div class="sub">${x.slot || x.q !== undefined ? '品质' + x.q : ''}</div></div>
-      <div class="act"><button class="btn" data-gv="${x.id}">发放</button></div></div>`).join('')
-    || '<div class="empty">无匹配</div>';
-  A$$('#gvList [data-gv]').forEach((b) => b.onclick = () => doGive(type, b.dataset.gv, list));
-}
-function findPlayer(uid) {
-  return PLAYERS.find((x) => x.obj.uid === uid || x.obj.name === uid);
-}
-async function doGive(type, id, list) {
-  const uid = (A$('#gvUid').value || '').trim();
-  const hit = findPlayer(uid);
-  if (!hit) return atoast('未找到该玩家，请先在玩家管理载入', 'err');
-  const p = hit.obj; const it = list.find((x) => x.id === id);
-  p.bag = p.bag || [];
-  if (type === 'equip') p.bag.push({ id: 'g_' + id, name: it.name, icon: it.icon, kind: 'equip',
-    q: it.q || 1, slot: it.slot, base: it.base || {}, enh: 0, temp: 0, fr: true });
-  else if (type === 'pill') p.bag.push({ id: 'g_' + id, name: it.name, icon: it.icon, kind: 'pill', count: 1 });
-  else if (type === 'skill') {
-    p.skills = p.skills || [];
-    if (p.skills.some((s) => s.id === id)) return atoast('已有此功法', 'err');
-    p.skills.push({ id, lv: 1 });
-  } else if (type === 'title') {
-    p.titles = p.titles || { owned: [], cur: null };
-    if (p.titles.owned.indexOf(id) < 0) p.titles.owned.push(id);
-  } else if (type === 'skin') {
-    p.skin = p.skin || { owned: [], wear: {} };
-    if (p.skin.owned.indexOf(id) < 0) p.skin.owned.push(id);
-  }
-  await savePlayer(p, 'give ' + type);
-  atoast(`已发放【${it.name}】给 ${p.name}`, 'ok');
-}
+  titles() {
+    const l = document.getElementById('btnTLoad');
+    if (l) l.onclick = () => {
+      const k = (D('#tUid').value || '').trim();
+      CUR = PLIST.find((p) => p.uid === k || p.name === k);
+      if (!CUR) return toast('未找到玩家', 'err');
+      render();
+    };
+    DD('[data-tt]').forEach((b) => b.onclick = () => {
+      const id = b.dataset.tt, p = CUR;
+      p.titles = p.titles || [];
+      const i = p.titles.indexOf(id);
+      if (i >= 0) { p.titles.splice(i, 1); if (p.titleCur === id) p.titleCur = p.titles[0] || null; }
+      else { p.titles.push(id); if (!p.titleCur) p.titleCur = id; }
+      saveP(p); render();
+    });
+  },
 
-/* ================= 7. 配置 ================= */
-async function loadCfgFile() {
-  const f = A$('#cfgFile').value;
-  const o = await readJSON(f).catch(() => null);
-  A$('#cfgJson').value = o ? JSON.stringify(o, null, 1) : '// 读取失败';
-}
+  config() {
+    const s = document.getElementById('btnCfgSave');
+    if (s) s.onclick = async () => {
+      const c = {
+        expRate: +D('#cfExpRate').value || 1,
+        stoneRate: +D('#cfStoneRate').value || 1,
+        breakRate: +D('#cfBreakRate').value || 0.55,
+      };
+      await Net.write('data/ss/config.json', c, '[admin] 数值配置');
+      toast('已保存', 'ok');
+    };
+    const n = document.getElementById('btnNotice');
+    if (n) n.onclick = async () => {
+      const t = D('#cfNotice').value.trim();
+      if (!t) return toast('请输入公告', 'err');
+      await Net.write('data/ss/notice.json', { text: t, at: Date.now() }, '[admin] 公告');
+      toast('公告已发布', 'ok');
+    };
+  },
 
-/* ================= 8. 数据维护 ================= */
-async function renderData() {
-  const lb = await readJSON('data/leaderboard.json').catch(() => null);
-  A$('#lbBox').innerHTML = lb
-    ? `<div class="small">更新于 ${ago(lb.at || lb.updatedAt)}</div>
-       <div class="small">条目 ${((lb.list) || []).length} 条</div>`
-    : '<div class="small">尚未生成（等 Actions 首次运行）</div>';
-  const st = await readJSON('data/stats.json').catch(() => null);
-  A$('#stBox').innerHTML = st
-    ? Object.entries(st).filter(([k, v]) => typeof v !== 'object')
-      .map(([k, v]) => `<div class="row" style="justify-content:space-between">
-        <span class="small">${k}</span><b style="color:var(--gold)">${fmt(v)}</b></div>`).join('')
-    : '<div class="small">尚未生成</div>';
-}
-async function buildLb() {
-  const list = PLAYERS.map((x) => ({ name: x.obj.name, uid: x.obj.uid,
-    power: power(x.obj), realm: x.obj.realm || 0, realmName: realmName(x.obj) }))
-    .sort((a, b) => b.power - a.power).slice(0, 100);
-  await writeJSON('data/leaderboard.json', { at: Date.now(), list }, 'admin: build leaderboard');
-  atoast(`排行榜已重建（${list.length} 条）`, 'ok'); renderData();
-}
-async function buildSt() {
-  const ps = PLAYERS.map((x) => x.obj);
-  const st = { at: Date.now(), players: ps.length,
-    power: ps.reduce((s, p) => s + power(p), 0),
-    kills: ps.reduce((s, p) => s + ((p.stats || {}).kills || 0), 0),
-    battles: ps.reduce((s, p) => s + ((p.stats || {}).battles || 0), 0),
-    stone: ps.reduce((s, p) => s + (p.stone || 0), 0) };
-  await writeJSON('data/stats.json', st, 'admin: build stats');
-  atoast('统计已重建', 'ok'); renderData();
-}
-async function backup() {
-  const data = PLAYERS.map((x) => x.obj);
-  const name = `backups/admin_${Date.now()}.json`;
-  await writeJSON(name, { at: Date.now(), count: data.length, players: data }, 'admin: backup');
-  A$('#bkMsg').textContent = `已备份 ${data.length} 位道友 → ${name}`;
-  atoast('备份完成', 'ok');
-}
+  data() {
+    const r = document.getElementById('btnRebuild');
+    if (r) r.onclick = async () => {
+      const list = PLIST.map((p) => ({ uid: p.uid, name: p.name, realm: CFG.realmName(p.realm || 0), power: E.power(p), at: Date.now() }))
+        .sort((a, b) => b.power - a.power).slice(0, 100);
+      await Net.write('data/ss/leaderboard.json', { list, at: Date.now() }, '[admin] 重建排行榜');
+      toast('排行榜已重建（' + list.length + '人）', 'ok');
+    };
+    const b = document.getElementById('btnBackup');
+    if (b) b.onclick = async () => {
+      await Net.write('data/ss/backup_' + Date.now() + '.json', PLIST, '[admin] 备份');
+      toast('已备份 ' + PLIST.length + ' 个存档', 'ok');
+    };
+    const c = document.getElementById('btnClearLb');
+    if (c) c.onclick = async () => { await Net.write('data/ss/leaderboard.json', { list: [] }, '[admin] 清空排行榜'); toast('已清空', 'ok'); };
+    const w = document.getElementById('btnWipe');
+    if (w) w.onclick = () => toast('请手动删除仓库 data/ss/players/ 目录', 'err');
+  },
 
-/* ================= 9. 系统 ================= */
-async function renderSys() {
-  A$('#sysRepo').textContent = `${window.GH ? GH.owner : '?'}/${window.GH ? GH.repo : '?'}`;
-  if (window.GH) A$('#sysExtra').value = (GH.extraEndpoints || []).join('\n');
-  A$('#sysEp').textContent = `当前通道：${(window.GH && GH.best) || '默认 api.github.com'}`;
-}
+  sys() {
+    const r = document.getElementById('btnReNet');
+    if (r) r.onclick = async () => { await Net.reset(); D('#atNet').textContent = Net.online ? '●' : '○'; D('#atNet').classList.toggle('off', !Net.online); render(); };
 
+    const bd = D('#btnDiag');
+    if (bd) bd.onclick = async () => {
+      const box = D('#diagBox'); if (!box) return;
+      box.innerHTML = '<div class="lbl">测试中…（每个端点最多 6 秒）</div>';
+      const list = await Net.diagnose();
+      const okN = list.filter((x) => x.ok).length;
+      box.innerHTML = `
+        <div class="lbl" style="margin-bottom:6px">${okN} / ${list.length} 个通道可用 ${okN ? '<span style="color:#7ae89a">（已自动切到最快的）</span>' : '<span style="color:#ff8fa4">（全部不通 → 必须配加速地址）</span>'}</div>
+        ${list.map((x) => `<div class="kv">
+          <span style="font-size:10px;word-break:break-all">${x.ep.replace('https://', '')}</span>
+          <b style="font-size:10px;color:${x.ok ? '#7ae89a' : '#ff8fa4'}">${x.ok ? '✔' : '✘'} ${x.st} ${x.ms}ms</b>
+        </div>`).join('')}`;
+      await Net.reset();
+      render();
+    };
 
-/* ================= 10. 聊天与日志 ================= */
-async function renderChat(kw) {
-  const d = await readJSON('data/chat.json').catch(() => null);
-  const list = (d && d.list) || [];
-  const q = (kw === undefined) ? (A$('#chatKw') ? A$('#chatKw').value.trim() : '') : kw;
-  const show = q ? list.filter((m) => ((m.text || '') + (m.name || '')).indexOf(q) >= 0) : list;
-  const rows = show.slice().reverse().slice(0, 50);
-  A$('#chatBody').innerHTML = rows.map((m, i) =>
-    `<tr><td class="small">${ago(m.at)}</td><td><b>${m.name || '—'}</b></td>
-     <td>${(m.text || '').replace(/</g, '&lt;')}</td>
-     <td><button class="btn sm d" data-chatdel="${i}">删除</button></td></tr>`).join('')
-    || '<tr><td colspan="4" class="empty">无消息</td></tr>';
-  A$('#chatCount').textContent = `共 ${list.length} 条${q ? '，匹配 ' + show.length : ''}`;
-  A$$('#chatBody [data-chatdel]').forEach((b) => b.onclick = async () => {
-    const real = show.slice().reverse()[+b.dataset.chatdel];
-    const idx = list.indexOf(real);
-    if (idx >= 0) list.splice(idx, 1);
-    await writeJSON('data/chat.json', { list }, 'admin: delete chat');
-    atoast('已删除', 'ok'); renderChat(q);
-  });
-}
-async function broadcast() {
-  const t = (A$('#bcText') || {}).value;
-  if (!t || !t.trim()) return atoast('请输入内容', 'err');
-  const d = await readJSON('data/chat.json').catch(() => null) || { list: [] };
-  d.list = d.list || [];
-  d.list.push({ name: '【系统】', text: '[公告] ' + t.trim(), at: Date.now(), sys: true });
-  if (d.list.length > 200) d.list.shift();
-  await writeJSON('data/chat.json', d, 'admin: broadcast');
-  A$('#bcText').value = '';
-  atoast('已广播', 'ok'); renderChat();
-}
+    const be = D('#btnSaveEps');
+    if (be) be.onclick = () => {
+      const v = (D('#sysEps').value || '').split('\n').map((x) => x.trim()).filter(Boolean);
+      GH.extra = v;
+      try { localStorage.setItem('ss_extra', JSON.stringify(v)); } catch (e) {}
+      alert('已保存 ' + v.length + ' 个加速地址，正在重新检测…');
+      Net.reset();
+    };
+    const f = document.getElementById('btnFlush');
+    if (f) f.onclick = async () => { const n = await Net.flush(); toast('补传 ' + n + ' 条', 'ok'); };
+    const l = document.getElementById('btnLogout');
+    if (l) l.onclick = () => location.reload();
+  },
+};
 
-/* ================= 11. 宗门管理 ================= */
-async function renderSectAdmin() {
-  const d = await readJSON('data/sects.json').catch(() => null);
-  const list = (d && d.list) || (d && Array.isArray(d) ? d : []);
-  const kw = (A$('#sectKw') || {}).value ? A$('#sectKw').value.trim() : '';
-  const show = kw ? list.filter((x) => (x.name || '').indexOf(kw) >= 0) : list;
-  const cnt = {};
-  PLAYERS.forEach((x) => { const n = (x.obj.sectInfo || {}).name; if (n) cnt[n] = (cnt[n] || 0) + 1; });
-  A$('#sectBody').innerHTML = show.map((x, i) =>
-    `<tr><td><b>${x.name || '—'}</b></td><td>${cnt[x.name] || x.members || 0}</td>
-     <td>${x.leader || x.owner || '—'}</td><td>${x.level || x.lv || 1}</td>
-     <td><button class="btn sm d" data-sectdel="${i}">解散</button></td></tr>`).join('')
-    || '<tr><td colspan="5" class="empty">无宗门</td></tr>';
-  A$$('#sectBody [data-sectdel]').forEach((b) => b.onclick = async () => {
-    if (!confirm('确定解散该宗门？')) return;
-    const t = show[+b.dataset.sectdel];
-    const idx = list.indexOf(t);
-    if (idx >= 0) list.splice(idx, 1);
-    await writeJSON('data/sects.json', { list }, 'admin: disband sect');
-    atoast('已解散', 'ok'); renderSectAdmin();
-  });
-}
-
-/* ================= 事件绑定 ================= */
-document.addEventListener('DOMContentLoaded', async () => {
-  renderNav();
-  const bg = A$('#burger'), mk = A$('#mask');
-  if (bg) bg.onclick = openSide;
-  if (mk) mk.onclick = closeSide;
-  await checkConn();
-  await loadCfg();
-  await loadPlayers(true);
-  renderDash();
-
-  A$('#btnRefresh').onclick = async () => { await checkConn(); await loadPlayers(true); renderDash(); atoast('已刷新', 'ok'); };
-
-  // 玩家
-  A$('#btnSearch').onclick = () => {
-    const q = (A$('#qUid').value || '').trim();
-    VIEW = q ? PLAYERS.filter((x) => (x.obj.uid || '').indexOf(q) >= 0 || (x.obj.name || '').indexOf(q) >= 0) : PLAYERS.slice();
-    sortView(A$('#qSort').value);
-  };
-  A$('#btnReloadAll').onclick = () => loadPlayers();
-  A$('#qSort').onchange = () => sortView(A$('#qSort').value);
-  A$('#btnSaveP').onclick = async () => {
-    if (!CUR) return;
-    CUR.name = A$('#fName').value.trim() || CUR.name;
-    CUR.realm = Math.max(0, +A$('#fRealm').value || 0);
-    CUR.stage = Math.max(0, Math.min(3, +A$('#fStage').value || 0));
-    CUR.exp = Math.max(0, +A$('#fExp').value || 0);
-    CUR.stone = Math.max(0, +A$('#fStone').value || 0);
-    CUR.stats = CUR.stats || {}; CUR.stats.kills = Math.max(0, +A$('#fKills').value || 0);
-    CUR.reinc = Math.max(0, +A$('#fReinc').value || 0);
-    CUR.banned = A$('#fBan').value === '1';
-    await savePlayer(CUR, 'edit'); renderTable();
-  };
-  A$('#btnGift').onclick = async () => {
-    if (!CUR) return;
-    CUR.stone = Math.max(0, +A$('#fStone').value || 0);
-    CUR.exp = Math.max(0, +A$('#fExp').value || 0);
-    if (window.ENGINE && ENGINE.gainExp) ENGINE.gainExp(CUR, 0);
-    await savePlayer(CUR, 'gift');
-  };
-  A$('#btnDelP').onclick = async () => {
-    if (!CUR) return;
-    if (!confirm(`确定删除【${CUR.name}】的存档？不可恢复。`)) return;
-    await writeJSON(playerPath(CUR.uid), null, 'admin: delete').catch(() => {});
-    atoast('已删除（若 API 不支持删除，请到仓库手动删）', 'ok');
-    await loadPlayers();
-  };
-  A$('#btnFull').onclick = async () => {
-    if (!CUR) return;
-    CUR.lastTick = Date.now(); CUR.lastSeen = Date.now();
-    await savePlayer(CUR, 'full heal'); atoast('已回满', 'ok');
-  };
-  A$('#btnResetTask').onclick = async () => {
-    if (!CUR) return;
-    CUR.tasks = { mainIdx: 0, daily: { date: '', prog: {}, claimed: [] }, bounty: { prog: {}, claimed: [] } };
-    await savePlayer(CUR, 'reset task'); atoast('任务已重置', 'ok');
-  };
-  A$('#btnSaveRaw').onclick = async () => {
-    try {
-      const o = JSON.parse(A$('#rawJson').value);
-      await writeJSON(playerPath(o.uid), o, 'admin raw');
-      atoast('已保存', 'ok'); await loadPlayers();
-    } catch (e) { atoast('JSON 格式错误', 'err'); }
-  };
-
-  // 批量
-  A$('#btnSendMail').onclick = sendMailAll;
-  A$('#btnGiveAll').onclick = giveAll;
-  A$$('[data-dbl]').forEach((b) => b.onclick = () => setDouble(b.dataset.dbl));
-  A$('#btnUnbanAll').onclick = async () => {
-    let n = 0;
-    for (const x of PLAYERS) if (x.obj.banned) { x.obj.banned = false; await writeJSON(playerPath(x.obj.uid), x.obj, 'admin unban'); n++; }
-    A$('#batchMsg2').textContent = `已解封 ${n} 位`; atoast('完成', 'ok');
-  };
-  A$('#btnClearInactive').onclick = async () => {
-    const old = PLAYERS.filter((x) => Date.now() - (x.obj.lastSeen || 0) > 2592000000);
-    A$('#batchMsg2').textContent = `30 天未上线：${old.length} 位（${old.map((x) => x.obj.name).join('、').slice(0, 80)}）`;
-  };
-  A$('#btnRecalcPower').onclick = async () => {
-    let n = 0;
-    for (const x of PLAYERS) { try { power(x.obj); n++; } catch (e) {} }
-    A$('#batchMsg2').textContent = `已重算 ${n} 位`; atoast('完成', 'ok');
-  };
-
-  // 货币
-  A$('#btnWLoad').onclick = async () => {
-    const uid = (A$('#wUid').value || '').trim();
-    const hit = findPlayer(uid);
-    if (!hit) return atoast('未找到', 'err');
-    CUR = hit.obj; renderWallet(CUR);
-    A$('#wWho').textContent = `已载入：${CUR.name}`;
-  };
-  A$('#btnWSave').onclick = saveWallet;
-  A$('#btnWMax').onclick = () => { A$$('#walletGrid [data-cur]').forEach((e) => e.value = 999999); };
-  A$('#btnWZero').onclick = () => { A$$('#walletGrid [data-cur]').forEach((e) => e.value = 0); };
-
-  // 活动
-  A$$('[data-af]').forEach((b) => b.onclick = () => {
-    A$$('[data-af]').forEach((x) => x.classList.remove('on'));
-    b.classList.add('on'); renderActs(b.dataset.af);
-  });
-
-  // 发放
-  A$('#gvType').onchange = renderGive;
-  A$('#btnGvSearch').onclick = renderGive;
-  A$('#gvKw').onkeydown = (e) => { if (e.key === 'Enter') renderGive(); };
-
-  // 配置
-  A$('#btnCfgLoad').onclick = loadCfgFile;
-  A$('#btnCfgSave').onclick = async () => {
-    try {
-      const o = JSON.parse(A$('#cfgJson').value);
-      await writeJSON(A$('#cfgFile').value, o, 'admin config');
-      atoast('配置已保存', 'ok');
-    } catch (e) { atoast('JSON 格式错误', 'err'); }
-  };
-  A$('#btnSaveNotice').onclick = async () => {
-    const n = await readJSON('data/config/notice.json') || {};
-    n.notice = A$('#nText').value;
-    n.giftCodes = A$('#nCodes').value.split(/[,，\s]+/).filter(Boolean);
-    await writeJSON('data/config/notice.json', n, 'admin notice');
-    A$('#noticeMsg').textContent = '已保存，玩家 2 分钟内生效'; atoast('已保存', 'ok');
-  };
-
-  // 数据维护
-  A$('#btnBuildLb').onclick = buildLb;
-  A$('#btnBuildSt').onclick = buildSt;
-  A$('#btnBackup').onclick = backup;
-  A$('#btnClearChat').onclick = async () => { if (!confirm('确定清空世界聊天？')) return;
-    await writeJSON('data/chat.json', { list: [] }, 'admin clear chat'); atoast('已清空', 'ok'); };
-  A$('#btnClearMarket').onclick = async () => { if (!confirm('确定清空寄售行？')) return;
-    await writeJSON('data/market.json', { list: [] }, 'admin clear market'); atoast('已清空', 'ok'); };
-  A$('#btnClearCache').onclick = () => {
-    Object.keys(localStorage).forEach((k) => { if (k.indexOf('xx_') === 0) localStorage.removeItem(k); });
-    atoast('本地缓存已清除', 'ok');
-  };
-
-  // 聊天
-  if (A$('#btnChatLoad')) A$('#btnChatLoad').onclick = () => renderChat();
-  if (A$('#btnChatClear')) A$('#btnChatClear').onclick = async () => {
-    if (!confirm('确定清空世界聊天？')) return;
-    await writeJSON('data/chat.json', { list: [] }, 'admin: clear chat');
-    atoast('已清空', 'ok'); renderChat();
-  };
-  if (A$('#btnChatSearch')) A$('#btnChatSearch').onclick = () => renderChat();
-  if (A$('#btnBroadcast')) A$('#btnBroadcast').onclick = broadcast;
-  // 宗门
-  if (A$('#btnSectLoad')) A$('#btnSectLoad').onclick = renderSectAdmin;
-  if (A$('#sectKw')) A$('#sectKw').onkeydown = (e) => { if (e.key === 'Enter') renderSectAdmin(); };
-
-  // 系统
-  A$('#btnSaveEp').onclick = async () => {
-    const list = A$('#sysExtra').value.split('\n').map((s) => s.trim()).filter(Boolean);
-    if (window.Net && Net.setExtra) Net.setExtra(list);
-    if (window.GH) GH.extraEndpoints = list;
-    localStorage.setItem('xx_extra_ep', JSON.stringify(list));
-    atoast('已保存，正在测速…', 'ok'); await checkConn();
-  };
-});
+function x_id(nm, arr) { const x = (arr || []).find((y) => (y.name || y.n) === nm); return x ? (x.id || nm) : nm; }
