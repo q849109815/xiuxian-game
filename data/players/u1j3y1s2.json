@@ -7,11 +7,11 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790040430374,
-  "lastTick": 1790040430374,
+  "lastSeen": 1790040433248,
+  "lastTick": 1790040433248,
   "realm": 31,
   "stage": 0,
-  "exp": 16187405164.931658,
+  "exp": 16512149388.273071,
   "stone": 8505046920682,
   "equip": {
     "weapon": null,
@@ -142,7 +142,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 2,
-    "acc": 78,
+    "acc": 81,
     "level": 2
   },
   "partners": {},
@@ -181,7 +181,9 @@
       "SK-018",
       "SK-009"
     ],
-    "wear": {}
+    "wear": {
+      "时装": "SK-009"
+    }
   },
   "worm": {
     "own": [],
