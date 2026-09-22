@@ -7,11 +7,11 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041952333,
-  "lastTick": 1790041952333,
+  "lastSeen": 1790041960500,
+  "lastTick": 1790041960500,
   "realm": 31,
   "stage": 0,
-  "exp": 206295882945.2184,
+  "exp": 236858718040.82608,
   "stone": 2827424644950.0703,
   "equip": {
     "weapon": {
@@ -111,6 +111,20 @@
       "atk": 88,
       "def": 181,
       "hp": 1275,
+      "crit": 0,
+      "mp": 337
+    },
+    "bracelet": {
+      "id": "it_1rhrqhn",
+      "kind": "equip",
+      "slot": "bracelet",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·锁金腕",
+      "atk": 206,
+      "def": 171,
+      "hp": 883,
       "crit": 0,
       "mp": 337
     }
@@ -532,20 +546,6 @@
       "mp": 337
     },
     {
-      "id": "it_1rhrqhn",
-      "kind": "equip",
-      "slot": "bracelet",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·锁金腕",
-      "atk": 206,
-      "def": 171,
-      "hp": 883,
-      "crit": 0,
-      "mp": 337
-    },
-    {
       "id": "it_bfytjti",
       "kind": "equip",
       "slot": "boots",
@@ -837,7 +837,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 4,
-    "acc": 34,
+    "acc": 42,
     "level": 30
   },
   "partners": {},
