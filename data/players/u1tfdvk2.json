@@ -7,11 +7,11 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790040234912,
-  "lastTick": 1790040234912,
+  "lastSeen": 1790040264914,
+  "lastTick": 1790040264914,
   "realm": 9,
   "stage": 0,
-  "exp": 30700.1450749855,
+  "exp": 346914.1916652244,
   "stone": 200,
   "equip": {
     "weapon": null,
@@ -64,13 +64,13 @@
     "daily": {
       "date": "2026-9-22",
       "prog": {
-        "meditate": 1
+        "meditate": 2
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
-        "meditate": 1
+        "meditate": 2
       },
       "claimed": []
     }
@@ -106,7 +106,7 @@
     "battles": 0,
     "breakthrough": 9,
     "offlineMin": 1,
-    "meditate": 1,
+    "meditate": 2,
     "dungeon": 0,
     "encounters": 0,
     "rob": 0
@@ -115,7 +115,7 @@
   "trait": "P003",
   "bottle": {
     "liquid": 9,
-    "acc": 72,
+    "acc": 102,
     "level": 1
   },
   "partners": {},
@@ -170,5 +170,5 @@
   },
   "loginAt": 1790038877486,
   "codexSeen": {},
-  "meditateUntil": 1790039628355
+  "meditateUntil": 1790040564697
 }
