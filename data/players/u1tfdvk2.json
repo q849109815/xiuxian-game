@@ -7,11 +7,11 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790040283456,
-  "lastTick": 1790040283456,
+  "lastSeen": 1790040294913,
+  "lastTick": 1790040294913,
   "realm": 9,
   "stage": 0,
-  "exp": 374018.25280153065,
+  "exp": 392087.6268924015,
   "stone": 200,
   "equip": {
     "weapon": null,
@@ -65,14 +65,14 @@
       "date": "2026-9-22",
       "prog": {
         "meditate": 2,
-        "arena": 16
+        "arena": 20
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "meditate": 2,
-        "arena": 16
+        "arena": 20
       },
       "claimed": []
     }
@@ -81,9 +81,9 @@
   "arena": {
     "score": 0,
     "wins": 0,
-    "losses": 16,
+    "losses": 20,
     "dayDate": "2026-9-22",
-    "fights": 16
+    "fights": 20
   },
   "mail": [],
   "karma": 0,
@@ -117,7 +117,7 @@
   "trait": "P003",
   "bottle": {
     "liquid": 9,
-    "acc": 120,
+    "acc": 132,
     "level": 1
   },
   "partners": {},
