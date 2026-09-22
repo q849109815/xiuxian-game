@@ -7,11 +7,11 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041892309,
-  "lastTick": 1790041892309,
+  "lastSeen": 1790041918592,
+  "lastTick": 1790041918592,
   "realm": 31,
   "stage": 0,
-  "exp": 310104458230.15424,
+  "exp": 77863121958.8374,
   "stone": 2827424644950.0703,
   "equip": {
     "weapon": {
@@ -59,17 +59,17 @@
       "mp": 337
     },
     "helmet": {
-      "id": "it_ipb64so",
+      "id": "it_kstsptw",
       "kind": "equip",
       "slot": "helmet",
-      "q": 0,
+      "q": 3,
       "level": 0,
       "temper": 0,
-      "name": "凡品·玄铁盔",
-      "atk": 83,
-      "def": 343,
-      "hp": 1741,
-      "crit": 0,
+      "name": "仙器·狻猊盔",
+      "atk": 55,
+      "def": 228,
+      "hp": 1525,
+      "crit": 0.02,
       "mp": 337
     },
     "artifact": {
@@ -421,20 +421,6 @@
       "mp": 337
     },
     {
-      "id": "it_kstsptw",
-      "kind": "equip",
-      "slot": "helmet",
-      "q": 3,
-      "level": 0,
-      "temper": 0,
-      "name": "仙器·狻猊盔",
-      "atk": 55,
-      "def": 228,
-      "hp": 1525,
-      "crit": 0.02,
-      "mp": 337
-    },
-    {
       "id": "it_ong9jb5",
       "kind": "equip",
       "slot": "weapon",
@@ -728,6 +714,20 @@
       "hp": 935,
       "crit": 0,
       "mp": 337
+    },
+    {
+      "id": "it_ipb64so",
+      "kind": "equip",
+      "slot": "helmet",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·玄铁盔",
+      "atk": 83,
+      "def": 343,
+      "hp": 1741,
+      "crit": 0,
+      "mp": 337
     }
   ],
   "skills": [
@@ -837,8 +837,8 @@
   "faction": "C001",
   "trait": "P002",
   "bottle": {
-    "liquid": 3,
-    "acc": 64,
+    "liquid": 4,
+    "acc": 0,
     "level": 30
   },
   "partners": {},
