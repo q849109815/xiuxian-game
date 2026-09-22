@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041740507,
-  "lastTick": 1790041740507,
+  "lastSeen": 1790041742308,
+  "lastTick": 1790041742308,
   "realm": 31,
   "stage": 0,
-  "exp": 48765975454.66908,
-  "stone": 2827424818147.0703,
+  "exp": 49170773545.29906,
+  "stone": 2827424819049.0703,
   "equip": {
     "weapon": {
       "id": "fr_fr_w002",
@@ -53,7 +53,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 97,
+      "count": 98,
       "desc": "炼器材料",
       "id": "i_w0lydih"
     },
@@ -165,6 +165,20 @@
       "hp": 885,
       "crit": 0,
       "mp": 337
+    },
+    {
+      "id": "it_t73pqvq",
+      "kind": "equip",
+      "slot": "necklace",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·阴阳环",
+      "atk": 152,
+      "def": 62,
+      "hp": 972,
+      "crit": 0,
+      "mp": 337
     }
   ],
   "skills": [
@@ -202,8 +216,8 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26063815153,
-        "kill": 27
+        "exp": 26063821847,
+        "kill": 28
       },
       "claimed": []
     },
@@ -211,9 +225,9 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26063815153,
-        "kill": 27,
-        "墨蛟": 13,
+        "exp": 26063821847,
+        "kill": 28,
+        "墨蛟": 14,
         "星斗海妖兽": 7,
         "禁地守卫": 7
       },
@@ -251,9 +265,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 27,
+    "kills": 28,
     "deaths": 6,
-    "battles": 33,
+    "battles": 34,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
@@ -265,7 +279,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 2,
-    "acc": 2,
+    "acc": 4,
     "level": 30
   },
   "partners": {},
