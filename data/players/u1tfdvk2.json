@@ -7,12 +7,12 @@
   "root": "metal",
   "sect": null,
   "createdAt": 1790003121304,
-  "lastSeen": 1790039326487,
-  "lastTick": 1790039326487,
+  "lastSeen": 1790039274913,
+  "lastTick": 1790039274913,
   "realm": 6,
   "stage": 0,
-  "exp": 124501.30689600056,
-  "stone": 700,
+  "exp": 115598.64499776052,
+  "stone": 200,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -111,7 +111,7 @@
   "trait": "P003",
   "bottle": {
     "liquid": 7,
-    "acc": 270,
+    "acc": 240,
     "level": 1
   },
   "partners": {},
@@ -122,7 +122,8 @@
     "owned": [
       "SK-010",
       "SK-013",
-      "SK-018"
+      "SK-018",
+      "SK-001"
     ],
     "wear": {}
   },
@@ -161,7 +162,8 @@
     "c014": 0,
     "c015": 0,
     "c016": 0,
-    "C001": 500
+    "C001": 200
   },
-  "loginAt": 1790038877486
+  "loginAt": 1790038877486,
+  "codexSeen": {}
 }
