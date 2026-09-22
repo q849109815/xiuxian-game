@@ -7,11 +7,11 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041982310,
-  "lastTick": 1790041982310,
+  "lastSeen": 1790041992130,
+  "lastTick": 1790041992130,
   "realm": 31,
   "stage": 0,
-  "exp": 323764350491.1551,
+  "exp": 27486550639.225277,
   "stone": 2827424644950.0703,
   "equip": {
     "weapon": {
@@ -59,16 +59,16 @@
     },
     "talisman": null,
     "necklace": {
-      "id": "it_q4e5ww4",
+      "id": "it_ptsjbuw",
       "kind": "equip",
       "slot": "necklace",
-      "q": 1,
-      "level": 12,
-      "temper": 8,
-      "name": "灵器·破妄链",
-      "atk": 128,
-      "def": 66,
-      "hp": 720,
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·聚灵珠",
+      "atk": 174,
+      "def": 58,
+      "hp": 765,
       "crit": 0,
       "mp": 337
     },
@@ -162,20 +162,6 @@
       "atk": 149,
       "def": 134,
       "hp": 1037,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_ptsjbuw",
-      "kind": "equip",
-      "slot": "necklace",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·聚灵珠",
-      "atk": 174,
-      "def": 58,
-      "hp": 765,
       "crit": 0,
       "mp": 337
     },
@@ -712,6 +698,20 @@
       "hp": 2926,
       "crit": 0,
       "mp": 337
+    },
+    {
+      "id": "it_q4e5ww4",
+      "kind": "equip",
+      "slot": "necklace",
+      "q": 1,
+      "level": 12,
+      "temper": 8,
+      "name": "灵器·破妄链",
+      "atk": 128,
+      "def": 66,
+      "hp": 720,
+      "crit": 0,
+      "mp": 337
     }
   ],
   "skills": [
@@ -822,7 +822,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 4,
-    "acc": 64,
+    "acc": 73,
     "level": 30
   },
   "partners": {},
