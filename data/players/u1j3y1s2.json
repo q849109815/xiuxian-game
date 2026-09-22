@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041826449,
-  "lastTick": 1790041826449,
+  "lastSeen": 1790041825500,
+  "lastTick": 1790041825500,
   "realm": 31,
   "stage": 0,
-  "exp": 89957834276.92506,
-  "stone": 2827424866779.0703,
+  "exp": 88819595670.16328,
+  "stone": 2827424867257.0703,
   "equip": {
     "weapon": {
       "id": "it_a4frt4b",
@@ -20,7 +20,7 @@
       "slot": "weapon",
       "q": 3,
       "level": 0,
-      "temper": 4,
+      "temper": 3,
       "name": "仙器·诛仙剑",
       "atk": 569,
       "def": 78,
@@ -108,7 +108,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 122,
+      "count": 121,
       "desc": "炼器材料",
       "id": "i_w0lydih"
     },
@@ -118,7 +118,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 215,
+      "count": 214,
       "desc": "炼丹材料",
       "id": "i_ugyldlf"
     },
@@ -418,20 +418,6 @@
       "hp": 713,
       "crit": 0,
       "mp": 337
-    },
-    {
-      "id": "it_kstsptw",
-      "kind": "equip",
-      "slot": "helmet",
-      "q": 3,
-      "level": 0,
-      "temper": 0,
-      "name": "仙器·狻猊盔",
-      "atk": 55,
-      "def": 228,
-      "hp": 1525,
-      "crit": 0.02,
-      "mp": 337
     }
   ],
   "skills": [
@@ -479,8 +465,8 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064352679,
-        "kill": 98
+        "exp": 26064345829,
+        "kill": 97
       },
       "claimed": []
     },
@@ -488,10 +474,10 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064352679,
-        "kill": 98,
+        "exp": 26064345829,
+        "kill": 97,
         "墨蛟": 39,
-        "星斗海妖兽": 30,
+        "星斗海妖兽": 29,
         "禁地守卫": 29
       },
       "claimed": []
@@ -528,9 +514,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 98,
+    "kills": 97,
     "deaths": 6,
-    "battles": 104,
+    "battles": 103,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
@@ -542,7 +528,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 2,
-    "acc": 88,
+    "acc": 87,
     "level": 30
   },
   "partners": {},
