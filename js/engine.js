@@ -160,7 +160,8 @@ const E = {
   },
 
   calcDamage(atkP, defP, mul, skillW) {
-    const A = this.attrs(atkP), D = this.foeAttrs(defP);
+    // 攻方可能是玩家，也可能是战斗体(foe)，统一用 foeAttrs 识别
+    const A = this.foeAttrs(atkP), D = this.foeAttrs(defP);
     const cw = this.counterMul(skillW, defP ? defP.root : null);
     let dmg = A.atk * (mul || 1) * cw;
     // 防御减伤
