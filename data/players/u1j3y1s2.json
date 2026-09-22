@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041744883,
-  "lastTick": 1790041744883,
+  "lastSeen": 1790041748666,
+  "lastTick": 1790041748666,
   "realm": 31,
   "stage": 0,
-  "exp": 49575588173.92903,
-  "stone": 2827424821791.0703,
+  "exp": 50494524947.68068,
+  "stone": 2827424824313.0703,
   "equip": {
     "weapon": {
       "id": "fr_fr_w002",
@@ -57,30 +57,8 @@
       "hp": 720,
       "crit": 0,
       "mp": 337
-    }
-  },
-  "bag": [
-    {
-      "kind": "ore",
-      "ref": "ore_iron",
-      "name": "玄铁",
-      "icon": "⚙️",
-      "price": 50,
-      "count": 99,
-      "desc": "炼器材料",
-      "id": "i_w0lydih"
     },
-    {
-      "kind": "herb",
-      "ref": "herb_green",
-      "name": "青灵草",
-      "icon": "🌿",
-      "price": 30,
-      "count": 175,
-      "desc": "炼丹材料",
-      "id": "i_ugyldlf"
-    },
-    {
+    "helmet": {
       "id": "it_ipb64so",
       "kind": "equip",
       "slot": "helmet",
@@ -93,6 +71,28 @@
       "hp": 1741,
       "crit": 0,
       "mp": 337
+    }
+  },
+  "bag": [
+    {
+      "kind": "ore",
+      "ref": "ore_iron",
+      "name": "玄铁",
+      "icon": "⚙️",
+      "price": 50,
+      "count": 100,
+      "desc": "炼器材料",
+      "id": "i_w0lydih"
+    },
+    {
+      "kind": "herb",
+      "ref": "herb_green",
+      "name": "青灵草",
+      "icon": "🌿",
+      "price": 30,
+      "count": 177,
+      "desc": "炼丹材料",
+      "id": "i_ugyldlf"
     },
     {
       "id": "it_wp3dm6t",
@@ -192,6 +192,34 @@
       "hp": 586,
       "crit": 0,
       "mp": 337
+    },
+    {
+      "id": "it_an3p07w",
+      "kind": "equip",
+      "slot": "necklace",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·养魂链",
+      "atk": 113,
+      "def": 70,
+      "hp": 751,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_5qiqjft",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·太极道衣",
+      "atk": 56,
+      "def": 466,
+      "hp": 2451,
+      "crit": 0,
+      "mp": 337
     }
   ],
   "skills": [
@@ -229,8 +257,8 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26063845079,
-        "kill": 31
+        "exp": 26063866335,
+        "kill": 34
       },
       "claimed": []
     },
@@ -238,11 +266,11 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26063845079,
-        "kill": 31,
+        "exp": 26063866335,
+        "kill": 34,
         "墨蛟": 15,
-        "星斗海妖兽": 8,
-        "禁地守卫": 8
+        "星斗海妖兽": 9,
+        "禁地守卫": 10
       },
       "claimed": []
     }
@@ -278,9 +306,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 31,
+    "kills": 34,
     "deaths": 6,
-    "battles": 37,
+    "battles": 40,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
@@ -292,7 +320,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 2,
-    "acc": 6,
+    "acc": 10,
     "level": 30
   },
   "partners": {},
