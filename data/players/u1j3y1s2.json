@@ -7,26 +7,26 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041771154,
-  "lastTick": 1790041771154,
+  "lastSeen": 1790041777992,
+  "lastTick": 1790041777992,
   "realm": 31,
   "stage": 0,
-  "exp": 60221370535.281395,
-  "stone": 2827424839447.0703,
+  "exp": 64517715131.78552,
+  "stone": 2827424844181.0703,
   "equip": {
     "weapon": {
-      "id": "it_mf028hu",
+      "id": "fr_fr_w002",
+      "name": "青竹蜂云剑",
+      "icon": "🗡️",
       "kind": "equip",
+      "q": 4,
       "slot": "weapon",
-      "q": 1,
-      "level": 0,
-      "temper": 2,
-      "name": "灵器·灵蛇杖",
-      "atk": 481,
-      "def": 87,
-      "hp": 586,
-      "crit": 0,
-      "mp": 337
+      "base": {
+        "atk": 80
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
     },
     "armor": {
       "id": "it_limcshl",
@@ -90,7 +90,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 188,
+      "count": 193,
       "desc": "炼丹材料",
       "id": "i_ugyldlf"
     },
@@ -236,20 +236,6 @@
       "mp": 337
     },
     {
-      "id": "fr_fr_w002",
-      "name": "青竹蜂云剑",
-      "icon": "🗡️",
-      "kind": "equip",
-      "q": 4,
-      "slot": "weapon",
-      "base": {
-        "atk": 80
-      },
-      "enh": 0,
-      "temp": 0,
-      "fr": true
-    },
-    {
       "id": "it_ej9xj2r",
       "kind": "equip",
       "slot": "helmet",
@@ -274,6 +260,48 @@
       "atk": 54,
       "def": 437,
       "hp": 2712,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_a4frt4b",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 3,
+      "level": 0,
+      "temper": 0,
+      "name": "仙器·诛仙剑",
+      "atk": 569,
+      "def": 78,
+      "hp": 650,
+      "crit": 0.02,
+      "mp": 337
+    },
+    {
+      "id": "it_ny8ed69",
+      "kind": "equip",
+      "slot": "boots",
+      "q": 1,
+      "level": 0,
+      "temper": 0,
+      "name": "灵器·玄铁靴",
+      "atk": 124,
+      "def": 154,
+      "hp": 1006,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_mf028hu",
+      "kind": "equip",
+      "slot": "weapon",
+      "q": 1,
+      "level": 0,
+      "temper": 3,
+      "name": "灵器·灵蛇杖",
+      "atk": 481,
+      "def": 87,
+      "hp": 586,
       "crit": 0,
       "mp": 337
     }
@@ -313,8 +341,8 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064004031,
-        "kill": 52
+        "exp": 26064049801,
+        "kill": 58
       },
       "claimed": []
     },
@@ -322,11 +350,11 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064004031,
-        "kill": 52,
-        "墨蛟": 20,
-        "星斗海妖兽": 14,
-        "禁地守卫": 18
+        "exp": 26064049801,
+        "kill": 58,
+        "墨蛟": 22,
+        "星斗海妖兽": 17,
+        "禁地守卫": 19
       },
       "claimed": []
     }
@@ -362,9 +390,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 52,
+    "kills": 58,
     "deaths": 6,
-    "battles": 58,
+    "battles": 64,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
@@ -376,7 +404,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 2,
-    "acc": 32,
+    "acc": 39,
     "level": 30
   },
   "partners": {},
