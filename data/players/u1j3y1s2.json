@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041788568,
-  "lastTick": 1790041788568,
+  "lastSeen": 1790041789380,
+  "lastTick": 1790041789380,
   "realm": 31,
   "stage": 0,
-  "exp": 67417476030.913574,
-  "stone": 2827424843524.0703,
+  "exp": 67687994356.02696,
+  "stone": 2827424843648.0703,
   "equip": {
     "weapon": {
       "id": "fr_fr_w002",
@@ -28,7 +28,7 @@
       "temp": 0,
       "fr": true,
       "temper": 3,
-      "level": 3
+      "level": 4
     },
     "armor": {
       "id": "it_limcshl",
@@ -82,7 +82,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 108,
+      "count": 109,
       "desc": "炼器材料",
       "id": "i_w0lydih"
     },
@@ -381,8 +381,8 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064107271,
-        "kill": 66
+        "exp": 26064113875,
+        "kill": 67
       },
       "claimed": []
     },
@@ -390,10 +390,10 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064107271,
-        "kill": 66,
+        "exp": 26064113875,
+        "kill": 67,
         "墨蛟": 27,
-        "星斗海妖兽": 19,
+        "星斗海妖兽": 20,
         "禁地守卫": 20
       },
       "claimed": []
@@ -430,21 +430,21 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 66,
+    "kills": 67,
     "deaths": 6,
-    "battles": 72,
+    "battles": 73,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
     "dungeon": 8,
-    "encounters": 10,
+    "encounters": 11,
     "rob": 0
   },
   "faction": "C001",
   "trait": "P002",
   "bottle": {
     "liquid": 2,
-    "acc": 50,
+    "acc": 51,
     "level": 30
   },
   "partners": {},
