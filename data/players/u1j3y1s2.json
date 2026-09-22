@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790042108382,
-  "lastTick": 1790042108382,
+  "lastSeen": 1790042110366,
+  "lastTick": 1790042110366,
   "realm": 31,
   "stage": 0,
-  "exp": 124751536473.13411,
-  "stone": 2827424749652.0703,
+  "exp": 132151174181.1258,
+  "stone": 2827424778131.0703,
   "equip": {
     "weapon": {
       "id": "it_a4frt4b",
@@ -107,7 +107,7 @@
       "slot": "boots",
       "q": 2,
       "level": 0,
-      "temper": 1,
+      "temper": 5,
       "name": "宝器·追风靴",
       "atk": 88,
       "def": 181,
@@ -137,7 +137,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 143,
+      "count": 144,
       "desc": "炼器材料",
       "id": "i_w0lydih"
     },
@@ -745,8 +745,8 @@
       "prog": {
         "arena": 2,
         "dungeon": 18,
-        "exp": 26356878508,
-        "kill": 154
+        "exp": 26357033612,
+        "kill": 155
       },
       "claimed": []
     },
@@ -754,12 +754,12 @@
       "prog": {
         "arena": 2,
         "dungeon": 18,
-        "exp": 26356878508,
-        "kill": 154,
+        "exp": 26357033612,
+        "kill": 155,
         "墨蛟": 56,
         "星斗海妖兽": 51,
         "禁地守卫": 45,
-        "守卫": 2
+        "守卫": 3
       },
       "claimed": []
     }
@@ -795,9 +795,9 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 154,
+    "kills": 155,
     "deaths": 7,
-    "battles": 161,
+    "battles": 162,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
@@ -809,7 +809,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 6,
-    "acc": 9,
+    "acc": 11,
     "level": 30
   },
   "partners": {},
