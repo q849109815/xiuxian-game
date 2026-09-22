@@ -7,11 +7,11 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041652308,
-  "lastTick": 1790041652308,
+  "lastSeen": 1790041681806,
+  "lastTick": 1790041681806,
   "realm": 31,
   "stage": 0,
-  "exp": 10661943657.03395,
+  "exp": 40497682225.993256,
   "stone": 2827424794905.0703,
   "equip": {
     "weapon": null,
@@ -76,7 +76,7 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 291821511
+        "exp": 26063593293
       },
       "claimed": []
     },
@@ -84,7 +84,7 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 291821511
+        "exp": 26063593293
       },
       "claimed": []
     }
@@ -121,8 +121,8 @@
   "title": "",
   "stats": {
     "kills": 0,
-    "deaths": 1,
-    "battles": 1,
+    "deaths": 5,
+    "battles": 5,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
@@ -134,7 +134,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 1,
-    "acc": 4,
+    "acc": 33,
     "level": 30
   },
   "partners": {},
