@@ -1,17 +1,14 @@
 {
-  "updatedAt": "2026-09-22T01:49:30.779Z",
+  "updatedAt": "2026-09-22T06:52:04.254Z",
   "total": 5,
-  "online10m": 1,
+  "online10m": 0,
   "dau": 5,
   "newToday": 5,
   "new7d": 5,
-  "totalStone": 11332484443309.07,
-  "totalKills": 4456,
+  "totalStone": 2500001200,
+  "totalKills": 155,
   "realmDist": {
-    "?": 1,
-    "真仙": 1,
-    "金丹": 2,
-    "筑基": 1
+    "?": 5
   },
   "rootDist": {
     "mixed": 1,
