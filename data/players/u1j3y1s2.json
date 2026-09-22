@@ -7,11 +7,11 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790040279825,
-  "lastTick": 1790040279825,
+  "lastSeen": 1790040304176,
+  "lastTick": 1790040304176,
   "realm": 31,
   "stage": 0,
-  "exp": 2573006835.7064013,
+  "exp": 4791116176.832605,
   "stone": 8505046406782,
   "equip": {
     "weapon": null,
@@ -145,7 +145,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 1,
-    "acc": 191,
+    "acc": 216,
     "level": 2
   },
   "partners": {},
@@ -190,7 +190,16 @@
   },
   "sectSkill": [],
   "titles": {
-    "owned": [],
+    "owned": [
+      "ti1",
+      "ti2",
+      "ti3",
+      "ti4",
+      "ti5",
+      "ti6",
+      "ti9",
+      "ti10"
+    ],
     "cur": null
   },
   "loginAt": 1790039825175,
@@ -222,5 +231,6 @@
   },
   "sectWh": {
     "items": []
-  }
+  },
+  "codexSeen": {}
 }
