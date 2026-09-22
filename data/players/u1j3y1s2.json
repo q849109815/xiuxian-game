@@ -7,19 +7,40 @@
   "root": "mixed",
   "sect": null,
   "createdAt": 1790039820957,
-  "lastSeen": 1790040034175,
-  "lastTick": 1790040034175,
-  "realm": 0,
+  "lastSeen": 1790040057482,
+  "lastTick": 1790040057482,
+  "realm": 1,
   "stage": 0,
-  "exp": 2713.719999999997,
-  "stone": 700,
+  "exp": 68.5559999999964,
+  "stone": 1000,
   "equip": {
     "weapon": null,
     "armor": null,
     "ring": null,
     "talisman": null
   },
-  "bag": [],
+  "bag": [
+    {
+      "kind": "herb",
+      "ref": "herb_green",
+      "name": "青灵草",
+      "icon": "🌿",
+      "price": 30,
+      "count": 2,
+      "desc": "炼丹材料",
+      "id": "i_fr8trrp"
+    },
+    {
+      "kind": "ore",
+      "ref": "ore_iron",
+      "name": "玄铁",
+      "icon": "⚙️",
+      "price": 50,
+      "count": 1,
+      "desc": "炼器材料",
+      "id": "i_w0lydih"
+    }
+  ],
   "skills": [
     {
       "id": "sk002",
@@ -83,7 +104,7 @@
     "kills": 0,
     "deaths": 0,
     "battles": 0,
-    "breakthrough": 0,
+    "breakthrough": 1,
     "offlineMin": 0,
     "meditate": 0,
     "dungeon": 0,
@@ -94,7 +115,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 0,
-    "acc": 210,
+    "acc": 233,
     "level": 1
   },
   "partners": {},
@@ -158,5 +179,6 @@
       "claimed": 0
     },
     "gifts": {}
-  }
+  },
+  "storyIdx": 1
 }
