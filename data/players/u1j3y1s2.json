@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790042059707,
-  "lastTick": 1790042059707,
+  "lastSeen": 1790042062899,
+  "lastTick": 1790042062899,
   "realm": 31,
   "stage": 0,
-  "exp": 273319937987.75388,
-  "stone": 2827424663796.0703,
+  "exp": 284327418002.9716,
+  "stone": 2827424669094.0703,
   "equip": {
     "weapon": {
       "id": "it_a4frt4b",
@@ -147,7 +147,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 262,
+      "count": 264,
       "desc": "炼丹材料",
       "id": "i_ugyldlf"
     },
@@ -744,7 +744,7 @@
       "date": "2026-9-22",
       "prog": {
         "arena": 2,
-        "dungeon": 17,
+        "dungeon": 18,
         "exp": 26064762329,
         "kill": 152
       },
@@ -753,7 +753,7 @@
     "bounty": {
       "prog": {
         "arena": 2,
-        "dungeon": 17,
+        "dungeon": 18,
         "exp": 26064762329,
         "kill": 152,
         "墨蛟": 56,
@@ -800,7 +800,7 @@
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
-    "dungeon": 17,
+    "dungeon": 18,
     "encounters": 29,
     "rob": 0
   },
@@ -808,7 +808,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 5,
-    "acc": 50,
+    "acc": 53,
     "level": 30
   },
   "partners": {},
@@ -822,7 +822,8 @@
     "D302",
     "D001",
     "D002",
-    "D101"
+    "D101",
+    "D107"
   ],
   "wallet": {
     "c001": 0,
