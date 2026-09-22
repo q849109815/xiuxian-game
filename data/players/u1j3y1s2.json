@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041805445,
-  "lastTick": 1790041805445,
+  "lastSeen": 1790041809469,
+  "lastTick": 1790041809469,
   "realm": 31,
   "stage": 0,
-  "exp": 72016280941.84117,
-  "stone": 2827424854927.0703,
+  "exp": 75147915210.4962,
+  "stone": 2827424858187.0703,
   "equip": {
     "weapon": {
       "id": "it_a4frt4b",
@@ -71,6 +71,20 @@
       "hp": 1741,
       "crit": 0,
       "mp": 337
+    },
+    "artifact": {
+      "id": "fr_fr_t003",
+      "name": "镇物：定界盘",
+      "icon": "🔮",
+      "kind": "equip",
+      "q": 1,
+      "slot": "artifact",
+      "base": {
+        "atk": 10
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
     }
   },
   "bag": [
@@ -80,7 +94,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 114,
+      "count": 116,
       "desc": "炼器材料",
       "id": "i_w0lydih"
     },
@@ -90,7 +104,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 205,
+      "count": 209,
       "desc": "炼丹材料",
       "id": "i_ugyldlf"
     },
@@ -334,34 +348,6 @@
       "fr": true
     },
     {
-      "id": "fr_fr_t003",
-      "name": "镇物：定界盘",
-      "icon": "🔮",
-      "kind": "equip",
-      "q": 1,
-      "slot": "artifact",
-      "base": {
-        "atk": 10
-      },
-      "enh": 0,
-      "temp": 0,
-      "fr": true
-    },
-    {
-      "id": "fr_fr_t003",
-      "name": "镇物：定界盘",
-      "icon": "🔮",
-      "kind": "equip",
-      "q": 1,
-      "slot": "artifact",
-      "base": {
-        "atk": 10
-      },
-      "enh": 0,
-      "temp": 0,
-      "fr": true
-    },
-    {
       "id": "fr_fr_w002",
       "name": "青竹蜂云剑",
       "icon": "🗡️",
@@ -376,6 +362,34 @@
       "fr": true,
       "temper": 3,
       "level": 4
+    },
+    {
+      "id": "it_lwixbbe",
+      "kind": "equip",
+      "slot": "boots",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·踏云靴",
+      "atk": 103,
+      "def": 170,
+      "hp": 1380,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_8pmemmk",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·锁子金甲",
+      "atk": 69,
+      "def": 376,
+      "hp": 3086,
+      "crit": 0,
+      "mp": 337
     }
   ],
   "skills": [
@@ -423,8 +437,8 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064212661,
-        "kill": 80
+        "exp": 26064245321,
+        "kill": 84
       },
       "claimed": []
     },
@@ -432,11 +446,11 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064212661,
-        "kill": 80,
-        "墨蛟": 33,
+        "exp": 26064245321,
+        "kill": 84,
+        "墨蛟": 35,
         "星斗海妖兽": 25,
-        "禁地守卫": 22
+        "禁地守卫": 24
       },
       "claimed": []
     }
@@ -472,21 +486,21 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 80,
+    "kills": 84,
     "deaths": 6,
-    "battles": 86,
+    "battles": 90,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
     "dungeon": 8,
-    "encounters": 12,
+    "encounters": 13,
     "rob": 0
   },
   "faction": "C001",
   "trait": "P002",
   "bottle": {
     "liquid": 2,
-    "acc": 67,
+    "acc": 71,
     "level": 30
   },
   "partners": {},
