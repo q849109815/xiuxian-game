@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041753531,
-  "lastTick": 1790041753531,
+  "lastSeen": 1790041771784,
+  "lastTick": 1790041771784,
   "realm": 31,
   "stage": 0,
-  "exp": 51792881463.01961,
-  "stone": 2827424827677.0703,
+  "exp": 60799062353.01431,
+  "stone": 2827424839885.0703,
   "equip": {
     "weapon": {
       "id": "it_mf028hu",
@@ -20,7 +20,7 @@
       "slot": "weapon",
       "q": 1,
       "level": 0,
-      "temper": 0,
+      "temper": 3,
       "name": "灵器·灵蛇杖",
       "atk": 481,
       "def": 87,
@@ -80,7 +80,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 101,
+      "count": 105,
       "desc": "炼器材料",
       "id": "i_w0lydih"
     },
@@ -90,7 +90,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 179,
+      "count": 189,
       "desc": "炼丹材料",
       "id": "i_ugyldlf"
     },
@@ -248,6 +248,34 @@
       "enh": 0,
       "temp": 0,
       "fr": true
+    },
+    {
+      "id": "it_ej9xj2r",
+      "kind": "equip",
+      "slot": "helmet",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·紫金冠",
+      "atk": 87,
+      "def": 254,
+      "hp": 1446,
+      "crit": 0,
+      "mp": 337
+    },
+    {
+      "id": "it_o8k1spd",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·玄龟甲",
+      "atk": 54,
+      "def": 437,
+      "hp": 2712,
+      "crit": 0,
+      "mp": 337
     }
   ],
   "skills": [
@@ -285,8 +313,8 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26063896747,
-        "kill": 38
+        "exp": 26064011235,
+        "kill": 53
       },
       "claimed": []
     },
@@ -294,11 +322,11 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26063896747,
-        "kill": 38,
-        "墨蛟": 15,
-        "星斗海妖兽": 9,
-        "禁地守卫": 14
+        "exp": 26064011235,
+        "kill": 53,
+        "墨蛟": 20,
+        "星斗海妖兽": 14,
+        "禁地守卫": 19
       },
       "claimed": []
     }
@@ -334,21 +362,21 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 38,
+    "kills": 53,
     "deaths": 6,
-    "battles": 44,
+    "battles": 59,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
     "dungeon": 8,
-    "encounters": 5,
+    "encounters": 8,
     "rob": 0
   },
   "faction": "C001",
   "trait": "P002",
   "bottle": {
     "liquid": 2,
-    "acc": 15,
+    "acc": 33,
     "level": 30
   },
   "partners": {},
