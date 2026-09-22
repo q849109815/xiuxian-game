@@ -5,13 +5,13 @@
   "gender": "m",
   "avatar": "🧙",
   "root": "mixed",
-  "sect": null,
+  "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790040154177,
-  "lastTick": 1790040154177,
+  "lastSeen": 1790040157229,
+  "lastTick": 1790040157229,
   "realm": 1,
   "stage": 0,
-  "exp": 6665.627999999973,
+  "exp": 6704.306399999972,
   "stone": 534,
   "equip": {
     "weapon": null,
@@ -75,7 +75,12 @@
       "claimed": []
     }
   },
-  "sectInfo": null,
+  "sectInfo": {
+    "id": "s_qingyun",
+    "rankIdx": 0,
+    "contrib": 0,
+    "joinedAt": 1790040155161
+  },
   "arena": {
     "score": 0,
     "wins": 0,
@@ -115,7 +120,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 1,
-    "acc": 66,
+    "acc": 69,
     "level": 2
   },
   "partners": {},
