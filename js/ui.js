@@ -40,11 +40,11 @@ const UI = {
     // 任务追踪
     const q = E.curMain(p);
     if (q) { $('#tskName').textContent = q.name; $('#tskGoal').textContent = q.goal || q.触发条件 || ''; }
-    // 血条灵力条
-    const mh = E.maxHp(p), mm = E.maxMp(p);
-    $('#heroHp').style.width = ((p.hp || mh) / mh * 100) + '%';
-    $('#heroMp').style.width = ((p.mp || mm) / mm * 100) + '%';
-    $('#heroFig').textContent = p.avatar || '🧙';
+    // 血条灵力条（战斗中的主角由 updateBattle 维护）
+    if (BT.on) {
+      const hero = (BT.allies || []).find((x) => x.isHero);
+      if (hero) { p.hp = Math.max(0, hero.hp); }
+    }
   },
 
   /* ================= 面板系统 ================= */
@@ -74,42 +74,96 @@ const UI = {
     this.CUR = null;
   },
 
-  /* ================= 战斗界面 ================= */
-  showBattle(foe) {
-    $('#bossFig').textContent = foe.icon;
-    $('#bossNm').textContent = foe.name;
-    $('#bossHp').style.width = '100%';
-    $$('.boss-stage,.hero-stage,.hero-bars,.btl-top').forEach((e) => e.style.display = '');
-    $('#bossFig').classList.remove('fig-dead');
-    BT.startCdTimer();
+  /* ================= 战斗界面（即时制多单位） ================= */
+
+  /** 造一个单位 DOM */
+  _unitEl(u) {
+    const tag = u.type === 'BOSS' ? '<div class="u-tag boss">BOSS</div>'
+      : u.isMate ? '<div class="u-tag mate">伙伴</div>'
+      : u.isPet ? '<div class="u-tag mate">灵宠</div>'
+      : u.isPup ? '<div class="u-tag mate">傀儡</div>' : '';
+    return `<div class="u ${u.isHero ? 'me' : ''}" data-uid="${u.id}">
+      ${tag}
+      <div class="u-fig">
+        <div class="body">${u.icon || '👹'}</div>
+        <div class="u-shadow2"></div>
+      </div>
+      <div class="u-hp"><i style="width:${Math.max(0, u.hp / u.maxHp * 100)}%"></i></div>
+      <div class="u-nm">${u.name}</div>
+    </div>`;
+  },
+
+  showBattle() {
+    const fl = $('#foeLine'), al = $('#allyLine');
+    if (fl) fl.innerHTML = (BT.foes || []).map((u) => this._unitEl(u)).join('');
+    if (al) al.innerHTML = (BT.allies || []).map((u) => this._unitEl(u)).join('');
+    // 场景：海面
+    const sc = $('#btlScene');
+    if (sc) {
+      const mapPic = { 'M1': 'luanxinghai', 'M2': 'huangfenggu', 'M3': 'xuese', 'M4': 'qixuanmen',
+        'M5': 'luanxinghai', 'M6': 'xutiandian', 'M7': 'tianyuan', 'M8': 'beihan' };
+      const f = mapPic[(this.P && this.P.map) || 'M1'] || 'luanxinghai';
+      sc.style.backgroundImage = `url(assets/scene/${f}.jpg)`;
+      sc.classList.add('sea');
+    }
+    $$('.btl-top').forEach((e) => e.style.display = '');
+    $('#dmgLayer').innerHTML = '';
     this.updateBattle();
   },
-  hideBattle() {
-    $$('.boss-stage,.hero-bars,.btl-top').forEach((e) => e.style.display = 'none');
-    BT.stopCdTimer();
-    BT.setAuto(false);
-    $('#dmgLayer').innerHTML = '';
-  },
-  updateBattle() {
-    if (!BT.foe) return;
-    const p = this.P || (BT && BT._p) || null;
-    if (!p) return;
-    $('#bossHp').style.width = Math.max(0, BT.foe.hp / BT.foe.maxHp * 100) + '%';
-    const mh = E.maxHp(p), mm = E.maxMp(p);
-    $('#heroHp').style.width = Math.max(0, (p.hp || 0) / mh * 100) + '%';
-    $('#heroMp').style.width = Math.max(0, (p.mp || 0) / mm * 100) + '%';
-    if (BT.foe.hp <= 0) $('#bossFig').classList.add('fig-dead');
-  },
-  updateCd(cd) {
-    $$('#skillbar .sk-btn[data-sk]').forEach((b) => {
-      const i = +b.dataset.sk;
-      if (cd[i] > 0) { b.classList.add('cd'); b.style.setProperty('--cd', (cd[i] / (EX.skills[i]?.cd || 6) * 360) + 'deg'); }
-      else b.classList.remove('cd');
-    });
-  },
-  updateAuto(v) { $('#btnAuto').classList.toggle('on', v); },
 
-  /* 伤害飘字 */
+  hideBattle() {
+    $$('.btl-top').forEach((e) => e.style.display = 'none');
+    const fl = $('#foeLine'), al = $('#allyLine');
+    if (fl) fl.innerHTML = '';
+    if (al) al.innerHTML = '';
+    const d = $('#dmgLayer'); if (d) d.innerHTML = '';
+  },
+
+  updateBattle() {
+    if (!BT.on && !BT.allies.length) return;
+    // 更新血条与死亡态
+    [].concat(BT.allies || [], BT.foes || []).forEach((u) => {
+      const el = document.querySelector(`[data-uid="${u.id}"]`);
+      if (!el) return;
+      const bar = el.querySelector('.u-hp i');
+      if (bar) bar.style.width = Math.max(0, u.hp / u.maxHp * 100) + '%';
+      el.classList.toggle('dead', !!u.dead);
+    });
+    // 计时
+    const t = $('#biTimer');
+    if (t) { const s = Math.floor(BT._t || 0); t.textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+    // 冷却
+    this.updateCd(BT.cd);
+    // 升级提示
+    const lu = $('#lvlup');
+    if (lu) lu.style.display = (this.P && E.canBreak(this.P) && E.canBreak(this.P).ok) ? '' : 'none';
+  },
+
+  updateCd(cd) {
+    for (let i = 0; i < 4; i++) {
+      const el = $('#cd' + i);
+      if (!el) continue;
+      if (cd && cd[i] > 0) { el.classList.add('on'); el.textContent = Math.ceil(cd[i]); }
+      else { el.classList.remove('on'); el.textContent = ''; }
+    }
+    const pet = $('#cdPet'), pup = $('#cdPup');
+    if (pet) { pet.classList.toggle('on', BT.petCd > 0); pet.textContent = BT.petCd > 0 ? Math.ceil(BT.petCd) : ''; }
+    if (pup) { pup.classList.toggle('on', BT.pupCd > 0); pup.textContent = BT.pupCd > 0 ? Math.ceil(BT.pupCd) : ''; }
+  },
+
+  updateAuto(v) {
+    const b = $('#btnAuto'); if (b) b.classList.toggle('on', v);
+  },
+
+  /* ---------- 伤害飘字（定位到单位） ---------- */
+  _unitPos(u) {
+    const el = document.querySelector(`[data-uid="${u.id}"]`);
+    const layer = $('#dmgLayer');
+    if (!el || !layer) return { x: 50, y: 40 };
+    const a = el.getBoundingClientRect(), b = layer.getBoundingClientRect();
+    return { x: (a.left + a.width / 2 - b.left) / b.width * 100, y: (a.top + a.height / 2 - b.top) / b.height * 100 };
+  },
+
   floatText(txt, cls, xPct, yPct) {
     const d = document.createElement('div');
     d.className = 'dmg ' + (cls || '');
@@ -118,62 +172,81 @@ const UI = {
     d.style.top = (yPct !== undefined ? yPct : 40) + '%';
     if (!cls) d.style.color = '#fff';
     if (cls === 'heal') d.style.color = '#5ce88a';
-    if (cls === 'crit') d.style.color = '#ffcf3a';
-    if (cls === 'miss') d.style.color = '#9aa8cc';
-    $('#dmgLayer').appendChild(d);
-    setTimeout(() => d.remove(), 1000);
+    if (cls === 'crit') d.style.color = '#ff4d6d';
+    if (cls === 'miss') d.style.color = '#cfd8f0';
+    if (cls === 'skill') d.style.color = '#5ce8ff';
+    const L = $('#dmgLayer'); if (!L) return;
+    L.appendChild(d);
+    setTimeout(() => d.remove(), 1100);
   },
-  hitFoe(dmg, crit, counter) {
+
+  /** 打击特效：飘字 + 受击抖动 */
+  hitFx(target, dmg, crit, counter, from) {
+    const pos = this._unitPos(target);
+    const jx = (Math.random() - 0.5) * 12;
     const txt = (crit ? '暴击+' : '') + E.fmt(dmg) + (counter > 1 ? ' 克制' : counter < 1 ? ' 被克' : '');
-    this.floatText(txt, crit ? 'crit' : '', 66 + Math.random() * 8, 22 + Math.random() * 8);
-    $('#bossFig').classList.add('hit');
-    setTimeout(() => $('#bossFig').classList.remove('hit'), 320);
-    this.shake();
+    this.floatText(txt, crit ? 'crit' : '', pos.x + jx, pos.y - 4);
+    const el = document.querySelector(`[data-uid="${target.id}"]`);
+    if (el) { el.classList.add('hurt'); setTimeout(() => el.classList.remove('hurt'), 240); }
+    if (crit) this.shake();
   },
+
+  hitFoe(dmg, crit, counter) { this.hitFx(BT.foe, dmg, crit, counter); },
   hitHero(dmg, crit) {
-    this.floatText((crit ? '暴击-' : '-') + E.fmt(dmg), crit ? 'crit' : '', 26 + Math.random() * 8, 62 + Math.random() * 8);
-    $('#heroFig').classList.add('hit');
-    setTimeout(() => $('#heroFig').classList.remove('hit'), 320);
-    this.shake();
+    const hero = (BT.allies || []).find((x) => x.isHero);
+    if (hero) this.hitFx(hero, dmg, crit, 1);
+    else this.floatText('-' + E.fmt(dmg), '', 30, 62);
   },
+
   shake() {
     const c = $('.center');
     if (!c) return;
     c.classList.add('screen-shake');
     setTimeout(() => c.classList.remove('screen-shake'), 260);
   },
+
   heroLunge() {
-    const f = $('#heroFig');
-    f.classList.add('atk'); setTimeout(() => f.classList.remove('atk'), 420);
+    const el = document.querySelector('[data-uid="hero"]');
+    if (el) { el.classList.add('hurt'); setTimeout(() => el.classList.remove('hurt'), 300); }
   },
   bossLunge() {
-    const f = $('#bossFig');
-    f.classList.add('atk'); setTimeout(() => f.classList.remove('atk'), 420);
+    const f = BT.foe; if (f) {
+      const el = document.querySelector(`[data-uid="${f.id}"]`);
+      if (el) { el.classList.add('hurt'); setTimeout(() => el.classList.remove('hurt'), 300); }
+    }
   },
+
   floatSkill(n, w) {
-    this.floatText('【' + n + '】', '', 40 + Math.random() * 10, 46);
+    const f = BT.foe;
+    const pos = f ? this._unitPos(f) : { x: 50, y: 40 };
+    this.floatText('【' + n + '】', 'skill', pos.x, pos.y - 12);
+    this.fx(n);
   },
+
   fx(name) {
-    const c = $('.center');
-    if (!c) return;
+    const f = BT.foe; if (!f) return;
+    const pos = this._unitPos(f);
+    const L = $('#dmgLayer'); if (!L) return;
     const d = document.createElement('div');
-    d.style.cssText = 'position:absolute;left:50%;top:52%;width:120px;height:120px;margin:-60px 0 0 -60px;' +
-      'border-radius:50%;pointer-events:none;animation:flash .45s forwards';
+    d.style.cssText = `position:absolute;left:${pos.x}%;top:${pos.y}%;width:110px;height:110px;` +
+      'margin:-55px 0 0 -55px;border-radius:50%;pointer-events:none;animation:flash .45s forwards';
     const col = { '剑影': 'rgba(92,232,255,.5)', '虫潮': 'rgba(95,208,122,.5)', '傀儡': 'rgba(176,108,255,.5)' }[name] || 'rgba(255,208,106,.45)';
     d.style.background = 'radial-gradient(circle,' + col + ',transparent 70%)';
-    c.appendChild(d);
+    L.appendChild(d);
     setTimeout(() => d.remove(), 460);
   },
 
-  battleResult(win, d) {
-    const p = this.P;
-    if (win) {
-      let s = `击败【${d.name}】 灵石+${E.fmt(d.stone)} 修为+${E.fmt(d.exp)}`;
+  battleResult(res, d) {
+    d = d || {};
+    if (res === 'win') {
+      let s = `战斗胜利！灵石+${E.fmt(d.stone || 0)} 修为+${E.fmt(d.exp || 0)}`;
       if (d.drops && d.drops.length) s += ' 掉落:' + d.drops.join('、');
       this.toast(s, 'ok');
       if (d.up > 0) this.toast('修为精进！', 'ok');
-    } else {
-      this.toast('不敌【' + d.name + '】，身受重伤', 'err');
+    } else if (res === 'lose') {
+      this.toast('不敌强敌，身受重伤', 'err');
+    } else if (res === 'flee') {
+      this.toast('已撤离战场', 'err');
     }
     this.hud();
   },
