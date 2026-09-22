@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": null,
   "createdAt": 1790039820957,
-  "lastSeen": 1790040122245,
-  "lastTick": 1790040122245,
+  "lastSeen": 1790040123037,
+  "lastTick": 1790040123037,
   "realm": 1,
   "stage": 0,
   "exp": 6264.155999999983,
-  "stone": 1360,
+  "stone": 1200,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -44,7 +44,7 @@
   "skills": [
     {
       "id": "sk002",
-      "level": 2
+      "level": 3
     }
   ],
   "equipped": [
