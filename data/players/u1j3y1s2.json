@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041682308,
-  "lastTick": 1790041682308,
+  "lastSeen": 1790041712325,
+  "lastTick": 1790041712325,
   "realm": 31,
   "stage": 0,
-  "exp": 40637819011.75047,
-  "stone": 2827424794905.0703,
+  "exp": 44701830952.70978,
+  "stone": 2827424798319.0703,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -26,7 +26,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 88,
+      "count": 90,
       "desc": "炼器材料",
       "id": "i_w0lydih"
     },
@@ -36,7 +36,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 161,
+      "count": 164,
       "desc": "炼丹材料",
       "id": "i_ugyldlf"
     }
@@ -76,7 +76,8 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26063593293
+        "exp": 26063638145,
+        "kill": 4
       },
       "claimed": []
     },
@@ -84,7 +85,10 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26063593293
+        "exp": 26063638145,
+        "kill": 4,
+        "墨蛟": 3,
+        "星斗海妖兽": 1
       },
       "claimed": []
     }
@@ -120,21 +124,21 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 0,
-    "deaths": 5,
-    "battles": 5,
+    "kills": 4,
+    "deaths": 6,
+    "battles": 10,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
     "dungeon": 8,
-    "encounters": 1,
+    "encounters": 2,
     "rob": 0
   },
   "faction": "C001",
   "trait": "P002",
   "bottle": {
     "liquid": 1,
-    "acc": 34,
+    "acc": 63,
     "level": 30
   },
   "partners": {},
@@ -223,7 +227,8 @@
     "daily": {
       "q-d005": 3,
       "q-d004": 1,
-      "q-d007": 1
+      "q-d007": 1,
+      "q-d003": 4
     },
     "weekly": {
       "q-w001": 3,
@@ -237,5 +242,9 @@
   "sectWh": {
     "items": []
   },
-  "codexSeen": {}
+  "codexSeen": {},
+  "killed": [
+    "墨蛟",
+    "星斗海妖兽"
+  ]
 }
