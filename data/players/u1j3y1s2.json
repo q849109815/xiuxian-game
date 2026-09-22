@@ -7,11 +7,11 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041925765,
-  "lastTick": 1790041925765,
+  "lastSeen": 1790041932434,
+  "lastTick": 1790041932434,
   "realm": 31,
   "stage": 0,
-  "exp": 103952643340.66872,
+  "exp": 129888795206.19922,
   "stone": 2827424644950.0703,
   "equip": {
     "weapon": {
@@ -42,7 +42,20 @@
       "crit": 0,
       "mp": 337
     },
-    "ring": null,
+    "ring": {
+      "id": "it_g2h4qz3",
+      "kind": "equip",
+      "slot": "ring",
+      "q": 2,
+      "level": 0,
+      "temper": 0,
+      "name": "宝器·太虚戒",
+      "atk": 178,
+      "def": 83,
+      "hp": 713,
+      "crit": 0,
+      "mp": 337
+    },
     "talisman": null,
     "necklace": {
       "id": "it_q4e5ww4",
@@ -403,20 +416,6 @@
       "atk": 534,
       "def": 55,
       "hp": 583,
-      "crit": 0,
-      "mp": 337
-    },
-    {
-      "id": "it_g2h4qz3",
-      "kind": "equip",
-      "slot": "ring",
-      "q": 2,
-      "level": 0,
-      "temper": 0,
-      "name": "宝器·太虚戒",
-      "atk": 178,
-      "def": 83,
-      "hp": 713,
       "crit": 0,
       "mp": 337
     },
@@ -838,7 +837,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 4,
-    "acc": 7,
+    "acc": 14,
     "level": 30
   },
   "partners": {},
