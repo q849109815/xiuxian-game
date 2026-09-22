@@ -210,10 +210,13 @@ const E = {
     if (p.realm >= CFG.realmCount - 1) return { ok: false, msg: '已至顶峰' };
     const rm = CFG.realm(p.realm);
     const cond = rm.breakCond || '';
-    // 找需要的丹药（突破条件里含"丹"）
+    // 找需要的丹药：只匹配真实存在的丹药名（避免把「结丹前置」这类境界词误判成丹药）
     let needPill = null;
-    const mm = cond.match(/([\u4e00-\u9fa5]+丹)/);
-    if (mm) needPill = mm[1];
+    for (const it of (CFG.core.items || [])) {
+      if (it.type !== '丹药') continue;
+      const nm = it.name || '';
+      if (nm && cond.indexOf(nm) >= 0) { needPill = nm; break; }
+    }
     if (needPill) {
       const own = (p.bag || []).some((x) => (x.n || '').indexOf(needPill) >= 0);
       if (!own) return { ok: false, msg: '需要【' + needPill + '】（炼丹/副本获取）', pill: needPill };
