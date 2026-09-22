@@ -7,8 +7,8 @@
   "root": "mixed",
   "sect": null,
   "createdAt": 1790039820957,
-  "lastSeen": 1790039820957,
-  "lastTick": 1790039820958,
+  "lastSeen": 1790039824174,
+  "lastTick": 1790039824174,
   "realm": 0,
   "stage": 0,
   "exp": 0,
@@ -41,7 +41,7 @@
   "tasks": {
     "mainIdx": 0,
     "daily": {
-      "date": "",
+      "date": "2026-9-22",
       "prog": {},
       "claimed": []
     },
@@ -95,5 +95,43 @@
   },
   "partners": {},
   "mapsSeen": [],
-  "dungeonCleared": []
+  "dungeonCleared": [],
+  "wallet": {
+    "c001": 0,
+    "c002": 0,
+    "c003": 0,
+    "c004": 0,
+    "c005": 0,
+    "c006": 0,
+    "c007": 0,
+    "c008": 0,
+    "c009": 0,
+    "c010": 0,
+    "c011": 0,
+    "c012": 0,
+    "c013": 0,
+    "c014": 0,
+    "c015": 0,
+    "c016": 0,
+    "C001": 200
+  },
+  "skin": {
+    "owned": [],
+    "wear": {}
+  },
+  "worm": {
+    "own": [],
+    "cur": null,
+    "feed": {}
+  },
+  "social": {
+    "friends": [],
+    "team": null,
+    "dm": []
+  },
+  "sectSkill": [],
+  "titles": {
+    "owned": [],
+    "cur": null
+  }
 }
