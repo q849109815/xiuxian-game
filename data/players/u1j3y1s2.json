@@ -7,11 +7,11 @@
   "root": "mixed",
   "sect": null,
   "createdAt": 1790039820957,
-  "lastSeen": 1790040134341,
-  "lastTick": 1790040134341,
+  "lastSeen": 1790040136732,
+  "lastTick": 1790040136732,
   "realm": 1,
   "stage": 0,
-  "exp": 6414.299999999979,
+  "exp": 6439.432799999979,
   "stone": 534,
   "equip": {
     "weapon": null,
@@ -20,16 +20,6 @@
     "talisman": null
   },
   "bag": [
-    {
-      "kind": "herb",
-      "ref": "herb_green",
-      "name": "青灵草",
-      "icon": "🌿",
-      "price": 30,
-      "count": 4,
-      "desc": "炼丹材料",
-      "id": "i_fr8trrp"
-    },
     {
       "kind": "ore",
       "ref": "ore_iron",
@@ -47,7 +37,7 @@
       "icon": "🔴",
       "desc": "战斗中恢复 30% 气血",
       "price": 80,
-      "count": 1,
+      "count": 3,
       "id": "i_8rn4rlp"
     }
   ],
@@ -125,7 +115,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 1,
-    "acc": 46,
+    "acc": 48,
     "level": 2
   },
   "partners": {},
@@ -193,7 +183,7 @@
   "storyIdx": 3,
   "rq": {
     "daily": {
-      "q-d005": 1
+      "q-d005": 3
     },
     "weekly": {},
     "event": {},
