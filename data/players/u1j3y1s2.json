@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": null,
   "createdAt": 1790039820957,
-  "lastSeen": 1790039974217,
-  "lastTick": 1790039974217,
+  "lastSeen": 1790039974175,
+  "lastTick": 1790039974176,
   "realm": 0,
   "stage": 0,
-  "exp": 1509.7999999999988,
-  "stone": 400,
+  "exp": 1009.7999999999989,
+  "stone": 200,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -117,7 +117,7 @@
     "c014": 0,
     "c015": 0,
     "c016": 0,
-    "C001": 400
+    "C001": 200
   },
   "skin": {
     "owned": [
@@ -145,10 +145,9 @@
   "loginAt": 1790039825175,
   "act": {
     "sign": {
-      "last": "2026-9-22",
-      "days": 1,
-      "streak": 1,
-      "at": 1790039974207
+      "last": 0,
+      "days": 0,
+      "streak": 0
     },
     "seven": {},
     "growth": {},
