@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790040321475,
-  "lastTick": 1790040321475,
+  "lastSeen": 1790040324740,
+  "lastTick": 1790040324740,
   "realm": 31,
   "stage": 0,
-  "exp": 6299435028.798424,
-  "stone": 8505046408282,
+  "exp": 6565609049.733568,
+  "stone": 8505046408582,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -37,7 +37,7 @@
       "icon": "🔴",
       "desc": "战斗中恢复 30% 气血",
       "price": 80,
-      "count": 2,
+      "count": 1,
       "id": "i_8rn4rlp"
     },
     {
@@ -46,7 +46,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 154,
+      "count": 156,
       "desc": "炼丹材料",
       "id": "i_ugyldlf"
     },
@@ -90,14 +90,14 @@
       "date": "2026-9-22",
       "prog": {
         "arena": 2,
-        "dungeon": 5
+        "dungeon": 6
       },
       "claimed": []
     },
     "bounty": {
       "prog": {
         "arena": 2,
-        "dungeon": 5
+        "dungeon": 6
       },
       "claimed": []
     }
@@ -139,7 +139,7 @@
     "breakthrough": 31,
     "offlineMin": 0,
     "meditate": 0,
-    "dungeon": 5,
+    "dungeon": 6,
     "encounters": 0,
     "rob": 0
   },
@@ -147,7 +147,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 1,
-    "acc": 233,
+    "acc": 236,
     "level": 2
   },
   "partners": {},
@@ -157,7 +157,8 @@
     "D106",
     "D108",
     "D205",
-    "D301"
+    "D301",
+    "D302"
   ],
   "wallet": {
     "c001": 0,
