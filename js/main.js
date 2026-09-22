@@ -151,6 +151,7 @@ async function enterGame(p, name, pwd) {
 
   UI.setScene(p.map || 'M1');
   UI.hud();
+  initBotNav();
   renderWheel();
   UI.chat('欢迎来到乱星海，' + p.name + '！', true);
 
@@ -309,6 +310,18 @@ function renderWheel() {
     UI.open(b.dataset.w);
     box.classList.remove('on'); main.classList.remove('on');
     $$('#whItems .wh-it').forEach((x) => x.style.transform = 'translate(0,0) scale(.3)');
+  });
+}
+
+/* ================= 底部主功能栏（图32） ================= */
+function initBotNav() {
+  const nav = $('#botnav'); if (!nav) return;
+  $$('#botnav .bn-item').forEach((b) => b.onclick = () => {
+    const k = b.dataset.p;
+    $$('#botnav .bn-item').forEach((x) => x.classList.toggle('on', x === b));
+    // 至宝/化灵 映射到已有面板
+    const MAP = { treasure: 'bag', pet: 'pet', partner: 'partner', role: 'role', forge: 'forge', cave: 'cave', skill: 'skill' };
+    UI.open(MAP[k] || k);
   });
 }
 
