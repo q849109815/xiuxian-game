@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790040274176,
-  "lastTick": 1790040274176,
+  "lastSeen": 1790040279825,
+  "lastTick": 1790040279825,
   "realm": 31,
   "stage": 0,
-  "exp": 2129384967.4811606,
-  "stone": 8505046412561,
+  "exp": 2573006835.7064013,
+  "stone": 8505046406782,
   "equip": {
     "weapon": null,
     "armor": null,
@@ -49,6 +49,16 @@
       "count": 144,
       "desc": "炼丹材料",
       "id": "i_ugyldlf"
+    },
+    {
+      "kind": "pill",
+      "ref": "fr_g008",
+      "name": "妖魂",
+      "icon": "💊",
+      "desc": "魔修功法/镇魂材料",
+      "price": 100,
+      "count": 1,
+      "id": "i_u6b2xey"
     }
   ],
   "skills": [
@@ -135,7 +145,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 1,
-    "acc": 186,
+    "acc": 191,
     "level": 2
   },
   "partners": {},
