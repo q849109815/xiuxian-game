@@ -7,12 +7,12 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041777992,
-  "lastTick": 1790041777992,
+  "lastSeen": 1790041782817,
+  "lastTick": 1790041782817,
   "realm": 31,
   "stage": 0,
-  "exp": 64517715131.78552,
-  "stone": 2827424844181.0703,
+  "exp": 65816068571.12445,
+  "stone": 2827424847317.0703,
   "equip": {
     "weapon": {
       "id": "fr_fr_w002",
@@ -26,7 +26,8 @@
       },
       "enh": 0,
       "temp": 0,
-      "fr": true
+      "fr": true,
+      "temper": 1
     },
     "armor": {
       "id": "it_limcshl",
@@ -80,7 +81,7 @@
       "name": "玄铁",
       "icon": "⚙️",
       "price": 50,
-      "count": 105,
+      "count": 108,
       "desc": "炼器材料",
       "id": "i_w0lydih"
     },
@@ -90,7 +91,7 @@
       "name": "青灵草",
       "icon": "🌿",
       "price": 30,
-      "count": 193,
+      "count": 195,
       "desc": "炼丹材料",
       "id": "i_ugyldlf"
     },
@@ -304,6 +305,20 @@
       "hp": 586,
       "crit": 0,
       "mp": 337
+    },
+    {
+      "id": "it_xrlpf5k",
+      "kind": "equip",
+      "slot": "necklace",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·养魂链",
+      "atk": 155,
+      "def": 68,
+      "hp": 778,
+      "crit": 0,
+      "mp": 337
     }
   ],
   "skills": [
@@ -341,8 +356,8 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064049801,
-        "kill": 58
+        "exp": 26064077137,
+        "kill": 62
       },
       "claimed": []
     },
@@ -350,10 +365,10 @@
       "prog": {
         "arena": 2,
         "dungeon": 8,
-        "exp": 26064049801,
-        "kill": 58,
-        "墨蛟": 22,
-        "星斗海妖兽": 17,
+        "exp": 26064077137,
+        "kill": 62,
+        "墨蛟": 25,
+        "星斗海妖兽": 18,
         "禁地守卫": 19
       },
       "claimed": []
@@ -390,21 +405,21 @@
   "banned": false,
   "title": "",
   "stats": {
-    "kills": 58,
+    "kills": 62,
     "deaths": 6,
-    "battles": 64,
+    "battles": 68,
     "breakthrough": 31,
     "offlineMin": 17,
     "meditate": 0,
     "dungeon": 8,
-    "encounters": 8,
+    "encounters": 9,
     "rob": 0
   },
   "faction": "C001",
   "trait": "P002",
   "bottle": {
     "liquid": 2,
-    "acc": 39,
+    "acc": 44,
     "level": 30
   },
   "partners": {},
