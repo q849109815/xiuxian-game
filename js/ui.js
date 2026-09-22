@@ -30,6 +30,13 @@ const UI = {
     $('#tbStone').textContent = E.fmt(p.stone);
     $('#tbJade').textContent = E.fmt(p.jade || 0);
     $('#tbAvIn').textContent = p.avatar || '🧙';
+    // 左上玩家信息（图32：头像 + Lv + 战力 + VIP）
+    const plNm = $('#plName'), plPw = $('#plPower'), plLv = $('#plAvLv'), plAv = $('#plAvImg'), plVip = $('#plVip');
+    if (plNm) plNm.textContent = p.name;
+    if (plPw) plPw.textContent = E.fmt(this.power ? this.power(p) : E.power(p));
+    if (plLv) plLv.textContent = 'Lv.' + ((p.realm || 0) * 10 + (p.layer || 0) + 1);
+    if (plVip) { const v = p.vip || 0; plVip.textContent = 'VIP' + v; plVip.style.display = v ? '' : 'none'; }
+    if (plAv) { const f = p.face || 'hanli'; plAv.src = 'assets/char/' + f + '.jpg'; plAv.onerror = () => { plAv.style.display = 'none'; }; }
     // 任务追踪
     const q = E.curMain(p);
     if (q) { $('#tskName').textContent = q.name; $('#tskGoal').textContent = q.goal || q.触发条件 || ''; }
@@ -192,16 +199,18 @@ const UI = {
   /* ================= 场景背景 ================= */
   setScene(name) {
     const sc = $('#scene');
-    const map = { '小寰岛': '', '魁星岛坊市': '', '外星海': '', '虚天殿': '', '星宫': '' };
-    // 暂用渐变场景（素材后续接入）
-    const g = {
-      'M1': 'radial-gradient(ellipse at 50% 80%,#1a4a6e,#0a1830)',
-      'M2': 'radial-gradient(ellipse at 50% 70%,#4a3a1e,#0a1830)',
-      'M5': 'radial-gradient(ellipse at 50% 75%,#12405e,#0a1830)',
-      'M7': 'radial-gradient(ellipse at 50% 60%,#2a1a5e,#0a1830)',
-      'M8': 'radial-gradient(ellipse at 50% 50%,#3a2a6e,#0a1830)',
-    }[name] || '';
-    if (g) { sc.style.background = g; sc.classList.add('on'); }
+    if (!sc) return;
+    // 地图 → 真实场景图（assets/scene/）
+    const PIC = {
+      'M1': 'luanxinghai', 'M2': 'huangfenggu', 'M3': 'xuese', 'M4': 'qixuanmen',
+      'M5': 'luanxinghai', 'M6': 'xutiandian', 'M7': 'tianyuan', 'M8': 'beihan',
+      'M9': 'luanxinghai', 'M10': 'xutiandian', 'M11': 'main_bg', 'M12': 'main_bg',
+    };
+    const f = PIC[name] || 'luanxinghai';
+    sc.style.backgroundImage = `url(assets/scene/${f}.jpg)`;
+    sc.style.backgroundSize = 'cover';
+    sc.style.backgroundPosition = 'center 60%';
+    sc.classList.add('on');
   },
 };
 
@@ -257,129 +266,137 @@ const PANELS = {
     },
     equipTab(p) {
       const slots = EX.slots;
-      const used = [];
       const L = slots.slice(0, 3), R = slots.slice(3);
+      const heroImg = 'assets/char/' + (p.heroImg || 'hanli') + '.jpg';
       const cell = (s) => {
         const it = p.equip[s.k];
-        return `<div class="eq-slot ${it?'on':''}" data-eq="${s.k}">
-          ${it ? (it.icon || '⚔️') : `<span style="opacity:.3;font-size:18px">${s.icon}</span>`}
-          ${it && it.lv ? `<span class="lv">+${it.lv}</span>` : ''}
-          <span class="nm2">${s.n}</span></div>`;
+        const q = it ? EX.qIndex(it.q) : 0;
+        return `<div class="eq-cell ${it ? 'on' : ''}" data-eq="${s.k}">
+          ${it ? (it.icon || '⚔️') : `<span style="opacity:.28;font-size:20px">${s.icon}</span>`}
+          ${it ? `<span class="lv">${it.lv ? '+' + it.lv : ''}</span>` : ''}
+        </div>`;
       };
       return `
-      <div class="role-stage">
-        <div class="role-halo"></div>
-        <div class="role-fig">${p.avatar || '🧙'}</div>
-        <div class="role-shadow"></div>
+      <!-- 图31：中央大立绘 + 顶部战力 -->
+      <div class="role-hero">
+        <div class="rh-bg"></div>
+        <div class="rh-ring"></div>
+        <div class="rh-pw">战力 <b>${E.fmt(E.power(p))}</b></div>
+        <img class="rh-fig" src="${heroImg}" alt="" onerror="this.style.display='none'">
       </div>
-      <div class="eq-wrap">
-        <div class="eq-col">${L.map(cell).join('')}</div>
-        <div class="eq-col" style="margin:0 6px">
-          <div class="bignum" style="padding:0"><div class="v" style="font-size:22px">${E.fmt(E.power(p))}</div></div>
+
+      <!-- 左右装备槽 -->
+      <div class="eq3">
+        <div class="eq3-col">${L.map(cell).join('')}</div>
+        <div class="eq3-mid">
+          <div style="font-size:11px;color:var(--txt3)">${CFG.realmName(p.realm)}</div>
+          <div style="font-size:10px;color:var(--gold1);margin-top:2px">${EX.layerName(p.realm, p.layer)}</div>
         </div>
-        <div class="eq-col">${R.map(cell).join('')}</div>
+        <div class="eq3-col">${R.map(cell).join('')}</div>
       </div>
-      <div class="row" style="display:flex;gap:8px;margin:10px 0">
-        <button class="btn p" style="flex:1" id="btnAutoEquip">一键装备</button>
+
+      <!-- 中部功能按钮（神识/御宠/仙霓神衣/幻化/收集） -->
+      <div class="midbtns">
+        <div class="mb" data-mb="sense"><i class="hot">👁</i><span>神识</span></div>
+        <div class="mb" data-mb="pet"><i>🐾</i><span>御宠</span></div>
+        <div class="mb" data-mb="robe"><i>👘</i><span>仙霓神衣</span></div>
+        <div class="mb" data-mb="hua"><i>✨</i><span>幻化</span></div>
+        <div class="mb" data-mb="collect"><i>📚</i><span>收集</span></div>
       </div>
+
+      <button class="btn-yellow" id="btnAutoEquip">一键装备</button>
+
+      <!-- 分类标签（首饰/神兵/时装/法器/套装） -->
+      <div class="cats" id="eqCats">
+        <div class="cat on" data-cat="all">全部</div>
+        <div class="cat" data-cat="首饰">首饰</div>
+        <div class="cat" data-cat="神兵">神兵</div>
+        <div class="cat" data-cat="时装">时装</div>
+        <div class="cat" data-cat="法器">法器</div>
+        <div class="cat" data-cat="套装">套装</div>
+      </div>
+
       <div class="sec-t">已装备</div>
       ${slots.map((s) => {
         const it = p.equip[s.k];
         return `<div class="item" data-eqs="${s.k}">
           <div class="ic">${it ? (it.icon || '⚔️') : s.icon}</div>
           <div class="info"><div class="nm">${it ? it.n : '（空）'}</div>
-          <div class="sub">${it ? `攻${it.atk||0} 防${it.def||0} 血${it.hp||0}${it.lv?' +'+it.lv:''}` : s.n + ' 未装备'}</div></div>
+          <div class="sub">${it ? `攻${it.atk || 0} 防${it.def || 0} 血${it.hp || 0}${it.lv ? ' +' + it.lv : ''}` : s.n + ' 未装备'}</div></div>
           <div class="act">${it ? `<button class="btn sm d" data-un="${s.k}">卸下</button>` : ''}</div></div>`;
       }).join('')}
       <div class="sec-t">背包可装备</div>
-      ${(p.bag||[]).map((it, i) => it.slot ? `<div class="item" data-bag="${i}">
-        <div class="ic">${it.icon||'⚔️'}</div>
-        <div class="info"><div class="nm">${it.n}×${it.cnt||1}</div>
-        <div class="sub">攻${it.atk||0} 防${it.def||0} 血${it.hp||0}</div></div>
+      ${(p.bag || []).map((it, i) => it.slot ? `<div class="item" data-bag="${i}">
+        <div class="ic">${it.icon || '⚔️'}</div>
+        <div class="info"><div class="nm">${it.n}×${it.cnt || 1}</div>
+        <div class="sub">攻${it.atk || 0} 防${it.def || 0} 血${it.hp || 0}</div></div>
         <div class="act"><button class="btn sm c" data-we="${i}">装备</button></div></div>` : '').join('') || '<div class="empty">无可装备物品</div>'}`;
     },
-    bind(p) {
-      $$('[data-we]').forEach((b) => b.onclick = () => {
-        const r = E.equipItem(p, +b.dataset.we); UI.toast(r.msg, r.ok ? 'ok' : 'err');
-        UI.hud(); save(); UI.open('role', UI.TAB.role);
-      });
-      $$('[data-un]').forEach((b) => b.onclick = () => {
-        const r = E.unequip(p, b.dataset.un); UI.toast(r.msg, 'ok');
-        UI.hud(); save(); UI.open('role', UI.TAB.role);
-      });
-      const ae = $('#btnAutoEquip');
-      if (ae) ae.onclick = () => {
-        let n = 0;
-        (p.bag || []).slice().forEach((it, i) => {
-          if (!it.slot) return;
-          const cur = p.equip[it.slot];
-          const sc = (it.atk || 0) + (it.def || 0) + (it.hp || 0) * 0.1;
-          const cs = cur ? (cur.atk || 0) + (cur.def || 0) + (cur.hp || 0) * 0.1 : -1;
-          if (sc > cs) { const idx = p.bag.indexOf(it); if (idx >= 0) { E.equipItem(p, idx); n++; } }
-        });
-        UI.toast(n ? '一键装备完成 ' + n + ' 件' : '无可提升装备', n ? 'ok' : 'err');
-        UI.hud(); save(); UI.open('role', UI.TAB.role);
-      };
-    },
-    /* 称号（参考图29） */
+
     titleTab(p) {
+      const owns = p.titles || [];
       const cur = p.titleCur;
-      return `<div class="card"><div class="card-t">当前称号 <span class="sub">${(EX.titles.find(x=>x.id===cur)||{}).n||'无'}</span></div>
-        <div class="small" style="font-size:11px;color:var(--txt2)">称号提供永久属性加成，激活后替换当前称号</div></div>
-        ${EX.titles.map((t) => {
-          const owned = (p.titles || []).includes(t.id);
-          const isCur = cur === t.id;
-          const buff = Object.entries(t.buff || {}).map(([k, v]) =>
-            ({ atk: '战力', def: '防御', hp: '生命', mp: '灵力', sense: '神识', crit: '暴击', all: '全属性' }[k] || k) + '+' + Math.round(v * 100) + '%').join(' ');
-          return `<div class="title-card ${isCur ? 'on' : ''}">
-            <div class="tc-nm">${t.n}</div>
-            <div class="tc-buff">${buff}</div>
-            <div class="tc-cond">${t.cond} · ${t.from}</div>
-            <button class="tc-btn ${isCur ? 'done' : owned ? '' : 'lock'}" data-ti="${t.id}">
-              ${isCur ? '已激活' : owned ? '激活' : '未解锁'}</button></div>`;
-        }).join('')}`;
-    },
-    /* 个性/头像（参考图30） */
-    avatarTab(p) {
-      return `<div class="card" style="text-align:center">
-        <div style="position:relative;width:96px;height:96px;margin:0 auto 10px">
-          <div class="av-cell on" style="width:96px;height:96px;font-size:44px">${p.avatar || '🧙'}</div>
-        </div>
-        <div style="font-size:14px;font-weight:700;color:var(--gold)">${p.name}</div>
-        <div style="font-size:11px;color:var(--txt2);margin-top:3px">
-          ${CFG.realmName(p.realm)} ${EX.layerName(p.realm, p.layer)} · 战力 ${E.fmt(E.power(p))}</div>
-        <button class="btn" style="margin-top:10px" id="btnAvUp">进阶形象</button>
+      const buffTxt = (b) => Object.entries(b || {}).map(([k, v]) =>
+        `<i>${({ atk: '战力', hp: '生命', def: '防御', crit: '暴击', all: '全属性' })[k] || k}+${Math.round(v * 100)}%</i>`).join('');
+      return `
+      <!-- 图29：顶部战力 -->
+      <div class="tt-power">当前战力 <b>${E.fmt(E.power(p))}</b></div>
+      <div class="tt-tabs">
+        <div class="cat on" data-tt="all">全部</div>
+        <div class="cat" data-tt="跨服">跨服</div>
+        <div class="cat" data-tt="赛季">赛季</div>
+        <div class="cat" data-tt="活动">活动</div>
+        <div class="cat" data-tt="成就">成就</div>
       </div>
-      <div class="sec-t">头像选择</div>
-      <div class="av-grid">
-        ${EX.avatars.map((a) => {
-          const owned = (p.avatars || []).includes(a.id);
-          return `<div class="av-cell ${p.avatarId === a.id ? 'on' : ''} ${owned ? '' : 'lock'}" data-av="${a.id}">
-            ${a.icon}${owned ? '' : '<div class="lk">🔒</div>'}</div>`;
+      ${EX.titles.map((t) => {
+        const own = owns.indexOf(t.id) >= 0;
+        const on = cur === t.id;
+        return `<div class="tt-card ${on ? 'on' : ''}">
+          <div class="shine"></div>
+          <div class="tt-nm">${t.n}</div>
+          <div class="tt-buff">${buffTxt(t.buff)}<div class="tt-cond">${t.cond || ''}</div></div>
+          <button class="tt-act ${own ? (on ? 'on' : '') : 'gray'}" data-tt-act="${t.id}">
+            ${on ? '已激活' : (own ? '激活' : '未获得')}
+          </button>
+        </div>`;
+      }).join('')}`;
+    },
+
+    avatarTab(p) {
+      // 图30：圆形头像 + 3x4 网格 + 锁 + 进阶 + 标签
+      const FACES = ['hanli', 'hanli_young', 'nangongwan', 'ziling', 'yinyue', 'yuanyao',
+        'wangchan', 'xuangu', 'modafu', 'lifeiyu', 'lihuayuan', 'qingyuanzi'];
+      const owned = p.faces || ['hanli'];
+      const cur = p.face || 'hanli';
+      const rank = p.faceRank || 1;
+      return `
+      <div class="ps-stage">
+        <div class="ps-ring">
+          <div class="ps-swirl"></div>
+          <img src="assets/char/${cur}.jpg" alt="" onerror="this.style.display='none'">
+        </div>
+      </div>
+      <div class="ps-meta">
+        <div class="nm">浮云${rank}阶</div>
+        <div class="sub">战力 ${E.fmt(E.power(p))} · ${owned.length > 1 ? '已解锁' + owned.length + '款' : '首次登录赠送'}</div>
+      </div>
+      <div class="cats">
+        <div class="cat on" data-ps="头像">头像</div>
+        <div class="cat" data-ps="头像框">头像框</div>
+        <div class="cat" data-ps="聊天框">聊天框</div>
+        <div class="cat" data-ps="传闻">传闻</div>
+      </div>
+      <div class="ps-grid">
+        ${FACES.map((f, i) => {
+          const ok = owned.indexOf(f) >= 0;
+          return `<div class="ps-cell ${cur === f ? 'on' : ''}" data-face="${f}">
+            ${ok ? `<img src="assets/char/${f}.jpg" alt="" onerror="this.style.display='none'">` : ''}
+            ${ok ? '' : '<div class="lk">🔒</div>'}
+            <div class="nmb">${['韩立', '少年', '南宫婉', '紫灵', '银月', '元瑶', '王蝉', '玄骨', '墨大夫', '厉飞雨', '李化元', '青元子'][i]}</div>
+          </div>`;
         }).join('')}
       </div>
-      <div class="small" style="font-size:10.5px;color:var(--txt3);margin-top:10px;line-height:1.7">
-        提升境界可解锁更多头像形象</div>`;
-    },
-    bind2(p) {
-      $$('[data-ti]').forEach((b) => b.onclick = () => {
-        const id = b.dataset.ti;
-        if (!(p.titles || []).includes(id)) { UI.toast('称号未解锁：' + (EX.titles.find(x=>x.id===id)||{}).cond, 'err'); return; }
-        p.titleCur = id; UI.toast('已激活称号【' + (EX.titles.find(x=>x.id===id)||{}).n + '】', 'ok');
-        UI.hud(); save(); UI.open('role', '称号');
-      });
-      $$('[data-av]').forEach((b) => b.onclick = () => {
-        const id = b.dataset.av;
-        if (!(p.avatars || []).includes(id)) { UI.toast('头像未解锁', 'err'); return; }
-        const a = EX.avatars.find(x => x.id === id);
-        p.avatarId = id; p.avatar = a.icon;
-        UI.toast('已更换头像', 'ok'); UI.hud(); save(); UI.open('role', '个性');
-      });
-      const up = $('#btnAvUp');
-      if (up) up.onclick = () => {
-        const need = Math.max(0, ...EX.avatars.filter(a => !p.avatars.includes(a.id)).map(a => a.need));
-        UI.toast(p.realm >= 2 ? '形象随境界自动解锁，继续提升境界' : '需筑基期以上', p.realm >= 2 ? 'ok' : 'err');
-      };
+      <button class="ps-adv" id="btnFaceAdv">进 阶</button>`;
     },
   },
 
