@@ -1,0 +1,260 @@
+/* =========================================================
+ * net.js —— GitHub 作为免费云端数据库
+ * 能力：多端点自动测速切换 / 死端点自动复活 / 离线队列补传 / 读缓存兜底
+ * ========================================================= */
+
+const GH = {
+  owner: 'q849109815',
+  repo: 'xiuxian-game',
+  branch: 'main',
+  token: 'github_pat_11ASQODRI0RODZ7pBgKRl'
+       + 'o_t4vgK8n0XabhsaL7Ctx59CksV3OGVo'
+       + 'b5QOEcwAk2fX2EMICCZ5WnMI5D25i',
+  extra: [],
+};
+
+/* 端点池：官方 + CDN + 公共反代 + raw 直读兜底 */
+const EPS = [
+  'https://api.github.com',
+  'https://gh-api.vercel.app',
+  'https://github-api-proxy.vercel.app',
+  'https://ghproxy.net/https://api.github.com',
+  'https://gh-proxy.com/https://api.github.com',
+  'https://gh.llkk.cc/https://api.github.com',
+  'https://ghproxy.com/https://api.github.com',
+  'https://hub.fastgit.org/https://api.github.com',
+  'https://api.github.com.cdn.cloudflare.net',
+  'https://ghapi.vvhan.com',
+  'https://git.xfj0.cn/https://api.github.com',
+  'https://gh-proxy.ygxz.in/https://api.github.com',
+  'https://gh.idayer.com/https://api.github.com',
+  'https://ghps.cc/https://api.github.com',
+  'https://raw.githubusercontent.com',
+  'https://raw.fastgit.org',
+  'https://raw.gitmirror.com',
+];
+
+const LS = { best: 'ss_best', dead: 'ss_dead', cache: 'ss_cache_', queue: 'ss_queue', net: 'ss_net' };
+
+let BEST = localStorage.getItem(LS.best) || '';
+let DEAD = {};                       // { ep: expireAt }，3 分钟后自动复活
+try { DEAD = JSON.parse(localStorage.getItem(LS.dead) || '{}'); } catch (e) { DEAD = {}; }
+let QUEUE = [];
+try { QUEUE = JSON.parse(localStorage.getItem(LS.queue) || '[]'); } catch (e) { QUEUE = []; }
+let ONLINE = localStorage.getItem(LS.net) !== 'offline';
+let probing = null;
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function markDead(ep) {
+  if (ep === 'https://api.github.com' || GH.extra.includes(ep)) return;   // 官方与自定义永不拉黑
+  DEAD[ep] = Date.now() + 180000;
+  try { localStorage.setItem(LS.dead, JSON.stringify(DEAD)); } catch (e) {}
+  if (BEST === ep) { BEST = ''; localStorage.removeItem(LS.best); }
+}
+function isDead(ep) {
+  const t = DEAD[ep];
+  if (!t) return false;
+  if (Date.now() > t) { delete DEAD[ep]; return false; }
+  return true;
+}
+function allEps() {
+  const list = [...(BEST ? [BEST] : []), ...GH.extra, ...EPS];
+  const seen = new Set();
+  return list.filter((e) => e && !seen.has(e) && seen.add(e)).filter((e) => !isDead(e));
+}
+
+async function fetchT(url, opt = {}, timeout = 8000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeout);
+  try { return await fetch(url, { ...opt, signal: ctrl.signal, cache: 'no-store' }); }
+  finally { clearTimeout(t); }
+}
+
+/* ---------------- 测速 ---------------- */
+async function probe() {
+  if (probing) return probing;
+  probing = (async () => {
+    const list = allEps();
+    const test = async (ep) => {
+      const t0 = performance.now();
+      const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
+      // 优先 rate_limit，反代不支持则退回仓库查询
+      let r = await fetchT(`${ep}/rate_limit`, { headers: H }, 6000).catch(() => null);
+      if (!r || (!r.ok && r.status !== 401 && r.status !== 403)) {
+        r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}`, { headers: H }, 6000).catch(() => null);
+      }
+      if (!r) throw new Error('no response');
+      if (!r.ok && r.status !== 401 && r.status !== 403) throw new Error('status ' + r.status);
+      return { ep, ms: performance.now() - t0 };
+    };
+    const res = await Promise.allSettled(list.map(test));
+    const ok = res.filter((x) => x.status === 'fulfilled').map((x) => x.value).sort((a, b) => a.ms - b.ms);
+    if (ok.length) {
+      BEST = ok[0].ep; ONLINE = true;
+      localStorage.setItem(LS.best, BEST);
+      localStorage.setItem(LS.net, 'online');
+      return BEST;
+    }
+    ONLINE = false;
+    localStorage.setItem(LS.net, 'offline');
+    return null;
+  })().finally(() => { setTimeout(() => (probing = null), 60000); });
+  return probing;
+}
+
+/* ---------------- 统一请求 ---------------- */
+/* 并发探测：同时请求多个端点，谁先成功用谁（避免串行遍历导致离线时卡 5 秒） */
+async function ghReq(path, { method = 'GET', body = null, timeout = 7000, quick = false } = {}) {
+  let eps = allEps();
+  if (!eps.length) { DEAD = {}; eps = allEps(); }
+  const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
+  const opt = { method, headers: { ...H, 'Content-Type': 'application/json' } };
+  if (body) opt.body = JSON.stringify(body);
+  // 并发窗口：离线快速模式只试 4 个，正常模式试 6 个
+  const WIN = quick ? 4 : 6;
+
+  const tryOne = async (ep) => {
+    const url = `${ep}/repos/${GH.owner}/${GH.repo}/contents/${path}`;
+    try {
+      const r = await fetchT(url, opt, timeout);
+      if (r.ok || r.status === 201) {
+        return { ok: true, ep, json: await r.json() };
+      }
+      if (r.status === 404) return { ok: true, ep, json: null, is404: true };
+      markDead(ep);
+      return { ok: false, ep };
+    } catch (e) { markDead(ep); return { ok: false, ep }; }
+  };
+
+  // 分批并发：先并发一批，都失败再下一批（最多 3 批）
+  for (let batch = 0; batch < 3; batch++) {
+    const slice = eps.slice(batch * WIN, batch * WIN + WIN);
+    if (!slice.length) break;
+    const res = await Promise.all(slice.map(tryOne));
+    const hit = res.find((x) => x.ok);
+    if (hit) {
+      if (hit.ep !== BEST) { BEST = hit.ep; localStorage.setItem(LS.best, hit.ep); }
+      ONLINE = true; localStorage.setItem(LS.net, 'online');
+      return hit.json;
+    }
+    // 该批全部失败，若已判定离线则快速放弃
+    if (!ONLINE && batch >= (quick ? 0 : 1)) break;
+  }
+  return null;
+}
+
+const b64 = (s) => btoa(unescape(encodeURIComponent(s)));
+function unb64(s) {
+  try { return decodeURIComponent(escape(atob(s.replace(/\n/g, '')))); } catch (e) { return null; }
+}
+
+/* ---------------- 对外 API ---------------- */
+const Net = {
+  get online() { return ONLINE; },
+  get endpoint() { return BEST || EPS[0]; },
+  get queueLen() { return QUEUE.length; },
+
+  async init() {
+    await probe();
+    this.startDaemon();
+    return ONLINE;
+  },
+
+  /** 后台守护：断网时积极重探，在线时定期复测 */
+  startDaemon() {
+    setInterval(() => {
+      if (document.hidden) return;
+      if (!ONLINE || !BEST) { DEAD = {}; probe(); }
+    }, 90000);
+    setInterval(() => { if (!document.hidden && ONLINE) probe(); }, 300000);
+    // 写队列补传
+    setInterval(() => { if (ONLINE && QUEUE.length) this.flush(); }, 20000);
+  },
+
+  /** 读 JSON：优先云端，失败用缓存，再失败读本地静态 */
+  /** quick=true：先立即返回本地缓存/静态，网络请求后台进行（保证秒开） */
+  async read(path, quick) {
+    if (quick) {
+      const c = localStorage.getItem(LS.cache + path);
+      if (c) {
+        try { return { data: JSON.parse(c), sha: null, from: 'cache' }; } catch (e) {}
+      }
+      try {
+        const r = await fetch(path + '?t=' + Date.now(), { cache: 'no-store' });
+        if (r.ok) return { data: await r.json(), sha: null, from: 'static' };
+      } catch (e) {}
+    }
+    const d = await ghReq(path, { method: 'GET', quick });
+    if (d && d.content) {
+      const txt = unb64(d.content);
+      if (txt) {
+        try {
+          localStorage.setItem(LS.cache + path, txt);
+          return { data: JSON.parse(txt), sha: d.sha, from: 'net' };
+        } catch (e) {}
+      }
+    }
+    const c = localStorage.getItem(LS.cache + path);
+    if (c) { try { return { data: JSON.parse(c), sha: null, from: 'cache' }; } catch (e) {} }
+    // 静态兜底（同域相对路径）
+    try {
+      const r = await fetch(path + '?t=' + Date.now(), { cache: 'no-store' });
+      if (r.ok) return { data: await r.json(), sha: null, from: 'static' };
+    } catch (e) {}
+    return null;
+  },
+
+  /** 写 JSON：失败进队列，联网自动补传 */
+  async write(path, obj, msg) {
+    const content = b64(JSON.stringify(obj));
+    let sha = null;
+    try {
+      const cur = await ghReq(path, { method: 'GET' });
+      if (cur && cur.sha) sha = cur.sha;
+    } catch (e) {}
+    const body = { message: msg || 'update ' + path, content, branch: GH.branch };
+    if (sha) body.sha = sha;
+    const r = await ghReq(path, { method: 'PUT', body });
+    if (r && r.content) {
+      localStorage.setItem(LS.cache + path, JSON.stringify(obj));
+      return true;
+    }
+    // 进队列
+    QUEUE = QUEUE.filter((x) => x.path !== path);
+    QUEUE.push({ path, obj, msg, at: Date.now() });
+    try { localStorage.setItem(LS.queue, JSON.stringify(QUEUE)); } catch (e) {}
+    return false;
+  },
+
+  async flush() {
+    if (!QUEUE.length || !ONLINE) return 0;
+    let n = 0;
+    const q = [...QUEUE];
+    QUEUE = [];
+    for (const it of q) {
+      const ok = await this.write(it.path, it.obj, it.msg);
+      if (ok) n++; else QUEUE.push(it);
+      await sleep(1500);                 // 慢速，避免触发限流
+    }
+    try { localStorage.setItem(LS.queue, JSON.stringify(QUEUE)); } catch (e) {}
+    return n;
+  },
+
+  /** 列出目录 */
+  async list(path) {
+    const d = await ghReq(path, { method: 'GET' });
+    if (Array.isArray(d)) return d.map((x) => x.name);
+    return [];
+  },
+
+  reset() {
+    DEAD = {}; BEST = ''; ONLINE = true;
+    localStorage.removeItem(LS.dead); localStorage.removeItem(LS.best);
+    localStorage.setItem(LS.net, 'online');
+    return probe();
+  },
+};
+
+window.Net = Net;
+window.GH = GH;
