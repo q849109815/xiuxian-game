@@ -7,11 +7,11 @@
   "root": "mixed",
   "sect": "s_qingyun",
   "createdAt": 1790039820957,
-  "lastSeen": 1790041960500,
-  "lastTick": 1790041960500,
+  "lastSeen": 1790041979566,
+  "lastTick": 1790041979566,
   "realm": 31,
   "stage": 0,
-  "exp": 236858718040.82608,
+  "exp": 311984400217.2015,
   "stone": 2827424644950.0703,
   "equip": {
     "weapon": {
@@ -29,18 +29,19 @@
       "mp": 337
     },
     "armor": {
-      "id": "it_limcshl",
+      "id": "fr_fr_e104",
+      "name": "玄铁甲",
+      "icon": "🥋",
       "kind": "equip",
+      "q": 2,
       "slot": "armor",
-      "q": 0,
-      "level": 0,
-      "temper": 0,
-      "name": "凡品·云锦袍",
-      "atk": 76,
-      "def": 458,
-      "hp": 2926,
-      "crit": 0,
-      "mp": 337
+      "base": {
+        "def": 120,
+        "hp": 4800
+      },
+      "enh": 0,
+      "temp": 0,
+      "fr": true
     },
     "ring": {
       "id": "it_g2h4qz3",
@@ -191,21 +192,6 @@
       "hp": 679,
       "crit": 0,
       "mp": 337
-    },
-    {
-      "id": "fr_fr_e104",
-      "name": "玄铁甲",
-      "icon": "🥋",
-      "kind": "equip",
-      "q": 2,
-      "slot": "armor",
-      "base": {
-        "def": 120,
-        "hp": 4800
-      },
-      "enh": 0,
-      "temp": 0,
-      "fr": true
     },
     {
       "id": "it_iid8t3p",
@@ -588,21 +574,6 @@
       "mp": 337
     },
     {
-      "id": "fr_fr_e104",
-      "name": "玄铁甲",
-      "icon": "🥋",
-      "kind": "equip",
-      "q": 2,
-      "slot": "armor",
-      "base": {
-        "def": 120,
-        "hp": 4800
-      },
-      "enh": 0,
-      "temp": 0,
-      "fr": true
-    },
-    {
       "id": "it_al7fk38",
       "kind": "equip",
       "slot": "helmet",
@@ -727,6 +698,20 @@
       "hp": 1478,
       "crit": 0,
       "mp": 337
+    },
+    {
+      "id": "it_limcshl",
+      "kind": "equip",
+      "slot": "armor",
+      "q": 0,
+      "level": 0,
+      "temper": 0,
+      "name": "凡品·云锦袍",
+      "atk": 76,
+      "def": 458,
+      "hp": 2926,
+      "crit": 0,
+      "mp": 337
     }
   ],
   "skills": [
@@ -837,7 +822,7 @@
   "trait": "P002",
   "bottle": {
     "liquid": 4,
-    "acc": 42,
+    "acc": 61,
     "level": 30
   },
   "partners": {},
