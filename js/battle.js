@@ -153,14 +153,14 @@ const BT = {
     const r = this.run;
     const mul = (r.mul || 1) * (r.endless ? 1 + (r.wave - 1) * 0.35 : 1);
     const z = this.mkZ(d, mul, Math.round(d.hp * mul));
-    z.isBoss = true; z.bossDef = d; z.phase = 0; z.maxHp = z.hp;
+    z.isBoss = true; z.bossDef = d; z.phase = 0; z.maxHp = z.hp; z.img = d.img;
     r.boss = z; r.zombies.push(z);
   },
 
   mkZ(d, mul, hpOverride) {
     const hp = hpOverride != null ? hpOverride : Math.round(d.hp * mul);
     return {
-      d, id: d.id, n: d.n, icon: d.icon,
+      d, id: d.id, n: d.n, icon: d.icon, img: d.img,
       x: 0, y: 0, hp, maxHp: hp, spd: d.spd, dmg: d.dmg, atkR: d.atkR,
       ai: d.ai, def: d.def || 0, front: d.front || 0, fly: !!d.fly,
       slow: 0, slowT: 0, burn: 0, burnT: 0, atkCd: 0, dashT: 0, facing: 0,
