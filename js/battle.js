@@ -53,7 +53,8 @@ const BT = {
     if (!this.cv) return;
     const b = this.cv.getBoundingClientRect();
     const d = window.devicePixelRatio || 1;
-    this.W = Math.max(320, b.width || 360); this.H = Math.max(480, b.height || 640);
+    this.W = Math.max(300, b.width || 390); this.H = Math.max(520, b.height || 693);
+    this.wallY = this.H - 96;
     this.cv.width = this.W * d; this.cv.height = this.H * d;
     this.ctx.setTransform(d, 0, 0, d, 0, 0);
   },
@@ -85,8 +86,13 @@ const BT = {
     const maxHp = a.hp;
     this.run = {
       def, endless: !!opt.endless, ch: def.ch,
-      px: this.W / 2, py: this.H * 0.62,
-      hp: maxHp, maxHp, shield: a.shield, maxShield: a.shield,
+      px: this.W / 2, py: this.H - 58,
+      aimX: 0, aimY: -1, aiming: false,
+      /* 防线血量（真实玩法：漏怪突破即失败） */
+      wallMax: Math.round(maxHp * 0.6), wallHp: Math.round(maxHp * 0.6),
+      hp: Math.round(maxHp * 0.6), maxHp: Math.round(maxHp * 0.6),
+      shield: a.shield, maxShield: a.shield,
+      turrets: [], mercs: [], coin: 0, cd: {},
       atk: a.atk, rate: a.rate, range: a.range, pierce: a.pierce, spread: a.spread,
       pellets: a.pellets || 1, crit: a.crit, critDmg: a.critDmg, moveSpd: a.moveSpd,
       mag: a.mag, magMax: a.mag, reloadT: 0, reloading: false,
@@ -101,6 +107,11 @@ const BT = {
       poison: 0, poisonT: 0, hitFlash: 0,
       boss: null, bossPhase: 0, warned: false,
     };
+    /* 带上基地已招募的佣兵 */
+    for (const mid of (p.mercs || [])) {
+      const md = EX.mercs.find((x) => x.id === mid); if (!md) continue;
+      r.mercs.push({ def: md, x: this.W * (0.28 + r.mercs.length * 0.18), y: this.H - 74, cd: 0 });
+    }
     this.on = true; this.paused = false;
     this.startWave(1);
     this.startLoop();
@@ -153,10 +164,9 @@ const BT = {
   randEdge(z) {
     const m = 30;
     const s = Math.floor(Math.random() * 4);
-    if (s === 0) { z.x = Math.random() * this.W; z.y = -m; }
-    else if (s === 1) { z.x = this.W + m; z.y = Math.random() * this.H; }
-    else if (s === 2) { z.x = Math.random() * this.W; z.y = this.H + m; }
-    else { z.x = -m; z.y = Math.random() * this.H; }
+    /* 真实玩法：僵尸从屏幕上方成波次向下推进 */
+    z.x = 24 + Math.random() * (this.W - 48);
+    z.y = -m;
   },
 
   startLoop() {
@@ -187,9 +197,9 @@ const BT = {
     const len = Math.hypot(mx, my);
     if (len > 1) { mx /= len; my /= len; }
     if (len > 0.08) {
-      r.px += mx * spd * dt; r.py += my * spd * dt;
-      r.px = Math.max(16, Math.min(this.W - 16, r.px));
-      r.py = Math.max(40, Math.min(this.H - 40, r.py));
+      /* 真实玩法：玩家固定在底部防线，不跑位；摇杆=瞄准方向 */
+      if (mx || my) { r.aimX = mx; r.aimY = my; r.aiming = true; }
+      else r.aiming = false;
     }
 
     /* --- 换弹 --- */
@@ -201,12 +211,57 @@ const BT = {
     /* --- 自动瞄准射击 --- */
     r.shootT -= dt;
     if (!r.reloading && r.mag > 0 && r.shootT <= 0) {
-      const tg = this.nearest(r.px, r.py, null, r.range);
+      /* 瞄准：拖动=按方向；否则自动锁定最近僵尸 */
+      let tg = null;
+      if (r.aiming) {
+        const ax = r.aimX, ay = r.aimY;
+        let best = null, bestD = 1e9;
+        for (const z of r.zombies) {
+          if (z.dead) continue;
+          const vx = z.x - r.px, vy = z.y - r.py;
+          const proj = vx * ax + vy * ay;
+          if (proj <= 0) continue;
+          const perp = Math.abs(vx * ay - vy * ax);
+          if (perp < 70 && proj < bestD) { bestD = proj; best = z; }
+        }
+        tg = best;
+      }
+      if (!tg) tg = this.nearest(r.px, r.py, null, r.range);
       if (tg) { r.shootT = 1 / (r.rate * (1 + r.mods.rateMul)); this.shoot(tg); }
     }
     if (!r.reloading && r.mag <= 0) this.reload();
 
     /* --- 生成 --- */
+    /* --- 炮台自动开火 --- */
+    for (const t of r.turrets) {
+      t.cd -= dt;
+      if (t.cd > 0) continue;
+      const tz = this.nearest(t.x, t.y, null, t.def.rng + t.lv * 12);
+      if (!tz) continue;
+      t.cd = 1 / (t.def.rate * (1 + t.lv * 0.12));
+      const dmgT = t.def.dmg * (1 + t.lv * 0.35) * (1 + r.mods.dmgMul);
+      this.spawnBullet(t.x, t.y, tz, dmgT, { pierce: 0, from: 'turret', el: t.def.el });
+    }
+
+    /* --- 佣兵 / 召唤物自动开火 --- */
+    for (let i = r.mercs.length - 1; i >= 0; i--) {
+      const m = r.mercs[i];
+      if (m.isSummon) {
+        m.life -= dt;
+        if (m.life <= 0) { r.mercs.splice(i, 1); continue; }
+      }
+      m.cd -= dt;
+      if (m.cd > 0) continue;
+      const mz = this.nearest(m.x, m.y, null, m.def.rng);
+      if (!mz) continue;
+      m.cd = 1 / m.def.rate;
+      this.spawnBullet(m.x, m.y, mz, m.def.dmg * (1 + r.mods.dmgMul),
+        { pierce: m.def.id === 'M_SJ' ? 3 : 0, from: 'merc', el: '物' });
+    }
+
+    /* --- 主动技能冷却 --- */
+    for (const k in r.cd) if (r.cd[k] > 0) r.cd[k] -= dt;
+
     if (r.spawnLeft > 0) {
       r.spawnT -= dt;
       if (r.spawnT <= 0) {
@@ -280,30 +335,44 @@ const BT = {
 
       if (z.isBoss) this.bossTick(z, dt, dist);
 
+      /* 真实玩法：僵尸整体自上而下推进，向防线（屏幕底部）压 */
+      const downSp = sp * (z.ai === 'rush' ? (z.dashT > 0 ? 2.2 : 1) : 1);
       if (z.ai === 'ranged') {
-        if (dist > z.atkR * 0.75) { z.x += dx / dist * sp * dt * 0.7; z.y += dy / dist * sp * dt * 0.7; }
+        /* 远程僵尸推进到射程内停下喷吐 */
+        if (dist > z.atkR * 0.9) z.y += downSp * dt * 0.85;
         z.atkCd -= dt;
         if (z.atkCd <= 0 && dist < z.atkR) {
           z.atkCd = 2.2;
-          if (z.d.poison) {
-            this.shootEnemy(z, 'poison');
-          } else {
-            r.pools.push({ x: r.px, y: r.py, r: 44, dps: z.dmg, life: 3.2, max: 3.2 });
-          }
+          if (z.d.poison) this.shootEnemy(z, 'poison');
+          else r.pools.push({ x: z.x, y: z.y + 30, r: 44, dps: z.dmg, life: 3.2, max: 3.2 });
         }
       } else if (z.ai === 'rush') {
         z.dashT -= dt;
-        const boost = z.dashT > 0 ? 2.4 : 1;
-        z.x += dx / dist * sp * boost * dt; z.y += dy / dist * sp * boost * dt;
+        z.y += downSp * dt;
         if (z.dashT <= -2.5) z.dashT = 0.9;
       } else if (z.ai === 'boomer') {
-        z.x += dx / dist * sp * dt; z.y += dy / dist * sp * dt;
-        if (dist < z.atkR + 8) { this.boom(z); }
+        z.y += downSp * dt;
+        if (dist < z.atkR + 8) this.boom(z);
       } else {
-        z.x += dx / dist * sp * dt; z.y += dy / dist * sp * dt;
+        z.y += downSp * dt;
+      }
+      /* 轻微横向摆动，避免完全直线 */
+      if (z.wobble == null) z.wobble = Math.random() * 6.28;
+      z.wobble += dt * 1.4;
+      z.x += Math.sin(z.wobble) * 8 * dt;
+      z.x = Math.max(14, Math.min(this.W - 14, z.x));
+      z.facing = Math.PI / 2;
+
+      /* 撞上防线：防线掉血，僵尸消失 */
+      if (z.y >= this.wallY) {
+        this.hurtPlayer(z.dmg, z.n);
+        z.dead = true; z.hp = 0;
+        this.efx.push({ t: 'hitWall', x: z.x, y: this.wallY, life: 0.3, max: 0.3, r: 26 });
+        if (window.SND) SND.play('hurt');
+        continue;
       }
 
-      /* 接触伤害 */
+      /* 接触伤害（近身） */
       if (dist < z.atkR * 0.55) {
         z.atkCd -= dt;
         if (z.atkCd <= 0) {
@@ -399,6 +468,157 @@ const BT = {
   },
 
   /* ---------------- 射击 ---------------- */
+  /* 范围爆炸 */
+  blast(pos, radius, dmg, el) {
+    const r = this.run; if (!r) return;
+    this.efx.push({ t: 'boom', x: pos.x, y: pos.y, r: radius, life: 0.36, max: 0.36, el: el || '火' });
+    if (window.SND) SND.play('explode');
+    for (const z of r.zombies) {
+      if (z.dead) continue;
+      const d = Math.hypot(z.x - pos.x, z.y - pos.y);
+      if (d <= radius) this.hurt(z, dmg * (1 - d / radius * 0.4), false, el);
+    }
+  },
+
+  /* 通用子弹生成（玩家/炮台/佣兵共用） */
+  spawnBullet(x, y, tg, dmg, opt = {}) {
+    const r = this.run;
+    const a = Math.atan2(tg.y - y, tg.x - x);
+    const spd = 520;
+    r.bullets.push({
+      x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+      dmg, pierce: opt.pierce || 0, life: 1.3, hit: [],
+      from: opt.from || 'player', el: opt.el || '物',
+      explode: 0, er: 0,
+    });
+  },
+
+  /* 建造/升级炮台（局内金币） */
+  buildTurret(slotKey, turretId) {
+    const r = this.run; if (!r) return { ok: false, msg: '未进入战斗' };
+    const def = EX.turrets.find((t) => t.id === turretId); if (!def) return { ok: false, msg: '炮台不存在' };
+    const slot = EX.turretSlots.find((s) => s.k === slotKey); if (!slot) return { ok: false, msg: '槽位不存在' };
+    const exist = r.turrets.find((t) => t.k === slotKey);
+    if (exist) {
+      const cost = Math.round(def.upCost * (1 + exist.lv * 0.6));
+      if (r.coin < cost) return { ok: false, msg: '金币不足（需 ' + cost + '）' };
+      r.coin -= cost; exist.lv++;
+      return { ok: true, msg: '⬆ ' + def.n + ' 升至 Lv.' + exist.lv };
+    }
+    if (r.coin < def.cost) return { ok: false, msg: '金币不足（需 ' + def.cost + '）' };
+    r.coin -= def.cost;
+    r.turrets.push({ k: slotKey, def, lv: 1, cd: 0,
+      x: this.W * slot.x, y: this.H * slot.y });
+    return { ok: true, msg: '🔧 已建造 ' + def.n };
+  },
+
+  /* 释放主动技能（资料 10 表：闪电链 / 火环 / 冰霜新星 / 护盾） */
+  castSkill(id) {
+    const r = this.run; if (!r) return { ok: false, msg: '未进入战斗' };
+    const lv = r.skills[id] || 0; if (!lv) return { ok: false, msg: '尚未学习该技能' };
+    const def = EX.skills.find((x) => x.id === id); if (!def) return { ok: false, msg: '技能不存在' };
+    if (def.kind === 'passive') return { ok: false, msg: def.n + ' 为被动技能，自动生效' };
+    if ((r.cd[id] || 0) > 0) return { ok: false, msg: def.n + ' 冷却中 ' + r.cd[id].toFixed(1) + 's' };
+    r.cd[id] = def.cd || 5;
+    const m = def.mods || {};
+    if (window.SND) SND.play(def.el === '火' ? 'explode' : def.el === '冰' ? 'pick' : 'crit');
+    switch (id) {
+      case 'shandian': {   /* 闪电链：命中后连锁电击多个目标 */
+        const tg = this.nearest(r.px, r.py, null, 420) || { x: this.W / 2, y: this.H * 0.35 };
+        let cur = tg, hit = [];
+        for (let i = 0; i < m.chainN + lv && cur; i++) {
+          hit.push(cur);
+          this.hurt(cur, r.atk * 0.7 * lv, false, '电');
+          this.efx.push({ t: 'chain', x1: cur.x, y1: cur.y, x2: cur.x, y2: cur.y, life: .25, max: .25, el: '电' });
+          cur = this.nearest(cur.x, cur.y, cur, 150);
+          if (cur) this.efx.push({ t: 'chain',
+            x1: hit[hit.length - 1].x, y1: hit[hit.length - 1].y,
+            x2: cur.x, y2: cur.y, life: .25, max: .25, el: '电' });
+        }
+        break;
+      }
+      case 'huohuan':      /* 火环：角色周围持续灼烧 + 击退 */
+        r.efx.push({ t: 'aura', x: r.px, y: r.py, r: m.auraR * (1 + lv * 0.09),
+          dps: m.auraDps * lv * r.atk * 0.12, life: 4.0, max: 4.0, el: '火', knock: m.knock });
+        break;
+      case 'bingshuang': { /* 冰霜新星：冰环减速 + 冰冻 */
+        const R = m.novaR * (1 + lv * 0.08);
+        for (const z of r.zombies) {
+          if (z.dead) continue;
+          if (Math.hypot(z.x - r.px, z.y - r.py) <= R) {
+            z.slow = Math.min(0.85, m.novaSlow + lv * 0.04);
+            z.slowT = 2.2 + lv * 0.25;
+            this.hurt(z, r.atk * 0.4 * lv, false, '冰');
+          }
+        }
+        this.efx.push({ t: 'nova', x: r.px, y: r.py, r: R, life: .55, max: .55, el: '冰' });
+        break;
+      }
+      case 'hudun':        /* 护盾：吸收伤害 */
+        r.shield = Math.min(r.maxShield * 3, (r.shield || 0) + m.shield * lv);
+        this.efx.push({ t: 'nova', x: r.px, y: r.py, r: 44, life: .5, max: .5, el: '物' });
+        break;
+      default: break;
+    }
+    return { ok: true, msg: def.n + ' 释放' };
+  },
+
+  /* 通用子弹生成（玩家/炮台/佣兵共用） */
+  spawnBullet(x, y, tg, dmg, opt = {}) {
+    const r = this.run;
+    const a = Math.atan2(tg.y - y, tg.x - x);
+    const spd = 520;
+    r.bullets.push({
+      x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+      dmg, pierce: opt.pierce || 0, life: 1.3, hit: [],
+      from: opt.from || 'player', el: opt.el || '物',
+      explode: 0, er: 0,
+    });
+  },
+
+  /* 建造/升级炮台（局内金币） */
+  buildTurret(slotKey, turretId) {
+    const r = this.run; if (!r) return { ok: false, msg: '未进入战斗' };
+    const def = EX.turrets.find((t) => t.id === turretId); if (!def) return { ok: false, msg: '炮台不存在' };
+    const slot = EX.turretSlots.find((s) => s.k === slotKey); if (!slot) return { ok: false, msg: '槽位不存在' };
+    const exist = r.turrets.find((t) => t.k === slotKey);
+    if (exist) {
+      const cost = Math.round(def.upCost * (1 + exist.lv * 0.6));
+      if (r.coin < cost) return { ok: false, msg: '金币不足（需 ' + cost + '）' };
+      r.coin -= cost; exist.lv++;
+      return { ok: true, msg: '⬆ ' + def.n + ' 升至 Lv.' + exist.lv };
+    }
+    if (r.coin < def.cost) return { ok: false, msg: '金币不足（需 ' + def.cost + '）' };
+    r.coin -= def.cost;
+    r.turrets.push({ k: slotKey, def, lv: 1, cd: 0,
+      x: this.W * slot.x, y: this.H * slot.y });
+    return { ok: true, msg: '🔧 已建造 ' + def.n };
+  },
+
+  /* 释放主动技能 */
+  castSkill(id) {
+    const r = this.run; if (!r) return { ok: false, msg: '未进入战斗' };
+    const lv = r.skills[id] || 0; if (!lv) return { ok: false, msg: '尚未学习该技能' };
+    const def = EX.skills.find((x) => x.id === id); if (!def) return { ok: false, msg: '技能不存在' };
+    if (def.kind !== 'periodic') return { ok: false, msg: def.n + ' 为被动技能，自动生效' };
+    if ((r.cd[id] || 0) > 0) return { ok: false, msg: def.n + ' 冷却中 ' + r.cd[id].toFixed(1) + 's' };
+    r.cd[id] = def.cd || 5;
+    const m = def.mods || {};
+    if (window.SND) SND.play(def.el === '火' ? 'explode' : def.el === '冰' ? 'pick' : 'crit');
+    /* 真实技能：冰霜新星为可主动释放的周期技能 */
+    if (id === 'bingshuang') {
+      this.efx.push({ t: 'nova', x: r.px, y: r.py, r: m.novaR * (1 + lv * 0.1),
+        life: 0.5, max: 0.5, el: '冰' });
+      for (const z of r.zombies) {
+        if (z.dead) continue;
+        if (Math.hypot(z.x - r.px, z.y - r.py) <= m.novaR * (1 + lv * 0.1)) {
+          z.slow = Math.min(0.8, m.novaSlow + lv * 0.04); z.slowT = 1.8 + lv * 0.15;
+        }
+      }
+    }
+    return { ok: true, msg: def.n + ' 释放' };
+  },
+
   shoot(tg) {
     const r = this.run;
     if (r.mag <= 0) return;
@@ -451,9 +671,13 @@ const BT = {
       const ab = Math.min(r.shield, d); r.shield -= ab; d -= ab;
       if (r.shield <= 0) UI.toast('🛡️ 护盾破碎', 'err');
     }
-    r.hp -= d; r.hitFlash = 0.18;
+    /* 真实玩法：伤害打在防线血量上，漏怪突破 → 防线归零 → 失败 */
+    r.wallHp = Math.max(0, (r.wallHp != null ? r.wallHp : r.hp) - d);
+    r.hp = r.wallHp;
+    r.hitFlash = 0.18;
     this.addFloat(r.px, r.py - 26, '-' + Math.round(dmg), 'hurt');
-    if (r.hp <= 0) { r.hp = 0; this.onLose(); }
+    if (window.SND) SND.play('hurt');
+    if (r.wallHp <= 0) { r.wallHp = 0; r.hp = 0; this.onLose(); }
   },
 
   kill(z) {
@@ -588,7 +812,8 @@ const BT = {
     const r = this.run; if (r.over) return;
     if (r.reviveLeft > 0) {
       r.reviveLeft--;
-      r.hp = r.maxHp; r.shield = r.maxShield;
+      r.wallHp = r.wallMax != null ? r.wallMax : r.maxHp;
+      r.hp = r.wallHp; r.shield = r.maxShield;
       for (const z of r.zombies.slice()) {
         if (Math.hypot(z.x - r.px, z.y - r.py) < 190) z.dead = true;
       }
@@ -609,7 +834,50 @@ const BT = {
   /* =================================================
    * 绘制
    * ================================================ */
+  /* ===== 2.5D 透视：近大远小 ===== */
+  depthScale(y) {
+    const t = Math.max(0, Math.min(1, y / (this.wallY || this.H)));
+    return 0.52 + Math.pow(t, 1.35) * 0.78;      /* 远处 0.52 倍 → 近处 1.30 倍 */
+  },
+
+  /* ===== 2.5D 透视地面网格 ===== */
+  drawPerspGround(c) {
+    const W = this.W, H = this.H, wall = this.wallY;
+    const vanishY = H * 0.10, vanishX = W / 2;
+    /* 横向线：远处密、近处疏（幂次分布制造纵深） */
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12;
+      const y = vanishY + Math.pow(t, 1.9) * (wall - vanishY);
+      const a = 0.05 + t * 0.22;
+      c.strokeStyle = 'rgba(120,170,220,' + a.toFixed(3) + ')';
+      c.lineWidth = t < 0.3 ? 0.6 : 1.1;
+      c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
+    }
+    /* 纵向线：从消失点向下发散 */
+    for (let i = -7; i <= 7; i++) {
+      const xT = vanishX + i * 6;
+      const xB = vanishX + i * (W / 5.5);
+      c.strokeStyle = 'rgba(120,170,220,0.13)';
+      c.lineWidth = 1;
+      c.beginPath(); c.moveTo(xT, vanishY); c.lineTo(xB, wall); c.stroke();
+    }
+    /* 地平线雾 */
+    const g = c.createLinearGradient(0, vanishY - 10, 0, vanishY + H * 0.16);
+    g.addColorStop(0, 'rgba(6,10,18,0.85)');
+    g.addColorStop(1, 'rgba(6,10,18,0)');
+    c.fillStyle = g; c.fillRect(0, vanishY - 10, W, H * 0.18);
+  },
+
+  /* ===== 贴地阴影（2.5D 关键） ===== */
+  shadow(c, x, y, r, sc) {
+    c.fillStyle = 'rgba(0,0,0,0.34)';
+    c.beginPath();
+    c.ellipse(x, y + r * 0.42 * sc, r * 0.62 * sc, r * 0.20 * sc, 0, 0, 7);
+    c.fill();
+  },
+
   draw() {
+    const cc = this.ctx || (this.cv && this.cv.getContext('2d'));
     const r = this.run; if (!r) { return; }
     const c = this.ctx; if (!c) return;
     const W = this.W, H = this.H;
@@ -624,6 +892,9 @@ const BT = {
       g.addColorStop(0, '#1a2637'); g.addColorStop(1, '#232f42');
       c.fillStyle = g; c.fillRect(0, 0, W, H);
     }
+
+    /* 2.5D 透视地面网格（产生纵深） */
+    this.drawPerspGround(c);
 
     /* 腐蚀液池 */
     for (const p of r.pools) {
@@ -669,24 +940,52 @@ const BT = {
     }
 
     /* 僵尸 */
-    for (const z of r.zombies) {
-      if (z.dead) continue;
-      const sz = z.isBoss ? 46 : (z.d.elite ? 28 : 24);
+    /* 按 y 排序：远的先画，近的后画（2.5D 遮挡关系） */
+    const zs = r.zombies.filter((z) => !z.dead).sort((a, b) => a.y - b.y);
+    for (const z of zs) {
+      const sc = this.depthScale(z.y);
+      const sz = (z.isBoss ? 46 : (z.d.elite ? 28 : 24)) * sc;
+      this.shadow(c, z.x, z.y, sz * 0.55, sc);
       if (z.slowT > 0) { c.fillStyle = 'rgba(92,216,255,0.28)'; c.beginPath(); c.arc(z.x, z.y, sz * 0.62, 0, 7); c.fill(); }
       const zim = IMG.get(z.img);
       if (zim) {
-        const w = sz * 1.5, h = sz * 1.5;
-        c.drawImage(zim, z.x - w / 2, z.y - h / 2, w, h);
+        const w = sz * 1.55, h = sz * 1.55;
+        c.drawImage(zim, z.x - w / 2, z.y - h * 0.62, w, h);
       } else {
         c.font = sz + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
         c.fillText(z.icon, z.x, z.y);
       }
       if (z.hp < z.maxHp) {
-        const bw = sz * 0.9;
-        c.fillStyle = 'rgba(0,0,0,0.55)'; c.fillRect(z.x - bw / 2, z.y - sz * 0.72, bw, 3.5);
+        const bw = sz * 0.95;
+        const by = z.y - sz * 0.68;
+        c.fillStyle = 'rgba(0,0,0,0.55)'; c.fillRect(z.x - bw / 2, by, bw, 3.5);
         c.fillStyle = z.isBoss ? '#ff4d6d' : '#5fd07a';
-        c.fillRect(z.x - bw / 2, z.y - sz * 0.72, bw * Math.max(0, z.hp / z.maxHp), 3.5);
+        c.fillRect(z.x - bw / 2, by, bw * Math.max(0, z.hp / z.maxHp), 3.5);
       }
+    }
+
+    /* ===== 2.5D 立体防线（底部城墙） ===== */
+    const wy = this.wallY;
+    const wg = c.createLinearGradient(0, wy - 6, 0, wy + 34);
+    wg.addColorStop(0, '#4a5568'); wg.addColorStop(0.35, '#2d3748'); wg.addColorStop(1, '#151b26');
+    c.fillStyle = wg;
+    c.fillRect(0, wy - 4, W, 30);
+    /* 城墙顶面高光（伪 3D 厚度） */
+    c.fillStyle = 'rgba(255,165,60,0.30)';
+    c.fillRect(0, wy - 6, W, 3);
+    /* 墙垛 */
+    c.fillStyle = '#3a4557';
+    for (let x = 0; x < W; x += 26) {
+      c.fillRect(x + 3, wy - 11, 16, 8);
+      c.fillStyle = 'rgba(255,215,106,0.18)';
+      c.fillRect(x + 3, wy - 11, 16, 2);
+      c.fillStyle = '#3a4557';
+    }
+    /* 防线受损闪红 */
+    const wr = r.wallHp != null ? r.wallHp / r.wallMax : (r.hp / r.maxHp);
+    if (wr < 0.35) {
+      c.fillStyle = 'rgba(255,60,90,' + (0.12 + (1 - wr / 0.35) * 0.20).toFixed(3) + ')';
+      c.fillRect(0, wy - 6, W, 32);
     }
 
     /* 玩家 */
