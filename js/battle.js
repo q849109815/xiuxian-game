@@ -44,16 +44,18 @@ const BT = {
   },
 
   /* ---------------- 关卡定义（按章节生成） ---------------- */
-  levelDef(levelNo) {
-    const per = EX.LEVELS_PER_CHAPTER;
-    const ch = Math.min(EX.chapters.length, Math.floor((levelNo - 1) / per) + 1);
-    const sub = ((levelNo - 1) % per) + 1;
-    const cd = EX.chapters[ch - 1];
-    const isBoss = sub === per;
-    const waves = isBoss ? 2 : Math.min(5, 2 + Math.floor(sub / 3));
+  /* 关卡定义：资料关卡表（3 章 10 关）；levelId = '1-1' 或 'endless' */
+  levelDef(levelId) {
+    if (levelId === 'endless') {
+      return { id: 'endless', ch: 0, n: '无尽模式', waves: 9999,
+        pool: EX.zombies.map((z) => z.id), per: [8, 20], mul: 1.0,
+        cond: 'endless', boss: null, scene: 'city', endless: true };
+    }
+    const d = EX.levels.find((x) => x.id === levelId) || EX.levels[0];
     return {
-      levelNo, ch, sub, isBoss, waves, pool: cd.pool, hpMul: cd.hpMul,
-      boss: isBoss ? cd.boss : null, name: cd.n + ' ' + sub + '-' + (isBoss ? 'BOSS' : sub),
+      id: d.id, ch: d.ch, n: d.id + ' ' + d.n, waves: d.waves,
+      pool: d.pool, per: d.per, mul: d.mul, cond: d.cond,
+      boss: d.boss || null, scene: d.scene, endless: false, rw: d.rw,
     };
   },
 
@@ -70,10 +72,11 @@ const BT = {
       px: this.W / 2, py: this.H * 0.62,
       hp: maxHp, maxHp, shield: a.shield, maxShield: a.shield,
       atk: a.atk, rate: a.rate, range: a.range, pierce: a.pierce, spread: a.spread,
-      crit: a.crit, critDmg: a.critDmg, moveSpd: a.moveSpd,
+      pellets: a.pellets || 1, crit: a.crit, critDmg: a.critDmg, moveSpd: a.moveSpd,
       mag: a.mag, magMax: a.mag, reloadT: 0, reloading: false,
       shootT: 0,
       wave: 0, waveTotal: def.waves, spawnLeft: 0, spawnT: 0, waveGap: 0,
+      def: def, cond: def.cond, mul: def.mul,
       zombies: [], bullets: [], pools: [], efx: [], floats: [], drops: [],
       skills: {}, mods: this.emptyMods(),
       lv: 1, xp: 0, xpNeed: 18,
@@ -97,16 +100,24 @@ const BT = {
   startWave(w) {
     const r = this.run, d = r.def;
     r.wave = w;
-    if (d.isBoss && w === 2) { this.spawnBoss(d.boss); r.spawnLeft = 0; return; }
-    const base = r.endless ? 6 + w * 2 : 5 + w * 2 + d.sub;
-    r.spawnLeft = Math.min(46, base);
-    r.spawnT = 0; r.spawnGap = Math.max(0.22, 0.62 - w * 0.05);
+    /* BOSS 关：最后一波出 BOSS（资料通关条件：击杀BOSS） */
+    const isBossWave = (d.cond === 'boss' || d.cond === 'bossAll') && w === d.waves;
+    if (isBossWave) {
+      if (Array.isArray(d.boss)) d.boss.forEach((b) => this.spawnBoss(b));
+      else this.spawnBoss(d.boss);
+    }
+    /* 每波数量：资料 per[min,max]，随波次递增 */
+    const [mn, mx] = d.per || [10, 15];
+    const t = d.waves > 1 ? (w - 1) / (d.waves - 1) : 1;
+    const base = Math.round(mn + (mx - mn) * t);
+    r.spawnLeft = Math.min(60, isBossWave ? Math.round(base * 0.7) : base);
+    r.spawnT = 0; r.spawnGap = Math.max(0.18, 0.60 - w * 0.05);
   },
 
   spawnBoss(id) {
     const d = EX.bosses.find((x) => x.id === id) || EX.bosses[0];
     const r = this.run;
-    const mul = r.def.hpMul * (r.endless ? 1 + r.wave * 0.3 : 1);
+    const mul = (r.mul || 1) * (r.endless ? 1 + (r.wave - 1) * 0.35 : 1);
     const z = this.mkZ(d, mul, Math.round(d.hp * mul));
     z.isBoss = true; z.bossDef = d; z.phase = 0; z.maxHp = z.hp;
     r.boss = z; r.zombies.push(z);
@@ -186,7 +197,7 @@ const BT = {
         r.spawnT = r.spawnGap;
         const id = r.def.pool[Math.floor(Math.random() * r.def.pool.length)];
         const d = EX.zombies.find((x) => x.id === id) || EX.zombies[0];
-        const mul = r.def.hpMul * (r.endless ? 1 + (r.wave - 1) * 0.35 : 1);
+        const mul = (r.mul || 1) * (r.endless ? 1 + (r.wave - 1) * 0.35 : 1);
         const z = this.mkZ(d, mul); this.randEdge(z);
         r.zombies.push(z); r.spawnLeft--;
       }
@@ -333,6 +344,7 @@ const BT = {
     /* --- 波次推进 --- */
     if (r.spawnLeft === 0 && r.zombies.length === 0) {
       if (r.wave >= r.waveTotal) { this.win(); return; }
+      if (r.endless) { this.startWave(r.wave + 1); return; }
       r.waveGap -= dt;
       if (r.waveGap <= 0) { this.startWave(r.wave + 1); r.waveGap = 1.4; }
     } else r.waveGap = 1.4;
@@ -376,8 +388,8 @@ const BT = {
     if (r.mag <= 0) return;
     r.mag--;
     const base = Math.atan2(tg.y - r.py, tg.x - r.px);
-    const n = Math.max(1, Math.round(r.spread + r.mods.spread));
-    const dmg = r.atk * (1 + r.mods.dmgMul);
+    const n = Math.max(1, Math.round(Number(r.pellets || 1) + Number(r.spread || 0) + Number(r.mods.spread || 0)));
+    const dmg = (Number(r.atk) || 1) * (1 + Number(r.mods.dmgMul) || 0);
     const g = E.gun(this.P);
     for (let i = 0; i < n; i++) {
       const off = n === 1 ? 0 : (i - (n - 1) / 2) * 0.13;
