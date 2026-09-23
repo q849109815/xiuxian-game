@@ -1,10 +1,11 @@
 /* =========================================================
  * main.js —— 启动 / 登录 / 摇杆输入 / 战斗流程 / 存档
- * 依据资料 06 操作方案：移动端摇杆 + PC 键鼠备选
+ * 依据资料 06 操作方案（移动端摇杆 + PC 备选）
+ *        08 跳转流程（16 步）
  * ========================================================= */
 
 let P = null, UID = null, saveT = null, hudT = null;
-let battleMode = 'normal';
+let battleMode = 'normal', battleLevel = '1-1';
 
 const MAIN = {
   savePath: null,
@@ -14,7 +15,7 @@ const MAIN = {
     for (const [txt, v] of steps) {
       const b = document.getElementById('ldBar'), t = document.getElementById('ldTxt');
       if (b) b.style.width = v + '%'; if (t) t.textContent = txt;
-      await sleep(180);
+      await new Promise((r) => setTimeout(r, 180));
     }
     await CFG.load();
     await Net.init().catch(() => {});
@@ -31,21 +32,35 @@ const MAIN = {
     try { const r = await Net.read(path); if (r && r.data) p = r.data; } catch (e) {}
     if (!p) {
       p = E.newPlayer(UID, name, gender);
-      p.gold = 3000; p.diamond = 100;
-      p.bag.push(E.rollChip('绿', null));
-      UI.toast('欢迎加入，先锋官！已发放新手芯片', 'ok');
+      UI.toast('欢迎加入，先锋官！', 'ok');
     } else { p.name = p.name || name; p.lastSeen = Date.now(); }
     P = p; window.P = p; UI.P = p;
     this.savePath = path;
-    /* 兼容旧档缺失字段 */
-    p.chips = p.chips || {}; p.bag = p.bag || []; p.talents = p.talents || {};
-    p.build = p.build || { hospital: 1, armory: 1, lab: 1, warehouse: 1 };
-    p.cleared = p.cleared || {}; p.tasks = p.tasks || { mainClaimed: [], dailyProg: {}, dailyClaimed: [], dailyDate: '', achieveClaimed: [] };
-    p.stats = p.stats || { kills: 0, runs: 0, boss: 0, clears: 0, upgrade: 0 };
-    E.resetDaily(p);
+    this.migrate(p);
     UI.home(); UI.show('home');
     await this.claimMail();
     this.startSave(); this.loadLeaderboard();
+  },
+
+  /* 旧档字段补全 */
+  migrate(p) {
+    p.char = p.char || 'C01'; p.chars = p.chars || ['C01'];
+    p.skin = p.skin || 'sk_c01a'; p.skins = p.skins || ['sk_c01a'];
+    p.mat = p.mat || { M01: 0, M02: 0, M03: 0, M04: 0, M05: 0, P01: 0, P02: 0 };
+    p.use = p.use || { I01: 0, I02: 0, I03: 0 };
+    p.gun = p.gun || 'W01'; p.gunLv = p.gunLv || 1; p.gunAdv = p.gunAdv || 0;
+    p.gunStats = p.gunStats || {}; p.gunOwn = p.gunOwn || ['W01'];
+    p.chips = p.chips || {}; p.bag = p.bag || []; p.talents = p.talents || {};
+    p.build = p.build || { hospital: 1, armory: 1, lab: 1, warehouse: 1 };
+    p.cleared = p.cleared || {}; p.curLevel = p.curLevel || '1-1';
+    p.stamina = p.stamina == null ? 100 : p.stamina;
+    p.staminaAt = p.staminaAt || Date.now();
+    p.tasks = p.tasks || { mainClaimed: [], dailyClaimed: [], dailyDate: '', dailyProg: {},
+      weeklyClaimed: [], weeklyKey: '', weeklyProg: {}, achieveClaimed: [] };
+    p.stats = p.stats || { kills: 0, runs: 0, bossKill: 0, noHitBest: 0, endlessBest: 0 };
+    p.guide = p.guide || {}; p.ach = p.ach || 0; p.endlessTime = p.endlessTime || 0;
+    p.mail = p.mail || [];
+    E.resetTasks(p); E.tickStamina(p);
   },
 
   async save() {
@@ -60,10 +75,10 @@ const MAIN = {
     try {
       const r = await Net.read('data/zb/leaderboard.json');
       const lb = (r && r.data && r.data.list) ? r.data.list : [];
-      const row = { u: P.uid, n: P.name, lv: P.level || 1, pw: E.power(P), eb: P.endlessBest || 0 };
+      const row = { u: P.uid, n: P.name, lv: E.curLevel(P), pw: E.power(P), eb: P.endlessBest || 0 };
       const i = lb.findIndex((x) => x.u === P.uid);
       if (i >= 0) lb[i] = row; else lb.push(row);
-      lb.sort((a, b) => b.lv - a.lv || b.pw - a.pw);
+      lb.sort((a, b) => (b.eb || 0) - (a.eb || 0) || b.pw - a.pw);
       await Net.write('data/zb/leaderboard.json', { list: lb.slice(0, 50), updated: Date.now() });
     } catch (e) {}
   },
@@ -78,9 +93,7 @@ const MAIN = {
       if (m.got) continue;
       m.got = 1; ch = true;
       P.gold += m.gold || 0; P.diamond += m.dia || 0;
-      for (let i = 0; i < (m.chips || m.eq || 0); i++) P.bag.push(E.rollChip(m.q || '紫', null));
-      UI.toast('📮 ' + (m.t || '邮件') + '：金币+' + E.fmt(m.gold || 0) + ' 钻石+' + (m.dia || 0)
-        + ((m.chips || m.eq || 0) ? ' 芯片×' + (m.chips || m.eq) : ''), 'ok');
+      UI.toast('📮 ' + (m.t || '邮件') + '：金币+' + E.fmt(m.gold || 0) + ' 钻石+' + (m.dia || 0), 'ok');
     }
     if (ch) { UI.home(); await this.save(); }
   },
@@ -88,41 +101,84 @@ const MAIN = {
 };
 
 /* =========================================================
- * 战斗流程
+ * 战斗流程（资料 08 跳转流程）
  * ========================================================= */
-function startBattle(mode, lv) {
+function startBattle(mode, levelId) {
   if (!P) return;
   battleMode = mode;
-  const levelNo = mode === 'endless' ? (lv || 1) : (lv || P.level || 1);
+  let id = levelId;
+  if (mode === 'endless') {
+    if (!E.endlessUnlocked(P)) { UI.toast('无尽模式需通关 3-3 解锁', 'err'); return; }
+    id = 'endless';
+  } else {
+    id = levelId || E.curLevel(P);
+    if (!E.levelUnlocked(P, id)) { UI.toast('该关卡尚未解锁', 'err'); return; }
+  }
+  /* 体力检查 */
+  const sp = E.spendStamina(P, id);
+  if (!sp.ok) { UI.toast(sp.msg, 'err'); return; }
+  battleLevel = id;
+
   UI.show('battle');
   BT.joy = { x: 0, y: 0 };
   const knob = document.getElementById('joyKnob');
-  if (knob) { knob.style.transform = 'translate(0,0)'; }
+  if (knob) knob.style.transform = 'translate(0,0)';
   BT.attach(document.getElementById('C'));
-  BT.start(P, levelNo, { endless: mode === 'endless', cb: onBattleEnd });
-  UI.btInit(P, levelNo, mode === 'endless');
+  BT.start(P, id, { endless: id === 'endless', cb: onBattleEnd });
+  UI.btInit(P, id, id === 'endless');
   if (hudT) clearInterval(hudT);
   hudT = setInterval(() => { if (BT.on || (BT.run && !BT.run.over)) UI.btTick(); }, 100);
+
+  /* 引导：移动 / 射击 */
+  if (!P.guide[1]) { P.guide[1] = 1; UI.toast('① 拖动左下摇杆移动角色', 'ok'); }
+  else if (!P.guide[2]) { P.guide[2] = 1; UI.toast('② 自动瞄准射击，怪物来袭', 'ok'); }
 }
 
 function onBattleEnd(res, d) {
   if (hudT) { clearInterval(hudT); hudT = null; }
   const r = BT.run;
-  P.stats.runs = (P.stats.runs || 0) + 1;
-  P.stats.kills = (P.stats.kills || 0) + (d.kills || 0);
-  P.gold += d.rw.gold || 0; P.diamond += d.rw.diamond || 0;
-  let stars = 0;
+  const kills = d.kills || 0;
+  const endless = r.endless;
+  /* 资料奖励表 */
+  let rw = { gold: 0, diamond: 0 };
   if (res === 'win') {
-    if (battleMode === 'endless') {
-      P.endlessBest = Math.max(P.endlessBest || 0, r.def.levelNo);
+    const def = r.def;
+    if (endless) {
+      rw.gold = 100 + r.wave * 20;
+      P.endlessBest = Math.max(P.endlessBest || 0, r.wave);
     } else {
-      const ratio = r.maxHp ? r.hp / r.maxHp : 0;
-      stars = E.clearLevel(P, r.def.levelNo, ratio);
-      if (r.def.isBoss) P.stats.boss = (P.stats.boss || 0) + 1;
+      const lr = def.rw || {};
+      rw.gold = lr.gold || 0;
+      for (const k in lr) {
+        if (k === 'gold') continue;
+        if (k === 'chip') { for (let i = 0; i < lr[k]; i++) P.bag.push(E.rollChipById('CH01')); }
+        else P.mat[k] = (P.mat[k] || 0) + lr[k];
+      }
     }
+  } else {
+    rw.gold = Math.floor((d.rw && d.rw.gold) || 0);
   }
+  /* 关卡掉落金币 */
+  rw.gold += Math.round((d.rw && d.rw.gold) || 0);
+  P.gold += rw.gold; P.diamond += rw.diamond;
+
+  /* 统计与任务推进 */
+  const stars = (res === 'win' && !endless) ? E.clearLevel(P, r.def.id, r.maxHp ? r.hp / r.maxHp : 0) : 0;
+  const isBoss = !endless && (r.def.cond === 'boss' || r.def.cond === 'bossAll');
+  E.pushStats(P, {
+    kills, clear: res === 'win' ? 1 : 0,
+    boss: (isBoss && res === 'win') ? 1 : 0,
+    noHit: (res === 'win' && r.hp >= r.maxHp) ? kills : 0,
+    endlessSec: endless ? r.time : 0,
+  });
+  if (endless) P.endlessTime = Math.max(P.endlessTime || 0, Math.floor(r.time));
+
+  /* 引导标记 */
+  if (res === 'win') { P.guide[5] = 1; P.guide[6] = 1; }
+  if (!P.guide[3]) P.guide[3] = 1;
+
   UI.home();
-  UI.showResult(res, d || { rw: { gold: 0, diamond: 0 }, kills: 0, time: 0 });
+  UI.showResult(res, { kills, time: r.time, rw, stars });
   if (stars) UI.toast('⭐ 获得 ' + stars + ' 星评价', 'ok');
   MAIN.save();
 }
@@ -172,14 +228,12 @@ function bindJoystick() {
 function bindKeys() {
   const keys = {};
   window.addEventListener('keydown', (e) => {
-    const k = e.key.toLowerCase();
-    keys[k] = 1;
+    const k = e.key.toLowerCase(); keys[k] = 1;
     if (!BT.on) return;
     if (k === 'r') BT.reload();
     if (k === 'escape') { BT.paused = true; document.getElementById('pause').classList.add('on'); }
   });
   window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = 0; });
-  /* WASD → 摇杆向量（PC 备选方案） */
   setInterval(() => {
     if (!BT.on) return;
     let x = 0, y = 0;
@@ -188,7 +242,6 @@ function bindKeys() {
     if (keys['w'] || keys['arrowup']) y -= 1;
     if (keys['s'] || keys['arrowdown']) y += 1;
     if (x || y) { BT.joy.x = x; BT.joy.y = y; }
-    else if (BT.joy.src !== 'touch') { /* 键盘松开归零，但保留触摸控制 */ }
   }, 40);
 }
 
@@ -208,13 +261,11 @@ function bindAll() {
   };
 
   const hg = document.getElementById('hmGo');
-  if (hg) hg.onclick = () => startBattle('normal');
+  if (hg) hg.onclick = () => UI.open('level');
   const he = document.getElementById('hmEndless');
-  if (he) he.onclick = () => startBattle('endless', 1);
+  if (he) he.onclick = () => startBattle('endless');
 
-  $$('.hm-nav .hn').forEach((b) => {
-    b.onclick = () => { UI.open(b.dataset.p); };
-  });
+  $$('.hm-nav .hn').forEach((b) => { b.onclick = () => UI.open(b.dataset.p); });
 
   const px = document.getElementById('pnX'); if (px) px.onclick = () => UI.close();
   const pm = document.getElementById('pnMask'); if (pm) pm.onclick = () => UI.close();
@@ -233,12 +284,15 @@ function bindAll() {
   if (cr) cr.onclick = () => { UI.toast('已刷新选项', 'ok'); BT.refreshOffer(); };
 
   const ra = document.getElementById('rsAgain');
-  if (ra) ra.onclick = () => { UI.hideResult(); startBattle(battleMode, BT.run.def.levelNo); };
+  if (ra) ra.onclick = () => { UI.hideResult(); startBattle(battleMode, battleLevel); };
   const rn = document.getElementById('rsNext');
   if (rn) rn.onclick = () => {
     UI.hideResult();
-    if (battleMode === 'endless') startBattle('endless', BT.run.def.levelNo + 1);
-    else startBattle('normal', Math.min(E.maxLevel(), BT.run.def.levelNo + 1));
+    if (battleMode === 'endless') startBattle('endless');
+    else {
+      const nx = E.nextLevel(battleLevel);
+      if (nx) startBattle('normal', nx); else { UI.home(); UI.show('home'); }
+    }
   };
   const rb = document.getElementById('rsBack');
   if (rb) rb.onclick = () => { UI.hideResult(); UI.home(); UI.show('home'); };
