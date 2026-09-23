@@ -278,7 +278,16 @@ function bindAll() {
   const he = document.getElementById('hmEndless');
   if (he) he.onclick = () => startBattle('endless');
 
-  $$('.hm-nav .hn').forEach((b) => { b.onclick = () => UI.open(b.dataset.p); });
+  $$('.hm-nav .hn').forEach((b) => {
+    b.onclick = () => {
+      const k = b.dataset.p;
+      if (k === 'battle') { UI.open('level', '章节'); return; }
+      $$('.hm-nav .hn').forEach((x) => x.classList.remove('on'));
+      b.classList.add('on');
+      UI.open(k);
+    };
+  });
+  $$('.hm-nav2 .hn2').forEach((b) => { b.onclick = () => { UI.open(b.dataset.p); }; });
 
   const px = document.getElementById('pnX'); if (px) px.onclick = () => UI.close();
   const pm = document.getElementById('pnMask'); if (pm) pm.onclick = () => UI.close();
