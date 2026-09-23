@@ -98,6 +98,7 @@ const BT = {
       turrets: [], mercs: [], coin: 0, cd: {},
       atk: a.atk, rate: a.rate, range: a.range, pierce: a.pierce, spread: a.spread,
       pellets: a.pellets || 1, crit: a.crit, critDmg: a.critDmg, moveSpd: a.moveSpd,
+      dmgMin: a.dmgMin, dmgMax: a.dmgMax, ls: a.ls, erMul: a.erMul, reloadCut: a.reloadCut,
       mag: a.mag, magMax: a.mag, reloadT: 0, reloading: false,
       shootT: 0,
       wave: 0, waveTotal: def.waves, spawnLeft: 0, spawnT: 0, waveGap: 0,
@@ -719,8 +720,17 @@ const BT = {
     r.mag--;
     const base = Math.atan2(tg.y - r.py, tg.x - r.px);
     const n = Math.max(1, Math.round(Number(r.pellets || 1) + Number(r.spread || 0) + Number(r.mods.spread || 0)));
-    const dmg = (Number(r.atk) || 1) * (1 + Number(r.mods.dmgMul) || 0);
     const g = E.gun(this.P);
+    const A = E.attrs(this.P) || {};
+    let dmg = (Number(r.atk) || 1) * (1 + Number(r.mods.dmgMul) || 0);
+    /* 伤害浮动区间（表44：如突击步枪 22-28） */
+    if (r.dmgMin != null && r.dmgMax != null && r.dmgMax > r.dmgMin) {
+      dmg = r.dmgMin + Math.random() * (r.dmgMax - r.dmgMin);
+      dmg *= (1 + Number(r.mods.dmgMul) || 0);
+    }
+    /* 双倍伤害词条 AF11 */
+    if (A.doubleChance && Math.random() < A.doubleChance) { dmg *= 2; r._dbl = true; }
+    else r._dbl = false;
     for (let i = 0; i < n; i++) {
       const off = n === 1 ? 0 : (i - (n - 1) / 2) * 0.13;
       const a = base + off + (Math.random() - 0.5) * 0.05;
@@ -736,7 +746,10 @@ const BT = {
   reload() {
     const r = this.run; if (!r || r.reloading || r.mag >= r.magMax) return;
     r.reloading = true;
-    r.reloadT = E.gun(this.P).reload * (1 - Math.min(0.4, (this.P.build?.armory || 0) * 0.01));
+    /* 换弹时间：军械库加成 + 词条 AF08 换弹-0.2秒 */
+    let _rt = E.gun(this.P).reload * (1 - Math.min(0.4, (this.P.build?.armory || 0) * 0.01));
+    _rt = Math.max(0.3, _rt - (r.reloadCut || 0));
+    r.reloadT = _rt;
   },
 
   shootEnemy(z, kind) {
