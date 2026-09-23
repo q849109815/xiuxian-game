@@ -14,6 +14,34 @@ const BT = {
   _cb: null,
   dpr: 1,
 
+  /* ---------------- 场景背景 ---------------- */
+  SCENES: {
+    city: 'assets/scene/city.jpg',
+    factory: 'assets/scene/factory.jpg',
+    wasteland: 'assets/scene/wasteland.jpg',
+    tunnel: 'assets/scene/tunnel.jpg',
+    field: 'assets/scene/field.jpg',
+    snow: 'assets/scene/snow.jpg',
+  },
+  _imgs: {},
+  sceneFor(levelNo) {
+    // 场景顺序：城市大街 → 废弃工厂 → 辐射废墟 → 地下隧道 → 麦田荒野 → 雪原哨站
+    const list = ['city', 'factory', 'wasteland', 'tunnel', 'field', 'snow'];
+    return list[Math.floor((levelNo - 1) / 30) % list.length];
+  },
+  img(key) {
+    if (this._imgs[key] !== undefined) return this._imgs[key];
+    const url = this.SCENES[key];
+    if (!url) { this._imgs[key] = null; return null; }
+    const im = new Image();
+    im.crossOrigin = 'anonymous';
+    im.onload = () => { this._imgs[key] = im; };
+    im.onerror = () => { this._imgs[key] = null; };
+    im.src = url;
+    this._imgs[key] = null;
+    return null;
+  },
+
   /* ---------------- 初始化 ---------------- */
   attach(canvas) {
     this.cv = canvas;
@@ -41,6 +69,9 @@ const BT = {
     const def = E.levelDef(levelNo, endless);
     const a = E.attrs(p);
 
+    this._heroImg = undefined;
+    this.scene = this.sceneFor(levelNo);
+    this.img(this.scene);
     this.run = {
       endless, def, levelNo,
       wave: 0, waveTotal: def.waves,
@@ -686,10 +717,23 @@ const BT = {
     const kw = this.cv.width / this.dpr / this.W, kh = this.cv.height / this.dpr / this.H;
     c.scale(kw, kh);
 
-    /* 背景：末日废墟 */
-    const g = c.createLinearGradient(0, 0, 0, this.H);
-    g.addColorStop(0, '#1a2637'); g.addColorStop(0.55, '#222f42'); g.addColorStop(1, '#2c1c0c');
-    c.fillStyle = g; c.fillRect(0, 0, this.W, this.H);
+    /* 背景：末日废墟（优先用场景图） */
+    const bg = this.img(this.scene || 'city');
+    if (bg && bg.complete && bg.naturalWidth) {
+      try { c.drawImage(bg, 0, 0, this.W, this.H); } catch (e) { }
+      // 压暗，保证单位与 UI 可读
+      c.fillStyle = 'rgba(10,16,28,0.34)';
+      c.fillRect(0, 0, this.W, this.H);
+    } else {
+      const g = c.createLinearGradient(0, 0, 0, this.H);
+      g.addColorStop(0, '#1a2637'); g.addColorStop(0.55, '#222f42'); g.addColorStop(1, '#2c1c0c');
+      c.fillStyle = g; c.fillRect(0, 0, this.W, this.H);
+      // 废墟剪影
+      c.fillStyle = 'rgba(10,16,28,0.55)';
+      [[20, 110, 34, 60], [300, 120, 40, 52], [70, 150, 26, 40], [260, 158, 30, 36]].forEach((b) => {
+        c.fillRect(b[0], b[1], b[2], b[3]);
+      });
+    }
     // 地面网格（透视感）
     c.strokeStyle = 'rgba(120,150,190,0.10)'; c.lineWidth = 1;
     for (let i = 0; i <= 8; i++) {
@@ -699,11 +743,6 @@ const BT = {
     for (let i = -4; i <= 4; i++) {
       c.beginPath(); c.moveTo(this.W / 2 + i * 16, 0); c.lineTo(this.W / 2 + i * 60, this.H); c.stroke();
     }
-    // 废墟剪影
-    c.fillStyle = 'rgba(10,16,28,0.55)';
-    [[20, 110, 34, 60], [300, 120, 40, 52], [70, 150, 26, 40], [260, 158, 30, 36]].forEach((b) => {
-      c.fillRect(b[0], b[1], b[2], b[3]);
-    });
     if (!r) return;
 
     /* 炮台 */
@@ -803,8 +842,27 @@ const BT = {
     const t = performance.now() / 1000;
     c.strokeStyle = 'rgba(255,215,106,0.35)'; c.lineWidth = 2;
     c.beginPath(); c.ellipse(r.px, r.py + 14, 22 + Math.sin(t * 3) * 2, 8, 0, 0, 7); c.stroke();
-    c.font = '32px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText(this.P.avatar || '👨‍🚀', r.px, r.py);
+    // 玩家：优先用立绘
+    const heroImg = this._heroImg !== undefined ? this._heroImg : (() => {
+      const url = this.P.avatarImg;
+      if (!url) { this._heroImg = null; return null; }
+      const im = new Image(); im.crossOrigin = 'anonymous';
+      im.onload = () => { this._heroImg = im; };
+      im.onerror = () => { this._heroImg = null; };
+      im.src = url; this._heroImg = null; return null;
+    })();
+    if (heroImg && heroImg.complete && heroImg.naturalWidth) {
+      try {
+        const hw = 40, hh = heroImg.naturalHeight / heroImg.naturalWidth * 40;
+        c.drawImage(heroImg, r.px - hw / 2, r.py - hh + 12, hw, hh);
+      } catch (e) {
+        c.font = '32px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(this.P.avatar || '👨‍🚀', r.px, r.py);
+      }
+    } else {
+      c.font = '32px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(this.P.avatar || '👨‍🚀', r.px, r.py);
+    }
     // 炮管指向
     const tg = this.nearest(r.px, r.py);
     const ang = tg ? Math.atan2(tg.y - r.py, tg.x - r.px) : -Math.PI / 2;
