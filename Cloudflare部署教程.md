@@ -70,26 +70,95 @@
 
 ## 二、部署游戏到 Cloudflare Pages
 
-### 2.1 进入创建页
+### 2.1 进入 Workers & Pages（⚠️ 2025 年底改版，路径变了）
 
-左侧菜单点 **Workers & Pages**
-→ 右上角点 **Create**（蓝色按钮）
+Cloudflare 新版控制台**没有 `/pages` 这个地址了**，直接打开会显示 "Page not found"。
 
-### 2.2 选择连接方式
+**方法一：官方直达链接（最稳，推荐）**
 
-页面上有几个标签，点 **Pages** 标签
-→ 点 **Connect to Git**（连接到 Git）
+浏览器地址栏直接粘贴回车：
 
-> 💡 也可以选 "Upload assets" 直接拖文件上传，但那样以后改代码要手动重传。推荐 Connect to Git，以后 push 自动同步。
+```
+https://dash.cloudflare.com/?to=/:account/workers-and-pages
+```
 
-### 2.3 授权 GitHub
+这个链接会自动识别你的账号并跳转，**不管菜单长什么样都能进去**。
+
+**方法二：从菜单找**
+
+新版左侧菜单结构是这样的（可能需要向下滚动）：
+
+```
+快速搜索...
+组织 (Beta)
+帐户
+网站
+我的个人资料
+─────────────
+Compute & AI        ← 找这个分组
+  └─ Workers & Pages   ← 点它
+```
+
+> 💡 如果看不到 "Compute & AI"，用页面顶部的**搜索框**输入 `Workers`，在结果里点 **Workers & Pages**。
+>
+> 💡 有些账号显示在 **构建(Build)** → **Compute** → **Workers & Pages**，位置不同但名字一样。
+
+**方法三：用 Account ID 拼链接**
+
+登录控制台后看浏览器地址栏，里面有一串 32 位字符就是你的 Account ID：
+
+```
+https://dash.cloudflare.com/8f1a2b3c4d5e6f7890abcdef12345678/home/domains
+                            └──────── 这串就是 Account ID ────────┘
+```
+
+复制它，拼成：
+
+```
+https://dash.cloudflare.com/你的AccountID/workers-and-pages
+```
+
+### 2.2 ⚠️ 关键一步：别掉进 Workers 的坑
+
+进到 Workers & Pages 后，点右上角 **Create**。
+
+**这时 Cloudflare 默认给你的是 Workers（后端代码）的创建页**，页面标题通常是 "Get started" 或 "Ship something new"，上面有三个大方块让你选模板。
+
+**不要在这三个方块里点 "Continue with GitHub"** —— 那样创建的是 Worker 项目，不是 Pages，后面会全错。
+
+**正确做法：** 把页面拉到**最底部**，找一行灰色小字：
+
+```
+Looking to deploy Pages? Get started
+```
+
+（中文界面可能显示「要部署 Pages？开始使用」）
+
+**点这行小字**，才会进入真正的 Pages 部署流程。
+
+> ⚠️ 如果不小心创建成了 Worker：回到 Workers & Pages 列表 → 进那个项目 → Settings → 最下面 **Delete**（删除），输入项目名确认。删掉重来，**不会影响你的 GitHub 仓库**。
+
+### 2.3 选择连接方式
+
+进入 Pages 流程后有两种方式：
+
+| 方式 | 优点 | 缺点 |
+|---|---|---|
+| **Connect to Git** | 以后改代码自动同步 | 存档提交会触发重建，耗 500 次额度 |
+| **Upload assets**（拖拽上传） | 简单，不耗构建额度 | 改代码要手动重传 |
+
+**新手推荐先用 Upload assets**（见 2.4B），跑通了再考虑连 Git。
+
+### 2.4A 方式一：Connect to Git（连 GitHub）
+
+**① 授权 GitHub**
 
 第一次会让你连 GitHub：
 1. 点 **Connect GitHub**
 2. 跳到 GitHub 授权页，点 **Authorize Cloudflare Pages**（绿色按钮）
 3. 如果 GitHub 让你输密码，输你的 GitHub 密码
 
-### 2.4 选择仓库
+**② 选择仓库**
 
 授权后回到 Cloudflare，看到你的仓库列表：
 
@@ -97,7 +166,36 @@
 
 > 💡 如果列表里没有，点上方 "Only select repositories" 旁边的调整链接，把 `xiuxian-game` 加进授权范围。
 
-### 2.5 填写构建配置（⚠️ 这一步最关键）
+然后跳到 [2.5 填写构建配置](#25-填写构建配置这一步最关键)。
+
+### 2.4B 方式二：Upload assets（拖拽上传，新手推荐）
+
+**适合你如果**：第一次部署、怕搞错、不想处理构建额度问题。
+
+**① 准备文件夹**
+
+把我给你的 `zombie` 文件夹整个留好，里面必须有 `index.html`（在最外层）。
+
+**② 上传**
+
+1. 在 Pages 流程里选 **Upload assets**（或直接拖文件那个方框）
+2. **Project name**（项目名）填：`xiuxian-game`
+3. 点 **Create project**
+4. 把 **`zombie` 文件夹里的所有内容**拖进虚线框
+   > ⚠️ 注意：拖的是**文件夹里面的内容**，不是 `zombie` 这个外层文件夹本身。
+   > 拖完后应该能看到 `index.html` 在最外层。
+5. 点 **Deploy site**（部署站点）
+6. 等 1～2 分钟
+
+**③ 拿到网址**
+
+部署完给你 `https://xiuxian-game.pages.dev`，直接用。
+
+> 💡 **用这种方式就不用填 2.5 的构建配置了**，因为根本没有构建步骤。
+>
+> 💡 以后我要改代码，你说一声，我改完你重新拖一次就行（换个文件夹名避免冲突，或直接覆盖）。
+
+### 2.5 填写构建配置（⚠️ 这一步最关键，仅 Connect to Git 需要）
 
 页面上是 **Set up builds and deployments** 表单，按下面填：
 
@@ -210,14 +308,41 @@ Worker 就是一个**中转站**：游戏 →（访问很快的 Cloudflare）→
 
 ### 4.2 创建 Worker
 
-1. 左侧 **Workers & Pages**
-2. 右上角 **Create**
-3. 这次点 **Create Worker**（不是 Pages）
-4. **Name**（名字）填：`xx-proxy`
-   > 名字只能用小写字母、数字、连字符
-5. 点 **Deploy**（部署）
+**① 进入 Workers & Pages**
+
+跟 2.1 一样，用直达链接最快：
+
+```
+https://dash.cloudflare.com/?to=/:account/workers-and-pages
+```
+
+**② 点 Create**
+
+右上角点 **Create**。
+
+**③ 注意：这次要留在 Workers 流程里**
+
+跟 Pages 相反——**这次不要点底部那行 "Looking to deploy Pages" 小字**。
+
+就在默认的 Workers 创建页，三个方块里选：
+
+```
+Start with Hello World!
+```
+
+（第三个选项，跳过配置，两步启动一个 hello world 应用）
+
+点它右边的 **Get started**。
+
+**④ 命名并部署**
+
+- **Worker name** 填：`xx-proxy`
+  > 只能用小写字母、数字、连字符，不能开头或结尾是连字符
+- 点 **Deploy**（部署）
 
 部署完会显示 "Your worker is available at..."，先不管。
+
+> 💡 如果不小心点进了 Pages 流程，返回重新来一次，这次别点底部小字就行。
 
 ### 4.3 粘贴代理代码
 
