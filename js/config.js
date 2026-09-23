@@ -551,6 +551,53 @@ const EX = {
     { k: 's3', x: 0.60, y: 0.58 }, { k: 's4', x: 0.82, y: 0.62 },
   ],
 
+  /* 【宝石】截图：红=攻击 蓝=生命/暴击 绿 紫，可镶嵌到装备 */
+  gems: [
+    { id: 'G_R', n: '红宝石', c: 'r', icon: '🔴', desc: '攻击 +1200' },
+    { id: 'G_B', n: '蓝宝石', c: 'b', icon: '🔵', desc: '生命 +2000 · 暴击 +15%' },
+    { id: 'G_G', n: '绿宝石', c: 'g', icon: '🟢', desc: '生命 +1500 · 吸血 +3%' },
+    { id: 'G_P', n: '紫宝石', c: 'p', icon: '🟣', desc: '暴击伤害 +30% · 攻速 +5%' },
+  ],
+  /* 【商店商品】截图：每日/武器/宝石/材料 三列网格 */
+  shopGoods: {
+    '每日': [
+      { id: 'D1', n: '金币袋', icon: '🪙', price: 1000, cur: 'gold', give: { gold: 5000 } },
+      { id: 'D2', n: '体力包', icon: '⚡', price: 50, cur: 'diamond', give: { stamina: 60 } },
+      { id: 'D3', n: '宝箱', icon: '🎁', price: 100, cur: 'diamond', give: { M01: 50, gold: 2000 } },
+      { id: 'D4', n: '武器箱', icon: '🔫', price: 200, cur: 'diamond', give: { M02: 30 } },
+      { id: 'D5', n: '宝石礼包', icon: '💎', price: 300, cur: 'diamond', give: { M03: 20 } },
+      { id: 'D6', n: '招募令', icon: '📜', price: 150, cur: 'diamond', give: { M04: 10 } },
+    ],
+    '武器': [
+      { id: 'W1', n: '突击步枪', icon: '🔫', price: 3000, cur: 'gold', give: { M01: 20 } },
+      { id: 'W2', n: '霰弹枪', icon: '💥', price: 5000, cur: 'gold', give: { M02: 15 } },
+      { id: 'W3', n: '狙击枪', icon: '🎯', price: 8000, cur: 'gold', give: { M03: 10 } },
+    ],
+    '宝石': [
+      { id: 'GB1', n: '红宝石', icon: '🔴', price: 200, cur: 'diamond', give: { M05: 5 } },
+      { id: 'GB2', n: '蓝宝石', icon: '🔵', price: 200, cur: 'diamond', give: { M05: 5 } },
+      { id: 'GB3', n: '绿宝石', icon: '🟢', price: 200, cur: 'diamond', give: { M05: 5 } },
+      { id: 'GB4', n: '紫宝石', icon: '🟣', price: 300, cur: 'diamond', give: { M05: 8 } },
+    ],
+    '材料': [
+      { id: 'M1', n: '金属', icon: '🔩', price: 500, cur: 'gold', give: { M01: 30 } },
+      { id: 'M2', n: '合金', icon: '⚙️', price: 1200, cur: 'gold', give: { M02: 20 } },
+      { id: 'M3', n: '稀有晶体', icon: '💠', price: 3000, cur: 'gold', give: { M03: 10 } },
+      { id: 'M4', n: '火药', icon: '🧨', price: 800, cur: 'gold', give: { M04: 15 } },
+    ],
+  },
+  /* 【装备槽】截图：装备/宝石界面 */
+  equipSlots: [
+    { k: 'head', n: '头盔', icon: '🪖' },
+    { k: 'cloth', n: '衣甲', icon: '🥋' },
+    { k: 'weapon', n: '神兵', icon: '⚔️' },
+    { k: 'ring', n: '首饰', icon: '💍' },
+    { k: 'boot', n: '靴子', icon: '👢' },
+    { k: 'fabao', n: '法器', icon: '🔮' },
+    { k: 'neck', n: '项链', icon: '📿' },
+    { k: 'brace', n: '护腕', icon: '🧤' },
+  ],
+
   /* 【军团】社交：加入/自建/捐献 */
   legions: [
     { id: 'L01', n: '钢铁防线', icon: '🛡️', mem: 42, need: 0, desc: '老牌军团，气氛活跃' },
