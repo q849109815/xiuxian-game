@@ -820,12 +820,18 @@ r_tavern(p, tab) {
       <span class="sub">🪙 ${E.fmt(p.gold)} · 💎 ${E.fmt(p.diamond)}</span></div>
       <div class="grid3">${goods.length ? goods.map((g) => {
         const can = (p[g.cur || 'gold'] || 0) >= g.price;
+        /* 表35：礼包限购状态 */
+        let lm = null;
+        if (g.limit) { try { lm = E.giftCan(p, g); } catch (e) { lm = null; } }
+        const blocked = lm && !lm.ok;
         return `<div class="gcell">
           ${g.img ? `<img src="${g.img}">` : `<div class="gi">${g.icon}</div>`}
-          <div class="gn">${g.n}</div>
-          <button class="btn sm" data-buy="${g.id}" ${can ? '' : 'disabled'}
+          <div class="gn">${g.n}${g.rmb ? `<span class="tag y" style="font-size:8px">${g.rmb}</span>` : ''}</div>
+          ${g.desc ? `<div class="lbl" style="font-size:8px;line-height:1.3;margin:2px 0">${g.desc}</div>` : ''}
+          <button class="btn sm" data-buy="${g.id}" ${(can && !blocked) ? '' : 'disabled'}
             style="font-size:9px;padding:3px 6px;margin-top:2px">
-            ${g.cur === 'diamond' ? '💎' : '🪙'}${g.price}</button>
+            ${g.price === 0 ? '免费领取' : (g.cur === 'diamond' ? '💎' : '🪙') + g.price}</button>
+          ${lm ? `<div class="lbl" style="font-size:8px;color:${lm.ok ? '#7ee38a' : '#ff8a8a'}">${lm.msg}</div>` : ''}
         </div>`;
       }).join('') : '<div class="lbl">暂无商品</div>'}</div>
     </div>`;
@@ -835,14 +841,30 @@ r_tavern(p, tab) {
       const goods = (EX.shopGoods || {})[tab] || [];
       const g = goods.find((x) => x.id === b.dataset.buy); if (!g) return;
       const cur = g.cur || 'gold';
+      /* 表35 限购校验 */
+      if (g.limit) {
+        let lm = null; try { lm = E.giftCan(p, g); } catch (e) { lm = null; }
+        if (lm && !lm.ok) return this.toast(lm.msg, 'err');
+      }
       if ((p[cur] || 0) < g.price) return this.toast('货币不足', 'err');
       p[cur] -= g.price;
       if (g.give) for (const k in g.give) {
         if (k === 'gold') p.gold += g.give[k];
         else if (k === 'diamond') p.diamond += g.give[k];
         else if (k === 'stamina') p.stamina = (p.stamina || 0) + g.give[k];
+        else if (/^chip/.test(k)) {
+          /* 芯片类：直接生成对应品质芯片进背包 */
+          const qmap = { chipN: 'n', chipE: 'e', chipL: 'l' };
+          const q = qmap[k] || 'n';
+          try {
+            const c = E.rollChipById ? E.rollChipById(q) : null;
+            if (c) { p.bag = p.bag || []; p.bag.push(c); }
+            else p.mat[k] = (p.mat[k] || 0) + g.give[k];
+          } catch (e) { p.mat[k] = (p.mat[k] || 0) + g.give[k]; }
+        }
         else p.mat[k] = (p.mat[k] || 0) + g.give[k];
       }
+      if (g.limit) { try { E.giftMark(p, g); } catch (e) {} }
       E.save(p); this.toast('购买成功', 'ok');
       if (window.SND) SND.play('get'); this.open('shop', tab); this.home();
     }; });
@@ -1387,6 +1409,14 @@ r_tavern(p, tab) {
       <div class="card"><div class="card-t">引导进度 <span class="sub">${Object.keys(p.guide || {}).length}/${EX.guides.length}</span></div>
       ${EX.guides.filter((g) => g.must).map((g) => `<div class="kv"><span style="font-size:10px">${g.n}</span>
         <b style="font-size:10px;color:${(p.guide || {})[g.id] ? 'var(--green)' : '#6b7899'}">${(p.guide || {})[g.id] ? '✔ 已完成' : '待引导'}</b></div>`).join('')}</div>
+      <div class="card"><div class="card-t">广告福利 <span class="sub">表24 广告位</span></div>
+      <div class="kv"><span style="font-size:10px">免费体力 AD03</span>
+        <b><button class="btn sm" id="setAdStam2">看广告 +10 体力（剩 ${E.adLeft(p, 'AD03')}）</button></b></div>
+      <div class="kv"><span style="font-size:10px">免费抽奖 AD04</span>
+        <b><button class="btn sm" id="setAdDraw">看广告 抽奖1次（剩 ${E.adLeft(p, 'AD04')}）</button></b></div>
+      <div class="kv"><span style="font-size:10px">额外宝箱 AD05</span>
+        <b><button class="btn sm" id="setAdBox">看广告 宝箱×1（剩 ${E.adLeft(p, 'AD05')}）</button></b></div>
+      <div class="lbl" style="text-align:left">每日上限：体力5次 · 抽奖3次 · 宝箱5次（每日重置）</div></div>
       <div class="card"><div class="card-t">数据</div>
       <button class="btn blk" id="setSave">立即保存存档</button>
       <button class="btn d blk" id="setReset">重置存档（清空全部进度）</button>
@@ -1462,6 +1492,30 @@ r_tavern(p, tab) {
       if (!r.ok) return this.toast(r.msg, 'err');
       E.addStamina(p, 10); this.toast('体力 +10（今日剩余 ' + E.adLeft(p, 'AD03') + ' 次）', 'ok');
       this.open('set', '账号'); this.home();
+    };
+    /* 表24 AD04 免费抽奖 */
+    const dw = $('#setAdDraw'); if (dw) dw.onclick = () => {
+      const r = E.useAd(p, 'AD04');
+      if (!r.ok) return this.toast(r.msg, 'err');
+      const got = E.adDraw(p);
+      if (window.SND) SND.play('get');
+      this.toast('抽奖获得：' + got.n + '（今日剩余 ' + E.adLeft(p, 'AD04') + ' 次）', 'ok');
+      E.save(p); this.open('set', '账号'); this.home();
+    };
+    /* 表24 AD05 额外宝箱 */
+    const bx = $('#setAdBox'); if (bx) bx.onclick = () => {
+      const r = E.useAd(p, 'AD05');
+      if (!r.ok) return this.toast(r.msg, 'err');
+      const got = E.adBoxReward(p);
+      if (window.SND) SND.play('get');
+      this.toast('获得：' + got.n + '（今日剩余 ' + E.adLeft(p, 'AD05') + ' 次）', 'ok');
+      E.save(p); this.open('set', '账号'); this.home();
+    };
+    const st2 = $('#setAdStam2'); if (st2) st2.onclick = () => {
+      const r = E.useAd(p, 'AD03');
+      if (!r.ok) return this.toast(r.msg, 'err');
+      E.addStamina(p, 10); this.toast('体力 +10（今日剩余 ' + E.adLeft(p, 'AD03') + ' 次）', 'ok');
+      E.save(p); this.open('set', '账号'); this.home();
     };
     const rn = $('#setReNet'); if (rn) rn.onclick = async () => { this.toast('检测中…'); await Net.reset(); this.open('set', '网络'); };
     const dg = $('#setDiag'); if (dg) dg.onclick = async () => {
