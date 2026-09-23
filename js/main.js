@@ -4,7 +4,7 @@
  *        08 跳转流程（16 步）
  * ========================================================= */
 
-let P = null, UID = null, saveT = null, hudT = null;
+let P = null, UID = null, saveT = null, hudT = null, MAINT = null;
 let battleMode = 'normal', battleLevel = '1-1';
 
 const MAIN = {
@@ -105,15 +105,106 @@ const MAIN = {
     catch (e) { window.LB = []; }
   },
   async claimMail() {
-    if (!P || !(P.mail || []).length) return;
+    if (!P) return;
     let ch = false;
-    for (const m of P.mail) {
+    /* 1) 玩家个人邮件（后台单发直接写入存档） */
+    for (const m of (P.mail || [])) {
       if (m.got) continue;
       m.got = 1; ch = true;
-      P.gold += m.gold || 0; P.diamond += m.dia || 0;
-      UI.toast('📮 ' + (m.t || '邮件') + '：金币+' + E.fmt(m.gold || 0) + ' 钻石+' + (m.dia || 0), 'ok');
+      this.giveRw(m.rw || { gold: m.gold || 0, dia: m.dia });
+      UI.toast('📮 ' + (m.t || '邮件') + ' 奖励已发放', 'ok');
     }
+    /* 2) 后台全服/定向邮件（云端 mail.json） */
+    try {
+      const r = await Net.read('data/zb/mail.json');
+      const db = (r && r.data) || null;
+      if (db && (db.list || []).length) {
+        const now = Date.now();
+        let touched = false;
+        for (const m of db.list) {
+          if (m.startAt && m.startAt > now) continue;
+          if (m.expireAt && m.expireAt < now) continue;
+          if ((m.claimed || []).indexOf(P.uid) >= 0) continue;
+          /* 定向：检查 uid 列表或筛选条件 */
+          if (m.type === 'target') {
+            const hit = (m.uids || []).indexOf(P.uid) >= 0
+              || this.matchFilter(P, m.filter);
+            if (!hit) continue;
+          }
+          m.claimed = m.claimed || [];
+          m.claimed.push(P.uid);
+          touched = true; ch = true;
+          this.giveRw(m.rw || {});
+          UI.toast('📢 ' + (m.title || '全服邮件') + ' 奖励已发放', 'ok');
+        }
+        if (touched) { try { await Net.write('data/zb/mail.json', db, '领取邮件'); } catch (e) {} }
+      }
+    } catch (e) {}
+    /* 3) 检查维护模式 */
+    try {
+      const r = await Net.read('data/zb/server.json');
+      if (r && r.data && r.data.mode === '维护') {
+        UI.toast('🖥️ ' + (r.data.msg || '服务器维护中'), 'err');
+        MAINT = r.data;
+      }
+    } catch (e) {}
     if (ch) { UI.home(); await this.save(); }
+  },
+  /* 按后台筛选条件匹配玩家 */
+  matchFilter(p, f) {
+    if (!f) return false;
+    const lv = p.lv || 1;
+    const cleared = Object.keys(p.cleared || {}).length;
+    if (f.lvMin != null && lv < f.lvMin) return false;
+    if (f.lvMax != null && lv > f.lvMax) return false;
+    if (f.clearedMin != null && cleared < f.clearedMin) return false;
+    if (f.regAfter != null && (p.created || 0) < f.regAfter) return false;
+    return true;
+  },
+  /* 通用发放（支持物品 id → 字段映射） */
+  giveRw(rw) {
+    if (!P || !rw) return;
+    Object.keys(rw).forEach((k) => {
+      const v = Number(rw[k]) || 0;
+      if (!v) return;
+      if (k === 'gold' || k === 'diamond' || k === 'ach' || k === 'stamina' || k === 'evToken') {
+        P[k] = (P[k] || 0) + v;
+      } else {
+        const it = (EX.items || []).find((x) => x.id === k);
+        if (it && it.type === '消耗') { P.use = P.use || {}; P.use[k] = (P.use[k] || 0) + v; }
+        else { P.mat = P.mat || {}; P.mat[k] = (P.mat[k] || 0) + v; }
+      }
+    });
+  },
+  /* ============ 礼包码兑换 ============ */
+  async redeemCode(code) {
+    if (!P) return { ok: false, msg: '未登录' };
+    code = (code || '').trim().toUpperCase();
+    if (!code) return { ok: false, msg: '请输入兑换码' };
+    let db = null;
+    try { const r = await Net.read('data/zb/cdkey.json'); db = r && r.data; } catch (e) {}
+    if (!db || !(db.codes || []).length) return { ok: false, msg: '礼包码服务不可用' };
+    const c = db.codes.find((x) => x.code === code);
+    if (!c) return { ok: false, msg: '兑换码不存在' };
+    if (c.status === '作废') return { ok: false, msg: '该兑换码已作废' };
+    if ((c.used || 0) >= (c.maxUse || 1)) return { ok: false, msg: '该兑换码已被使用' };
+    if (c.exp && c.exp < Date.now()) return { ok: false, msg: '该兑换码已过期' };
+    if (c.bindUid && c.bindUid !== P.uid) return { ok: false, msg: '该兑换码已绑定其他账号' };
+    if ((c.usedBy || []).indexOf(P.uid) >= 0) return { ok: false, msg: '您已兑换过该码' };
+    const tpl = (db.templates || []).find((t) => t.id === c.tpl);
+    if (!tpl) return { ok: false, msg: '礼包模板缺失' };
+    if (tpl.once && (c.usedBy || []).indexOf(P.uid) >= 0) return { ok: false, msg: '每人限领 1 次' };
+    this.giveRw(tpl.items || {});
+    c.used = (c.used || 0) + 1;
+    c.usedBy = c.usedBy || [];
+    c.usedBy.push(P.uid);
+    c.usedAt = Date.now();
+    if (c.used >= c.maxUse) c.status = '已使用';
+    try { await Net.write('data/zb/cdkey.json', db, '兑换 ' + code); } catch (e) {}
+    try { OPS.track('iap_purchase', { cdkey: code }); } catch (e) {}
+    await this.save();
+    const got = Object.keys(tpl.items || {}).map((k) => E.itemName(k) + '×' + tpl.items[k]).join('、');
+    return { ok: true, msg: '兑换成功：' + (got || '礼包') };
   },
   toast(m, c) { UI.toast(m, c); },
 };
