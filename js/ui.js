@@ -174,7 +174,9 @@ const UI = {
       ${EX.guns.filter((g) => g.kind === kind).map((g) => {
         const ok = E.gunUnlocked(p, g.id);
         const on = p.gun === g.id;
-        return `<div class="item"><div class="ic" style="border:1.5px solid ${EX.qColor[g.q]}">${g.icon}</div>
+        return `<div class="item"><div class="ic" style="border:1.5px solid ${EX.qColor[g.q]}">${g.img
+          ? `<img src="${g.img}" style="width:30px;height:30px;border-radius:6px;object-fit:cover">`
+          : g.icon}</div>
           <div class="info"><div class="nm"><span style="color:${EX.qColor[g.q]}">${g.q}</span> ${g.n} <span class="tag">${g.type}</span></div>
           <div class="sub">伤害${g.dmg} 射速${g.rate}/s 弹夹${g.mag} 换弹${g.reload}s ${g.pellets > 1 ? '弹丸' + g.pellets : ''} ${g.pierce ? '穿透' + g.pierce : ''}</div>
           <div class="sub">${g.bullet}${ok ? '' : ' · 需通关 ' + g.unlockLv}</div></div>
@@ -184,7 +186,15 @@ const UI = {
     const g = E.gun(p), a = E.attrs(p), c = E.gunUpgradeCost(p);
     const adv = E.advInfo(p.gunLv);
     const nextAdv = EX.gunAdvance[Math.min(EX.gunAdvance.length - 1, E.advOf(p.gunLv) + 1)];
-    return `<div class="card"><div class="card-t">${g.icon} ${g.n} <span class="sub">${g.kind}武器 · ${g.type}</span></div>
+    return `<div class="card"><div class="card-t">当前武器</div>
+      <div style="text-align:center;padding:6px 0">
+        ${g.img ? `<img src="${g.img}" style="width:96px;height:96px;object-fit:contain;border-radius:10px"
+             onerror="this.style.display='none'">` : ''}
+        <div style="font-size:26px">${g.icon}</div>
+        <div style="color:${EX.qColor[adv.q]};font-weight:700;margin-top:2px">${g.n}</div>
+        <div style="font-size:10px;color:#7d8ca8">${g.kind}武器 · ${g.type} · ${adv.q}品</div>
+      </div></div>
+      <div class="card"><div class="card-t">武器属性</div>
       <div class="kv"><span>品质</span><b style="color:${EX.qColor[adv.q]}">${adv.q}品</b></div>
       <div class="kv"><span>等级</span><b>Lv.${p.gunLv}</b></div>
       <div class="kv"><span>面板伤害</span><b>${g.dmg} → <span style="color:var(--gold)">${E.fmt(a.gunBase)}</span></b></div>
@@ -218,7 +228,9 @@ const UI = {
       if (!bag.length) return '<div class="empty"><span class="ic">🔲</span>暂无芯片<br><span style="font-size:10px">BOSS 关掉落 / 活动获取</span></div>';
       return `<div class="card"><div class="card-t">芯片背包 <span class="sub">${bag.length} 块</span></div>
       ${bag.map((c) => `<div class="item">
-        <div class="ic" style="border:1.5px solid ${EX.qColor[c.q]}">🔲</div>
+        <div class="ic" style="border:1.5px solid ${EX.qColor[c.q]}">
+          <img src="assets/icon/i_chip.jpg" style="width:30px;height:30px;border-radius:6px;object-fit:cover"
+               onerror="this.outerHTML='🔲'"></div>
         <div class="info"><div class="nm" style="color:${EX.qColor[c.q]}">${E.chipName(c)}</div>
         <div class="sub">${(E.chipDef(c.def) || {}).src || ''}</div></div>
         <div class="act">
@@ -237,7 +249,9 @@ const UI = {
       }).join('')}</div></div>
       <div class="card"><div class="card-t">可装备芯片</div>
       ${(p.bag || []).length ? (p.bag || []).map((c) => `<div class="item">
-        <div class="ic" style="border:1.5px solid ${EX.qColor[c.q]}">🔲</div>
+        <div class="ic" style="border:1.5px solid ${EX.qColor[c.q]}">
+          <img src="assets/icon/i_chip.jpg" style="width:30px;height:30px;border-radius:6px;object-fit:cover"
+               onerror="this.outerHTML='🔲'"></div>
         <div class="info"><div class="nm" style="color:${EX.qColor[c.q]}">${E.chipName(c)}</div></div>
         <div class="act"><button class="btn c sm" data-wear="${c.id}">装上</button></div></div>`).join('')
         : '<div class="lbl">背包内暂无芯片</div>'}</div>
@@ -331,7 +345,9 @@ const UI = {
       return `<div class="card"><div class="card-t">消耗品</div>
       ${EX.items.filter((x) => x.type === '消耗').map((it) => {
         const n = (p.use || {})[it.id] || 0;
-        return `<div class="item"><div class="ic">${it.icon}</div>
+        return `<div class="item"><div class="ic">${it.img
+          ? `<img src="${it.img}" style="width:30px;height:30px;border-radius:6px;object-fit:cover">`
+          : it.icon}</div>
           <div class="info"><div class="nm">${it.n} <span class="tag">${n}</span></div>
           <div class="sub">${it.use || ''}</div><div class="sub">来源：${it.src}</div></div>
           <div class="act"><button class="btn sm" data-use="${it.id}" ${n ? '' : 'disabled'}>使用</button></div></div>`;
@@ -346,7 +362,8 @@ const UI = {
       <div class="card"><div class="card-t">材料 <span class="sub">武器进阶 / 合成</span></div>
       ${EX.items.filter((x) => x.type === '材料' || x.type === '碎片').map((it) => {
         const n = (p.mat || {})[it.id] || 0;
-        return `<div class="kv"><span>${it.icon} ${it.n}</span><b>${E.fmt(n)}</b></div>`;
+        const im = it.img ? `<img src="${it.img}" style="width:22px;height:22px;border-radius:5px;object-fit:cover;vertical-align:middle;margin-right:4px">` : (it.icon + ' ');
+        return `<div class="kv"><span>${im}${it.n}</span><b>${E.fmt(n)}</b></div>`;
       }).join('')}</div>
       <div class="card"><div class="card-t">已装芯片加成</div>
       ${['atk', 'hp', 'armor', 'crit', 'critDmg', 'ls', 'rate'].map((k) => {
