@@ -357,3 +357,85 @@ input{font-family:inherit}
 .sec-t{font-size:11px;color:var(--txt2);letter-spacing:2px;margin:12px 0 7px}
 .hr{height:1px;background:var(--line);margin:10px 0}
 .pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+
+/* =========================================================
+ * 摇杆 / 换弹 / 战斗 HUD（资料 06 操作方案）
+ * ========================================================= */
+.joy{position:absolute;left:18px;bottom:24px;width:112px;height:112px;border-radius:50%;
+  background:rgba(10,16,28,.42);border:2px solid rgba(120,150,190,.35);
+  touch-action:none;z-index:12;backdrop-filter:blur(2px)}
+.joy i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;
+  border-radius:50%;background:linear-gradient(160deg,rgba(255,215,106,.9),rgba(240,160,32,.75));
+  box-shadow:0 2px 10px rgba(0,0,0,.4);pointer-events:none;transition:transform .05s}
+
+.bt-reload{position:absolute;right:18px;bottom:30px;width:74px;height:74px;border-radius:50%;
+  background:rgba(10,16,28,.55);border:2px solid var(--line);z-index:12;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.bt-reload i{font-size:22px;font-style:normal}
+.bt-reload span{font-size:11px;font-weight:800;color:var(--gold)}
+.bt-reload em{position:absolute;left:0;bottom:0;height:4px;width:0;background:var(--gold);
+  border-radius:0 0 6px 6px;font-style:normal;transition:width .06s}
+.bt-reload.reloading{opacity:.6}
+
+.bt-skills{position:absolute;right:16px;top:132px;display:flex;flex-direction:column;gap:6px;z-index:11}
+.bt-skills .bs{width:38px;height:38px;border-radius:9px;background:rgba(10,16,28,.6);
+  border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+  font-size:17px;position:relative}
+.bt-skills .bs u{position:absolute;right:1px;bottom:0;font-size:8px;color:var(--gold);
+  text-decoration:none;font-weight:800}
+
+.bt-hp{position:absolute;left:12px;right:12px;top:52px;z-index:11}
+.hpbar{position:relative;height:16px;border-radius:8px;background:rgba(10,16,28,.7);
+  border:1px solid var(--line);overflow:hidden}
+.hpbar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#5fd07a,#7be8a0);transition:width .12s}
+.hpbar b{position:absolute;left:0;right:0;top:0;font-size:10px;line-height:16px;text-align:center;
+  color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8);font-weight:700}
+.shbar{height:5px;margin-top:3px;border-radius:3px;background:rgba(10,16,28,.6);overflow:hidden}
+.shbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#5cd8ff,#a8e8ff);transition:width .12s}
+
+.bt-stats{position:absolute;left:12px;top:96px;display:flex;gap:10px;font-size:11px;
+  color:var(--txt2);z-index:11;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+.bt-stats b{color:var(--gold)}
+
+.bt-tip{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:9.5px;
+  color:rgba(200,215,240,.5);z-index:10;pointer-events:none}
+
+.bt-top{position:absolute;left:10px;right:10px;top:8px;display:flex;justify-content:space-between;
+  align-items:center;z-index:11;font-size:12px}
+.bt-top .bt-l,.bt-top .bt-r{display:flex;gap:8px;align-items:center;
+  background:rgba(10,16,28,.6);padding:4px 10px;border-radius:12px;border:1px solid var(--line)}
+.bt-top button{font-size:14px;padding:0 2px}
+
+/* 基地：养成入口 10 项 */
+.hm-nav{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+.hm-nav .hn{padding:6px 2px}
+.hm-nav .hn i{font-size:19px}
+.hm-nav .hn span{font-size:9.5px}
+
+.hm-acts{display:flex;gap:8px;padding:0 12px 8px}
+.ha{flex:1;padding:10px 6px;border-radius:11px;background:rgba(27,38,55,.85);
+  border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:2px}
+.ha i{font-size:20px;font-style:normal}
+.ha b{font-size:13px}
+.ha span{font-size:9.5px;color:var(--txt3)}
+.ha.go{background:linear-gradient(160deg,rgba(255,215,106,.22),rgba(240,160,32,.12));border-color:rgba(255,215,106,.45)}
+.ha.go b{color:var(--gold)}
+
+.hm-base{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:0 12px 10px}
+.bs{padding:9px;border-radius:11px;background:rgba(27,38,55,.85);border:1px solid var(--line);
+  position:relative;text-align:left}
+.bs i{font-size:19px;font-style:normal}
+.bs b{font-size:12px;display:block;margin-top:1px}
+.bs span{font-size:9.5px;color:var(--txt3);display:block}
+.bs .dot{position:absolute;right:7px;top:7px;width:7px;height:7px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 6px var(--green)}
+
+/* 关卡格子 */
+.lvgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.lvc{padding:7px 2px;border-radius:9px;background:rgba(10,16,28,.6);border:1px solid var(--line);
+  text-align:center;position:relative}
+.lvc b{display:block;font-size:13px}
+.lvc .st{font-size:8px;color:var(--gold);letter-spacing:1px;height:10px}
+.lvc.lock{opacity:.38}
+.lvc.cur{border-color:var(--gold);background:rgba(255,215,106,.12)}
+.lvc.boss b{color:var(--red)}
