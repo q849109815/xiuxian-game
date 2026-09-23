@@ -85,6 +85,7 @@ const BT = {
 
     const maxHp = a.hp;
     this.run = {
+      skillDmg: {},
       def, endless: !!opt.endless, ch: def.ch,
       px: this.W / 2, py: this.H - 58,
       aimX: 0, aimY: -1, aiming: false,
@@ -171,6 +172,8 @@ const BT = {
   },
 
   startLoop() {
+    /* 开局台词（截图45/46） */
+    if (window.UI && UI.btIntroTalk) setTimeout(() => UI.btIntroTalk(this.run), 700);
     this.last = performance.now();
     const loop = (t) => {
       this.raf = requestAnimationFrame(loop);
@@ -660,6 +663,11 @@ const BT = {
     const r = this.run;
     let d = dmg * (1 + (crit ? r.critDmg : 0));
     z.hp -= d;
+    /* 技能伤害统计（截图51：突击步枪/干冰弹/温压弹/电磁穿刺…） */
+    if (r.skillDmg) {
+      const k = src || 'gun';
+      r.skillDmg[k] = (r.skillDmg[k] || 0) + d;
+    }
     this.addFloat(z.x, z.y - 14, Math.round(d), crit ? 'crit' : 'dmg');
     if (z.hp <= 0) this.kill(z);
   },
@@ -746,6 +754,9 @@ const BT = {
     while (r.xp >= r.xpNeed) {
       r.xp -= r.xpNeed; r.lv++;
       r.xpNeed = Math.round(r.xpNeed * 1.28 + 6);
+      /* 升级弹窗（截图52）+ 奖励 R币 */
+      if (window.UI && UI.showLvUp) UI.showLvUp(r.lv, 200);
+      if (this.P) { this.P.gold = (this.P.gold || 0) + 200; }
       this.offerSkills();
     }
   },
