@@ -108,15 +108,28 @@
 <div class="screen" id="battle">
   <canvas id="C"></canvas>
 
-  <!-- 顶部状态栏：关卡 / 波次 / 倍速 / 暂停 -->
+  <!-- 顶部状态栏（截图44/45/48/49/50）：关卡名 · 等级 · 计时 · 倍速 -->
   <div class="bt-topbar">
     <button class="btb-icon" id="btPause">⏸</button>
     <div class="btb-mid">
-      <div class="btb-lv" id="btLevel">第 1 关</div>
-      <div class="btb-wave">波次 <b id="btWave">1</b>/<span id="btWaveMax">20</span></div>
+      <div class="btb-lv" id="btLevel">1.城市大街</div>
+      <div class="btb-sub">
+        <span class="btb-lvn"><b id="btLv">1</b>级</span>
+        <span class="btb-tm" id="btTime">00:00</span>
+        <span class="btb-wv">波次 <b id="btWave">1</b>/<span id="btWaveMax">20</span></span>
+      </div>
     </div>
-    <button class="btb-speed" id="btSpeed">×1</button>
+    <button class="btb-speed" id="btSpeed">X1</button>
   </div>
+
+  <!-- 右上：武器等级 + 弹药（截图44/48/49/50） -->
+  <div class="bt-ammo">
+    <div class="ba-gun"><img id="btGunImg2" onerror="this.style.display='none'"></div>
+    <div class="ba-mag"><b id="btMag2">30</b>/<span id="btMagMax">30</span></div>
+  </div>
+
+  <!-- 中央对话气泡（截图45/46：核心G-94 协同作战） -->
+  <div class="bt-talk" id="btTalk"><span id="btTalkTx"></span></div>
 
   <!-- 左上：玩家等级 / 战力 -->
   <div class="bt-hero">
@@ -142,9 +155,8 @@
 
   <!-- 底部：防线生命值 -->
   <div class="bt-wall">
-    <span class="bw-lb">防线</span>
-    <div class="bw-bar"><i id="btWallBar"></i></div>
-    <b class="bw-tx" id="btWallTxt">0/0</b>
+    <div class="bw-hp"><i id="btWallBar"></i></div>
+    <div class="bw-num"><span class="bw-heart">❤</span><b id="btWallTxt">0</b></div>
   </div>
 
   <!-- 底部：技能栏（主动技能点击释放） -->
@@ -175,7 +187,8 @@
     </div>
     <div class="ch-sub">局内技能选择 · 可叠加至 10 级</div>
     <div id="chCards"></div>
-    <button class="ch-rf" id="chRefresh">🔄 刷新选项</button>
+    <div class="ch-rfnum" id="chRfNum">当局剩余观看次数 1/1</div>
+    <button class="ch-rf" id="chRefresh">🔄 刷新</button>
   </div>
 </div>
 
@@ -185,12 +198,24 @@
     <div class="rs-t" id="rsTitle">战 斗 胜 利</div>
     <div class="rs-lv" id="rsLevel">第 1 关</div>
     <div class="rs-grid" id="rsGrid"></div>
+    <div class="rs-dmg" id="rsDmg"></div>
+    <div class="rs-times" id="rsTimes">今日剩余次数：3/3</div>
     <div id="rsAd"></div>
     <div class="rs-btns">
+      <button class="btn o" id="rsAd2xBtn">📺 双倍奖励</button>
       <button class="btn c" id="rsNext">下一关</button>
       <button class="btn" id="rsAgain">再挑战</button>
-      <button class="btn d" id="rsBack">返回基地</button>
+      <button class="btn d" id="rsBack">返回</button>
     </div>
+  </div>
+</div>
+
+<!-- ========== 等级提升（截图52） ========== -->
+<div class="modal" id="lvup">
+  <div class="lvup-box">
+    <div class="lvup-badge" id="lvupNum">5</div>
+    <div class="lvup-t">等 级 提 升</div>
+    <div class="lvup-rw" id="lvupRw">获得 200 R币</div>
   </div>
 </div>
 
