@@ -192,6 +192,11 @@ function onBattleEnd(res, d) {
 
   UI.home();
   UI.showResult(res, { kills, time: r.time, rw, stars });
+  /* 表21：第一次通关 → 通关引导；首次失败 → 广告复活引导 */
+  if (UI.guideTrigger) {
+    if (res === 'win') UI.guideTrigger('win');
+    else if (res === 'lose') UI.guideTrigger('fail');
+  }
   if (stars) UI.toast('⭐ 获得 ' + stars + ' 星评价', 'ok');
   MAIN.save();
 }
