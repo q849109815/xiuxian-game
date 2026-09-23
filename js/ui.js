@@ -1355,7 +1355,9 @@ const UI = {
       <div class="kv"><span>登录方式</span><b class="g">${window.WX && WX.phone() ? '微信 · 已绑定' : '微信'}</b></div>
       <div class="kv"><span>手机号</span><b>${window.WX && WX.phone() ? WX.phoneMask() : '未绑定'}</b></div>
       <div class="kv"><span>下次登录</span><b style="font-size:10px">${window.WX && WX.shouldAuto() ? '微信一键登录（免验证）' : '需重新授权'}</b></div>
-      <button class="btn n blk" id="setSwitchAcct">🔁 切换账户 / 解除绑定</button></div>
+      <button class="btn g blk" id="setScanLogin">📷 扫码登录（另一台设备）</button>
+      <button class="btn n blk" id="setSwitchAcct">🔁 切换账户 / 解除绑定</button>
+      <div class="lbl" style="text-align:left;margin-top:8px">扫码或复制链接在另一台设备打开，即可以同一账号继续游戏</div></div>
     <div class="card"><div class="card-t">账号信息</div>
       <div class="kv"><span>代号</span><b>${p.name}</b></div>
       <div class="kv"><span>UID</span><b style="font-size:10px">${p.uid}</b></div>
@@ -1375,6 +1377,12 @@ const UI = {
       <button class="btn blk" id="setAdmin">进入管理后台</button></div>`;
   },
   b_set(p, tab) {
+    /* 扫码登录（生成二维码） */
+    const sl = $('#setScanLogin');
+    if (sl) sl.onclick = () => {
+      if (window.WX && WX.phone()) WX.showScan();
+      else this.toast('当前账号未绑定手机号，无法生成登录码', 'err');
+    };
     /* 切换账户 / 解除微信绑定 */
     const sw = $('#setSwitchAcct');
     if (sw) sw.onclick = () => {
