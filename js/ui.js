@@ -29,6 +29,10 @@ const UI = {
     $('#hmLv').textContent = 'Lv.' + (p.lv || 1);
     $('#hmPower').textContent = E.fmt(E.power(p));
     $('#cuGold').textContent = E.fmt(p.gold);
+    const ci = EX.curIcon || {};
+    const cgEl = $('#cuGoldIco'); if (cgEl && ci.gold) cgEl.src = ci.gold;
+    const cdEl = $('#cuDiaIco'); if (cdEl && ci.diamond) cdEl.src = ci.diamond;
+    const csEl = $('#cuStaIco'); if (csEl && ci.stamina) csEl.src = ci.stamina;
     $('#cuDia').textContent = E.fmt(p.diamond);
     const cur = E.curLevel(p);
     $('#hmLevel').textContent = E.char(p).n + ' · ' + E.levelName(cur);
@@ -96,7 +100,9 @@ const UI = {
       ${EX.mercs.map((m) => {
         const own = hired.indexOf(m.id) >= 0;
         return `<div class="mc-card">
-          <div class="mi">${m.icon}</div>
+          <div class="mi">${m.img
+            ? `<img src="${m.img}" style="width:40px;height:40px;border-radius:8px;object-fit:cover">`
+            : m.icon}</div>
           <div class="mn"><b>${m.n}</b>
             <span>${m.desc}</span>
             <span>伤害 ${m.dmg} · 射速 ${m.rate}/s · 射程 ${m.rng}</span></div>
@@ -162,7 +168,9 @@ const UI = {
       ${EX.skins.filter((s) => s.char === (p.char || 'C01')).map((s) => {
         const own = (p.skins || []).indexOf(s.id) >= 0;
         const on = p.skin === s.id;
-        return `<div class="item"><div class="ic" style="font-size:20px">${s.icon}</div>
+        return `<div class="item"><div class="ic">${s.img
+          ? `<img src="${s.img}" style="width:34px;height:44px;border-radius:6px;object-fit:cover">`
+          : `<span style="font-size:20px">${s.icon}</span>`}</div>
           <div class="info"><div class="nm">${s.n} ${s.bonus ? '<span class="tag y">' + s.desc + '</span>' : ''}</div>
           <div class="sub">${s.desc}</div></div>
           <div class="act">${on ? '<span class="tag g">穿着中</span>'
