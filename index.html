@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>向僵尸开炮</title>
-<link rel="stylesheet" href="css/style.css?v=20260923b">
+<link rel="stylesheet" href="css/style.css?v=20260923c">
 </head>
 <body>
 
@@ -41,8 +41,12 @@
       <div class="wx-tip" id="wxTip">已记住本机账户，下次打开自动进入</div>
     </div>
 
-    <!-- 切换账户 / 手动建号 -->
-    <div class="lg-switch"><a href="javascript:;" id="lgSwitch">切换账户 · 手动建号</a></div>
+    <!-- 切换账户 / 扫码 -->
+    <div class="lg-switch">
+      <a href="javascript:;" id="lgScan">📷 扫码登录</a>
+      <span style="color:var(--line)">|</span>
+      <a href="javascript:;" id="lgSwitch">切换账户 · 手动建号</a>
+    </div>
 
     <div class="lg-manual" id="lgManual" style="display:none">
       <div class="lg-gender" id="lgGender">
@@ -86,24 +90,35 @@
   </div>
 </div>
 
-<!-- ========== 手机号绑定（首次登录） ========== -->
+<!-- ========== 手机号绑定（首次登录，免验证码） ========== -->
 <div class="wxt" id="wxTel">
   <div class="wxt-box">
-    <div class="wxt-t">绑定手机号</div>
-    <div class="wxt-s">首次登录需验证手机号<br>绑定后下次可微信一键登录</div>
+    <div class="wxt-t">完善账号信息</div>
+    <div class="wxt-s">手机号即账号，换设备输入同一号码<br>存档、等级、装备全部保留</div>
     <div class="wxt-phone">
-      <span class="wxt-cc">+86 ▾</span>
-      <input id="wxtPhone" type="tel" inputmode="numeric" maxlength="11" placeholder="请输入手机号" autocomplete="tel">
+      <input id="wxtName" type="text" maxlength="8" placeholder="游戏昵称（2-8字）" autocomplete="nickname">
     </div>
     <div class="wxt-code">
-      <input id="wxtCode" type="tel" inputmode="numeric" maxlength="6" placeholder="请输入验证码" autocomplete="one-time-code">
-      <button id="wxtSend">获取验证码</button>
+      <span class="wxt-cc">+86 ▾</span>
+      <input id="wxtPhone" type="tel" inputmode="numeric" maxlength="11" placeholder="请输入手机号" autocomplete="tel">
     </div>
     <div class="wxt-tip" id="wxtTip"></div>
     <label class="wxt-agree"><input type="checkbox" id="wxtAgree" checked><span>已阅读并同意《用户协议》《隐私政策》</span></label>
     <button class="wxt-go" id="wxtGo">登 录</button>
     <div class="wxt-skip"><a href="javascript:;" id="wxtBack">← 返回微信登录</a></div>
-    <div class="wxt-demo">演示环境：验证码填写任意 6 位数字即可</div>
+    <div class="wxt-demo">无需验证码 · 手机号仅用于识别账号，不发送短信</div>
+  </div>
+</div>
+
+<!-- ========== 扫码登录 ========== -->
+<div class="wxt" id="wxScan">
+  <div class="wxt-box">
+    <div class="wxt-t">扫码登录</div>
+    <div class="wxt-s">用另一台设备的相机扫描<br>打开后自动进入同一账号</div>
+    <div class="wxscan-cv"><canvas id="wxScanCv"></canvas></div>
+    <div class="wxt-demo" id="wxScanUrl"></div>
+    <button class="wxt-go" id="wxScanCopy">📋 复制登录链接</button>
+    <div class="wxt-skip"><a href="javascript:;" id="wxScanClose">关闭</a></div>
   </div>
 </div>
 
@@ -313,15 +328,16 @@
 
 <div id="toasts"></div>
 
-<script src="js/net.js?v=20260923b"></script>
-<script src="js/config.js?v=20260923b"></script>
-<script src="js/ops.js?v=20260923b"></script>
-<script src="js/engine.js?v=20260923b"></script>
-<script src="js/battle.js?v=20260923b"></script>
-<script src="js/ui.js?v=20260923b"></script>
-<script src="js/wx.js?v=20260923b"></script>
-<script src="js/audio.js?v=20260923b"></script>
-<script src="js/main.js?v=20260923b"></script>
+<script src="js/net.js?v=20260923c"></script>
+<script src="js/config.js?v=20260923c"></script>
+<script src="js/ops.js?v=20260923c"></script>
+<script src="js/engine.js?v=20260923c"></script>
+<script src="js/battle.js?v=20260923c"></script>
+<script src="js/ui.js?v=20260923c"></script>
+<script src="js/qr.js?v=20260923c"></script>
+<script src="js/wx.js?v=20260923c"></script>
+<script src="js/audio.js?v=20260923c"></script>
+<script src="js/main.js?v=20260923c"></script>
 </div>
 </div>
 </body>
