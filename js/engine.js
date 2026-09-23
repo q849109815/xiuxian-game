@@ -41,6 +41,7 @@ const E = {
       chips: {}, bag: [],
       talents: {},
       build: { hospital: 1, armory: 1, lab: 1, warehouse: 1 },
+      mercs: [],              // 已招募佣兵（酒馆）
       cleared: {},            // { '1-1': stars }
       curLevel: '1-1',
       endlessBest: 0, endlessTime: 0,
