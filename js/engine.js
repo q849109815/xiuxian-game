@@ -456,6 +456,24 @@ const E = {
     if (t.cond.t === 'clearLv') return !!p.cleared[t.cond.v];
     return this.taskVal(p, t.cond.t) >= t.cond.v;
   },
+  /* 每日签到（UTC+8 跨天，防改系统时间） */
+  sign(p) {
+    const now = Date.now();
+    if (p.signLast && now < p.signLast - 3600000) {
+      return { ok: false, msg: '时间异常，无法签到' };
+    }
+    const d = new Date(now + 8 * 3600000);
+    const today = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    if (p.signDay === today) return { ok: false, msg: '今日已签到' };
+    const cnt = (p.signDay && (today - p.signDay === 1 || (today - p.signDay > 1 && p.signDays < 7)))
+      ? p.signDays : 0;
+    p.signDays = Math.min(7, (cnt || 0) + 1);
+    p.signDay = today; p.signLast = now;
+    const rw = { gold: 100 * p.signDays, diamond: p.signDays >= 7 ? 50 : 0 };
+    p.gold += rw.gold; p.diamond += rw.diamond;
+    return { ok: true, msg: '签到成功 第' + p.signDays + '天 🪙' + rw.gold + (rw.diamond ? ' 💎' + rw.diamond : '') };
+  },
+
   taskProg(p, t) {
     if (t.cond.t === 'clearLv') return p.cleared[t.cond.v] ? 1 : 0;
     return Math.min(this.taskVal(p, t.cond.t), t.cond.v);
