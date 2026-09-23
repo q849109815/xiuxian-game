@@ -67,7 +67,7 @@ const UI = {
     mail: ['邮件', ['邮件'], 'top'],
     act: ['活动', ['活动'], 'top'],
     rank: ['排行榜', ['全服'], 'top'],
-    set: ['设置', ['账号', '网络', '数值'], 'side'],
+    set: ['设置', ['账号', '网络', '数值', '语言', '运营'], 'side'],
     level: ['关卡选择', ['章节'], 'top'],
     base: ['基地建筑', ['建筑'], 'top'],
     tavern: ['酒馆招募', ['佣兵'], 'top'],
@@ -467,7 +467,9 @@ const UI = {
       if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('gun', tab); this.home(); }
     };
     const u = $('#gunUp'); if (u) u.onclick = () => {
-      const r = E.upgradeGun(p); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('gun', tab); this.home(); }
+      const r = E.upgradeGun(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      try { OPS.track('weapon_upgrade', { lv: p.gunLv }); } catch (e) {}
+      if (r.ok) { this.open('gun', tab); this.home(); }
     };
     /* 表30 武器词条洗练 */
     const ar = $('#gunAfReroll');
@@ -1169,6 +1171,8 @@ const UI = {
   },
   /* 战斗内按事件触发（表21 触发时机） */
   guideTrigger(ev) {
+    /* 表37 埋点：funnel_convert（新手漏斗） */
+    try { OPS.track('funnel_convert', { step: ev }); } catch (e) {}
     const p = this.P; if (!p) return;
     /* 表21 触发时机 → 引导节点 id */
     const map = {
@@ -1256,6 +1260,59 @@ const UI = {
   },
 
   r_set(p, tab) {
+    /* ---------- 多语言（表39） ---------- */
+    if (tab === '语言') {
+      const cur = (window.OPS ? OPS.getLang() : 'zh');
+      return `<div class="card"><div class="card-t">语言 <span class="sub">表39 本地化</span></div>
+        <div class="sub">当前：${((EX.LANGS || []).find((x) => x.k === cur) || { n: cur }).n}</div>
+        ${(EX.LANGS || []).map((l) => `<div class="zrow">
+          <div class="zav">🌐</div>
+          <div class="zi"><b>${l.n}</b><span>${l.k}</span></div>
+          ${l.k === cur ? '<span class="st on">使用中</span>'
+            : `<button class="btn sm" data-lang="${l.k}">切换</button>`}</div>`).join('')}
+      </div>
+      <div class="card"><div class="card-t">文本预览 <span class="sub">TXT_001~008</span></div>
+        ${Object.keys(EX.I18N || {}).map((id) => `<div class="kv">
+          <span style="font-size:10px">${id}</span><b style="font-size:11px">${window.OPS ? OPS.t(id) : (EX.I18N[id] || {}).zh}</b></div>`).join('')}
+      </div>`;
+    }
+    /* ---------- 运营（表37 埋点 / 表38 版本 / 表40 接口 / 表36 命名 / 热更新） ---------- */
+    if (tab === '运营') {
+      const st = window.OPS ? OPS.trackStat() : {};
+      const mi = window.OPS ? OPS.manifestInfo() : { ver: '-', n: 0 };
+      const cv = window.OPS ? OPS.curVersion() : null;
+      return `<div class="card"><div class="card-t">热更新 <span class="sub">表02 #15 / 表23 #9</span></div>
+        <div class="kv"><span>资源版本号</span><b style="color:var(--yel)">${mi.ver}</b></div>
+        <div class="kv"><span>清单条目</span><b>${mi.n} 个</b></div>
+        <div class="sub">启动时比对版本，不一致自动刷新缓存并提示。</div></div>
+
+      <div class="card"><div class="card-t">版本 <span class="sub">表38 排期</span></div>
+        <div class="kv"><span>当前版本</span><b style="color:var(--green)">${cv ? cv.v + ' ' + cv.n : '-'}</b></div>
+        ${(EX.VERSIONS || []).map((v) => `<div class="zrow"><div class="zav">${v.done ? '✔' : '○'}</div>
+          <div class="zi"><b>${v.v} ${v.n}</b><span>${v.wk} · ${v.c}</span></div>
+          <span class="st ${v.done ? 'on' : 'off'}">${v.done ? '已完成' : '开发中'}</span></div>`).join('')}
+      </div>
+
+      <div class="card"><div class="card-t">数据埋点 <span class="sub">表37 · 共 ${window.OPS ? OPS.trackBuf().length : 0} 条</span></div>
+        ${Object.keys(st).length ? Object.keys(st).map((k) => `<div class="zrow">
+          <div class="zav">📊</div>
+          <div class="zi"><b>${st[k].n}</b><span>${k} · ${st[k].pr} · ${st[k].cnt} 次</span></div></div>`).join('')
+          : '<div class="lbl">暂无埋点数据</div>'}
+        <button class="btn d blk" id="opsClearTrack">清空埋点</button>
+      </div>
+
+      <div class="card"><div class="card-t">后端接口 <span class="sub">表40 → GitHub 实现</span></div>
+        ${(EX.APIS || []).map((a) => `<div class="kv">
+          <span style="font-size:10px">${a.id} ${a.n}</span>
+          <b style="font-size:9.5px;color:var(--txt3)">${a.impl}</b></div>`).join('')}
+      </div>
+
+      <div class="card"><div class="card-t">资源命名规范 <span class="sub">表36 · 12 类</span></div>
+        ${(EX.NAMING || []).map((n) => `<div class="kv">
+          <span style="font-size:10px"><b style="color:var(--yel)">${n.pre}</b> ${n.t}</span>
+          <b style="font-size:9.5px;color:var(--txt3)">${n.eg}</b></div>`).join('')}
+      </div>`;
+    }
     if (tab === '网络') {
       return `<div class="card"><div class="card-t">网络状态</div>
         <div class="kv"><span>状态</span><b style="color:${Net.online ? 'var(--green)' : '#ff8fa4'}">${Net.online ? '● 已连接' : '○ 离线'}</b></div>
@@ -1293,6 +1350,17 @@ const UI = {
       <button class="btn blk" id="setAdmin">进入管理后台</button></div>`;
   },
   b_set(p, tab) {
+    /* 表39 多语言切换 */
+    $$('#pnBody [data-lang]').forEach((b) => { b.onclick = () => {
+      if (window.OPS) OPS.setLang(b.dataset.lang);
+      this.toast('语言已切换为 ' + b.dataset.lang, 'ok');
+      this.open('set', '语言'); this.home();
+    }; });
+    /* 表37 清空埋点 */
+    const oct = $('#opsClearTrack');
+    if (oct) oct.onclick = () => {
+      if (window.OPS) OPS.clearTrack(); this.toast('埋点数据已清空', 'ok'); this.open('set', '运营');
+    };
     const sv = $('#setSave'); if (sv) sv.onclick = async () => { await MAIN.save(); this.toast('存档已上传', 'ok'); };
     const rs = $('#setReset'); if (rs) rs.onclick = () => {
       if (!confirm('确定清空全部进度？此操作不可恢复！')) return;
@@ -1508,6 +1576,8 @@ const UI = {
         <div class="ch-arrow">▼</div></button>`;
     }).join('');
     $$('#chCards .ccard').forEach((b) => {
+      /* 表37 埋点：skill_select */
+      try { OPS.track('skill_select', { sk: b.dataset.pick }); } catch (e) {}
       b.onclick = () => { $('#choice').classList.remove('on'); BT.pickSkill(b.dataset.pick); };
     });
     $('#choice').classList.add('on');
@@ -1529,6 +1599,8 @@ const UI = {
 
   showResult(res, d) {
     const win = res === 'win';
+    /* 表37 埋点：level_finish */
+    try { OPS.track('level_finish', { win: win, t: Math.floor(d.time || 0) }); } catch (e) {}
     /* 截图51/52：标题「恭喜获得」+ 剩余血量% + 新纪录 */
     $('#rsTitle').textContent = win ? '恭 喜 获 得' : (res === 'lose' ? '防 线 失 守' : '撤 离 战 场');
     $('#rsTitle').className = 'rs-t ' + (win ? 'win' : 'lose');
@@ -1574,6 +1646,7 @@ const UI = {
       const b2 = $('#rsAd2x');
       if (b2) b2.onclick = () => {
         const r = E.useAd(this.P, 'AD02'); if (!r.ok) return this.toast(r.msg, 'err');
+      try { OPS.track('ad_watch', {}); } catch (e) {}
         this.P.gold += Math.floor((d.rw.gold || 0));
         this.toast('奖励翻倍！金币 +' + E.fmt(d.rw.gold), 'ok');
         b2.disabled = true; b2.textContent = '已领取双倍'; this.home(); MAIN.save();
@@ -1581,6 +1654,8 @@ const UI = {
       const br = $('#rsAdRev');
       if (br) br.onclick = () => {
         const r = E.useAd(this.P, 'AD01'); if (!r.ok) return this.toast(r.msg, 'err');
+      try { OPS.track('ad_watch', {}); } catch (e) {}
+        try { OPS.track('resurrect', {}); } catch (e) {}
         this.hideResult(); startBattle(battleMode, BT.run.def.id);
       };
     }
