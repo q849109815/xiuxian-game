@@ -52,27 +52,30 @@ const UI = {
   },
 
   /* ================= 面板 ================= */
+  /* PANELS: [标题, 分类, tab位置]
+     位置: side=左侧竖排(截图35/38/39/41) bottom=底部横排(截图34背包) right=右侧竖标(截图40) */
   PANELS: {
-    role: ['角色', ['装备', '宝石', '皮肤']],
-    gun: ['武器', ['强化', '武器库']],
-    chip: ['芯片系统', ['芯片']],
-    talent: ['天赋', ['天赋']],
-    task: ['任务', ['主线', '日常', '成就']],
-    bag: ['我的背包', ['宝石', '装备', '材料', '芯片']],
-    shop: ['商店', ['每日', '武器', '宝石', '材料']],
-    gem: ['宝石镶嵌', ['镶嵌']],
-    friends: ['好友', ['好友列表', '申请', '聊天']],
-    mail: ['邮件', ['邮件']],
-    act: ['活动', ['活动']],
-    rank: ['排行榜', ['全服']],
-    set: ['设置', ['账号', '网络', '数值']],
-    level: ['关卡选择', ['章节']],
-    base: ['基地建筑', ['建筑']],
-    tavern: ['酒馆招募', ['佣兵']],
-    core: ['核心技能', ['技能']],
-    legion: ['军团', ['军团', '成员']],
-    exped: ['远征堡垒', ['远征', '巡逻']],
+    role: ['角色', ['装备', '宝石', '皮肤'], 'side'],
+    gun: ['武器', ['强化', '武器库'], 'side'],
+    chip: ['芯片系统', ['芯片'], 'right'],
+    talent: ['天赋', ['天赋'], 'top'],
+    task: ['任务', ['主线', '日常', '成就'], 'side'],
+    bag: ['我的背包', ['宝石', '装备', '材料', '芯片'], 'bottom'],
+    shop: ['商店', ['每日', '武器', '宝石', '材料'], 'side'],
+    gem: ['宝石镶嵌', ['镶嵌'], 'top'],
+    friends: ['好友', ['好友列表', '申请', '聊天'], 'side'],
+    mail: ['邮件', ['邮件'], 'top'],
+    act: ['活动', ['活动'], 'top'],
+    rank: ['排行榜', ['全服'], 'top'],
+    set: ['设置', ['账号', '网络', '数值'], 'side'],
+    level: ['关卡选择', ['章节'], 'top'],
+    base: ['基地建筑', ['建筑'], 'top'],
+    tavern: ['酒馆招募', ['佣兵'], 'top'],
+    core: ['核心技能', ['技能'], 'top'],
+    legion: ['军团', ['军团', '成员'], 'side'],
+    exped: ['远征堡垒', ['远征', '巡逻'], 'side'],
   },
+  tabPos(key) { const d = this.PANELS[key]; return (d && d[2]) || 'top'; },
 
   open(key, tab) {
     if (window.SND) SND.play('panel');
@@ -81,8 +84,14 @@ const UI = {
     if (tab) this.curTab[key] = tab;
     if (!this.curTab[key]) this.curTab[key] = def[1][0];
     $('#pnTitle').textContent = def[0];
-    $('#pnTabs').innerHTML = def[1].map((t) =>
+    const pos = this.tabPos(key);
+    const box = $('#panel');
+    if (box) box.dataset.tp = pos;
+    const tabsHTML = def[1].map((t) =>
       `<button class="pt ${t === this.curTab[key] ? 'on' : ''}" data-t="${t}">${t}</button>`).join('');
+    /* 单分类时不显示 tab 区 */
+    $('#pnTabs').innerHTML = def[1].length > 1 ? tabsHTML : '';
+    $('#pnTabs').style.display = def[1].length > 1 ? '' : 'none';
     $$('#pnTabs .pt').forEach((b) => { b.onclick = () => { this.curTab[key] = b.dataset.t; this.open(key); }; });
     $('#pnBody').innerHTML = this.render(key, this.curTab[key]);
     $('#panel').classList.add('on');
@@ -168,12 +177,23 @@ const UI = {
       </div>`;
     }
     if (lg) {
-      return `<div class="card"><div class="card-t">${lg.n}</div>
-        <div class="kv"><span>军团等级</span><b>Lv.${lg.lv || 1}</b></div>
-        <div class="kv"><span>人数</span><b>${(lg.members || []).length}/${lg.cap || 50}</b></div>
-        <div class="kv"><span>我的贡献</span><b>${E.fmt(p.legionExp || 0)}</b></div>
-        <div class="sub" style="padding:6px 2px">捐献资源可提升军团等级，解锁军团商店与军团副本。</div>
-        <button class="btn" id="lgDonate" style="width:100%;margin-top:6px">🪙 捐献 5000 金币（+100 贡献）</button>
+      /* 截图37：军团名/等级/成员/战力 + 战团列表 + 底部三按钮 */
+      const mem = lg.members || [];
+      const totalPw = mem.reduce((s, m) => s + (m.pw || 0), 0);
+      return `<div class="card" style="text-align:center">
+        ${this.zAvatarHTML(lg.id, '')}
+        <div style="font-size:15px;font-weight:800;margin-top:6px;color:var(--yel)">${lg.n}</div>
+        <div class="sub">${lg.lv || 1}级 · 成员 ${mem.length}/${lg.cap || 50} · 战力 ${E.fmt(Math.max(totalPw, E.power(p)))}</div>
+      </div>
+      <div class="card"><div class="card-t">战团</div>
+        ${['一团', '二团', '三团'].map((nm, i) => `<div class="zrow">
+          ${this.zAvatarHTML('t' + i)}<div class="zi"><b>${nm}</b><span>人数 ${[1, 3, 1][i]} · 队伍 ${i + 1}</span></div>
+          ${this.zAvatarHTML('u' + i)}</div>`).join('')}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn sm o" style="flex:1" id="lgAct">军团活动</button>
+        <button class="btn sm o" style="flex:1" id="lgShop">军团商店</button>
+        <button class="btn sm" style="flex:1" id="lgDonate">捐献</button>
       </div>`;
     }
     return `<div class="card"><div class="card-t">加入军团</div>
@@ -209,6 +229,12 @@ const UI = {
       if (p.gold < 5000) return this.toast('金币不足', 'err');
       p.gold -= 5000; p.legionExp = (p.legionExp || 0) + 100;
       E.save(p); this.toast('捐献成功 +100 贡献', 'ok'); this.open('legion'); this.home();
+    };
+    const la = $('#lgAct');
+    if (la) la.onclick = () => this.toast('军团活动开发中', 'ok');
+    const ls = $('#lgShop');
+    if (ls) ls.onclick = () => {
+      this.toast('军团商店：可用贡献兑换', 'ok');
     };
   },
 
@@ -281,77 +307,87 @@ const UI = {
   },
 
   /* ---------- 角色 ---------- */
+  /* ---------- 角色（截图41：Q版角色 + 装备/宝石/皮肤 + 橙色「装备设造」） ---------- */
   r_role(p, tab) {
-    if (tab === '皮肤') {
-      return `<div class="card"><div class="card-t">皮肤 <span class="sub">钻石解锁，切换角色后需重新选</span></div>
-      ${EX.skins.filter((s) => s.char === (p.char || 'C01')).map((s) => {
-        const own = (p.skins || []).indexOf(s.id) >= 0;
-        const on = p.skin === s.id;
-        return `<div class="item"><div class="ic">${s.img
-          ? `<img src="${s.img}" style="width:34px;height:44px;border-radius:6px;object-fit:cover">`
-          : `<span style="font-size:20px">${s.icon}</span>`}</div>
-          <div class="info"><div class="nm">${s.n} ${s.bonus ? '<span class="tag y">' + s.desc + '</span>' : ''}</div>
-          <div class="sub">${s.desc}</div></div>
-          <div class="act">${on ? '<span class="tag g">穿着中</span>'
-            : own ? `<button class="btn c sm" data-wear="${s.id}">穿上</button>`
-            : `<button class="btn sm" data-buyskin="${s.id}">💎${s.price}</button>`}</div></div>`;
-      }).join('')}</div>`;
-    }
+    const c = E.char(p);
     const a = E.attrs(p);
-    const ci = (E.char(p) || {}).img;
-    return `<div class="card"><div class="card-t">当前先锋官</div>
-      <div style="text-align:center;padding:6px 0">
-        ${ci ? `<img src="${ci}" style="width:88px;height:88px;border-radius:14px;border:2px solid var(--gold);object-fit:cover"
-             onerror="this.outerHTML='<div style=\'font-size:52px\'>${E.char(p).icon}</div>'">`
-             : `<div style="font-size:52px">${E.char(p).icon}</div>`}
-        <div style="color:var(--gold);font-weight:700;margin-top:4px">${E.char(p).n}</div>
-        <div style="font-size:10px;color:#7d8ca8">${E.skin(p).n}</div>
-      </div></div>
-      <div class="card"><div class="card-t">角色选择 <span class="sub">通关解锁</span></div>
-      ${EX.chars.map((c) => {
-        const ok = E.charUnlocked(p, c.id);
-        const on = p.char === c.id;
-        return `<div class="item"><div class="ic">${c.img
-            ? `<img src="${c.img}" style="width:30px;height:30px;border-radius:7px;object-fit:cover">`
-            : `<span style="font-size:20px">${c.icon}</span>`}</div>
-          <div class="info"><div class="nm">${c.n} ${on ? '<span class="tag g">使用中</span>' : ''}</div>
-          <div class="sub">生命${c.hp} 移速${c.spd} 护甲${c.armor} 暴击${(c.crit * 100).toFixed(0)}%</div>
-          <div class="sub">${c.desc}</div>
-          ${ok ? '' : `<div class="sub" style="color:#ff8fa4">需通关 ${c.unlockLv} 解锁</div>`}</div>
-          <div class="act">${on ? '' : ok ? `<button class="btn c sm" data-char="${c.id}">切换</button>` : '<span class="tag r">未解锁</span>'}</div></div>`;
-      }).join('')}</div>
-      <div class="card"><div class="card-t">当前属性</div>
-      <div class="kv"><span>角色</span><b>${a.charName}</b></div>
-      <div class="kv"><span>战力</span><b style="color:var(--gold)">${E.fmt(E.power(p))}</b></div>
-      <div class="kv"><span>武器</span><b>${a.gunName}</b></div>
-      <div class="kv"><span>攻击力</span><b>${E.fmt(a.atk)}</b></div>
-      <div class="kv"><span>生命值</span><b>${E.fmt(a.hp)}</b></div>
+    if (tab === '皮肤') {
+      return `<div class="card"><div class="card-t">外观</div>
+        <div class="grid3">${(EX.skins || []).map((sk) => {
+          const own = sk.price === 0 || (p.skin || []).indexOf(sk.id) >= 0;
+          return `<div class="gcell ${own ? '' : 'sel'}">${sk.img
+            ? `<img src="${sk.img}">` : `<div class="gi">${sk.icon}</div>`}
+            <div class="gn">${sk.n}</div></div>`;
+        }).join('') || '<div class="lbl">暂无外观</div>'}</div>
+      </div>`;
+    }
+    if (tab === '宝石') {
+      /* 截图41：宝石属性 tab，三颗宝石 + 绿色「卸下」+ 橙色「装备设造」 */
+      const gb = E.gemBonus(p);
+      return `<div class="card"><div class="card-t">宝石属性
+        <span class="sub">Lv.${p.gemLv || 0}</span></div>
+        ${(EX.gems || []).map((g) => {
+          const on = p.gemOn === g.id;
+          return `<div class="zrow">
+            ${g.img ? `<div class="zav"><img src="${g.img}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>`
+                    : `<div class="zav">${g.icon}</div>`}
+            <div class="zi"><b>${g.n}</b><span>${g.desc}</span>
+              <span style="color:var(--yel)">当前加成 攻+${E.fmt(gb.atk)} 血+${E.fmt(gb.hp)}</span></div>
+            ${on ? '<button class="btn g sm" data-gemoff="1">卸下</button>'
+                 : `<button class="btn sm" data-gemon="${g.id}">镶嵌</button>`}
+          </div>`;
+        }).join('') || '<div class="lbl">暂无宝石</div>'}
+        <button class="btn o" id="roleForge" style="width:100%;margin-top:8px">装备设造</button>
+      </div>
+      <div class="card"><div class="card-t">装备槽 <span class="sub">强化 / 进阶</span></div>
+        <div class="grid4">${(EX.equipSlots || []).map((sl) => {
+          const e = (p.equip || {})[sl.k] || { lv: 0 };
+          return `<div class="gcell ${e.lv ? '' : 'sel'}" data-forge="${sl.k}">
+            <div class="gi">${sl.icon}</div>
+            <div class="gn">${sl.n}</div>
+            ${e.lv ? `<span class="gq">+${e.lv}</span>` : ''}</div>`;
+        }).join('')}</div>
+        <div class="sub" style="margin-top:6px">点击装备槽强化，每 5 级进阶一次</div>
+      </div>`;
+    }
+    /* 装备总览 */
+    return `<div class="card" style="text-align:center">
+      <div style="position:relative;display:inline-block">
+        ${c.img ? `<img src="${c.img}" style="width:120px;height:160px;object-fit:cover;border-radius:14px;
+          border:3px solid rgba(255,201,60,.5);box-shadow:0 6px 20px rgba(0,0,0,.5)">`
+          : `<div style="font-size:70px">${c.icon}</div>`}
+      </div>
+      <div style="font-size:16px;font-weight:800;margin-top:6px;color:var(--yel)">${c.n}</div>
+      <div class="sub">战力 ${E.fmt(E.power(p))}</div>
+    </div>
+    <div class="card"><div class="card-t">属性</div>
+      <div class="kv"><span>攻击</span><b>${E.fmt(a.atk)}</b></div>
+      <div class="kv"><span>生命</span><b>${E.fmt(a.hp)}</b></div>
       <div class="kv"><span>护甲</span><b>${a.armor}</b></div>
-      <div class="kv"><span>移动速度</span><b>${a.moveSpd}</b></div>
-      <div class="kv"><span>暴击率</span><b>${(a.crit * 100).toFixed(1)}%</b></div>
-      <div class="kv"><span>暴击伤害</span><b>${(a.critDmg * 100).toFixed(0)}%</b></div>
+      <div class="kv"><span>暴击</span><b>${(a.crit * 100).toFixed(1)}%</b></div>
       <div class="kv"><span>吸血</span><b>${(a.ls * 100).toFixed(1)}%</b></div>
-      <div class="kv"><span>复活次数</span><b>${a.revive}</b></div></div>
-      <div class="card"><div class="card-t">进度</div>
-      <div class="kv"><span>通关关卡</span><b>${Object.keys(p.cleared || {}).length} / ${EX.levels.length}</b></div>
-      <div class="kv"><span>总星数</span><b>${E.totalStars(p)}</b></div>
-      <div class="kv"><span>成就点</span><b>${E.fmt(p.ach || 0)}</b></div>
-      <div class="kv"><span>无尽最佳</span><b>${p.endlessBest || 0} 层</b></div>
-      <div class="kv"><span>累计击杀</span><b>${E.fmt((p.stats && p.stats.kills) || 0)}</b></div></div>`;
+    </div>
+    <button class="btn o" id="roleForge" style="width:100%">装备设造</button>`;
   },
-  b_role(p) {
-    $$('#pnBody [data-char]').forEach((b) => {
-      b.onclick = () => { const r = E.switchChar(p, b.dataset.char); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('role', '角色'); this.home(); } };
-    });
-    $$('#pnBody [data-wear]').forEach((b) => {
-      b.onclick = () => { p.skin = b.dataset.wear; this.toast('已更换外观', 'ok'); this.open('role', '皮肤'); this.home(); };
-    });
-    $$('#pnBody [data-buyskin]').forEach((b) => {
-      b.onclick = () => { const r = E.buySkin(p, b.dataset.buyskin); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('role', '皮肤'); this.home(); } };
-    });
+  b_role(p, tab) {
+    $$('#pnBody [data-gemon]').forEach((b) => { b.onclick = () => {
+      const g = (EX.gems || []).find((x) => x.id === b.dataset.gemon);
+      if (!((p.gems || {})[b.dataset.gemon] > 0)) return this.toast('该宝石数量不足', 'err');
+      p.gemOn = b.dataset.gemon; E.save(p);
+      this.toast('已镶嵌 ' + g.n, 'ok'); this.open('role', '宝石'); this.home();
+    }; });
+    $$('#pnBody [data-gemoff]').forEach((b) => { b.onclick = () => {
+      p.gemOn = null; E.save(p); this.toast('已卸下', 'ok'); this.open('role', '宝石'); this.home();
+    }; });
+    $$('#pnBody [data-forge]').forEach((b) => { b.onclick = () => {
+      const r = E.forgeEquip(p, b.dataset.forge);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('role', '宝石'); this.home(); }
+    }; });
+    const fb = $('#roleForge');
+    if (fb) fb.onclick = () => this.open('role', '宝石');
   },
 
-  /* ---------- 武器 ---------- */
   r_gun(p, tab) {
     if (tab === '武器库') {
       return `<div class="card"><div class="card-t">武器库 <span class="sub">主武器 6 + 副武器 4</span></div>
