@@ -884,6 +884,29 @@ const EX = {
       { id: 'GB3', n: '绿宝石', icon: '🟢', price: 200, cur: 'diamond', give: { M05: 5 } },
       { id: 'GB4', n: '紫宝石', icon: '🟣', price: 300, cur: 'diamond', give: { M05: 8 } },
     ],
+    /* ===== 表35 礼包内容明细表 GP01~GP06 =====
+     * limit: {t:'once'|'daily'|'weekly'|'monthly'|'level'|'bossFirst', v}
+     * 单机无支付SDK，故用钻石计价，rmb 字段仅作价值展示 */
+    '礼包': [
+      { id: 'GP01', n: '新手礼包', icon: '🎁', price: 60, cur: 'diamond', rmb: '6元',
+        give: { gold: 2000, M01: 50, M04: 10, P01: 3 },
+        limit: { t: 'once', v: 1 }, desc: '金币2000+金属50+枪械碎片10+急救包3' },
+      { id: 'GP02', n: '成长礼包', icon: '📦', price: 300, cur: 'diamond', rmb: '30元',
+        give: { gold: 8000, M02: 30, diamond: 100 },
+        limit: { t: 'level', v: 5 }, desc: '按等级分批解锁：金币/材料/钻石（每5关1次）' },
+      { id: 'GP03', n: '每日特惠', icon: '💰', price: 10, cur: 'diamond', rmb: '1元',
+        give: { gold: 500, M01: 10, diamond: 10 },
+        limit: { t: 'daily', v: 1 }, desc: '金币500+金属10+钻石10 · 每日1次' },
+      { id: 'GP04', n: '周礼包', icon: '🗓️', price: 300, cur: 'diamond', rmb: '30元',
+        give: { M03: 10, chipE: 1, diamond: 200 },
+        limit: { t: 'weekly', v: 1 }, desc: '稀有金属10+精英芯片1+钻石200 · 每周1次' },
+      { id: 'GP05', n: '月度超值', icon: '👑', price: 680, cur: 'diamond', rmb: '68元',
+        give: { chipL: 1, M03: 20, diamond: 800 },
+        limit: { t: 'monthly', v: 1 }, desc: '传说芯片1+稀有金属20+钻石800 · 每月1次' },
+      { id: 'GP06', n: 'BOSS首杀礼包', icon: '🏆', price: 0, cur: 'gold', rmb: '免费',
+        give: { M03: 5, chipN: 1 },
+        limit: { t: 'bossFirst', v: 1 }, desc: '击杀首个BOSS赠送 · 稀有金属5+芯片1' },
+    ],
     '材料': [
       { id: 'M1', n: '金属', icon: '🔩', price: 500, cur: 'gold', give: { M01: 30 } },
       { id: 'M2', n: '合金', icon: '⚙️', price: 1200, cur: 'gold', give: { M02: 20 } },
