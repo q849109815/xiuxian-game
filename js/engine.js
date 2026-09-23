@@ -372,8 +372,8 @@ const E = {
     const spdUp = this.chipVal(p, 'spd') + ((sk && sk.bonus && sk.bonus.spd) || 0);
     const moveSpd = c.spd * this.SPD_MUL * (1 + spdUp);
     return {
-      atk: atk + this.gemBonus(p).atk,
-      hp: Math.round(hp) + this.gemBonus(p).hp,
+      atk: (atk + this.gemBonus(p).atk) * (1 + EX.starBonus(p.charStar)),
+      hp: (Math.round(hp) + this.gemBonus(p).hp) * (1 + EX.starBonus(p.charStar)),
       gunBase, armor: Math.round(armor),
       rate: g.rate * (1 + this.chipVal(p, 'rate') + this.gunStatVal(p, 'rate')),
       mag: g.mag + Math.round(this.gunStatVal(p, 'mag')),
@@ -396,7 +396,7 @@ const E = {
     return Math.round(a.atk * 12 + a.hp * 0.6 + p.gunLv * 60
       + Object.keys(p.chips || {}).length * 220
       + Object.values(p.talents || {}).reduce((s, v) => s + v, 0) * 90
-      + gb.atk * 6 + gb.hp * 0.3 + eqP);
+      + gb.atk * 6 + gb.hp * 0.3 + eqP) * (1 + EX.starBonus(p.charStar));
   },
 
   /* =================================================
@@ -478,6 +478,155 @@ const E = {
     const rw = { gold: 100 * p.signDays, diamond: p.signDays >= 7 ? 50 : 0 };
     p.gold += rw.gold; p.diamond += rw.diamond;
     return { ok: true, msg: '签到成功 第' + p.signDays + '天 🪙' + rw.gold + (rw.diamond ? ' 💎' + rw.diamond : '') };
+  },
+
+  /* =========================================================
+   * 扫荡系统（表29：已通关关卡快速扫荡，消耗体力）
+   * ======================================================== */
+  canSweep(p, lvId) {
+    const st = (p.stars || {})[lvId] || 0;
+    if (!st) return { ok: false, msg: '需先通关该关卡' };
+    if ((p.stamina || 0) < EX.SWEEP_STAMINA) return { ok: false, msg: '体力不足（需 ' + EX.SWEEP_STAMINA + '）' };
+    return { ok: true };
+  },
+  sweep(p, lvId, times) {
+    const lvNum = parseInt(String(lvId).split('-')[1] || '1', 10);
+    const ck = this.canSweep(p, lvId);
+    if (!ck.ok) return ck;
+    const t = Math.max(1, Math.min(EX.SWEEP_MAX, times || 1));
+    const cost = EX.SWEEP_STAMINA * t;
+    if ((p.stamina || 0) < cost) return { ok: false, msg: '体力不足，最多可扫荡 ' + Math.floor((p.stamina || 0) / EX.SWEEP_STAMINA) + ' 次' };
+    p.stamina -= cost;
+    const rw = EX.sweepRw(lvNum, t);
+    p.gold = (p.gold || 0) + rw.gold;
+    p.mat = p.mat || {};
+    p.mat.M01 = (p.mat.M01 || 0) + rw.M01;
+    p.xp = (p.xp || 0) + rw.xp;
+    return { ok: true, msg: '扫荡 ' + t + ' 次完成！', rw: rw, cost: cost };
+  },
+
+  /* =========================================================
+   * 角色升星（表15/42：角色碎片升星，每星 +8% 全属性）
+   * ======================================================== */
+  starUp(p) {
+    const cur = p.charStar || 0;
+    if (cur >= EX.STAR_MAX) return { ok: false, msg: '已达最高星级' };
+    const need = EX.starCost[cur + 1] || 999;
+    const have = (p.mat || {}).P02 || 0;
+    if (have < need) return { ok: false, msg: '角色碎片不足（需 ' + need + '，现有 ' + have + '）' };
+    p.mat.P02 = have - need;
+    p.charStar = cur + 1;
+    return { ok: true, msg: '升星成功！当前 ' + p.charStar + ' 星（全属性 +' + Math.round(p.charStar * 8) + '%）' };
+  },
+
+  /* =========================================================
+   * 成就商店（表42：消耗成就点，限购按 日/周/月/终身）
+   * ======================================================== */
+  achShopKey(id) { return 'as_' + id; },
+  achShopBought(p, id) {
+    const b = p.achShopBuy || (p.achShopBuy = {});
+    const it = (EX.achShop || []).find((x) => x.id === id);
+    if (!it) return 0;
+    const k = this.achShopKey(id);
+    const rec = b[k] || { n: 0, t: 0 };
+    if (!this._perReset(rec, it.per)) return rec.n;
+    return rec.n;
+  },
+  _perReset(rec, per) {
+    const now = Date.now();
+    if (per === 'day') { if (now - rec.t > 864e5) { rec.n = 0; rec.t = now; } }
+    else if (per === 'week') { if (now - rec.t > 6048e5) { rec.n = 0; rec.t = now; } }
+    else if (per === 'month') { if (now - rec.t > 2592e6) { rec.n = 0; rec.t = now; } }
+    else if (per === 'once') { /* 终身 */ }
+    return true;
+  },
+  achShopBuyItem(p, id) {
+    const it = (EX.achShop || []).find((x) => x.id === id);
+    if (!it) return { ok: false, msg: '商品不存在' };
+    const b = p.achShopBuy || (p.achShopBuy = {});
+    const k = this.achShopKey(id);
+    if (!b[k]) b[k] = { n: 0, t: Date.now() };
+    this._perReset(b[k], it.per);
+    if (b[k].n >= it.limit) return { ok: false, msg: '已达限购次数（' + it.limit + '）' };
+    if ((p.ach || 0) < it.cost) return { ok: false, msg: '成就点不足（需 ' + it.cost + '）' };
+    p.ach -= it.cost;
+    b[k].n++; b[k].t = Date.now();
+    this.grant(p, it.give);
+    return { ok: true, msg: '兑换成功：' + it.n };
+  },
+  /* 通用发放 */
+  grant(p, give) {
+    if (!give) return;
+    p.mat = p.mat || {};
+    Object.keys(give).forEach((k) => {
+      if (k === 'gold') p.gold = (p.gold || 0) + give[k];
+      else if (k === 'diamond') p.diamond = (p.diamond || 0) + give[k];
+      else if (k === 'stamina') p.stamina = Math.min(EX.STAMINA_MAX, (p.stamina || 0) + give[k]);
+      else if (k === 'title') { p.titles = p.titles || []; if (p.titles.indexOf(give[k]) < 0) p.titles.push(give[k]); }
+      else if (k === 'skin') { p.skin = p.skin || []; if (p.skin.indexOf(give[k]) < 0) p.skin.push(give[k]); }
+      else if (k === 'frame') { p.frames = p.frames || []; if (p.frames.indexOf(give[k]) < 0) p.frames.push(give[k]); }
+      else p.mat[k] = (p.mat[k] || 0) + give[k];
+    });
+  },
+
+  /* =========================================================
+   * 活动商店（表43：消耗活动代币）
+   * ======================================================== */
+  eventShopBuy(p, id) {
+    const it = (EX.eventShop || []).find((x) => x.id === id);
+    if (!it) return { ok: false, msg: '商品不存在' };
+    const b = p.evShopBuy || (p.evShopBuy = {});
+    const k = 'es_' + id;
+    if (!b[k]) b[k] = { n: 0, t: Date.now() };
+    this._perReset(b[k], it.per);
+    if (b[k].n >= it.limit) return { ok: false, msg: '已达限购次数（' + it.limit + '）' };
+    if ((p.evToken || 0) < it.cost) return { ok: false, msg: '活动代币不足（需 ' + it.cost + '）' };
+    p.evToken -= it.cost;
+    b[k].n++; b[k].t = Date.now();
+    this.grant(p, it.give);
+    return { ok: true, msg: '兑换成功：' + it.n };
+  },
+
+  /* =========================================================
+   * 排行榜奖励（表33：按排名发奖到邮件）
+   * ======================================================== */
+  rankRewardFor(board, rank) {
+    const list = (EX.rankRewards || []).filter((x) => x.board === board);
+    const hit = list.find((x) => rank >= x.lo && rank <= x.hi);
+    return hit || null;
+  },
+  claimRankRw(p, board, rank) {
+    const rw = this.rankRewardFor(board, rank);
+    if (!rw) return { ok: false, msg: '该名次无奖励' };
+    const key = 'rk_' + board + '_' + rw.id;
+    p.rankRwGot = p.rankRwGot || {};
+    if (p.rankRwGot[key]) return { ok: false, msg: '已领取过该奖励' };
+    p.rankRwGot[key] = 1;
+    this.grant(p, rw.rw);
+    return { ok: true, msg: '领取 ' + board + ' ' + rw.rank + ' 奖励成功！' };
+  },
+
+  /* =========================================================
+   * 图鉴收集（表29：首次解锁领奖）
+   * ======================================================== */
+  codexUnlock(p, kind, id) {
+    p.codex = p.codex || {};
+    p.codex[kind] = p.codex[kind] || [];
+    if (p.codex[kind].indexOf(id) >= 0) return { ok: false, msg: '', already: true };
+    p.codex[kind].push(id);
+    const rw = (EX.codexRw || {})[kind] || {};
+    this.grant(p, rw);
+    return { ok: true, msg: '图鉴解锁！+' + (rw.gold || 0) + ' 金币', rw: rw };
+  },
+  codexCount(p) {
+    const c = p.codex || {};
+    let got = 0, all = 0;
+    (EX.codexKinds || []).forEach((k) => {
+      const list = EX.codexOf(k.k) || [];
+      all += list.length;
+      got += (c[k.k] || []).length;
+    });
+    return { got: got, all: all };
   },
 
   /* 宝石合成：3 颗同级 → 1 颗高一级（截图「宝石合成」） */
