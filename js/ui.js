@@ -61,6 +61,8 @@ const UI = {
     set: ['设置', ['账号', '网络', '数值']],
     level: ['关卡选择', ['章节']],
     base: ['基地建筑', ['建筑']],
+    tavern: ['酒馆招募', ['佣兵']],
+    core: ['核心技能', ['技能']],
   },
 
   open(key, tab) {
@@ -86,6 +88,62 @@ const UI = {
     const p = this.P; if (!p) return;
     const f = this['b_' + key]; if (f) f.call(this, p, tab);
   },
+  /* ---------- 酒馆：招募佣兵（真实玩法：基地酒馆） ---------- */
+  r_tavern(p, tab) {
+    const hired = p.mercs || [];
+    return `<div class="card"><div class="card-t">🍺 酒馆 · 雇佣兵
+      <span class="sub">战斗中协同作战（已雇 ${hired.length}/${EX.mercs.length}）</span></div>
+      ${EX.mercs.map((m) => {
+        const own = hired.indexOf(m.id) >= 0;
+        return `<div class="mc-card">
+          <div class="mi">${m.icon}</div>
+          <div class="mn"><b>${m.n}</b>
+            <span>${m.desc}</span>
+            <span>伤害 ${m.dmg} · 射速 ${m.rate}/s · 射程 ${m.rng}</span></div>
+          <button data-hire="${m.id}" class="${own ? 'hired' : ''}"
+            ${own ? '' : (p.gold < m.cost ? 'disabled' : '')}>
+            ${own ? '已雇佣' : '🪙' + m.cost}</button>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="card"><div class="card-t">战斗阵容</div>
+      <div class="sub" style="padding:4px 2px">雇佣的佣兵会在每局战斗开始时自动出战，站在防线后方协同射击。</div>
+    </div>`;
+  },
+  b_tavern(p, tab) {
+    $$('#pnBody [data-hire]').forEach((b) => {
+      b.onclick = () => {
+        const id = b.dataset.hire;
+        const m = EX.mercs.find((x) => x.id === id); if (!m) return;
+        if ((p.mercs || []).indexOf(id) >= 0) return;
+        if (p.gold < m.cost) return this.toast('金币不足', 'err');
+        p.gold -= m.cost;
+        (p.mercs || (p.mercs = [])).push(id);
+        E.save(p); this.toast('已雇佣 ' + m.n, 'ok');
+        if (window.SND) SND.play('upgrade');
+        this.open('tavern'); this.home();
+      };
+    });
+  },
+
+  /* ---------- 核心：局内技能总览 ---------- */
+  r_core(p, tab) {
+    const byEl = {};
+    EX.skills.forEach((s) => { (byEl[s.el] || (byEl[s.el] = [])).push(s); });
+    const elName = { '火': '🔥 火系', '冰': '❄️ 冰系', '电': '⚡ 电系', '风': '🌪️ 风系', '物': '🔩 物理' };
+    return Object.keys(byEl).map((el) => {
+      const c = (EX.elements.find((x) => x.k === el) || {}).c || '#ffd76a';
+      return `<div class="card"><div class="card-t" style="color:${c}">${elName[el] || el}</div>
+      ${byEl[el].map((s) => `<div class="item">
+        <div class="ic" style="border:1.5px solid ${c}66">${s.icon}</div>
+        <div class="info"><div class="nm">${s.n}
+          <span class="tag">${s.kind === 'active' ? '主动' : s.kind === 'summon' ? '召唤' : '被动'}</span></div>
+          <div class="sub">${s.desc}</div>
+          <div class="sub" style="color:#ffd76a">${s.up} · 上限 Lv${s.max}</div></div>
+      </div>`).join('')}</div>`;
+    }).join('');
+  },
+
   /* 奖励文本 */
   rwTxt(rw) {
     if (!rw) return '';
