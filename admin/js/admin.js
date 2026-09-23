@@ -76,13 +76,14 @@ const PAGES = {
     const total = PLIST.length;
     const online = PLIST.filter((p) => Date.now() - (p.lastSeen || 0) < 600000).length;
     const sumGold = PLIST.reduce((s, p) => s + (p.gold || 0), 0);
-    const avgLv = (PLIST.reduce((s, p) => s + (p.level || 0), 0) / total).toFixed(1);
-    const maxLv = Math.max(...PLIST.map((p) => p.level || 0));
+    const clearCnt = (p) => Object.keys(p.cleared || {}).length;
+    const avgLv = (PLIST.reduce((s, p) => s + clearCnt(p), 0) / total).toFixed(1);
+    const maxLv = Math.max(...PLIST.map(clearCnt));
     const sumKill = PLIST.reduce((s, p) => s + ((p.stats && p.stats.kills) || 0), 0);
     const sumClear = PLIST.reduce((s, p) => s + Object.keys(p.cleared || {}).length, 0);
     const dist = {};
     PLIST.forEach((p) => {
-      const k = '第' + E.chapterOf(p.level || 1) + '章';
+      const k = '第' + E.chapterOf(E.curLevel(p)) + '章';
       dist[k] = (dist[k] || 0) + 1;
     });
     const dk = Object.keys(dist).sort();
@@ -92,8 +93,8 @@ const PAGES = {
     <div class="grid g3">
       <div class="stat"><div class="v">${total}</div><div class="l">总玩家</div></div>
       <div class="stat"><div class="v">${online}</div><div class="l">10分钟内活跃</div></div>
-      <div class="stat"><div class="v">${maxLv}</div><div class="l">最高关卡</div></div>
-      <div class="stat"><div class="v">${avgLv}</div><div class="l">平均关卡</div></div>
+      <div class="stat"><div class="v">${maxLv}</div><div class="l">最多通关数</div></div>
+      <div class="stat"><div class="v">${avgLv}</div><div class="l">平均通关数</div></div>
       <div class="stat"><div class="v">${E.fmt(sumGold)}</div><div class="l">金币总量</div></div>
       <div class="stat"><div class="v">${E.fmt(sumKill)}</div><div class="l">累计击杀</div></div>
     </div>
@@ -102,10 +103,10 @@ const PAGES = {
     <div class="card"><div class="card-t">战力 TOP10</div>
       ${top.map((p, i) => `<div class="pl" data-sel="${p.uid}">
         <div class="pl-n">${i + 1}. ${p.name || '—'} <span class="tag y">${E.fmt(E.power(p))}</span></div>
-        <div class="pl-s">第 ${p.level || 1} 关 · 星 ${E.totalStars(p)} · 无尽 ${p.endlessBest || 0} 层</div></div>`).join('')}</div>
+        <div class="pl-s">${E.curLevel(p)} · 通关 ${Object.keys(p.cleared || {}).length} · 星 ${E.totalStars(p)}</div></div>`).join('')}</div>
     <div class="card"><div class="card-t">最近活跃</div>
       ${PLIST.slice().sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0)).slice(0, 8).map((p) =>
-        `<div class="pl" data-sel="${p.uid}"><div class="pl-n">${p.name || '—'} <span class="tag b">第${p.level || 1}关</span></div>
+        `<div class="pl" data-sel="${p.uid}"><div class="pl-n">${p.name || '—'} <span class="tag b">${E.curLevel(p)}</span></div>
         <div class="pl-s">${new Date(p.lastSeen || 0).toLocaleString()}</div></div>`).join('')}</div>`;
   },
 
@@ -117,8 +118,8 @@ const PAGES = {
     <div id="plList">
       ${PLIST.length ? PLIST.map((p) => `
         <div class="pl ${SEL === p.uid ? 'on' : ''}" data-sel="${p.uid}">
-          <div class="pl-n">${p.name || '—'} <span class="tag y">第${p.level || 1}关</span></div>
-          <div class="pl-s">UID:${p.uid} · 武器 Lv.${p.gunLv || 1} · ${new Date(p.lastSeen || 0).toLocaleString()}</div>
+          <div class="pl-n">${p.name || '—'} <span class="tag y">${E.curLevel(p)}</span></div>
+          <div class="pl-s">UID:${p.uid} · ${E.char(p).n} · ${E.gun(p).n} Lv.${p.gunLv || 1} · ${new Date(p.lastSeen || 0).toLocaleString()}</div>
           <div class="pl-t">
             <span class="tag y">🪙${E.fmt(p.gold || 0)}</span>
             <span class="tag b">💎${E.fmt(p.diamond || 0)}</span>
@@ -158,7 +159,7 @@ const PAGES = {
     return `
     <div class="card"><div class="card-t">🎁 内容发放</div>
       <select class="inp" id="grWho">
-        ${PLIST.length ? PLIST.map((x) => `<option value="${x.uid}" ${SEL === x.uid ? 'selected' : ''}>${x.name}（第${x.level || 1}关）</option>`).join('') : '<option value="">暂无玩家</option>'}
+        ${PLIST.length ? PLIST.map((x) => `<option value="${x.uid}" ${SEL === x.uid ? 'selected' : ''}>${x.name}（${E.curLevel(x)}）</option>`).join('') : '<option value="">暂无玩家</option>'}
       </select>
       <div class="lbl" style="color:var(--gold)">当前目标：${p ? p.name : '未选择'}</div></div>
     <div class="card"><div class="card-t">武器解锁 <span class="sub">全部 ${EX.guns.length} 把</span></div>
@@ -170,6 +171,8 @@ const PAGES = {
         <button class="btn sm" data-grchip="1">发放 1 块</button>
         <button class="btn sm" data-grchip="3">发放 3 块</button>
         <button class="btn sm" data-grchip="6">发放 6 块</button></div></div>
+    <div class="card"><div class="card-t">角色解锁</div>
+      <div class="grid g3">${EX.chars.map((c) => `<button class="btn sm" data-grchar="${c.id}">${c.icon}${c.n}</button>`).join('')}</div></div>
     <div class="card"><div class="card-t">外观发放</div>
       <div class="grid g3">${EX.skins.map((s) => `<button class="btn sm" data-grskin="${s.id}">${s.icon}${s.n}</button>`).join('')}</div></div>`;
   },
@@ -206,8 +209,10 @@ const PAGES = {
       ${EX.guns.map((g) => `<tr><td>${g.icon} ${g.n}</td><td>${g.dmg}</td><td>${g.rate}/s</td><td>${g.mag}</td><td>${g.reload}s</td><td>${g.pierce}</td></tr>`).join('')}</table></div>
     <div class="card"><div class="card-t">📖 章节</div>
       <table class="tbl"><tr><th>章节</th><th>怪物池</th><th>BOSS</th><th>血量系数</th></tr>
-      ${EX.chapters.map((c) => `<tr><td>${c.icon} ${c.n}</td><td>${c.pool.map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')}</td>
-        <td>${(EX.bosses.find((b) => b.id === c.boss) || {}).n}</td><td>×${c.hpMul}</td></tr>`).join('')}</table></div>`;
+      ${EX.levels.map((l) => `<tr><td>${l.id} ${l.n}</td>
+        <td>${l.pool.map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')}</td>
+        <td>${l.boss ? (Array.isArray(l.boss) ? l.boss.map((b) => (EX.bosses.find((x) => x.id === b) || {}).n).join('+') : (EX.bosses.find((b) => b.id === l.boss) || {}).n) : '—'}</td>
+        <td>×${l.mul}</td></tr>`).join('')}</table></div>`;
   },
 
   config() {
@@ -216,12 +221,12 @@ const PAGES = {
     <div class="card"><div class="card-t">🎛️ 数值配置</div>
       <div class="kv"><span>游戏名</span><b>${c.name || '向僵尸开炮'}</b></div>
       <div class="kv"><span>版本</span><b>${c.ver || '1.0.0'}</b></div>
-      <div class="kv"><span>关卡上限</span><b>${E.maxLevel()}</b></div></div>
+      <div class="kv"><span>关卡总数</span><b>${EX.levels.length}</b></div></div>
     <div class="card"><div class="card-t">成长曲线</div>
       <div class="kv"><span>武器每级成长</span><b>+${(E.GUN_GROW * 100).toFixed(0)}%</b></div>
       <div class="kv"><span>基础生命</span><b>${E.HP_BASE}</b></div>
       <div class="kv"><span>基础移速</span><b>${E.MOVE_BASE}</b></div>
-      <div class="kv"><span>章节血量系数</span><b>${EX.chapters.map((x) => '×' + x.hpMul).join(' ')}</b></div>
+      <div class="kv"><span>关卡强度系数</span><b>${EX.levels.map((x) => '×' + x.mul).join(' ')}</b></div>
       <div class="lbl">武器成长需 ≥ 怪物血量成长，否则后期卡关。</div></div>
     <div class="card"><div class="card-t">原始 JSON 编辑</div>
       <textarea class="inp" id="cfJson" rows="6">${JSON.stringify(c, null, 1)}</textarea>
@@ -271,12 +276,12 @@ function playerEditHTML() {
   <div class="card"><div class="card-t">编辑：<span style="color:var(--gold)">${p.name}</span> <span class="sub">${p.uid}</span></div>
     <div class="grid g2">
       <div><div class="lbl">代号</div><input class="inp" id="edName" value="${p.name || ''}"></div>
-      <div><div class="lbl">当前关卡</div><input class="inp" id="edLevel" type="number" value="${p.level || 1}"></div>
+      <div><div class="lbl">当前关卡</div><input class="inp" id="edLevel" value="${E.curLevel(p)}" placeholder="如 2-1"></div>
       <div><div class="lbl">金币</div><input class="inp" id="edGold" type="number" value="${p.gold || 0}"></div>
       <div><div class="lbl">钻石</div><input class="inp" id="edDia" type="number" value="${p.diamond || 0}"></div>
       <div><div class="lbl">武器等级</div><input class="inp" id="edGun" type="number" value="${p.gunLv || 1}"></div>
       <div><div class="lbl">无尽最佳</div><input class="inp" id="edEndless" type="number" value="${p.endlessBest || 0}"></div>
-      <div><div class="lbl">芯片碎片</div><input class="inp" id="edShard" type="number" value="${p.shards || 0}"></div>
+      <div><div class="lbl">枪械碎片</div><input class="inp" id="edShard" type="number" value="${(p.mat || {}).P01 || 0}"></div>
       <div><div class="lbl">武器</div>
         <select class="inp" id="edGunId">${EX.guns.map((g) => `<option value="${g.id}" ${p.gun === g.id ? 'selected' : ''}>${g.n}</option>`).join('')}</select></div>
     </div>
@@ -311,7 +316,7 @@ const BINDS = {
       const hit = PLIST.filter((p) => (p.name || '').toLowerCase().indexOf(k) >= 0 || (p.uid || '').indexOf(k) >= 0);
       D('#plList').innerHTML = hit.length ? hit.map((p) => `
         <div class="pl ${SEL === p.uid ? 'on' : ''}" data-sel="${p.uid}">
-          <div class="pl-n">${p.name} <span class="tag y">第${p.level || 1}关</span></div>
+          <div class="pl-n">${p.name} <span class="tag y">${E.curLevel(p)}</span></div>
           <div class="pl-s">UID:${p.uid}</div></div>`).join('') : '<div class="empty">未找到</div>';
       $$('#plList [data-sel]').forEach((el) => { el.onclick = () => { SEL = el.dataset.sel; this.render(); }; });
     };
@@ -320,24 +325,26 @@ const BINDS = {
     if (sv) sv.onclick = async () => {
       const p = PLIST.find((x) => x.uid === SEL); if (!p) return;
       p.name = D('#edName').value || p.name;
-      p.level = +D('#edLevel').value || 1;
+      const lvIn = (D('#edLevel').value || '').trim();
+      if (EX.levels.some((x) => x.id === lvIn)) p.curLevel = lvIn;
       p.gold = +D('#edGold').value || 0;
       p.diamond = +D('#edDia').value || 0;
       p.gunLv = +D('#edGun').value || 1;
       p.endlessBest = +D('#edEndless').value || 0;
-      p.shards = +D('#edShard').value || 0;
+      p.mat.P01 = +D('#edShard').value || 0;
       p.gun = D('#edGunId').value;
       await this.save(SEL, p); this.toast('已保存', 'ok'); this.render();
     };
     const mx = D('#edMax'); if (mx) mx.onclick = async () => {
       const p = PLIST.find((x) => x.uid === SEL); if (!p) return;
-      p.gold = 99999999; p.diamond = 999999; p.shards = 99999;
+      p.gold = 99999999; p.diamond = 999999;
+      for (const k in p.mat) p.mat[k] = 99999;
       await this.save(SEL, p); this.toast('资源已拉满', 'ok'); this.render();
     };
     const ec = D('#edChip'); if (ec) ec.onclick = async () => {
       const p = PLIST.find((x) => x.uid === SEL); if (!p) return;
       const slots = EX.chipSlots.map((s) => s.k);
-      slots.forEach((k) => { p.chips[k] = E.rollChip('红', k); });
+      slots.forEach((k) => { p.chips[k] = E.rollChipById('CH06'); });
       await this.save(SEL, p); this.toast('已发放 6 块红品芯片并装配', 'ok'); this.render();
     };
     const et = D('#edTalent'); if (et) et.onclick = async () => {
@@ -352,8 +359,8 @@ const BINDS = {
     };
     const ec2 = D('#edClear'); if (ec2) ec2.onclick = async () => {
       const p = PLIST.find((x) => x.uid === SEL); if (!p) return;
-      for (let i = 1; i <= E.maxLevel(); i++) p.cleared[i] = 3;
-      p.level = E.maxLevel();
+      EX.levels.forEach((l) => { p.cleared[l.id] = 3; });
+      p.curLevel = EX.levels[EX.levels.length - 1].id;
       await this.save(SEL, p); this.toast('已标记全部关卡 3 星通关', 'ok'); this.render();
     };
     const rs = D('#edReset'); if (rs) rs.onclick = async () => {
@@ -408,8 +415,17 @@ const BINDS = {
       b.onclick = async () => {
         const p = PLIST.find((x) => x.uid === SEL); if (!p) return this.toast('请先选择玩家', 'err');
         const q = D('#grQ') ? D('#grQ').value : '紫';
-        for (let i = 0; i < +b.dataset.grchip; i++) p.bag.push(E.rollChip(q, null));
+        const defId = q === '红' ? 'CH06' : q === '蓝' ? 'CH04' : 'CH01';
+        for (let i = 0; i < +b.dataset.grchip; i++) p.bag.push(E.rollChipById(defId));
         await this.save(SEL, p); this.toast('已发放 ' + b.dataset.grchip + ' 块' + q + '品芯片', 'ok');
+      };
+    });
+    $$('#body [data-grchar]').forEach((b) => {
+      b.onclick = async () => {
+        const p = PLIST.find((x) => x.uid === SEL); if (!p) return this.toast('请先选择玩家', 'err');
+        p.chars = p.chars || [];
+        if (p.chars.indexOf(b.dataset.grchar) < 0) p.chars.push(b.dataset.grchar);
+        await this.save(SEL, p); this.toast('已解锁角色', 'ok');
       };
     });
     $$('#body [data-grskin]').forEach((b) => {
@@ -484,7 +500,7 @@ A.toggleBuff = async function (k) {
   await Net.write('data/zb/config.json', c, 'admin: 切换 ' + k);
 };
 A.rebuildRank = async function () {
-  const lb = PLIST.map((p) => ({ u: p.uid, n: p.name, lv: p.level || 1, pw: E.power(p), eb: p.endlessBest || 0 }));
+  const lb = PLIST.map((p) => ({ u: p.uid, n: p.name, lv: E.curLevel(p), pw: E.power(p), eb: p.endlessBest || 0 }));
   lb.sort((a, b) => b.lv - a.lv || b.pw - a.pw);
   await Net.write('data/zb/leaderboard.json', { list: lb.slice(0, 50), updated: Date.now() }, 'admin: 重建排行榜');
 };
