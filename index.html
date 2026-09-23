@@ -9,6 +9,9 @@
 </head>
 <body>
 
+<div id="stage">
+<div id="app">
+
 <!-- ========== 加载 ========== -->
 <div class="screen on" id="loading">
   <div class="ld-logo">💥</div>
@@ -78,11 +81,13 @@
 
   <!-- 真实《向僵尸开炮》主界面底部：战斗 / 角色 / 核心 / 基地 / 任务 -->
   <nav class="hm-nav">
-    <button class="hn on" data-p="battle"><i>⚔️</i><span>战斗</span></button>
+    <button class="hn" data-p="shop"><i>🛒</i><span>商城</span></button>
     <button class="hn" data-p="role"><i>👤</i><span>角色</span></button>
+    <button class="hn main" data-p="battle"><i>⚔️</i><span>战斗</span></button>
     <button class="hn" data-p="core"><i>💠</i><span>核心</span></button>
     <button class="hn" data-p="base"><i>🏰</i><span>基地</span></button>
-    <button class="hn" data-p="task"><i>📋</i><span>任务</span></button>
+    <button class="hn" data-p="legion"><i>🛡️</i><span>军团</span></button>
+    <button class="hn" data-p="exped"><i>🚩</i><span>远征</span></button>
   </nav>
   <nav class="hm-nav2">
     <button class="hn2" data-p="gun"><i>🔫</i><span>武器</span></button>
@@ -90,7 +95,6 @@
     <button class="hn2" data-p="talent"><i>⭐</i><span>天赋</span></button>
     <button class="hn2" data-p="tavern"><i>🍺</i><span>酒馆</span></button>
     <button class="hn2" data-p="bag"><i>🎒</i><span>背包</span></button>
-    <button class="hn2" data-p="shop"><i>🛒</i><span>商城</span></button>
     <button class="hn2" data-p="act"><i>🎪</i><span>活动</span></button>
     <button class="hn2" data-p="rank"><i>🏆</i><span>排行</span></button>
     <button class="hn2" data-p="set"><i>⚙️</i><span>设置</span></button>
@@ -100,29 +104,63 @@
 <!-- ========== 战斗 ========== -->
 <div class="screen" id="battle">
   <canvas id="C"></canvas>
-  <div class="bt-top">
-    <div class="bt-l"><span id="btLevel">第 1 关</span><span id="btWave">第 1/3 波</span></div>
-    <div class="bt-r"><span id="btTime">00:00</span><button id="btPause">⏸</button></div>
+
+  <!-- 顶部状态栏：关卡 / 波次 / 倍速 / 暂停 -->
+  <div class="bt-topbar">
+    <button class="btb-icon" id="btPause">⏸</button>
+    <div class="btb-mid">
+      <div class="btb-lv" id="btLevel">第 1 关</div>
+      <div class="btb-wave">波次 <b id="btWave">1</b>/<span id="btWaveMax">20</span></div>
+    </div>
+    <button class="btb-speed" id="btSpeed">×1</button>
   </div>
-  <div class="bt-hp">
-    <div class="hpbar"><i id="btHpBar"></i><b id="btHpTxt">100/100</b></div>
-    <div class="shbar" id="btShWrap"><i id="btShBar"></i></div>
+
+  <!-- 左上：玩家等级 / 战力 -->
+  <div class="bt-hero">
+    <div class="bth-av"><img id="btHeroImg" onerror="this.style.display='none'"></div>
+    <div class="bth-info">
+      <div class="bth-lv">Lv.<b id="btLv">1</b></div>
+      <div class="bth-pw">战力 <b id="btPower">0</b></div>
+    </div>
   </div>
-  <div class="bt-stats">
-    <span>☠ <b id="btKill">0</b></span><span>🪙 <b id="btCoin">0</b></span><span>Lv.<b id="btLv">1</b></span>
+
+  <!-- 右上：击杀 / 金币 / 钻石 -->
+  <div class="bt-cur">
+    <span><img src="assets/icon/i_gold.jpg" onerror="this.style.display='none'"><b id="btCoin">0</b></span>
+    <span><img src="assets/icon/i_diamond.jpg" onerror="this.style.display='none'"><b id="btDia">0</b></span>
+    <span>☠ <b id="btKill">0</b></span>
   </div>
-  <!-- 防线血条（真实玩法：漏怪突破即失败） -->
-  <div class="bt-wall"><span>防线</span>
-    <div class="wallbar"><i id="btWallBar"></i></div><b id="btWallTxt">0/0</b>
+
+  <!-- 右侧：功能栏（暂停/加速/技能切换） -->
+  <div class="bt-side">
+    <button class="bts" id="btAuto" title="自动">🤖</button>
+    <button class="bts" id="btSwitch" title="切换">🔄</button>
   </div>
-  <!-- 技能栏：主动技能点击释放 -->
+
+  <!-- 底部：防线生命值 -->
+  <div class="bt-wall">
+    <span class="bw-lb">防线</span>
+    <div class="bw-bar"><i id="btWallBar"></i></div>
+    <b class="bw-tx" id="btWallTxt">0/0</b>
+  </div>
+
+  <!-- 底部：技能栏（主动技能点击释放） -->
   <div class="bt-skills" id="btSkills"></div>
-  <!-- 炮台建造栏 -->
+
+  <!-- 底部：炮台建造栏 -->
   <div class="bt-turret" id="btTurret"></div>
-  <!-- 瞄准摇杆（真实玩法：单指滑动调整炮口方向，松手自动开火） -->
-  <div class="joy" id="joy"><i id="joyKnob"></i></div>
-  <button class="bt-reload" id="btReload"><i>🔫</i><span id="btMag">30/30</span><em id="btReloadBar"></em></button>
-  <div class="bt-tip">滑动瞄准 · 松手自动开火 · 点技能释放 · 用金币建炮台</div>
+
+  <!-- 底部：武器 + 换弹 + 瞄准 -->
+  <div class="bt-bottom">
+    <div class="joy" id="joy"><i id="joyKnob"></i></div>
+    <button class="bt-reload" id="btReload">
+      <img id="btGunImg" class="gun-ic" onerror="this.style.display='none'">
+      <span id="btMag">30/30</span>
+      <em id="btReloadBar"></em>
+    </button>
+  </div>
+
+  <div class="bt-tip">滑动瞄准 · 松手自动开火 · 点技能释放 · 金币建炮台</div>
 </div>
 
 <!-- ========== 技能三选一 ========== -->
@@ -182,5 +220,7 @@
 <script src="js/wx.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/main.js"></script>
+</div>
+</div>
 </body>
 </html>
