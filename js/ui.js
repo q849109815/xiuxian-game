@@ -580,6 +580,21 @@ const UI = {
     }; });
   },
 
+  /* 僵尸 Q 版头像（按 id 稳定取一个） */
+  zAvatar(seed) {
+    const arr = EX.zAvatars || [];
+    if (!arr.length) return '🧟';
+    let h = 0; const str = String(seed || 'z');
+    for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+    return arr[h % arr.length];
+  },
+  zAvatarHTML(seed, cls) {
+    const u = this.zAvatar(seed);
+    return u.indexOf('assets/') === 0
+      ? `<div class="zav ${cls || ''}"><img src="${u}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>`
+      : `<div class="zav ${cls || ''}">${u}</div>`;
+  },
+
   r_bag(p, tab) {
     const GEMC = { r: 'gem r', b: 'gem b', g: 'gem g', p: 'gem p' };
     if (tab === '宝石') {
@@ -588,7 +603,8 @@ const UI = {
         <div class="grid4">${gs.length ? gs.map((g) => {
           const n = (p.gems || {})[g.id] || 0;
           return `<div class="gcell ${n ? '' : 'sel'}" data-gem="${g.id}">
-            <div class="${GEMC[g.c] || 'gem'}">${g.icon || '💎'}</div>
+            ${g.img ? `<img src="${g.img}" style="width:60%;height:60%;object-fit:contain">`
+                    : `<div class="${GEMC[g.c] || 'gem'}">${g.icon || '💎'}</div>`}
             <div class="gn">${g.n}</div>
             ${n ? `<span class="gq">×${n}</span>` : ''}${n == 0 ? '' : '<i class="gdot"></i>'}</div>`;
         }).join('') : '<div class="lbl">暂无宝石</div>'}</div>
@@ -679,7 +695,7 @@ const UI = {
     const g = gs.find((x) => x.id === sel) || gs[0];
     return `<div class="stone-panel">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div class="zav" style="width:52px;height:52px;font-size:30px">🧟</div>
+        ${this.zAvatarHTML('gem')}
         <div><b style="font-size:14px">宝石镶嵌</b>
           <div class="sub">镶嵌宝石可大幅提升属性</div></div>
       </div>
@@ -688,7 +704,8 @@ const UI = {
           const n = (p.gems || {})[x.id] || 0;
           const on = x.id === sel;
           return `<div class="zrow" data-gsel="${x.id}" style="${on ? 'border-color:var(--yel);background:rgba(255,201,60,.12)' : ''}">
-            <div class="gem ${x.c === 'r' ? 'r' : x.c === 'b' ? 'b' : x.c === 'g' ? 'g' : 'p'}">${x.icon || '💎'}</div>
+            <div class="gem ${x.c === 'r' ? 'r' : x.c === 'b' ? 'b' : x.c === 'g' ? 'g' : 'p'}">${x.img
+              ? `<img src="${x.img}" style="width:26px;height:26px;object-fit:contain">` : (x.icon || '💎')}</div>
             <div class="zi"><b>${x.n}</b><span>${x.desc}</span></div>
             <span class="st ${on ? 'on' : 'off'}">${n} 颗</span>
           </div>`;
@@ -699,9 +716,18 @@ const UI = {
         ${g ? ' · ' + g.desc : ''}
       </div>
       <button class="btn" id="gemInlay" style="width:100%;margin-top:10px">镶 嵌</button>
+      <button class="btn o" id="gemFuse" style="width:100%;margin-top:6px">🔨 宝石合成（3 颗 → 升一级）</button>
+      <div class="sub" style="margin-top:6px">当前宝石等级：<b style="color:var(--yel)">Lv.${p.gemLv || 0}</b>
+        加成：攻击 +${E.fmt(E.gemBonus(p).atk)} · 生命 +${E.fmt(E.gemBonus(p).hp)} · 暴击 +${((E.gemBonus(p).crit) * 100).toFixed(0)}%</div>
     </div>`;
   },
   b_gem(p, tab) {
+    const fb = $('#gemFuse');
+    if (fb) fb.onclick = () => {
+      const id = this.gemSel;
+      const r = E.gemFuse(p, id); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('gem'); this.home(); }
+    };
     $$('#pnBody [data-gsel]').forEach((el) => { el.onclick = () => {
       this.gemSel = el.dataset.gsel; this.open('gem');
     }; });
@@ -721,14 +747,14 @@ const UI = {
     if (tab === '聊天') {
       const msgs = (p.chat || []).slice(-20).reverse();
       return `<div class="card"><div class="card-t">聊天</div>
-        ${msgs.length ? msgs.map((m) => `<div class="zrow"><div class="zav">🧟</div>
+        ${msgs.length ? msgs.map((m) => `<div class="zrow">${this.zAvatarHTML(m.n)}
           <div class="zi"><b>${m.n || '匿名'}</b><span>${m.t || ''}</span></div></div>`).join('')
         : '<div class="lbl">暂无消息</div>'}</div>`;
     }
     if (tab === '申请') {
       const reqs = p.friendReq || [];
       return `<div class="card"><div class="card-t">好友申请 <span class="sub">${reqs.length}</span></div>
-        ${reqs.length ? reqs.map((r) => `<div class="zrow"><div class="zav">🧟</div>
+        ${reqs.length ? reqs.map((r) => `<div class="zrow">${this.zAvatarHTML(r.id)}
           <div class="zi"><b>${r.n}</b><span>战力 ${E.fmt(r.pw || 0)}</span></div>
           <button class="btn g sm" data-accept="${r.id}">接受</button></div>`).join('')
         : '<div class="lbl">暂无申请</div>'}</div>`;
@@ -737,7 +763,7 @@ const UI = {
     return `<div class="card"><div class="card-t">好友列表
       <span class="sub">${fs.length} 人 · 每个 +0.5% 攻击</span></div>
       ${fs.length ? fs.map((f) => `<div class="zrow">
-        <div class="zav">🧟</div>
+        ${this.zAvatarHTML(f.id)}
         <div class="zi"><b>${f.n}</b><span>战力 ${E.fmt(f.pw || 0)} · 可发送体力</span></div>
         <button class="btn sm g" data-sendst="${f.id}">送体力</button>
         <span class="st ${f.online ? 'on' : 'off'}">${f.online ? '在线' : '离线'}</span>
@@ -772,7 +798,7 @@ const UI = {
     const un = ms.filter((m) => !m.got).length;
     return `<div class="card"><div class="card-t">邮件 <span class="sub">${un} 封未读</span></div>
       ${ms.length ? ms.slice().reverse().map((m) => `<div class="zrow">
-        <div class="zav">🧟</div>
+        ${this.zAvatarHTML(m.t)}
         <div class="zi"><b>${m.t}</b><span>${m.b || ''}</span>
           <span>🪙${m.gold || 0} 💎${m.dia || 0}</span></div>
         ${m.got ? '<span class="st off">已领</span>'
