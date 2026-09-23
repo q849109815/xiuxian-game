@@ -67,7 +67,7 @@ const UI = {
     mail: ['邮件', ['邮件'], 'top'],
     act: ['活动', ['活动'], 'top'],
     rank: ['排行榜', ['全服'], 'top'],
-    set: ['设置', ['账号', '网络', '数值', '语言', '运营'], 'side'],
+    set: ['设置', ['账号', '兑换码', '网络', '数值', '语言', '运营'], 'side'],
     level: ['关卡选择', ['章节'], 'top'],
     base: ['基地建筑', ['建筑'], 'top'],
     tavern: ['酒馆招募', ['佣兵'], 'top'],
@@ -1107,7 +1107,8 @@ const UI = {
       const el = document.getElementById('swN');
       const n = Math.max(1, Math.min(max, parseInt((el && el.value) || '1', 10)));
       const r = E.sweep(p, lvId, n);
-      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      try { E.logAct(p, 'shop', 'sweep'); } catch (e) {}
+          this.toast(r.msg, r.ok ? 'ok' : 'err');
       if (r.ok) { if (window.SND) SND.play('pickup'); box.classList.remove('on'); this.open('level'); this.home(); }
     };
     const x1 = document.getElementById('swX'), x2 = document.getElementById('swX2');
@@ -1219,7 +1220,8 @@ const UI = {
     const isAch = tab === '成就商店';
     $$('#pnBody [data-buy]').forEach((b) => { b.onclick = () => {
       const r = isAch ? E.achShopBuyItem(p, b.dataset.buy) : E.eventShopBuy(p, b.dataset.buy);
-      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      try { E.logAct(p, 'shop', 'achShopBuyItem'); } catch (e) {}
+          this.toast(r.msg, r.ok ? 'ok' : 'err');
       if (r.ok) { if (window.SND) SND.play('equip'); this.open('ashop', tab); this.home(); }
     }; });
   },
@@ -1313,6 +1315,24 @@ const UI = {
           <b style="font-size:9.5px;color:var(--txt3)">${n.eg}</b></div>`).join('')}
       </div>`;
     }
+    /* ---------- 兑换码（后台礼包码系统） ---------- */
+    if (tab === '兑换码') {
+      return `<div class="card"><div class="card-t">礼包码兑换 <span class="sub">后台生成</span></div>
+        <div class="fld"><label>输入兑换码</label>
+          <input id="cdInput" placeholder="请输入 CDKEY" style="width:100%;text-transform:uppercase"
+            autocomplete="off"></div>
+        <button class="btn blk" id="cdGo">🎁 立即兑换</button>
+        <div id="cdTip" class="lbl">兑换码由后台「礼包码 → 生成兑换码」产出</div>
+      </div>
+      <div class="card"><div class="card-t">说明</div>
+        <div class="lbl" style="text-align:left;line-height:1.7">
+          · 每个兑换码有使用次数上限，先到先得<br>
+          · 过期 / 作废 / 已绑定的码无法使用<br>
+          · 若礼包模板设置了「限领 1 次」，同一账号只能兑换一次<br>
+          · 兑换成功后奖励直接发放到背包
+        </div>
+      </div>`;
+    }
     if (tab === '网络') {
       return `<div class="card"><div class="card-t">网络状态</div>
         <div class="kv"><span>状态</span><b style="color:${Net.online ? 'var(--green)' : '#ff8fa4'}">${Net.online ? '● 已连接' : '○ 离线'}</b></div>
@@ -1350,6 +1370,19 @@ const UI = {
       <button class="btn blk" id="setAdmin">进入管理后台</button></div>`;
   },
   b_set(p, tab) {
+    /* 礼包码兑换 */
+    const cdg = $('#cdGo');
+    if (cdg) cdg.onclick = async () => {
+      const v = ($('#cdInput') && $('#cdInput').value) || '';
+      if (!v.trim()) return this.toast('请输入兑换码', 'err');
+      cdg.disabled = true; cdg.textContent = '兑换中…';
+      const r = await MAIN.redeemCode(v);
+      cdg.disabled = false; cdg.textContent = '🎁 立即兑换';
+      const tip = $('#cdTip');
+      if (tip) tip.innerHTML = `<span style="color:${r.ok ? 'var(--green)' : 'var(--red)'}">${this.esc(r.msg)}</span>`;
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pick'); this.home(); }
+    };
     /* 表39 多语言切换 */
     $$('#pnBody [data-lang]').forEach((b) => { b.onclick = () => {
       if (window.OPS) OPS.setLang(b.dataset.lang);
