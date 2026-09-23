@@ -95,6 +95,9 @@
     <button class="hn2" data-p="talent"><i>⭐</i><span>天赋</span></button>
     <button class="hn2" data-p="tavern"><i>🍺</i><span>酒馆</span></button>
     <button class="hn2" data-p="bag"><i>🎒</i><span>背包</span></button>
+    <button class="hn2" data-p="mail"><i>📮</i><span>邮件</span></button>
+    <button class="hn2" data-p="friends"><i>👥</i><span>好友</span></button>
+    <button class="hn2" data-p="gem"><i>💎</i><span>宝石</span></button>
     <button class="hn2" data-p="act"><i>🎪</i><span>活动</span></button>
     <button class="hn2" data-p="rank"><i>🏆</i><span>排行</span></button>
     <button class="hn2" data-p="set"><i>⚙️</i><span>设置</span></button>
@@ -166,8 +169,11 @@
 <!-- ========== 技能三选一 ========== -->
 <div class="modal" id="choice">
   <div class="ch-box">
-    <div class="ch-t">升 级 · 选 择 技 能</div>
-    <div class="ch-sub">选择一项强化，可叠加至 10 级</div>
+    <div class="ch-head">
+      <b id="chTitle">选择技能</b>
+      <span class="ch-timer">⏱ <i id="chTimer">15</i> 秒</span>
+    </div>
+    <div class="ch-sub">局内技能选择 · 可叠加至 10 级</div>
     <div id="chCards"></div>
     <button class="ch-rf" id="chRefresh">🔄 刷新选项</button>
   </div>
@@ -202,6 +208,7 @@
   <div class="pn-mask" id="pnMask"></div>
   <div class="pn-box">
     <div class="pn-hd">
+      <span class="pn-back" id="pnBack">◀</span>
       <b id="pnTitle">标题</b>
       <button id="pnX">✕</button>
     </div>
