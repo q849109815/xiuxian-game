@@ -364,23 +364,30 @@ const E = {
       + ((sk && sk.bonus && sk.bonus.armor) || 0);
     const armor = c.armor * (1 + armorUp);
     /* 暴击 */
-    const crit = Math.min(0.85, c.crit + this.talentVal(p, 'crit') + this.chipVal(p, 'crit')
+    /* 武器词条加成（表30） */
+    const af = this.affixBonus(p);
+    /* 武器自带暴击/暴伤（表44） */
+    const gCrit = (g && g.crit) || 0, gCritDmg = (g && g.critDmg) || 1.5;
+    const crit = Math.min(0.85, c.crit + gCrit + af.crit + this.talentVal(p, 'crit') + this.chipVal(p, 'crit')
       + ((sk && sk.bonus && sk.bonus.crit) || 0) + this.gunStatVal(p, 'crit'));
-    const critDmg = 1.5 + this.chipVal(p, 'critDmg');
+    const critDmg = gCritDmg + af.critDmg + this.chipVal(p, 'critDmg');
     /* 移速 */
     const spdUp = this.chipVal(p, 'spd') + ((sk && sk.bonus && sk.bonus.spd) || 0);
     const moveSpd = c.spd * this.SPD_MUL * (1 + spdUp);
     return {
-      atk: (atk + this.gemBonus(p).atk) * (1 + EX.starBonus(p.charStar)),
+      atk: (atk * (1 + af.dmg) + this.gemBonus(p).atk) * (1 + EX.starBonus(p.charStar)),
       hp: (Math.round(hp) + this.gemBonus(p).hp) * (1 + EX.starBonus(p.charStar)),
       gunBase, armor: Math.round(armor),
-      rate: g.rate * (1 + this.chipVal(p, 'rate') + this.gunStatVal(p, 'rate')),
-      mag: g.mag + Math.round(this.gunStatVal(p, 'mag')),
-      pierce: g.pierce + Math.floor(this.gunStatVal(p, 'pierce')),
-      pellets: g.pellets || 1, range: 300, spread: 0,
+      rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gunStatVal(p, 'rate')),
+      mag: g.mag + af.mag + Math.round(this.gunStatVal(p, 'mag')),
+      pierce: g.pierce + af.pierce + Math.floor(this.gunStatVal(p, 'pierce')),
+      pellets: (g.pellets || 1) + af.extra, range: 300, spread: 0,
       crit: Math.min(0.85, crit + this.gemBonus(p).crit), critDmg,
       moveSpd: Math.round(moveSpd),
-      ls: this.talentVal(p, 'ls') + this.chipVal(p, 'ls'),
+      /* 词条额外项：吸血 / 换弹 / 爆炸范围 / 双倍概率 */
+      reloadCut: af.reload, erMul: 1 + af.er, doubleChance: af.double,
+      dmgMin: g.dmgMin || null, dmgMax: g.dmgMax || null,
+      ls: this.talentVal(p, 'ls') + this.chipVal(p, 'ls') + af.lifesteal,
       revive: Math.floor(p.talents.t_revive || 0),
       goldMul: 1 + this.talentVal(p, 'gold'),
       xpMul: 1 + this.talentVal(p, 'xp') + this.buildVal(p, 'xp'),
@@ -699,6 +706,53 @@ const E = {
     /* 返回下一个未完成且已满足触发条件的强制引导 */
     const g = (EX.guides || []).find((x) => x.must && !(p.guide || {})[x.id]);
     return g || null;
+  },
+
+  /* =========================================================
+   * 武器词条系统（表30 AF01~AF12 + 表44 词条槽位）
+   * ======================================================== */
+  gunSlots(p) {
+    const g = this.gun(p); return (g && g.slots) || 2;
+  },
+  /* 当前武器的词条列表 */
+  gunAffixes(p) {
+    p.gunAffix = p.gunAffix || {};
+    const gid = p.gunId || (this.gun(p) || {}).id || 'W01';
+    if (!p.gunAffix[gid]) p.gunAffix[gid] = [];
+    const sl = this.gunSlots(p);
+    /* 槽位变化时补齐/裁剪 */
+    while (p.gunAffix[gid].length < sl) p.gunAffix[gid].push(EX.rollAffixOne(false));
+    if (p.gunAffix[gid].length > sl) p.gunAffix[gid].length = sl;
+    return p.gunAffix[gid];
+  },
+  /* 词条加成汇总 */
+  affixBonus(p) {
+    const b = { dmg: 0, rate: 0, crit: 0, critDmg: 0, pierce: 0, lifesteal: 0,
+      mag: 0, reload: 0, er: 0, double: 0, extra: 0 };
+    this.gunAffixes(p).forEach((af) => {
+      const a = EX.affixOf(af.id); if (!a || !b.hasOwnProperty(a.k)) return;
+      if (a.stack) b[a.k] += af.v; else b[a.k] = Math.max(b[a.k], af.v);
+    });
+    return b;
+  },
+  /* 洗练：普通消耗金币，传说消耗钻石 */
+  rerollAffix(p, legend) {
+    const gid = p.gunId || (this.gun(p) || {}).id || 'W01';
+    p.gunAffix = p.gunAffix || {};
+    p.gunAffix[gid] = p.gunAffix[gid] || [];
+    if (legend) {
+      const c = EX.AFFIX_REROLL_LEGEND_DIA;
+      if ((p.diamond || 0) < c) return { ok: false, msg: '钻石不足（需 ' + c + '）' };
+      p.diamond -= c;
+      p.gunAffix[gid] = [EX.rollAffixOne(true), EX.rollAffixOne(true)].slice(0, this.gunSlots(p));
+    } else {
+      const c = EX.AFFIX_REROLL_GOLD;
+      if ((p.gold || 0) < c) return { ok: false, msg: '金币不足（需 ' + this.fmt(c) + '）' };
+      p.gold -= c;
+      p.gunAffix[gid] = [];
+      for (let i = 0; i < this.gunSlots(p); i++) p.gunAffix[gid].push(EX.rollAffixOne(false));
+    }
+    return { ok: true, msg: '洗练完成！' };
   },
 
   /* 宝石合成：3 颗同级 → 1 颗高一级（截图「宝石合成」） */
