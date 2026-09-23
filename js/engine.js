@@ -176,12 +176,11 @@ const E = {
     let extra = '';
     if (newA > oldA) {
       p.gunAdv = newA;
-      /* 进阶解锁新词条槽 */
+      /* 进阶解锁新词条槽（表30：按品质加权 蓝60%/紫30%/红10%） */
       const slot = EX.gunAdvance[newA].slot;
-      const pool = EX.gunStats.slice();
-      const st = pool[Math.floor(Math.random() * pool.length)];
+      const st = this.rollGunAffix(p, p.gun);
       p.gunStats = p.gunStats || {};
-      p.gunStats['s' + slot] = { k: st.k, v: +(st.base * (1 + newA * 0.5)).toFixed(4) };
+      p.gunStats['s' + slot] = { id: st.id, k: st.k, n: st.n, q: st.q, v: +(st.v * (1 + newA * 0.5)).toFixed(4) };
       extra = ' ⬆进阶至' + EX.gunAdvance[newA].q + '品，解锁词条：' + st.n;
     }
     return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra };
@@ -627,6 +626,79 @@ const E = {
       got += (c[k.k] || []).length;
     });
     return { got: got, all: all };
+  },
+
+  /* =========================================================
+   * 武器词条（表30 武器词条池 AF01~AF12）
+   * 进阶解锁词条槽，可消耗钻石洗练
+   * ======================================================== */
+  gunAffixSlots(p, gunId) {
+    /* p.gunAdv 是进阶档位数字 0~4（白/绿/蓝/紫/橙），对应 gunAdvance[].slot */
+    const adv = Math.max(0, Math.min(4, p.gunAdv || 0));
+    const row = (EX.gunAdvance || [])[adv];
+    return row ? (row.slot || 0) : 0;
+  },
+  rollGunAffix(p, gunId) {
+    const pool = EX.gunStats || [];
+    /* 按品质加权：蓝 60% / 紫 30% / 红 10% */
+    const r = Math.random();
+    const q = r < 0.60 ? '蓝' : r < 0.90 ? '紫' : '红';
+    const cand = pool.filter((x) => x.q === q);
+    const list = cand.length ? cand : pool;
+    const a = list[Math.floor(Math.random() * list.length)];
+    return { id: a.id, k: a.k, n: a.n, q: a.q, v: a.base };
+  },
+  gunAffixBonus(p) {
+    const out = { dmg: 0, rate: 0, crit: 0, critDmg: 0, pierce: 0, lifesteal: 0,
+      mag: 0, reload: 0, blastR: 0, pierce2: 0, double: 0, extraB: 0 };
+    const gid = p.gunId || 'W01';
+    const aff = (p.gunAffix || {})[gid] || [];
+    aff.forEach((a) => { if (a && out[a.k] != null) out[a.k] += a.v; });
+    return out;
+  },
+  /* 洗练：消耗钻石重随机全部词条 */
+  rerollGun(p, gunId) {
+    const gid = gunId || p.gun || 'W01';
+    const slots = this.gunAffixSlots(p, gid);
+    if (slots <= 0) return { ok: false, msg: '需先进阶武器才解锁词条槽' };
+    const cost = EX.REROLL_GUN_COST || 20;
+    if ((p.diamond || 0) < cost) return { ok: false, msg: '钻石不足（需 ' + cost + '）' };
+    p.diamond -= cost;
+    p.gunStats = p.gunStats || {};
+    /* 与进阶解锁保持同一套 key：s1 ~ s{slot} */
+    const names = [];
+    for (let i = 1; i <= slots; i++) {
+      const st = this.rollGunAffix(p, gid);
+      const adv = this.advOf(p.gunLv);
+      p.gunStats['s' + i] = { id: st.id, k: st.k, n: st.n, q: st.q, v: +(st.v * (1 + adv * 0.5)).toFixed(4) };
+      names.push(st.n);
+    }
+    return { ok: true, msg: '洗练成功！获得 ' + names.join('、') };
+  },
+  /* 进阶时自动补齐新解锁槽位的词条 */
+  fillGunAffix(p, gunId) {
+    const slots = this.gunAffixSlots(p, gunId);
+    p.gunAffix = p.gunAffix || {};
+    const cur = p.gunAffix[gunId] || [];
+    while (cur.length < slots) cur.push(this.rollGunAffix(p, gunId));
+    cur.length = slots;
+    p.gunAffix[gunId] = cur;
+    return cur;
+  },
+
+  /* =========================================================
+   * 新手引导（表21：12 个引导节点）
+   * ======================================================== */
+  guideDone(p, id) {
+    p.guide = p.guide || {};
+    if (p.guide[id]) return false;
+    p.guide[id] = 1;
+    return true;
+  },
+  guideNext(p) {
+    /* 返回下一个未完成且已满足触发条件的强制引导 */
+    const g = (EX.guides || []).find((x) => x.must && !(p.guide || {})[x.id]);
+    return g || null;
   },
 
   /* 宝石合成：3 颗同级 → 1 颗高一级（截图「宝石合成」） */
