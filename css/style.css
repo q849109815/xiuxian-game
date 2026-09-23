@@ -13,14 +13,51 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;height:100%;overflow:hidden;
-  background:#0a0e16;color:var(--txt);
+  background:#05080e;color:var(--txt);
   font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
   user-select:none;-webkit-user-select:none}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 input{font-family:inherit}
 
-#app{position:relative;width:100%;height:100%;max-width:430px;margin:0 auto;
-  overflow:hidden;background:var(--bg);box-shadow:0 0 40px rgba(0,0,0,.6)}
+/* =========================================================
+ * 9:16 竖屏适配：手机铺满 / PC 居中手机框
+ *   手机（窄屏）：#app 铺满视口
+ *   PC（宽屏）  ：#app 按视口高度反推 9:16 宽度，居中，两侧暗色背景
+ * ========================================================= */
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:
+    radial-gradient(ellipse at 50% 30%,#16202e 0%,#05080e 70%),
+    #05080e}
+/* 宽屏（PC）两侧装饰 */
+#stage::before,#stage::after{content:'';position:absolute;top:0;bottom:0;width:1px;
+  background:linear-gradient(180deg,transparent,rgba(255,165,60,.10),transparent);pointer-events:none}
+#stage::before{left:calc(50% - 8px)}
+#stage::after{right:calc(50% - 8px)}
+
+#app{position:relative;overflow:hidden;background:var(--bg);
+  width:100%;height:100%;
+  box-shadow:0 0 60px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.06)}
+/* PC 端：锁定 9:16，按高度自适应 */
+@media (min-aspect-ratio: 9/16){
+  #app{
+    height:100vh;
+    width:calc(100vh * 9 / 16);
+    max-width:100vw;
+    border-radius:14px;
+  }
+  /* 高度过大时限制，避免超出视口 */
+  @media (min-height:1200px){
+    #app{height:1200px;width:675px}
+  }
+}
+/* 超宽屏再收一点，保证完整可见 */
+@media (min-aspect-ratio: 3/2){
+  #app{height:96vh;width:calc(96vh * 9 / 16);max-width:100vw}
+}
+/* 手机竖屏：铺满 */
+@media (max-aspect-ratio: 9/16){
+  #app{width:100vw;height:100vh;border-radius:0}
+}
 .screen{position:absolute;inset:0;display:none;flex-direction:column}
 .screen.on{display:flex}
 
@@ -504,3 +541,108 @@ input{font-family:inherit}
   background:linear-gradient(135deg,#ffa53c,#ff7a3c);color:#1a1207;font-weight:700}
 .mc-card button.hired{background:rgba(92,216,255,.16);color:#5cd8ff;border:1px solid #5cd8ff44}
 .mc-card button:disabled{opacity:.45}
+
+/* =========================================================
+ * 战斗界面（真实《向僵尸开炮》布局 · 9:16 竖屏）
+ * 顶部状态栏 / 中部战场 / 右侧功能栏 / 底部防线+技能+武器
+ * ========================================================= */
+#battle{position:relative}
+#battle canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+/* --- 顶部状态栏 --- */
+.bt-topbar{position:absolute;left:0;right:0;top:0;height:46px;z-index:6;
+  display:flex;align-items:center;gap:8px;padding:0 8px;
+  background:linear-gradient(180deg,rgba(6,10,18,.92),rgba(6,10,18,0))}
+.btb-icon,.btb-speed{flex:0 0 auto;width:34px;height:34px;border-radius:9px;
+  background:rgba(12,18,30,.9);border:1px solid rgba(255,255,255,.14);
+  color:#cfd8e8;font-size:15px;display:flex;align-items:center;justify-content:center}
+.btb-speed{font-size:12px;font-weight:800;color:#ffd76a;border-color:rgba(255,215,106,.35)}
+.btb-mid{flex:1;text-align:center;min-width:0}
+.btb-lv{font-size:12px;font-weight:700;color:#e6edf7;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btb-wave{font-size:10px;color:#7d8ca8;margin-top:1px}
+.btb-wave b{color:#ffd76a;font-size:12px}
+
+/* --- 左上：等级战力 --- */
+.bt-hero{position:absolute;left:8px;top:52px;z-index:6;display:flex;align-items:center;gap:6px;
+  padding:4px 8px 4px 4px;border-radius:20px;background:rgba(8,13,22,.82);
+  border:1px solid rgba(255,255,255,.1)}
+.bth-av{width:30px;height:30px;border-radius:50%;overflow:hidden;flex:0 0 auto;
+  background:rgba(255,165,60,.14);display:flex;align-items:center;justify-content:center}
+.bth-av img{width:100%;height:100%;object-fit:cover}
+.bth-info{line-height:1.25}
+.bth-lv{font-size:11px;color:#ffd76a;font-weight:800}
+.bth-pw{font-size:9px;color:#7d8ca8}
+
+/* --- 右上：货币 --- */
+.bt-cur{position:absolute;right:8px;top:52px;z-index:6;display:flex;flex-direction:column;
+  gap:3px;align-items:flex-end}
+.bt-cur span{display:flex;align-items:center;gap:3px;font-size:10px;color:#cfd8e8;
+  padding:2px 6px;border-radius:8px;background:rgba(8,13,22,.82);border:1px solid rgba(255,255,255,.08)}
+.bt-cur span img{width:13px;height:13px;border-radius:3px}
+.bt-cur span b{color:#ffd76a;font-size:11px}
+
+/* --- 右侧功能栏 --- */
+.bt-side{position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:6;
+  display:flex;flex-direction:column;gap:7px}
+.bts{width:36px;height:36px;border-radius:50%;font-size:16px;
+  background:rgba(12,18,30,.9);border:1px solid rgba(255,255,255,.14);color:#cfd8e8}
+.bts.on{border-color:#5fd07a;color:#5fd07a;background:rgba(95,208,122,.14)}
+
+/* --- 底部：防线生命 --- */
+.bt-wall{position:absolute;left:10px;right:10px;bottom:196px;z-index:6;
+  display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:10px;
+  background:rgba(6,10,18,.85);border:1px solid rgba(255,165,60,.32)}
+.bw-lb{font-size:10px;color:#ffa53c;font-weight:800;flex:0 0 auto}
+.bw-bar{flex:1;height:10px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}
+.bw-bar i{display:block;height:100%;width:100%;border-radius:5px;
+  background:linear-gradient(90deg,#ffa53c,#ff6b3c);transition:width .18s}
+.bw-tx{font-size:10px;color:#ffd8a8;min-width:58px;text-align:right}
+
+/* --- 底部：技能栏 --- */
+.bt-skills{position:absolute;left:8px;right:8px;bottom:150px;z-index:6;
+  display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.bt-skills .bs{position:relative;width:42px;height:42px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  background:rgba(10,16,28,.92);border:1px solid rgba(255,255,255,.16)}
+.bt-skills .bs img{width:32px;height:32px;border-radius:7px;object-fit:cover}
+.bt-skills .bs>u{position:absolute;left:0;bottom:0;height:100%;width:0;
+  background:rgba(0,0,0,.58);pointer-events:none;transition:width .1s linear}
+.bt-skills .bs>b{position:absolute;right:2px;top:0;font-size:9px;color:#ffd76a;font-weight:800}
+.bt-skills .bs.cd{filter:grayscale(.7) brightness(.72)}
+
+/* --- 底部：炮台建造 --- */
+.bt-turret{position:absolute;left:8px;right:8px;bottom:106px;z-index:6;
+  display:flex;gap:5px;justify-content:center}
+.bt-turret button{flex:0 0 auto;padding:4px 6px;border-radius:8px;font-size:9px;
+  background:rgba(10,16,28,.92);border:1px solid rgba(255,255,255,.14);color:#cfd8e8}
+.bt-turret button img{width:22px;height:22px;border-radius:5px;object-fit:cover;
+  display:block;margin:0 auto 1px}
+.bt-turret button:disabled{opacity:.4}
+
+/* --- 底部操作区：摇杆 + 武器 --- */
+.bt-bottom{position:absolute;left:10px;right:10px;bottom:14px;height:82px;z-index:6;
+  display:flex;align-items:center;justify-content:space-between}
+.joy{position:relative;width:82px;height:82px;border-radius:50%;flex:0 0 auto;
+  background:rgba(10,16,28,.72);border:2px solid rgba(255,255,255,.14)}
+.joy i{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;
+  border-radius:50%;background:linear-gradient(180deg,#ffa53c,#ff7a3c);
+  box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.bt-reload{position:relative;flex:0 0 auto;width:82px;height:82px;border-radius:50%;
+  background:rgba(10,16,28,.72);border:2px solid rgba(255,215,106,.35);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.bt-reload .gun-ic{width:38px;height:38px;object-fit:contain;border-radius:6px}
+.bt-reload span{font-size:10px;color:#ffd76a;margin-top:2px;font-weight:700}
+.bt-reload em{position:absolute;left:0;bottom:0;height:100%;width:0;
+  background:rgba(0,0,0,.55);pointer-events:none}
+.bt-tip{position:absolute;left:0;right:0;bottom:2px;text-align:center;
+  font-size:9px;color:rgba(160,180,210,.5);z-index:5;pointer-events:none}
+
+/* 窄屏微调 */
+@media(max-height:640px){
+  .bt-wall{bottom:176px}
+  .bt-skills{bottom:134px}
+  .bt-turret{bottom:94px}
+  .bt-bottom{bottom:8px;height:72px}
+  .joy,.bt-reload{width:72px;height:72px}
+}
