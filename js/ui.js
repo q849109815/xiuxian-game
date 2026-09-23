@@ -67,6 +67,8 @@ const UI = {
     base: ['基地建筑', ['建筑']],
     tavern: ['酒馆招募', ['佣兵']],
     core: ['核心技能', ['技能']],
+    legion: ['军团', ['军团', '成员']],
+    exped: ['远征堡垒', ['远征', '巡逻']],
   },
 
   open(key, tab) {
@@ -141,13 +143,127 @@ const UI = {
       const c = (EX.elements.find((x) => x.k === el) || {}).c || '#ffd76a';
       return `<div class="card"><div class="card-t" style="color:${c}">${elName[el] || el}</div>
       ${byEl[el].map((s) => `<div class="item">
-        <div class="ic" style="border:1.5px solid ${c}66">${s.icon}</div>
+        <div class="ic" style="border:1.5px solid ${c}66">${s.img
+          ? `<img src="${s.img}" style="width:30px;height:30px;border-radius:6px;object-fit:cover">`
+          : s.icon}</div>
         <div class="info"><div class="nm">${s.n}
           <span class="tag">${s.kind === 'active' ? '主动' : s.kind === 'summon' ? '召唤' : '被动'}</span></div>
           <div class="sub">${s.desc}</div>
           <div class="sub" style="color:#ffd76a">${s.up} · 上限 Lv${s.max}</div></div>
       </div>`).join('')}</div>`;
     }).join('');
+  },
+
+  /* ---------- 军团 ---------- */
+  r_legion(p, tab) {
+    const lg = p.legion || null;
+    if (tab === '成员') {
+      if (!lg) return '<div class="empty">尚未加入军团</div>';
+      const mem = lg.members || [];
+      return `<div class="card"><div class="card-t">成员 <span class="sub">${mem.length} 人</span></div>
+        ${mem.map((m) => `<div class="kv"><span>${m.role || '成员'} ${m.n}</span><b>战力 ${E.fmt(m.pw || 0)}</b></div>`).join('')}
+      </div>`;
+    }
+    if (lg) {
+      return `<div class="card"><div class="card-t">${lg.n}</div>
+        <div class="kv"><span>军团等级</span><b>Lv.${lg.lv || 1}</b></div>
+        <div class="kv"><span>人数</span><b>${(lg.members || []).length}/${lg.cap || 50}</b></div>
+        <div class="kv"><span>我的贡献</span><b>${E.fmt(p.legionExp || 0)}</b></div>
+        <div class="sub" style="padding:6px 2px">捐献资源可提升军团等级，解锁军团商店与军团副本。</div>
+        <button class="btn" id="lgDonate" style="width:100%;margin-top:6px">🪙 捐献 5000 金币（+100 贡献）</button>
+      </div>`;
+    }
+    return `<div class="card"><div class="card-t">加入军团</div>
+      <div class="sub" style="padding:4px 2px">军团可提供属性加成、军团副本与军团商店。</div>
+      ${EX.legions.map((l) => `<div class="mc-card">
+        <div class="mi">${l.icon}</div>
+        <div class="mn"><b>${l.n}</b><span>${l.desc}</span>
+          <span>人数 ${l.mem} · 需要战力 ${E.fmt(l.need)}</span></div>
+        <button data-join="${l.id}" ${E.power(this.P) < l.need ? 'disabled' : ''}>加入</button>
+      </div>`).join('')}
+      <div class="sub" style="padding:6px 2px">或花费 <b>20000 金币</b> 自建军团</div>
+      <button class="btn" id="lgCreate" style="width:100%;margin-top:4px">🏰 自建军团（20000 金币）</button>
+    </div>`;
+  },
+  b_legion(p, tab) {
+    const jb = $$('#pnBody [data-join]');
+    jb.forEach((b) => { b.onclick = () => {
+      const l = EX.legions.find((x) => x.id === b.dataset.join); if (!l) return;
+      p.legion = { id: l.id, n: l.n, lv: 1, cap: 50, members: [{ n: p.name, role: '成员', pw: E.power(p) }] };
+      E.save(p); this.toast('已加入 ' + l.n, 'ok');
+      if (window.SND) SND.play('upgrade'); this.open('legion'); this.home();
+    }; });
+    const cb = $('#lgCreate');
+    if (cb) cb.onclick = () => {
+      if (p.gold < 20000) return this.toast('金币不足', 'err');
+      p.gold -= 20000;
+      p.legion = { id: 'my', n: p.name + '的军团', lv: 1, cap: 50,
+        members: [{ n: p.name, role: '团长', pw: E.power(p) }] };
+      E.save(p); this.toast('军团创建成功', 'ok'); this.open('legion'); this.home();
+    };
+    const db = $('#lgDonate');
+    if (db) db.onclick = () => {
+      if (p.gold < 5000) return this.toast('金币不足', 'err');
+      p.gold -= 5000; p.legionExp = (p.legionExp || 0) + 100;
+      E.save(p); this.toast('捐献成功 +100 贡献', 'ok'); this.open('legion'); this.home();
+    };
+  },
+
+  /* ---------- 远征堡垒 ---------- */
+  r_exped(p, tab) {
+    if (tab === '巡逻') {
+      const last = p.patrolT || 0;
+      const now = Date.now();
+      const hrs = Math.min(8, (now - last) / 3600000);
+      const gain = Math.floor(hrs * ((p.patrolRate || 16)));
+      return `<div class="card"><div class="card-t">🚩 巡逻收益
+        <span class="sub">章节越高，收益越大</span></div>
+        <div class="kv"><span>当前章节</span><b>第 ${p.ch || 1} 章</b></div>
+        <div class="kv"><span>每小时产出</span><b>${p.patrolRate || 16} 金币</b></div>
+        <div class="kv"><span>累计可领</span><b>${E.fmt((p.patrolAcc || 0) + gain)}</b></div>
+        <div class="sub" style="padding:6px 2px">最长累计 8 小时，离线也会累积。</div>
+        <button class="btn" id="ptClaim" style="width:100%;margin-top:6px">领取巡逻收益</button>
+        <button class="btn g" id="ptFast" style="width:100%;margin-top:6px">⚡ 快速巡逻（${p.patrolFast || 0}/3）</button>
+      </div>`;
+    }
+    return `<div class="card"><div class="card-t">远征副本</div>
+      <div class="sub" style="padding:4px 2px">消耗体力挑战，产出稀有材料与宝石。</div>
+      ${EX.expeds.map((e) => {
+        const ok = (p.stamina || 0) >= e.cost;
+        return `<div class="mc-card">
+          <div class="mi">${e.icon}</div>
+          <div class="mn"><b>${e.n}</b><span>${e.desc}</span>
+            <span>消耗体力 ${e.cost} · 推荐战力 ${E.fmt(e.need)}</span></div>
+          <button data-exped="${e.id}" ${!ok ? 'disabled' : ''}>${ok ? '挑战' : '体力不足'}</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  },
+  b_exped(p, tab) {
+    $$('#pnBody [data-exped]').forEach((b) => { b.onclick = () => {
+      const e = EX.expeds.find((x) => x.id === b.dataset.exped); if (!e) return;
+      if ((p.stamina || 0) < e.cost) return this.toast('体力不足', 'err');
+      p.stamina -= e.cost;
+      const rw = { gold: e.gold, ['M0' + ((Math.floor(Math.random() * 5)) + 1)]: e.mat };
+      for (const k in rw) { if (k === 'gold') p.gold += rw[k]; else p.mat[k] = (p.mat[k] || 0) + rw[k]; }
+      E.save(p); this.toast('远征完成，获得奖励', 'ok');
+      if (window.SND) SND.play('upgrade'); this.open('exped'); this.home();
+    }; });
+    const cb = $('#ptClaim');
+    if (cb) cb.onclick = () => {
+      const now = Date.now();
+      const hrs = Math.min(8, (now - (p.patrolT || now)) / 3600000);
+      const gain = Math.floor(hrs * (p.patrolRate || 16)) + (p.patrolAcc || 0);
+      if (gain <= 0) return this.toast('暂无可领收益', 'err');
+      p.gold += gain; p.patrolAcc = 0; p.patrolT = now;
+      E.save(p); this.toast('领取 ' + E.fmt(gain) + ' 金币', 'ok'); this.open('exped', '巡逻'); this.home();
+    };
+    const fb = $('#ptFast');
+    if (fb) fb.onclick = () => {
+      if ((p.patrolFast || 0) <= 0) return this.toast('快速巡逻次数已用完', 'err');
+      p.patrolFast--; p.gold += (p.patrolRate || 16) * 2;
+      E.save(p); this.toast('快速巡逻完成', 'ok'); this.open('exped', '巡逻'); this.home();
+    };
   },
 
   /* 奖励文本 */
@@ -659,17 +775,36 @@ const UI = {
   },
   btTick() {
     const r = BT.run; if (!r) return;
-    $('#btWave').textContent = r.endless ? ('第 ' + r.wave + ' 层') : ('第 ' + r.wave + '/' + r.waveTotal + ' 波');
-    const s = Math.floor(r.time);
-    $('#btTime').textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
-    $('#btHpBar').style.width = Math.max(0, r.hp / r.maxHp * 100) + '%';
-    $('#btHpTxt').textContent = Math.ceil(r.hp) + '/' + Math.ceil(r.maxHp);
+    /* 顶部关卡 / 波次 */
+    const blv = $('#btLevel');
+    if (blv) blv.textContent = r.endless ? ('无尽 ' + r.wave + ' 层') : (r.def.n || ('第 ' + r.wave + ' 波'));
+    const bw0 = $('#btWave'); if (bw0) bw0.textContent = r.wave;
+    const bwm0 = $('#btWaveMax'); if (bwm0) bwm0.textContent = r.waveTotal;
+    const bt = $('#btTime');
+    if (bt) { const s = Math.floor(r.time);
+      bt.textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+    /* 血量（旧布局，保留兼容） */
+    const hb = $('#btHpBar'); if (hb) hb.style.width = Math.max(0, r.hp / r.maxHp * 100) + '%';
+    const ht = $('#btHpTxt'); if (ht) ht.textContent = Math.ceil(r.hp) + '/' + Math.ceil(r.maxHp);
     const sh = $('#btShWrap'), sb = $('#btShBar');
-    if (r.maxShield > 0) { sh.style.display = ''; sb.style.width = (r.shield / r.maxShield * 100) + '%'; }
-    else sh.style.display = 'none';
-    $('#btKill').textContent = r.kills;
+    if (sh && sb) { if (r.maxShield > 0) { sh.style.display = ''; sb.style.width = (r.shield / r.maxShield * 100) + '%'; }
+      else sh.style.display = 'none'; }
+    const bk = $('#btKill'); if (bk) bk.textContent = r.kills;
     const cg = $('#btCoin'); if (cg) cg.textContent = E.fmt(r.coin != null ? r.coin : r.gold);
     $('#btLv').textContent = r.lv;
+    /* 顶部波次 */
+    const bw = $('#btWave'); if (bw) bw.textContent = r.wave;
+    const bwm = $('#btWaveMax'); if (bwm) bwm.textContent = r.waveTotal;
+    /* 左上英雄立绘 + 战力 */
+    const hi = $('#btHeroImg');
+    if (hi && !hi.src) { const av = (E.char(this.P) || {}).img; if (av) hi.src = av; }
+    const bpw = $('#btPower'); if (bpw) bpw.textContent = E.fmt(E.power(this.P));
+    const bd = $('#btDia'); if (bd) bd.textContent = E.fmt(this.P.diamond || 0);
+    /* 武器图标 */
+    const gi = $('#btGunImg');
+    if (gi && !gi.src) { const g = E.gun(this.P); if (g && g.img) gi.src = g.img; }
+    /* 倍速按钮 */
+    const sp = $('#btSpeed'); if (sp) sp.textContent = '×' + (BT.speed || 1);
     /* 防线血条 */
     const wb = $('#btWallBar'), wt = $('#btWallTxt');
     if (wb) {
@@ -690,7 +825,7 @@ const UI = {
     }
     const sk = $('#btSkills');
     const ids = Object.keys(r.skills).filter((id) => {
-      const d = EX.skills.find((x) => x.id === id); return d && d.kind === 'periodic';
+      const d = EX.skills.find((x) => x.id === id); return d && d.kind !== 'passive';
     });
     const key = ids.join(',') + '|' + ids.map((i) => (r.cd[i] || 0).toFixed(1)).join(',');
     if (sk.dataset.k !== key) {
