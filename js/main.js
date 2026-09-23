@@ -120,6 +120,11 @@ function startBattle(mode, levelId) {
   battleLevel = id;
 
   UI.show('battle');
+  /* 音频：战斗 BGM */
+  if (window.SND) {
+    const isBoss = BT.run && (BT.run.def.cond === 'boss' || BT.run.def.cond === 'bossAll');
+    SND.bgm(id === 'endless' ? 'endless' : isBoss ? 'boss' : 'battle');
+  }
   BT.joy = { x: 0, y: 0 };
   const knob = document.getElementById('joyKnob');
   if (knob) knob.style.transform = 'translate(0,0)';
@@ -136,6 +141,7 @@ function startBattle(mode, levelId) {
 
 function onBattleEnd(res, d) {
   if (hudT) { clearInterval(hudT); hudT = null; }
+  if (window.SND) { SND.play(res === 'win' ? 'win' : 'lose'); SND.bgm('base'); }
   const r = BT.run;
   const kills = d.kills || 0;
   const endless = r.endless;
@@ -295,7 +301,7 @@ function bindAll() {
     }
   };
   const rb = document.getElementById('rsBack');
-  if (rb) rb.onclick = () => { UI.hideResult(); UI.home(); UI.show('home'); };
+  if (rb) rb.onclick = () => { UI.hideResult(); UI.home(); UI.show('home'); if (window.SND) SND.bgm('base'); };
 
   document.addEventListener('visibilitychange', () => { if (document.hidden && BT.on) BT.paused = true; });
   window.addEventListener('beforeunload', () => { if (P) MAIN.save(); });
