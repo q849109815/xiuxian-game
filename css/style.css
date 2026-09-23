@@ -807,3 +807,92 @@ input{font-family:inherit}
 #panel[data-tp="bottom"] .pn-main{flex-direction:column}
 #panel[data-tp="bottom"] .pn-tabs{order:2}
 #panel[data-tp="bottom"] .pn-body{order:1}
+
+/* =========================================================
+ * 战斗 HUD（按真实截图 44/45/46/48/49/50 一比一）
+ * ========================================================= */
+/* 顶部：关卡名 + 等级 + 计时 + 倍速 */
+.bt-topbar{display:flex;align-items:center;gap:8px;padding:6px 10px 4px}
+.btb-mid{flex:1;text-align:center;min-width:0}
+.btb-lv{font-size:13px;font-weight:800;color:#fff;letter-spacing:.5px;
+  text-shadow:0 2px 4px rgba(0,0,0,.8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btb-sub{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:1px;
+  font-size:10.5px;color:#dfe8f5;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.btb-lvn{color:var(--yel);font-weight:800}
+.btb-lvn b{font-size:11.5px}
+.btb-tm{font-variant-numeric:tabular-nums;font-weight:700;letter-spacing:.5px}
+.btb-wv{opacity:.9}
+.btb-wv b{color:#fff}
+.btb-speed{padding:3px 9px;border-radius:9px;font-size:11px;font-weight:800;
+  background:rgba(0,0,0,.45);border:1.5px solid rgba(255,255,255,.35);color:var(--yel)}
+
+/* 右上：武器 + 弹药 */
+.bt-ammo{position:absolute;right:8px;top:46px;display:flex;align-items:center;gap:5px;
+  padding:4px 8px;border-radius:10px;background:rgba(0,0,0,.42);
+  border:1.5px solid rgba(255,255,255,.28)}
+.ba-gun{width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.ba-gun img{width:100%;height:100%;object-fit:contain}
+.ba-mag{font-size:12px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;
+  text-shadow:0 1px 3px #000}
+.ba-mag b{color:#fff}
+.ba-mag span{opacity:.65;font-size:10px}
+
+/* 对话气泡（截图45/46） */
+.bt-talk{position:absolute;left:50%;top:23%;transform:translateX(-50%);
+  max-width:78%;padding:9px 13px;border-radius:14px;
+  background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(226,236,250,.94));
+  color:#1b2436;font-size:11.5px;line-height:1.45;font-weight:600;
+  border:2px solid rgba(255,255,255,.7);
+  box-shadow:0 5px 16px rgba(0,0,0,.45);
+  opacity:0;transition:opacity .3s;pointer-events:none;z-index:12}
+.bt-talk.on{opacity:1;animation:talkIn .3s ease-out}
+.bt-talk::after{content:'';position:absolute;left:26px;bottom:-8px;
+  border:8px solid transparent;border-top-color:rgba(232,240,250,.95)}
+@keyframes talkIn{from{transform:translateX(-50%) translateY(8px) scale(.96);opacity:0}
+  to{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}
+
+/* 防线血条：绿色 + 心形 + 数值（截图44/45/48/49/50） */
+.bt-wall{display:flex;align-items:center;gap:7px;padding:0 10px 4px}
+.bw-hp{flex:1;height:13px;border-radius:8px;overflow:hidden;
+  background:rgba(0,0,0,.5);border:1.5px solid rgba(255,255,255,.32);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
+.bw-hp i{display:block;height:100%;border-radius:6px;
+  background:linear-gradient(90deg,#4caf50,#7ed957 60%,#a5f08a);
+  box-shadow:0 0 8px rgba(126,217,87,.6);transition:width .25s}
+.bw-num{display:flex;align-items:center;gap:3px;flex:0 0 auto;
+  font-size:12px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000;
+  font-variant-numeric:tabular-nums}
+.bw-heart{color:#ff5c7a;font-size:12px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+/* 技能卡 NEW 角标（截图47） */
+.ccard{position:relative}
+.cc-new{position:absolute;right:-4px;top:-6px;z-index:3;
+  padding:2px 7px;border-radius:8px;font-size:9.5px;font-weight:800;font-style:normal;
+  color:#fff;background:linear-gradient(135deg,#ff5c7a,#e0234a);
+  border:1.5px solid rgba(255,255,255,.7);
+  box-shadow:0 2px 7px rgba(224,35,74,.6);transform:rotate(8deg)}
+/* 刷新次数（截图47） */
+.ch-rfnum{text-align:center;font-size:10.5px;color:var(--txt2);margin:6px 0 3px}
+/* 结算：新纪录 / 技能伤害 / 剩余次数（截图51） */
+.rs-new{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:800;
+  color:#fff;background:linear-gradient(135deg,#ff5c7a,#e0234a);
+  box-shadow:0 2px 6px rgba(224,35,74,.5)}
+.rs-dmg{margin:8px 0 4px;padding:8px 10px;border-radius:11px;
+  background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.14)}
+.rsd-t{font-size:10.5px;color:var(--yel);font-weight:800;margin-bottom:5px;letter-spacing:1px}
+.rsd-r{display:flex;align-items:center;gap:6px;font-size:10.5px;padding:2px 0;color:var(--txt2)}
+.rsd-r span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rsd-r b{color:#fff;font-variant-numeric:tabular-nums}
+.rsd-r i{font-style:normal;color:var(--txt3);font-size:9.5px;width:52px;text-align:right}
+.rs-times{text-align:center;font-size:10.5px;color:var(--txt2);margin:5px 0}
+/* 升级弹窗（截图52） */
+.lvup-box{text-align:center;padding:14px}
+.lvup-badge{width:82px;height:82px;margin:0 auto 8px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:36px;font-weight:900;color:#fff;
+  background:radial-gradient(circle at 35% 30%,#ffe9a0,var(--gold) 45%,#e08c14);
+  border:3px solid rgba(255,255,255,.65);
+  box-shadow:0 0 26px rgba(255,201,60,.75),inset 0 3px 8px rgba(255,255,255,.5);
+  animation:lvPop .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes lvPop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.lvup-t{font-size:15px;font-weight:800;color:var(--yel);letter-spacing:2px}
+.lvup-rw{margin-top:8px;font-size:12px;color:#fff}
