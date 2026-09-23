@@ -9,6 +9,7 @@ const E = {
     return {
       uid, name, gender: gender || 'm',
       avatar: gender === 'f' ? '👩‍🚀' : '👨‍🚀',
+      avatarImg: gender === 'f' ? 'assets/char/hero_f.jpg' : 'assets/char/hero_m.jpg',
       lv: 1, exp: 0,
       level: 1, maxLevel: 1, endlessBest: 0,
       gold: 500, diamond: 100,
