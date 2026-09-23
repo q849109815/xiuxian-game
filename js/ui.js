@@ -1030,11 +1030,36 @@ const UI = {
     $('#btLv').textContent = '1';
     $('#btSkills').innerHTML = '';
   },
+  /* 战斗对话气泡（截图45/46：核心G-94 协同作战） */
+  btTalk(text, ms) {
+    const el = $('#btTalk'), tx = $('#btTalkTx');
+    if (!el || !tx || !text) return;
+    tx.textContent = text;
+    el.classList.add('on');
+    clearTimeout(this._talkT);
+    this._talkT = setTimeout(() => el.classList.remove('on'), ms || 4200);
+  },
+
+  /* 开局台词（截图45/46） */
+  btIntroTalk(r) {
+    const lines = [
+      '丧尸越来越多了，守住防线！',
+      '丧尸大队马上赶到，弹药资源有限，申请支援！',
+      '我是来自后方实验室的核心G-94，我的任务是协同你一起作战，对抗尸潮。请快速填充弹药，接下来我会配合你的。',
+    ];
+    this.btTalk(lines[Math.floor(Math.random() * lines.length)], 4600);
+  },
+
   btTick() {
     const r = BT.run; if (!r) return;
     /* 顶部关卡 / 波次 */
     const blv = $('#btLevel');
-    if (blv) blv.textContent = r.endless ? ('无尽 ' + r.wave + ' 层') : (r.def.n || ('第 ' + r.wave + ' 波'));
+    if (blv) {
+      /* 截图格式：1.城市大街 */
+      const nm = r.endless ? ('无尽 ' + r.wave + ' 层')
+        : (r.def && r.def.n ? r.def.n : ('第 ' + r.wave + ' 波'));
+      blv.textContent = r.endless ? nm : ((r.ch || 1) + '.' + String(nm).replace(/^第\s*|^\s*关/g, ''));
+    }
     const bw0 = $('#btWave'); if (bw0) bw0.textContent = r.wave;
     const bwm0 = $('#btWaveMax'); if (bwm0) bwm0.textContent = r.waveTotal;
     const bt = $('#btTime');
@@ -1057,17 +1082,24 @@ const UI = {
     if (hi && !hi.src) { const av = (E.char(this.P) || {}).img; if (av) hi.src = av; }
     const bpw = $('#btPower'); if (bpw) bpw.textContent = E.fmt(E.power(this.P));
     const bd = $('#btDia'); if (bd) bd.textContent = E.fmt(this.P.diamond || 0);
-    /* 武器图标 */
+    /* 武器图标（底部 + 右上） */
     const gi = $('#btGunImg');
     if (gi && !gi.src) { const g = E.gun(this.P); if (g && g.img) gi.src = g.img; }
+    const gi2 = $('#btGunImg2');
+    if (gi2 && !gi2.src) { const g2 = E.gun(this.P); if (g2 && g2.img) gi2.src = g2.img; }
+    /* 右上弹药 30/30 */
+    const mg2 = $('#btMag2'), mgm = $('#btMagMax');
+    if (mg2) mg2.textContent = r.mag != null ? r.mag : 30;
+    if (mgm) mgm.textContent = (E.attrs(this.P).mag) || 30;
     /* 倍速按钮 */
-    const sp = $('#btSpeed'); if (sp) sp.textContent = '×' + (BT.speed || 1);
+    const sp = $('#btSpeed'); if (sp) sp.textContent = 'X' + (BT.speed || 1);
     /* 防线血条 */
     const wb = $('#btWallBar'), wt = $('#btWallTxt');
     if (wb) {
       const wm = r.wallMax || r.maxHp, wv = r.wallHp != null ? r.wallHp : r.hp;
       wb.style.width = Math.max(0, wv / wm * 100) + '%';
-      if (wt) wt.textContent = Math.ceil(Math.max(0, wv)) + '/' + Math.round(wm);
+      if (wt) wt.textContent = Math.ceil(Math.max(0, wv));
+      /* 截图：只显示当前血量数值（如 3000），不显示上限 */
     }
     const rl = $('#btReload');
     if (r.reloading) {
@@ -1146,18 +1178,31 @@ const UI = {
         }
       }, 1000);
     }
+    const owned = (BT.run && BT.run.skills) ? BT.run.skills : {};
+    /* 截图47：刷新按钮 + 当局剩余观看次数 */
+    this.rfLeft = (this.rfLeft == null ? 1 : this.rfLeft);
+    const rfB = $('#chRefresh');
+    if (rfB) {
+      rfB.innerHTML = '🔄 刷新';
+      rfB.disabled = this.rfLeft <= 0;
+      rfB.style.opacity = this.rfLeft > 0 ? '1' : '.45';
+    }
+    const rfN = $('#chRfNum');
+    if (rfN) rfN.textContent = '当局剩余观看次数 ' + Math.max(0, this.rfLeft) + '/1';
     $('#chCards').innerHTML = picks.map((s) => {
+      const isNew = !owned[s.id];
       const L = ((BT.run && BT.run.skills ? BT.run.skills[s.id] : 0) || 0);
       const el = EX.elements.find((x) => x.k === s.el) || { c: '#ffd76a' };
       const kindTxt = s.kind === 'passive' ? '被动强化（自动生效）' : s.kind === 'summon' ? '召唤' : '主动释放';
       return `<button class="ccard" data-pick="${s.id}">
+        ${isNew ? '<i class="cc-new">新</i>' : ''}
         <i style="background:${el.c}22">${s.img
           ? `<img src="${s.img}" style="width:38px;height:38px;border-radius:8px;object-fit:cover">`
           : s.icon}</i>
         <div class="ci"><div class="cn"><span style="color:${el.c}">${s.n}</span>
           ${L ? `<span class="tag y">Lv.${L}→${L + 1}</span>` : '<span class="tag g">NEW</span>'}</div>
           <div class="cd2">${s.desc}</div>
-          <div class="cl">${kindTxt} · ${s.up}${s.conflict ? ' · ⚠️与' + (EX.skills.find((x) => x.id === s.conflict) || {}).n + '互斥' : ''}</div>
+          <div class="cl">${isNew ? '<b style="color:#ff5c7a">学习' + s.n + '</b>' : kindTxt} · ${s.up}</div>
         </div>
         <div class="ch-arrow">▼</div></button>`;
     }).join('');
@@ -1169,17 +1214,56 @@ const UI = {
   hideChoice() { clearInterval(this._chIv); $('#choice').classList.remove('on'); },
 
   /* ---------- 结算 ---------- */
+  /* 升级弹窗（截图52：发光圆形徽章数字 + 奖励 R币） */
+  showLvUp(lv, rw) {
+    const b = $('#lvup');
+    if (!b) return;
+    $('#lvupNum').textContent = lv;
+    $('#lvupRw').innerHTML = '获得 <b style="color:var(--yel)">' + (rw || 200) + '</b> R币';
+    b.classList.add('on');
+    if (window.SND) SND.play('upgrade');
+    clearTimeout(this._lvT);
+    this._lvT = setTimeout(() => b.classList.remove('on'), 2200);
+  },
+
   showResult(res, d) {
     const win = res === 'win';
-    $('#rsTitle').textContent = win ? '战 斗 胜 利' : (res === 'lose' ? '防 线 失 守' : '撤 离 战 场');
+    /* 截图51/52：标题「恭喜获得」+ 剩余血量% + 新纪录 */
+    $('#rsTitle').textContent = win ? '恭 喜 获 得' : (res === 'lose' ? '防 线 失 守' : '撤 离 战 场');
     $('#rsTitle').className = 'rs-t ' + (win ? 'win' : 'lose');
-    $('#rsLevel').textContent = (BT.run && BT.run.def) ? BT.run.def.n : '';
-    const mm = Math.floor((d.time || 0) / 60), ss = Math.floor((d.time || 0) % 60);
+    const r = BT.run || {};
+    const hpPct = r.wallMax ? Math.round(Math.max(0, r.wallHp) / r.wallMax * 100) : 0;
+    const best = (this.P.bestHpPct || {})[(r.def || {}).id] || 0;
+    const isNew = win && hpPct > best;
+    if (isNew) { this.P.bestHpPct = this.P.bestHpPct || {}; this.P.bestHpPct[(r.def || {}).id] = hpPct; }
+    $('#rsLevel').innerHTML = `剩余血量：<b style="color:var(--grn)">${hpPct}%</b>`
+      + (isNew ? ' <span class="rs-new">新纪录</span>' : '')
+      + ((r.def || {}).n ? ' · ' + r.def.n : '');
+    /* 奖励（截图51：EXP / 枪械部件 / 技能 / 宝石 / 图纸 / R币） */
+    const rw = d.rw || {};
     $('#rsGrid').innerHTML = `
-      <div class="rs-i"><div class="v">${d.kills}</div><div class="l">击杀僵尸</div></div>
-      <div class="rs-i"><div class="v">${mm}:${String(ss).padStart(2, '0')}</div><div class="l">战斗时长</div></div>
-      <div class="rs-i"><div class="v">${E.fmt(d.rw.gold)}</div><div class="l">获得金币</div></div>
-      <div class="rs-i"><div class="v">${E.fmt(d.rw.diamond || 0)}</div><div class="l">获得钻石</div></div>`;
+      <div class="rs-i"><div class="v">${E.fmt(rw.exp || 15)}</div><div class="l">EXP</div></div>
+      <div class="rs-i"><div class="v">${E.fmt(rw.gold)}</div><div class="l">R币</div></div>
+      <div class="rs-i"><div class="v">${d.kills}</div><div class="l">击杀</div></div>
+      <div class="rs-i"><div class="v">${rw.parts || 0}</div><div class="l">1阶枪械部件</div></div>`;
+    /* 技能伤害统计（截图51） */
+    const dm = $('#rsDmg');
+    if (dm) {
+      const st = (r.skillDmg || {});
+      const ks = Object.keys(st);
+      dm.innerHTML = ks.length ? `<div class="rsd-t">技能伤害</div>` + ks.map((k) => {
+        const sk = (EX.skills || []).find((x) => x.id === k);
+        const sec = Math.max(1, Math.floor(r.time || 1));
+        return `<div class="rsd-r"><span>${sk ? sk.n : k}</span>
+          <b>${E.fmt(st[k])}</b><i>${E.fmt(Math.round(st[k] / sec))}/s</i></div>`;
+      }).join('') : '';
+    }
+    /* 今日剩余次数（截图51） */
+    const tn = $('#rsTimes');
+    if (tn) {
+      const left = E.adLeft ? E.adLeft(this.P, 'AD02') : 3;
+      tn.textContent = '今日剩余次数：' + Math.max(0, left) + '/3';
+    }
     $('#rsNext').style.display = win && !BT.run.endless ? '' : 'none';
     /* 广告：双倍奖励 / 复活 */
     const adBox = $('#rsAd');
