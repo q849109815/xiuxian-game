@@ -368,7 +368,7 @@ const BT = {
       if (z.y >= this.wallY) {
         this.hurtPlayer(z.dmg, z.n);
         z.dead = true; z.hp = 0;
-        this.efx.push({ t: 'hitWall', x: z.x, y: this.wallY, life: 0.3, max: 0.3, r: 26 });
+        r.efx.push({ t: 'hitWall', x: z.x, y: this.wallY, life: 0.3, max: 0.3, r: 26 });
         if (window.SND) SND.play('hurt');
         continue;
       }
