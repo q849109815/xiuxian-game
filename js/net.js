@@ -7,6 +7,8 @@ const GH = {
   owner: 'q849109815',
   repo: 'xiuxian-game',
   branch: 'main',
+  /** 玩家存档专用分支（与 main 分离，避免存档提交触发 Pages 重建耗光 500 次/月额度） */
+  dataBranch: 'players',
   token: 'github_pat_11ASQODRI0RODZ7pBgKRl'
        + 'o_t4vgK8n0XabhsaL7Ctx59CksV3OGVo'
        + 'b5QOEcwAk2fX2EMICCZ5WnMI5D25i',
@@ -69,7 +71,7 @@ function allEps() {
   return list.filter((e) => e && !seen.has(e) && seen.add(e)).filter((e) => !isDead(e));
 }
 
-async function fetchT(url, opt = {}, timeout = 8000) {
+async function fetchT(url, opt = {}, timeout = 14000) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeout);
   try { return await fetch(url, { ...opt, signal: ctrl.signal, cache: 'no-store' }); }
@@ -96,7 +98,7 @@ async function probe() {
     const seen = new Set(); const round1 = prio.filter((e) => e && !seen.has(e) && seen.add(e));
     const round2 = allEps().filter((e) => !round1.includes(e));
 
-    for (const [list, ms] of [[round1, 3500], [round2, 7000]]) {
+    for (const [list, ms] of [[round1, 10000], [round2, 15000]]) {
       if (!list.length) continue;
       const res = await Promise.allSettled(list.map((ep) => test(ep, ms)));
       const ok = res.filter((x) => x.status === 'fulfilled').map((x) => x.value).sort((a, b) => a.ms - b.ms);
@@ -125,7 +127,7 @@ async function diagnose() {
     const t0 = performance.now();
     let st = '超时', ok = false;
     try {
-      const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/data/config/core.json`, { headers: H }, 6000);
+      const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/data/config/core.json`, { headers: H }, 10000);
       st = 'HTTP ' + r.status;
       ok = r.ok || [401, 403, 404].includes(r.status);
     } catch (e) { st = '失败'; }
@@ -136,7 +138,7 @@ async function diagnose() {
 
 /* ---------------- 统一请求 ---------------- */
 /* 并发探测：同时请求多个端点，谁先成功用谁（避免串行遍历导致离线时卡 5 秒） */
-async function ghReq(path, { method = 'GET', body = null, timeout = 7000, quick = false } = {}) {
+async function ghReq(path, { method = 'GET', body = null, timeout = 14000, quick = false } = {}) {
   let eps = allEps();
   if (!eps.length) { DEAD = {}; eps = allEps(); }
   const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
@@ -145,8 +147,10 @@ async function ghReq(path, { method = 'GET', body = null, timeout = 7000, quick 
   // 并发窗口：离线快速模式只试 4 个，正常模式试 6 个
   const WIN = quick ? 4 : 6;
 
+  // 存档路径读 players 分支，其余读 main
+  const rdBr = /^data\/zb\//.test(path) ? (GH.dataBranch || GH.branch) : GH.branch;
   const tryOne = async (ep) => {
-    const url = `${ep}/repos/${GH.owner}/${GH.repo}/contents/${path}`;
+    const url = `${ep}/repos/${GH.owner}/${GH.repo}/contents/${path}?ref=${rdBr}`;
     try {
       const r = await fetchT(url, opt, timeout);
       if (r.ok || r.status === 201) {
@@ -245,7 +249,8 @@ const Net = {
       const cur = await ghReq(path, { method: 'GET' });
       if (cur && cur.sha) sha = cur.sha;
     } catch (e) {}
-    const body = { message: msg || 'update ' + path, content, branch: GH.branch };
+    const br = /^data\/zb\//.test(path) ? (GH.dataBranch || GH.branch) : GH.branch;
+    const body = { message: msg || 'update ' + path, content, branch: br };
     if (sha) body.sha = sha;
     const r = await ghReq(path, { method: 'PUT', body });
     if (r && r.content) {
@@ -285,7 +290,7 @@ const Net = {
         const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
           method: 'DELETE',
           headers: { ...H, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: 'delete ' + path, sha: d.sha, branch: GH.branch }),
+          body: JSON.stringify({ message: 'delete ' + path, sha: d.sha, branch: /^data\/zb\//.test(path) ? (GH.dataBranch || GH.branch) : GH.branch }),
         }, 12000);
         if (r.ok || r.status === 200) return true;
       } catch (e) {}
