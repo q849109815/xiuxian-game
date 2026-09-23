@@ -332,7 +332,7 @@ const EX = {
     { id: 'M04', n: '火药', type: '材料', q: '白', icon: '🧪', img: 'assets/icon/i_powder.jpg', stack: 9999, src: '关卡/分解' },
     { id: 'M05', n: '电子元件', type: '材料', q: '蓝', icon: '🔌', img: 'assets/icon/i_chip_elec.jpg', stack: 9999, src: '商店/掉落' },
     { id: 'P01', n: '枪械碎片', type: '碎片', q: '蓝', icon: '🧩', img: 'assets/icon/i_gunfrag.jpg', stack: 9999, src: '关卡/分解' },
-    { id: 'P02', n: '角色碎片', type: '碎片', q: '紫', icon: '👤', stack: 9999, src: '活动/抽奖' },
+    { id: 'P02', n: '角色碎片', type: '碎片', q: '紫', icon: '👤', img: 'assets/icon/i_frag.jpg', stack: 9999, src: '活动/抽奖' },
     { id: 'C01', n: '普通芯片', type: '芯片', q: '白', icon: '🔲', img: 'assets/icon/i_chip.jpg', stack: 999, src: 'BOSS关' },
     { id: 'C02', n: '精英芯片', type: '芯片', q: '蓝', icon: '🔳', img: 'assets/icon/i_chip.jpg', stack: 999, src: '活动/合成' },
     { id: 'C03', n: '传说芯片', type: '芯片', q: '红', icon: '💎', img: 'assets/icon/i_chip.jpg', stack: 999, src: '合成/活动' },
@@ -395,6 +395,95 @@ const EX = {
       { id: 'A04', n: '无尽达10分钟', cond: { t: 'endlessTime', v: 600 }, rw: { ach: 200 }, desc: '无尽模式存活 10 分钟' },
     ],
   },
+
+  /* =====================================================
+   * 【36_】扫荡系统（表29：已通关关卡快速扫荡，消耗体力）
+   * =================================================== */
+  SWEEP_STAMINA: 5,          /* 单次扫荡消耗体力 */
+  SWEEP_MAX: 10,             /* 单次最多扫荡次数 */
+  sweepRw(lv, times) {
+    /* 产出随关卡章节递增 */
+    const ch = Math.floor((lv - 1) / 10) + 1;
+    const g = Math.round((120 + ch * 60) * times);
+    const metal = Math.round((3 + ch * 2) * times);
+    const xp = Math.round((80 + ch * 45) * times);
+    return { gold: g, M01: metal, xp: xp };
+  },
+
+  /* =====================================================
+   * 【42_成就商店兑换表】12 项，消耗成就点
+   * =================================================== */
+  achShop: [
+    { id: 'AS01', n: '金属x20', t: '材料', cost: 30, limit: 10, per: 'day', need: 0, give: { M01: 20 } },
+    { id: 'AS02', n: '合金x5', t: '材料', cost: 50, limit: 5, per: 'day', need: 0, give: { M02: 5 } },
+    { id: 'AS03', n: '稀有金属x2', t: '材料', cost: 120, limit: 2, per: 'day', need: 0, give: { M03: 2 } },
+    { id: 'AS04', n: '火药x10', t: '材料', cost: 40, limit: 5, per: 'day', need: 0, give: { M04: 10 } },
+    { id: 'AS05', n: '急救包x1', t: '消耗', cost: 80, limit: 3, per: 'day', need: 0, give: { U01: 1 } },
+    { id: 'AS06', n: '护盾发生器x1', t: '消耗', cost: 100, limit: 2, per: 'day', need: 0, give: { U02: 1 } },
+    { id: 'AS07', n: '枪械碎片x3', t: '碎片', cost: 150, limit: 2, per: 'day', need: 0, give: { P01: 3 } },
+    { id: 'AS08', n: '角色碎片x2', t: '碎片', cost: 200, limit: 3, per: 'week', need: 0, give: { P02: 2 } },
+    { id: 'AS09', n: '普通芯片x1', t: '芯片', cost: 180, limit: 1, per: 'day', need: 0, give: { C01: 1 } },
+    { id: 'AS10', n: '精英芯片x1', t: '芯片', cost: 400, limit: 2, per: 'week', need: 0, give: { C02: 1 } },
+    { id: 'AS11', n: '传说芯片x1', t: '芯片', cost: 900, limit: 1, per: 'month', need: 0, give: { C03: 1 } },
+    { id: 'AS12', n: '限定称号-百人斩', t: '称号', cost: 500, limit: 1, per: 'once', need: 0, give: { title: 'ach_100' } },
+  ],
+
+  /* =====================================================
+   * 【43_活动商店兑换表】12 项，消耗活动代币
+   * =================================================== */
+  eventShop: [
+    { id: 'ES01', n: '金属x30', t: '材料', cost: 50, limit: 10, per: 'day', ev: '丧尸围城', give: { M01: 30 } },
+    { id: 'ES02', n: '合金x8', t: '材料', cost: 100, limit: 5, per: 'day', ev: '丧尸围城', give: { M02: 8 } },
+    { id: 'ES03', n: '稀有金属x3', t: '材料', cost: 200, limit: 2, per: 'day', ev: '丧尸围城', give: { M03: 3 } },
+    { id: 'ES04', n: '枪械碎片x5', t: '碎片', cost: 150, limit: 3, per: 'day', ev: '丧尸围城', give: { P01: 5 } },
+    { id: 'ES05', n: '角色碎片x3', t: '碎片', cost: 250, limit: 3, per: 'ev', ev: 'BOSS突袭', give: { P02: 3 } },
+    { id: 'ES06', n: '普通芯片x2', t: '芯片', cost: 180, limit: 2, per: 'day', ev: 'BOSS突袭', give: { C01: 2 } },
+    { id: 'ES07', n: '精英芯片x1', t: '芯片', cost: 350, limit: 2, per: 'ev', ev: 'BOSS突袭', give: { C02: 1 } },
+    { id: 'ES08', n: '传说芯片x1', t: '芯片', cost: 800, limit: 1, per: 'ev', ev: 'BOSS突袭', give: { C03: 1 } },
+    { id: 'ES09', n: '限定皮肤-末日战甲', t: '皮肤', cost: 1500, limit: 1, per: 'ev', ev: '节日活动', give: { skin: 'mo_ri' } },
+    { id: 'ES10', n: '钻石x100', t: '货币', cost: 300, limit: 5, per: 'ev', ev: '丧尸围城', give: { diamond: 100 } },
+    { id: 'ES11', n: '体力x30', t: '体力', cost: 60, limit: 3, per: 'day', ev: '节日活动', give: { stamina: 30 } },
+    { id: 'ES12', n: '活动限定头像框', t: '外观', cost: 800, limit: 1, per: 'ev', ev: '节日活动', give: { frame: 'ev_frame' } },
+  ],
+
+  /* =====================================================
+   * 【33_排行榜奖励表】10 项，按排名发奖（邮件）
+   * =================================================== */
+  rankRewards: [
+    { id: 'RK01', board: '无尽生存榜', rank: '第1名', lo: 1, hi: 1, rw: { C03: 1, diamond: 500, title: 'endless_king' }, cyc: '每小时' },
+    { id: 'RK02', board: '无尽生存榜', rank: '第2-5名', lo: 2, hi: 5, rw: { C02: 2, diamond: 200 }, cyc: '每小时' },
+    { id: 'RK03', board: '无尽生存榜', rank: '第6-20名', lo: 6, hi: 20, rw: { C01: 2, diamond: 100 }, cyc: '每小时' },
+    { id: 'RK04', board: '无尽生存榜', rank: '第21-100名', lo: 21, hi: 100, rw: { gold: 2000, M01: 20 }, cyc: '每小时' },
+    { id: 'RK05', board: '战力榜', rank: '第1名', lo: 1, hi: 1, rw: { C03: 1, M03: 5 }, cyc: '每日' },
+    { id: 'RK06', board: '战力榜', rank: '第2-10名', lo: 2, hi: 10, rw: { C02: 1, M03: 3 }, cyc: '每日' },
+    { id: 'RK07', board: '战力榜', rank: '第11-50名', lo: 11, hi: 50, rw: { C01: 1, M02: 10 }, cyc: '每日' },
+    { id: 'RK08', board: '活动冲榜', rank: '第1名', lo: 1, hi: 1, rw: { skin: 'ev_top', C03: 2 }, cyc: '活动结束' },
+    { id: 'RK09', board: '活动冲榜', rank: '第2-5名', lo: 2, hi: 5, rw: { C03: 1, diamond: 300 }, cyc: '活动结束' },
+    { id: 'RK10', board: '活动冲榜', rank: '第6-20名', lo: 6, hi: 20, rw: { C02: 2, diamond: 150 }, cyc: '活动结束' },
+  ],
+
+  /* =====================================================
+   * 【图鉴收集】表29：收集怪物/武器/皮肤，首次解锁领奖
+   * =================================================== */
+  codexRw: { zombie: { gold: 100, ach: 5 }, gun: { gold: 200, ach: 10 }, skin: { gold: 300, ach: 15 } },
+  codexKinds: [
+    { k: 'zombie', n: '怪物图鉴', icon: '🧟' },
+    { k: 'gun', n: '武器图鉴', icon: '🔫' },
+    { k: 'skin', n: '皮肤图鉴', icon: '👕' },
+  ],
+  codexOf(kind) {
+    if (kind === 'zombie') return (this.zombies || []).map((z) => ({ id: z.id, n: z.n, icon: z.icon, img: z.img }));
+    if (kind === 'gun') return (this.guns || []).map((g) => ({ id: g.id, n: g.n, icon: g.icon, img: g.img }));
+    if (kind === 'skin') return (this.skins || []).map((s) => ({ id: s.id, n: s.n, icon: s.icon, img: s.img }));
+    return [];
+  },
+
+  /* =====================================================
+   * 【角色升星】表15/42：角色碎片升星，每星 +8% 全属性
+   * =================================================== */
+  starCost: [0, 10, 20, 40, 80, 160],   /* 升到 1~5 星各需角色碎片 */
+  STAR_MAX: 5,
+  starBonus(star) { return (star || 0) * 0.08; },   /* 每星 +8% */
 
   /* =====================================================
    * 【商城表】资料：10 个商品（RMB 直购）
@@ -515,21 +604,21 @@ const EX = {
       desc: '高能射线贯穿，对高血量目标额外增伤', up: '每级 +伤害', mods: { rayMul: 2.0, rayPierce: 7 } },
     { id: 'hongzhaji', n: '轰炸机', icon: '✈️', img: 'assets/icon/sk_hongzhaji.jpg', kind: 'active', el: '火', max: 8, cd: 14.0,
       desc: '呼叫轰炸机对全场进行轰炸', up: '每级 +轰炸次数', mods: { bombN: 5, bombMul: 2.2 } },
-    { id: 'bingbao', n: '冰暴发生器', icon: '🌨️', kind: 'active', el: '冰', max: 8, cd: 11.0,
+    { id: 'bingbao', n: '冰暴发生器', icon: '🌨️', img: 'assets/icon/sk_bingbao.jpg', kind: 'active', el: '冰', max: 8, cd: 11.0,
       desc: '引发冰暴，全场大幅减速并造成伤害', up: '每级 +伤害', mods: { stormR: 150, stormDps: 1.1 } },
-    { id: 'fenliezidan', n: '分裂子弹', icon: '🎯', kind: 'passive', el: '物', max: 10, cd: 0,
+    { id: 'fenliezidan', n: '分裂子弹', icon: '🎯', img: 'assets/icon/sk_fenliezidan.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
       desc: '子弹命中后分裂成多枚', up: '每级 +分裂数', mods: { split: 2 } },
-    { id: 'lianfa', n: '连发', icon: '🔫', kind: 'passive', el: '物', max: 10, cd: 0,
+    { id: 'lianfa', n: '连发', icon: '🔫', img: 'assets/icon/sk_lianfa.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
       desc: '提升射速', up: '每级 +15% 射速', mods: { rateMul: 0.15 } },
-    { id: 'zidanbaozha', n: '子弹爆炸', icon: '💥', kind: 'passive', el: '火', max: 10, cd: 0,
+    { id: 'zidanbaozha', n: '子弹爆炸', icon: '💥', img: 'assets/icon/s_baozha.jpg', kind: 'passive', el: '火', max: 10, cd: 0,
       desc: '子弹命中触发小范围爆炸', up: '每级 +爆炸范围', mods: { explode: 0.45, er: 42 } },
-    { id: 'zengshang', n: '子弹增伤', icon: '💪', kind: 'passive', el: '物', max: 10, cd: 0,
+    { id: 'zengshang', n: '子弹增伤', icon: '💪', img: 'assets/icon/s_shanghai.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
       desc: '提升子弹伤害', up: '每级 +15% 伤害', mods: { dmgMul: 0.15 } },
-    { id: 'chuantou', n: '穿透', icon: '➤', kind: 'passive', el: '物', max: 10, cd: 0,
+    { id: 'chuantou', n: '穿透', icon: '➤', img: 'assets/icon/s_chuantou.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
       desc: '子弹穿透更多目标', up: '每级 +1 穿透', mods: { pierce: 1 } },
-    { id: 'baoji', n: '暴击强化', icon: '💥', kind: 'passive', el: '物', max: 10, cd: 0,
+    { id: 'baoji', n: '暴击强化', icon: '💥', img: 'assets/icon/s_baoji.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
       desc: '提升暴击率与暴击伤害', up: '每级 +3% 暴击率', mods: { crit: 0.03 } },
-    { id: 'xixue', n: '吸血', icon: '🩸', kind: 'passive', el: '物', max: 8, cd: 0,
+    { id: 'xixue', n: '吸血', icon: '🩸', img: 'assets/icon/s_xixue.jpg', kind: 'passive', el: '物', max: 8, cd: 0,
       desc: '造成伤害时回复防线血量', up: '每级 +1.5% 吸血', mods: { healOnKill: 0.015 } },
   ],
 
@@ -551,12 +640,19 @@ const EX = {
     { k: 's3', x: 0.60, y: 0.58 }, { k: 's4', x: 0.82, y: 0.62 },
   ],
 
+  /* 【僵尸 Q 版头像】截图：好友/邮件/军团均为绿皮黄眼僵尸 */
+  zAvatars: [
+    'assets/char/z_suit.jpg',
+    'assets/char/z_cap.jpg',
+    'assets/char/z_pilot.jpg',
+  ],
+
   /* 【宝石】截图：红=攻击 蓝=生命/暴击 绿 紫，可镶嵌到装备 */
   gems: [
-    { id: 'G_R', n: '红宝石', c: 'r', icon: '🔴', desc: '攻击 +1200' },
-    { id: 'G_B', n: '蓝宝石', c: 'b', icon: '🔵', desc: '生命 +2000 · 暴击 +15%' },
-    { id: 'G_G', n: '绿宝石', c: 'g', icon: '🟢', desc: '生命 +1500 · 吸血 +3%' },
-    { id: 'G_P', n: '紫宝石', c: 'p', icon: '🟣', desc: '暴击伤害 +30% · 攻速 +5%' },
+    { id: 'G_R', n: '红宝石', c: 'r', icon: '🔴', img: 'assets/icon/gem_r.jpg', desc: '攻击 +1200' },
+    { id: 'G_B', n: '蓝宝石', c: 'b', icon: '🔵', img: 'assets/icon/gem_b.jpg', desc: '生命 +2000 · 暴击 +15%' },
+    { id: 'G_G', n: '绿宝石', c: 'g', icon: '🟢', img: 'assets/icon/gem_g.jpg', desc: '生命 +1500 · 吸血 +3%' },
+    { id: 'G_P', n: '紫宝石', c: 'p', icon: '🟣', img: 'assets/icon/gem_p.jpg', desc: '暴击伤害 +30% · 攻速 +5%' },
   ],
   /* 【商店商品】截图：每日/武器/宝石/材料 三列网格 */
   shopGoods: {
