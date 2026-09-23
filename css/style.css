@@ -439,3 +439,46 @@ input{font-family:inherit}
 .lvc.lock{opacity:.38}
 .lvc.cur{border-color:var(--gold);background:rgba(255,215,106,.12)}
 .lvc.boss b{color:var(--red)}
+
+/* ===== 防线塔防战斗 UI（真实《向僵尸开炮》布局） ===== */
+.bt-wall{position:absolute;left:10px;right:10px;bottom:150px;display:flex;align-items:center;gap:7px;
+  padding:5px 9px;border-radius:9px;background:rgba(6,10,18,.82);border:1px solid rgba(255,165,60,.35);z-index:5}
+.bt-wall span{font-size:10px;color:#ffa53c;font-weight:700;flex:0 0 auto}
+.bt-wall .wallbar{flex:1;height:9px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}
+.bt-wall .wallbar i{display:block;height:100%;width:100%;border-radius:5px;
+  background:linear-gradient(90deg,#ffa53c,#ff6b3c);transition:width .18s}
+.bt-wall b{font-size:10px;color:#ffd8a8;flex:0 0 auto;min-width:56px;text-align:right}
+.bt-turret{position:absolute;left:8px;right:8px;bottom:96px;display:flex;gap:6px;justify-content:center;z-index:5}
+.bt-turret button{flex:0 0 auto;padding:5px 8px;border-radius:8px;font-size:10px;
+  background:rgba(10,16,28,.9);border:1px solid rgba(255,255,255,.16);color:#cfd8e8;cursor:pointer}
+.bt-turret button.on{border-color:#5cd8ff;color:#5cd8ff}
+.bt-turret button:disabled{opacity:.4}
+.bt-skills{position:absolute;left:8px;right:8px;bottom:52px;display:flex;gap:6px;justify-content:center;z-index:5}
+.bt-skills .bs{position:relative;width:40px;height:40px;border-radius:10px;display:flex;
+  align-items:center;justify-content:center;font-size:19px;
+  background:rgba(10,16,28,.9);border:1px solid rgba(255,255,255,.16);cursor:pointer;overflow:hidden}
+.bt-skills .bs u{position:absolute;left:0;bottom:0;height:100%;width:0;background:rgba(0,0,0,.55);pointer-events:none}
+.bt-skills .bs b{position:absolute;right:2px;top:1px;font-size:9px;color:#ffd76a}
+.bt-skills .bs.cd{filter:grayscale(.7) brightness(.7)}
+@media(max-width:400px){
+  .bt-wall{bottom:142px}
+  .bt-turret{bottom:90px}
+  .bt-skills{bottom:48px}
+}
+
+/* ===== 微信登录 ===== */
+.lg-wx{margin:16px 0 6px;text-align:center}
+.wx-btn{width:100%;padding:12px 14px;border:none;border-radius:10px;cursor:pointer;
+  background:linear-gradient(180deg,#2dc100,#07c160);color:#fff;font-size:15px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 4px 14px rgba(7,193,96,.35);transition:transform .12s}
+.wx-btn:active{transform:scale(.97)}
+.wx-btn .wx-ico{display:flex;align-items:center}
+.wx-tip{margin-top:8px;font-size:11px;color:#7d8ca8}
+.lg-switch{margin:10px 0 4px;text-align:center}
+.lg-switch a{color:#5cd8ff;font-size:12px;text-decoration:none}
+.lg-switch a:hover{text-decoration:underline}
+.lg-manual{margin-top:8px}
+/* 登录框加 2.5D 立体 */
+.lg-box{transform:perspective(700px) rotateX(2deg);
+  box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(255,165,60,.18)}
