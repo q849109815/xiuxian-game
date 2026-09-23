@@ -1009,7 +1009,7 @@ const BT = {
   /* ===== 2.5D 透视：近大远小 ===== */
   depthScale(y) {
     const t = Math.max(0, Math.min(1, y / (this.wallY || this.H)));
-    return 0.52 + Math.pow(t, 1.35) * 0.78;      /* 远处 0.52 倍 → 近处 1.30 倍 */
+    return 0.80 + Math.pow(t, 1.2) * 0.42;      /* 远处 0.80 倍 → 近处 1.22 倍（弱透视，贴近平视俯瞰） */
   },
 
   /* ===== 2.5D 透视地面网格 ===== */
@@ -1089,78 +1089,212 @@ const BT = {
   },
 
   /* =========================================================
-   * 几何图形兜底：图片加载失败/未就绪时也能看清人物与僵尸
-   * （此前用 emoji 文字兜底，缺字体环境下会显示成空白）
+   * 3D 立体造型（伪 3D：球体/圆柱光影 + 投影 + 深度缩放）
+   * 图片加载失败时使用——此前是扁平色块，被看成"卡片"，
+   * 现在用径向/线性渐变模拟受光，做出真正的体积感
    * ========================================================= */
+
+  /* 柔和椭圆投影：距离越远越小越淡 */
+  shadow3d(c, x, y, r, sc) {
+    c.save();
+    const g = c.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(0,0,0,.45)');
+    g.addColorStop(0.6, 'rgba(0,0,0,.22)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g;
+    c.beginPath(); c.ellipse(x, y, r, r * 0.42, 0, 0, 7); c.fill();
+    c.restore();
+  },
+
+  /* 球体：径向渐变（光来自左上 → 高光偏左上，右下暗） */
+  sphere(c, x, y, r, base, hi) {
+    const g = c.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r * 1.15);
+    g.addColorStop(0, hi);
+    g.addColorStop(0.55, base);
+    g.addColorStop(1, 'rgba(0,0,0,.55)');
+    c.fillStyle = g;
+    c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
+  },
+
+  /* 圆柱：横截面受光（左暗-中亮-右暗），做出鼓起的立体感 */
+  cylinder(c, x, y, w, h, base, hi, r) {
+    const g = c.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+    g.addColorStop(0, 'rgba(0,0,0,.42)');
+    g.addColorStop(0.28, base);
+    g.addColorStop(0.46, hi);
+    g.addColorStop(0.72, base);
+    g.addColorStop(1, 'rgba(0,0,0,.48)');
+    c.fillStyle = g;
+    c.beginPath();
+    if (c.roundRect) c.roundRect(x - w / 2, y, w, h, r == null ? Math.min(w, h) * 0.3 : r);
+    else c.rect(x - w / 2, y, w, h);
+    c.fill();
+  },
+
+  /* ---------- 3D 僵尸 ---------- */
   drawZombieShape(c, x, y, sz, z) {
     const d = (z && z.d) || {};
     const big = !!z.isBoss || !!d.elite;
-    const skin = big ? '#5b7f8c' : '#6f9b6a';      /* 蓝绿尸皮 */
-    const dark = big ? '#33474f' : '#3f5c3c';
+    const S = sz / 24;                       /* 缩放系数 */
+    const skin = big ? '#5d8290' : '#73996d';
+    const skinHi = big ? '#9fd0dd' : '#a8d69f';
+    const cloth = big ? '#2f4550' : '#3d5140';
+    const clothHi = big ? '#577786' : '#6b866e';
+
     c.save();
-    /* 阴影椭圆 */
-    c.fillStyle = 'rgba(0,0,0,.32)';
-    c.beginPath(); c.ellipse(x, y + sz * 0.46, sz * 0.42, sz * 0.17, 0, 0, 7); c.fill();
-    /* 身体 */
-    c.fillStyle = dark;
-    c.beginPath();
-    c.roundRect ? c.roundRect(x - sz * 0.30, y - sz * 0.10, sz * 0.60, sz * 0.56, sz * 0.14)
-                : c.rect(x - sz * 0.30, y - sz * 0.10, sz * 0.60, sz * 0.56);
-    c.fill();
-    /* 双臂前伸 */
-    c.fillStyle = skin;
-    c.fillRect(x - sz * 0.50, y - sz * 0.02, sz * 0.22, sz * 0.13);
-    c.fillRect(x + sz * 0.28, y - sz * 0.02, sz * 0.22, sz * 0.13);
-    /* 头 */
-    c.fillStyle = skin;
-    c.beginPath(); c.arc(x, y - sz * 0.30, sz * 0.27, 0, 7); c.fill();
-    c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 1; c.stroke();
-    /* 眼睛（发亮） */
-    c.fillStyle = z && z.slowT > 0 ? '#8be9ff' : '#ffe066';
-    c.beginPath(); c.arc(x - sz * 0.10, y - sz * 0.32, sz * 0.055, 0, 7); c.fill();
-    c.beginPath(); c.arc(x + sz * 0.10, y - sz * 0.32, sz * 0.055, 0, 7); c.fill();
-    /* 嘴 */
-    c.strokeStyle = '#2b1d1d'; c.lineWidth = Math.max(1, sz * 0.04);
-    c.beginPath(); c.moveTo(x - sz * 0.09, y - sz * 0.19); c.lineTo(x + sz * 0.09, y - sz * 0.19); c.stroke();
-    /* 精英/BOSS 标记 */
+    this.shadow3d(c, x, y + sz * 0.52, sz * 0.5, S);
+
+    /* 腿（两根圆柱，带前后错开＝立体） */
+    this.cylinder(c, x - sz * 0.15, y + sz * 0.16, sz * 0.16, sz * 0.34, cloth, clothHi, sz * 0.06);
+    this.cylinder(c, x + sz * 0.15, y + sz * 0.16, sz * 0.16, sz * 0.34, cloth, clothHi, sz * 0.06);
+
+    /* 躯干（椭球感：圆柱 + 顶肩） */
+    this.cylinder(c, x, y - sz * 0.14, sz * 0.62, sz * 0.42, cloth, clothHi, sz * 0.16);
+    /* 胸腹破布层次（暗部） */
+    c.fillStyle = 'rgba(0,0,0,.22)';
+    c.beginPath(); c.ellipse(x, y + sz * 0.02, sz * 0.22, sz * 0.10, 0, 0, 7); c.fill();
+
+    /* 前伸双臂（圆柱 + 手球） */
+    const swing = Math.sin((z.animT || 0) * 6) * sz * 0.05;
+    this.cylinder(c, x - sz * 0.36, y - sz * 0.08 + swing, sz * 0.14, sz * 0.32, skin, skinHi, sz * 0.06);
+    this.cylinder(c, x + sz * 0.36, y - sz * 0.08 - swing, sz * 0.14, sz * 0.32, skin, skinHi, sz * 0.06);
+    this.sphere(c, x - sz * 0.36, y + sz * 0.26 + swing, sz * 0.09, skin, skinHi);
+    this.sphere(c, x + sz * 0.36, y + sz * 0.26 - swing, sz * 0.09, skin, skinHi);
+
+    /* 头（球体 + 下颌阴影） */
+    const hy = y - sz * 0.36;
+    this.sphere(c, x, hy, sz * 0.26, skin, skinHi);
+    /* 头顶高光 */
+    c.fillStyle = 'rgba(255,255,255,.20)';
+    c.beginPath(); c.ellipse(x - sz * 0.08, hy - sz * 0.12, sz * 0.10, sz * 0.06, -0.5, 0, 7); c.fill();
+
+    /* 眼窝（凹陷暗） */
+    c.fillStyle = 'rgba(0,0,0,.42)';
+    c.beginPath(); c.ellipse(x, hy + sz * 0.02, sz * 0.17, sz * 0.08, 0, 0, 7); c.fill();
+    /* 发光眼睛 */
+    const eye = z && z.slowT > 0 ? '#7fe9ff' : (big ? '#ff5a5a' : '#ffe066');
+    c.fillStyle = eye; c.shadowColor = eye; c.shadowBlur = 6 * S;
+    c.beginPath(); c.arc(x - sz * 0.10, hy + sz * 0.01, sz * 0.045, 0, 7); c.fill();
+    c.beginPath(); c.arc(x + sz * 0.10, hy + sz * 0.01, sz * 0.045, 0, 7); c.fill();
+    c.shadowBlur = 0;
+
+    /* 嘴（张口） */
+    c.fillStyle = '#241a1a';
+    c.beginPath(); c.ellipse(x, hy + sz * 0.13, sz * 0.07, sz * 0.045, 0, 0, 7); c.fill();
+    /* 牙 */
+    c.fillStyle = '#e8e2d0';
+    c.fillRect(x - sz * 0.04, hy + sz * 0.10, sz * 0.02, sz * 0.03);
+    c.fillRect(x + sz * 0.02, hy + sz * 0.10, sz * 0.02, sz * 0.03);
+
+    /* BOSS/精英：头顶红色等级环 */
     if (big) {
       c.fillStyle = '#ff4d6d';
-      c.beginPath(); c.arc(x, y - sz * 0.56, sz * 0.10, 0, 7); c.fill();
+      c.beginPath(); c.arc(x, hy - sz * 0.36, sz * 0.10, 0, 7); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.85)';
+      c.font = 'bold ' + Math.round(sz * 0.13) + 'px sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('!', x, hy - sz * 0.35);
+    }
+    /* 护盾僵尸：正面盾牌（有厚度） */
+    if (d.front) {
+      const sw = sz * 0.5, sh = sz * 0.42;
+      c.save();
+      c.translate(x, y - sz * 0.05);
+      c.fillStyle = 'rgba(0,0,0,.3)';
+      c.beginPath(); c.ellipse(3, 4, sw * 0.5, sh * 0.5, 0, 0, 7); c.fill();
+      const sg = c.createLinearGradient(-sw / 2, 0, sw / 2, 0);
+      sg.addColorStop(0, '#6b7a8c'); sg.addColorStop(.45, '#c8d4e2'); sg.addColorStop(1, '#4a5566');
+      c.fillStyle = sg;
+      c.beginPath();
+      if (c.roundRect) c.roundRect(-sw / 2, -sh / 2, sw, sh, 4); else c.rect(-sw / 2, -sh / 2, sw, sh);
+      c.fill();
+      c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 1.5; c.stroke();
+      c.restore();
+    }
+    /* 冰冻状态：整体罩一层冰蓝 */
+    if (z && z.slowT > 0) {
+      c.fillStyle = 'rgba(120,220,255,.30)';
+      c.beginPath(); c.arc(x, y, sz * 0.62, 0, 7); c.fill();
+      c.strokeStyle = 'rgba(190,245,255,.7)'; c.lineWidth = 1.5;
+      c.beginPath(); c.arc(x, y, sz * 0.62, 0, 7); c.stroke();
     }
     c.restore();
   },
 
+  /* ---------- 3D 主角（末日士兵） ---------- */
   drawHeroShape(c, x, y) {
-    const h = 46, w = 26;
+    const S = 1;
     c.save();
-    /* 阴影 */
-    c.fillStyle = 'rgba(0,0,0,.35)';
-    c.beginPath(); c.ellipse(x, y + 15, w * 0.55, 6, 0, 0, 7); c.fill();
-    /* 腿 */
-    c.fillStyle = '#2f3d52';
-    c.fillRect(x - 8, y + 2, 6, 12);
-    c.fillRect(x + 2, y + 2, 6, 12);
-    /* 身体（战术夹克） */
-    const g = c.createLinearGradient(x - w / 2, y - 14, x + w / 2, y + 4);
-    g.addColorStop(0, '#4a5c78'); g.addColorStop(1, '#28344a');
-    c.fillStyle = g;
-    c.beginPath();
-    c.roundRect ? c.roundRect(x - w / 2, y - 14, w, 18, 5) : c.rect(x - w / 2, y - 14, w, 18);
-    c.fill();
-    /* 护甲高光 */
-    c.fillStyle = 'rgba(255,180,80,.55)';
-    c.fillRect(x - w / 2 + 3, y - 11, w - 6, 3);
-    /* 头 + 头盔 */
-    c.fillStyle = '#e8c39a';
-    c.beginPath(); c.arc(x, y - 20, 8, 0, 7); c.fill();
-    c.fillStyle = '#3b4a63';
-    c.beginPath(); c.arc(x, y - 22, 9, Math.PI * 1.05, Math.PI * 1.95); c.fill();
-    c.fillRect(x - 9, y - 23, 18, 3);
-    /* 枪（朝上） */
-    c.fillStyle = '#8d97a8';
-    c.fillRect(x + 6, y - 22, 4, 22);
+    /* 地面投影 */
+    this.shadow3d(c, x, y + 20, 22, S);
+
+    /* 腿（两根圆柱，立体受光） */
+    this.cylinder(c, x - 7.5, y + 4, 9, 15, '#2b374c', '#48597a', 3);
+    this.cylinder(c, x + 7.5, y + 4, 9, 15, '#2b374c', '#48597a', 3);
+    c.beginPath(); c.roundRect ? c.roundRect(x - 12, y + 4, 9, 15, 3) : c.rect(x - 12, y + 4, 9, 15); c.fill();
+    c.beginPath(); c.roundRect ? c.roundRect(x + 3, y + 4, 9, 15, 3) : c.rect(x + 3, y + 4, 9, 15); c.fill();
+
+    /* 靴子 */
+    c.fillStyle = '#1a2230';
+    c.beginPath(); c.roundRect ? c.roundRect(x - 13, y + 16, 11, 5, 2) : c.rect(x - 13, y + 16, 11, 5); c.fill();
+    c.beginPath(); c.roundRect ? c.roundRect(x + 2, y + 16, 11, 5, 2) : c.rect(x + 2, y + 16, 11, 5); c.fill();
+
+    /* 躯干（战术夹克，圆柱受光） */
+    this.cylinder(c, x, y - 12, 26, 20, '#41536e', '#6d84a8', 7);
+    /* 胸口护甲（凸起，高光） */
+    c.fillStyle = 'rgba(255,190,90,.55)';
+    c.beginPath(); c.roundRect ? c.roundRect(x - 8, y - 9, 16, 5, 2) : c.rect(x - 8, y - 9, 16, 5); c.fill();
+    /* 腰带 */
+    c.fillStyle = '#20293a';
+    c.fillRect(x - 13, y - 1, 26, 4);
     c.fillStyle = '#ffd76a';
-    c.fillRect(x + 6, y - 24, 4, 3);
+    c.fillRect(x - 4, y - 1, 8, 4);
+
+    /* 手臂（两侧圆柱，右臂持枪前伸） */
+    this.cylinder(c, x - 15, y - 10, 7, 16, '#3a4a63', '#5e739a', 3);
+    this.cylinder(c, x + 13, y - 11, 7, 14, '#3a4a63', '#5e739a', 3);
+
+    /* 头（球体 + 肤色） */
+    const hy = y - 22;
+    this.sphere(c, x, hy, 8.5, '#e3b98d', '#ffd9ae');
+    /* 战术头盔（半球 + 高光） */
+    c.save();
+    c.beginPath(); c.arc(x, hy - 1, 9.5, Math.PI * 1.02, Math.PI * 1.98); c.fill();
+    const hg = c.createLinearGradient(x - 9, hy - 10, x + 9, hy + 2);
+    hg.addColorStop(0, '#4c5f7d'); hg.addColorStop(.5, '#7d92b3'); hg.addColorStop(1, '#33415a');
+    c.fillStyle = hg; c.fill();
+    c.restore();
+    /* 帽檐 */
+    c.fillStyle = '#2c3850';
+    c.beginPath(); c.ellipse(x, hy - 2, 10, 3.2, 0, 0, 7); c.fill();
+    /* 护目镜（发光） */
+    c.fillStyle = '#5cd8ff'; c.shadowColor = '#5cd8ff'; c.shadowBlur = 5;
+    c.beginPath(); c.roundRect ? c.roundRect(x - 7, hy - 1, 14, 3.5, 1.6) : c.rect(x - 7, hy - 1, 14, 3.5); c.fill();
+    c.shadowBlur = 0;
+
+    /* 枪（立体：枪管 + 枪身 + 高光） */
+    c.save();
+    c.translate(x + 15, y - 8);
+    c.rotate(-0.12);
+    /* 枪身 */
+    const gg = c.createLinearGradient(-4, 0, 4, 0);
+    gg.addColorStop(0, '#3a4250'); gg.addColorStop(.5, '#79859a'); gg.addColorStop(1, '#2b323d');
+    c.fillStyle = gg;
+    c.beginPath(); c.roundRect ? c.roundRect(-3.5, -14, 7, 26, 2) : c.rect(-3.5, -14, 7, 26); c.fill();
+    /* 枪管（前伸） */
+    c.fillStyle = '#8e9aad';
+    c.fillRect(-2, -20, 4, 8);
+    /* 枪口火光点 */
+    c.fillStyle = '#ffd76a';
+    c.beginPath(); c.arc(0, -20, 2, 0, 7); c.fill();
+    /* 弹夹（前凸，有厚度） */
+    c.fillStyle = '#39424f';
+    c.beginPath(); c.roundRect ? c.roundRect(2, -2, 5, 10, 1.5) : c.rect(2, -2, 5, 10); c.fill();
+    c.restore();
+
+    /* 头顶选中光环（金色，表示玩家） */
+    c.strokeStyle = 'rgba(255,201,60,.55)'; c.lineWidth = 2;
+    c.beginPath(); c.ellipse(x, y + 20, 20, 8, 0, 0, 7); c.stroke();
     c.restore();
   },
 
@@ -1289,7 +1423,7 @@ const BT = {
     const zs = r.zombies.filter((z) => !z.dead).sort((a, b) => a.y - b.y);
     for (const z of zs) {
       const sc = this.depthScale(z.y);
-      const sz = (z.isBoss ? 46 : (z.d.elite ? 28 : 24)) * sc;
+      const sz = (z.isBoss ? 58 : (z.d.elite ? 38 : 32)) * sc;
       this.shadow(c, z.x, z.y, sz * 0.55, sc);
       if (z.slowT > 0) { c.fillStyle = 'rgba(92,216,255,0.28)'; c.beginPath(); c.arc(z.x, z.y, sz * 0.62, 0, 7); c.fill(); }
       const zim = IMG.get(z.img);
@@ -1351,7 +1485,7 @@ const BT = {
     let heroDrawn = false;
     if (heroImg && heroImg.complete && heroImg.naturalWidth) {
       try {
-        const hh = 44, hw = hh * heroImg.naturalWidth / heroImg.naturalHeight;
+        const hh = 54, hw = hh * heroImg.naturalWidth / heroImg.naturalHeight;
         c.drawImage(heroImg, r.px - hw / 2, r.py - hh + 14, hw, hh);
         heroDrawn = true;
       } catch (e) {}
@@ -1360,7 +1494,13 @@ const BT = {
       const cim = IMG.get(this.charImg);
       if (cim) { c.drawImage(cim, r.px - 26, r.py - 26, 52, 52); heroDrawn = true; }
     }
-    if (!heroDrawn) this.drawHeroShape(c, r.px, r.py);
+    if (!heroDrawn) {
+      c.save();
+      /* 几何士兵：整体放大到与立绘一致（3D 细节更清晰） */
+      c.translate(r.px, r.py); c.scale(1.15, 1.15); c.translate(-r.px, -r.py);
+      this.drawHeroShape(c, r.px, r.py);
+      c.restore();
+    }
     if (r.shield > 0) {
       c.strokeStyle = 'rgba(92,216,255,0.75)'; c.lineWidth = 2.5;
       c.beginPath(); c.arc(r.px, r.py, 26, 0, 7); c.stroke();
