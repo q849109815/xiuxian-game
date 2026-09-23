@@ -22,6 +22,7 @@ const WX = {
   },
 
   KEY_UID: 'zb_uid',
+  KEY_PHONE: 'zb_phone',
   KEY_WX: 'zb_wxbound',
   KEY_NAME: 'zb_name',
   KEY_GENDER: 'zb_gender',
@@ -50,32 +51,156 @@ const WX = {
     };
   },
 
-  /* ---------- 微信快捷登录 ---------- */
-  /* 手机端：直接一键授权；PC 端：同样一键（若接真 OAuth 则跳扫码页） */
+  /* ---------- 登录页提示文案 ---------- */
+  tipText() {
+    const p = this.phone();
+    return p ? ('已绑定 ' + this.phoneMask() + '，下次打开自动进入')
+             : '首次登录需微信授权并绑定手机号';
+  },
+
+  /* ---------- 手机号 ---------- */
+  phone() { return localStorage.getItem(this.KEY_PHONE) || ''; },
+  phoneMask() {
+    const p = this.phone();
+    return p ? p.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '';
+  },
+
+  /* =========================================================
+   * 微信登录主流程（三步）
+   *   ① 点「微信登录」→ 弹出微信授权页 → 点【允许】
+   *   ② 首次登录 → 绑定手机号（输入手机号 + 验证码）
+   *   ③ 进游戏；下次打开 → 微信一键登录，跳过 ①② 直接进
+   * ========================================================= */
   async login() {
     const uid = this.uid();
 
-    /* 已接入真微信 OAuth → 跳授权页 */
+    /* 已接入真微信 OAuth → 跳微信授权页 */
     if (this.OA.enabled && this.OA.appId && this.OA.redirect) {
       this.goOAuth();
       return { ok: false, pending: true };
     }
 
-    /* 未接后端 → 模拟微信授权成功，绑定本机 */
+    /* ③ 已绑定过手机号 → 一键登录，不再弹窗 */
+    if (this.bound() && this.phone()) {
+      let nm = localStorage.getItem(this.KEY_NAME);
+      if (!nm) { nm = this.randomWxName(); localStorage.setItem(this.KEY_NAME, nm); }
+      const gd = localStorage.getItem(this.KEY_GENDER) || 'm';
+      await this.sleep(320);
+      return { ok: true, uid, name: nm, gender: gd, quick: true };
+    }
+
+    /* ① 微信授权页 */
+    const allow = await this.showAuth();
+    if (!allow) return { ok: false, msg: '已取消微信授权' };
+
+    /* ② 绑定手机号 */
+    const tel = await this.showTel();
+    if (!tel) return { ok: false, msg: '未完成手机号验证' };
+
+    /* 授权 + 绑定完成，记住账户 */
     localStorage.setItem(this.KEY_WX, '1');
     localStorage.setItem(this.KEY_AUTO, '1');
+    localStorage.setItem(this.KEY_PHONE, tel.phone);
 
-    /* 生成一个微信风格默认昵称（若没有记忆的名字） */
     let nm = localStorage.getItem(this.KEY_NAME);
-    if (!nm) {
-      nm = this.randomWxName();
-      localStorage.setItem(this.KEY_NAME, nm);
-    }
-    const gd = localStorage.getItem(this.KEY_GENDER) || 'm';
+    if (!nm) { nm = this.randomWxName(); localStorage.setItem(this.KEY_NAME, nm); }
+    const gd = localStorage.getItem(this.KEY_GENDER) || (tel.gender || 'm');
 
-    /* 模拟授权动画时长 */
-    await this.sleep(600);
     return { ok: true, uid, name: nm, gender: gd };
+  },
+
+  /* =========================================================
+   * ① 微信授权弹窗（模拟微信客户端授权页）
+   * ========================================================= */
+  showAuth() {
+    return new Promise((res) => {
+      const box = document.getElementById('wxAuth');
+      const yes = document.getElementById('wxaAllow');
+      const no = document.getElementById('wxaCancel');
+      if (!box || !yes) { res(true); return; }   /* 兼容：无浮层则直接通过 */
+      box.classList.add('on');
+      const done = (v) => {
+        box.classList.remove('on');
+        yes.onclick = null; no.onclick = null; box.onclick = null;
+        yes.disabled = false; yes.textContent = '允许';
+        res(v);
+      };
+      yes.onclick = () => {
+        yes.disabled = true; yes.textContent = '授权中…';
+        setTimeout(() => done(true), 520);
+      };
+      no.onclick = () => done(false);
+      box.onclick = (e) => { if (e.target === box) done(false); };
+    });
+  },
+
+  /* =========================================================
+   * ② 手机号绑定页
+   * ========================================================= */
+  showTel() {
+    return new Promise((res) => {
+      const box = document.getElementById('wxTel');
+      if (!box) { res({ phone: '' }); return; }
+      const ph = document.getElementById('wxtPhone');
+      const cd = document.getElementById('wxtCode');
+      const send = document.getElementById('wxtSend');
+      const go = document.getElementById('wxtGo');
+      const back = document.getElementById('wxtBack');
+      const tip = document.getElementById('wxtTip');
+      const agree = document.getElementById('wxtAgree');
+      let timer = null;
+
+      ph.value = ''; cd.value = ''; tip.textContent = '';
+      send.disabled = false; send.textContent = '获取验证码';
+      go.disabled = false; go.textContent = '登 录';
+      box.classList.add('on');
+      setTimeout(() => ph.focus(), 320);
+
+      const say = (m, ok) => {
+        tip.textContent = m;
+        tip.style.color = ok ? '#07c160' : '#e64340';
+      };
+      const done = (v) => {
+        if (timer) clearInterval(timer);
+        box.classList.remove('on');
+        send.onclick = null; go.onclick = null; back.onclick = null;
+        res(v);
+      };
+      const valid = (v) => /^1[3-9]\d{9}$/.test(v || '');
+
+      /* 获取验证码 */
+      send.onclick = () => {
+        if (!valid(ph.value.trim())) { say('请输入正确的手机号'); ph.focus(); return; }
+        let n = 60;
+        send.disabled = true; send.textContent = n + 's 后重发';
+        if (timer) clearInterval(timer);
+        timer = setInterval(() => {
+          n--;
+          if (n <= 0) { clearInterval(timer); send.disabled = false; send.textContent = '重新获取'; }
+          else send.textContent = n + 's 后重发';
+        }, 1000);
+        say('验证码已发送至 ' + ph.value.trim().replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'), true);
+        cd.focus();
+      };
+
+      /* 登录 / 绑定 */
+      go.onclick = () => {
+        const p = (ph.value || '').trim();
+        const c = (cd.value || '').trim();
+        if (!valid(p)) { say('请输入正确的手机号'); ph.focus(); return; }
+        if (!/^\d{6}$/.test(c)) { say('请输入 6 位数字验证码'); cd.focus(); return; }
+        if (agree && !agree.checked) { say('请先阅读并同意用户协议'); return; }
+        go.disabled = true; go.textContent = '登录中…';
+        setTimeout(() => {
+          /* 演示环境：任意 6 位数字均通过；接真短信服务后改为校验接口 */
+          const g = parseInt(c.slice(-1), 10) % 2 === 0 ? 'f' : 'm';
+          localStorage.setItem(this.KEY_GENDER, g);
+          done({ phone: p, gender: g });
+        }, 420);
+      };
+
+      back.onclick = () => done(null);
+    });
   },
 
   /* ---------- 跳微信授权页（真 OAuth 时用） ---------- */
@@ -115,13 +240,14 @@ const WX = {
     localStorage.removeItem(this.KEY_AUTO);
     localStorage.removeItem(this.KEY_UID);
     localStorage.removeItem(this.KEY_NAME);
-    UI.toast('已退出，可重新登录', 'ok');
+    localStorage.removeItem(this.KEY_PHONE);
+    if (window.UI && UI.toast) UI.toast('已退出，可重新登录', 'ok');
     setTimeout(() => { location.reload(); }, 500);
   },
 
   /* ---------- 是否应自动登录 ---------- */
   shouldAuto() {
-    return localStorage.getItem(this.KEY_AUTO) === '1' && this.bound();
+    return localStorage.getItem(this.KEY_AUTO) === '1' && this.bound() && !!this.phone();
   },
 
   sleep(ms) { return new Promise((r) => setTimeout(r, ms)); },
