@@ -59,7 +59,7 @@ const UI = {
     gun: ['武器', ['强化', '武器库'], 'side'],
     chip: ['芯片系统', ['芯片'], 'right'],
     talent: ['天赋', ['天赋'], 'top'],
-    task: ['任务', ['主线', '日常', '成就'], 'side'],
+    task: ['任务', ['主线', '日常', '周常', '成就'], 'side'],
     bag: ['我的背包', ['宝石', '装备', '材料', '芯片'], 'bottom'],
     shop: ['商店', ['每日', '武器', '宝石', '材料'], 'side'],
     gem: ['宝石镶嵌', ['镶嵌'], 'top'],
@@ -74,6 +74,8 @@ const UI = {
     core: ['核心技能', ['技能'], 'top'],
     legion: ['军团', ['军团', '成员'], 'side'],
     exped: ['远征堡垒', ['远征', '巡逻'], 'side'],
+    ashop: ['兑换商店', ['成就商店', '活动商店'], 'side'],
+    codex: ['图鉴收集', ['怪物', '武器', '皮肤'], 'side'],
   },
   tabPos(key) { const d = this.PANELS[key]; return (d && d[2]) || 'top'; },
 
@@ -367,6 +369,15 @@ const UI = {
       <div class="kv"><span>暴击</span><b>${(a.crit * 100).toFixed(1)}%</b></div>
       <div class="kv"><span>吸血</span><b>${(a.ls * 100).toFixed(1)}%</b></div>
     </div>
+    <div class="card"><div class="card-t">角色升星
+      <span class="sub">${p.charStar || 0} / ${EX.STAR_MAX} 星</span></div>
+      <div class="stars">${[1, 2, 3, 4, 5].map((i) =>
+        `<span class="star ${(p.charStar || 0) >= i ? 'on' : ''}">★</span>`).join('')}</div>
+      <div class="sub">每星全属性 +8%，当前 +${Math.round((p.charStar || 0) * 8)}%</div>
+      <div class="kv"><span>角色碎片</span><b>${(p.mat || {}).P02 || 0}</b></div>
+      <div class="kv"><span>下级所需</span><b>${EX.starCost[(p.charStar || 0) + 1] || '已满级'}</b></div>
+      <button class="btn" id="roleStar" style="width:100%;margin-top:8px">⭐ 升星</button>
+    </div>
     <button class="btn o" id="roleForge" style="width:100%">装备设造</button>`;
   },
   b_role(p, tab) {
@@ -565,13 +576,27 @@ const UI = {
   /* ---------- 任务（截图：主线/日常/成就 + 黄色「前往任务」） ---------- */
   r_task(p, tab) {
     const DONE = '✔';
+    if (tab === '周常') {
+      return `<div class="card"><div class="card-t">周常任务 <span class="sub">每周刷新</span></div>
+        ${(EX.tasks.weekly || []).map((t) => {
+          const cur = E.taskProg(p, t), need = t.cond.v || t.need || 1, done = cur >= need;
+          return `<div class="zrow">
+            <div class="zav">🏆</div>
+            <div class="zi"><b>${t.n}</b><span>${cur}/${need} · ${t.desc || ''}</span></div>
+            ${done ? `<button class="btn sm g" data-wq="${t.id}">领取</button>`
+                   : '<span class="st off">未完成</span>'}</div>`;
+        }).join('') || '<div class="lbl">暂无周常</div>'}
+        <div class="sub" style="padding:6px 2px">每周一 0 点刷新，奖励钻石与稀有材料。</div>
+      </div>`;
+    }
     if (tab === '日常') {
       return `<div class="card"><div class="card-t">日常任务 <span class="sub">每日刷新</span></div>
         ${EX.tasks.daily.map((t) => {
-          const cur = E.taskProg(p, t), done = cur >= t.need;
+          const need = t.need || (t.cond ? t.cond.v : 1);
+          const cur = E.taskProg(p, t), done = cur >= need;
           return `<div class="zrow">
             <div class="zav">${this.taskIcon(t)}</div>
-            <div class="zi"><b>${t.n}</b><span>${cur}/${t.need}</span></div>
+            <div class="zi"><b>${t.n}</b><span>${cur}/${need}</span></div>
             ${done ? `<button class="btn sm g" data-dq="${t.id}">领取</button>`
                    : '<span class="st off">未完成</span>'}</div>`;
         }).join('')}
@@ -579,23 +604,34 @@ const UI = {
       <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往任务</button>`;
     }
     if (tab === '成就') {
-      return `<div class="card"><div class="card-t">成就 <span class="sub">${Object.keys(p.achGot || {}).length}/${EX.tasks.achieve.length}</span></div>
+      return `<div class="card"><div class="card-t">成就
+        <span class="sub">${Object.keys(p.achGot || {}).length}/${EX.tasks.achieve.length}</span></div>
+        <div class="kv"><span>成就点</span><b style="color:var(--yel)">${p.ach || 0}</b></div>
+        <button class="btn o blk" id="toAchShop">🔄 前往成就商店</button>
+      </div>
+      <div class="card"><div class="card-t">成就列表</div>
         ${EX.tasks.achieve.map((a) => {
           const got = (p.achGot || {})[a.id];
+          const done = E.taskDone(p, a);
+          const claimed = (p.tasks.achieveClaimed || []).indexOf(a.id) >= 0;
           return `<div class="zrow">
             <div class="zav">${this.taskIcon(a)}</div>
-            <div class="zi"><b>${a.n}</b><span>${a.desc}</span></div>
-            ${got ? '<span class="st on">已达成</span>' : `<span class="st off">💎${a.rw.diamond || 0}</span>`}</div>`;
+            <div class="zi"><b>${a.n}</b><span>${a.desc}</span>
+              <span style="color:var(--yel)">成就点 +${a.rw.ach || 0}</span></div>
+            ${claimed ? '<span class="st on">已领取</span>'
+              : (done ? `<button class="btn sm g" data-aq="${a.id}">领取</button>`
+                      : '<span class="st off">未达成</span>')}</div>`;
         }).join('')}</div>`;
     }
     /* 主线（截图：清除僵尸/通关关卡/收集材料/领取奖励 + 紫宝石金币奖励） */
     return `<div class="card"><div class="card-t">主线任务
       <span class="sub">第 ${p.ch || 1} 章</span></div>
       ${EX.tasks.main.map((t) => {
-        const cur = E.taskProg(p, t), done = cur >= t.need;
+        const need = t.need || (t.cond && t.cond.t === 'clearLv' ? 1 : (t.cond ? t.cond.v : 1));
+        const cur = E.taskProg(p, t), done = cur >= need;
         return `<div class="zrow">
           <div class="zav">${this.taskIcon(t)}</div>
-          <div class="zi"><b>${t.n}</b><span>${Math.min(cur, t.need)}/${t.need}</span>
+          <div class="zi"><b>${t.n}</b><span>${Math.min(cur, need)}/${need}</span>
             <span>💎${t.rw.diamond || 0} 🪙${t.rw.gold || 0}</span></div>
           ${done ? `<button class="btn sm g" data-mq="${t.id}">领取</button>`
                  : '<span class="st off">进行中</span>'}</div>`;
@@ -605,13 +641,23 @@ const UI = {
   },
   b_task(p, tab) {
     const gb = $('#goTask');
+    const asb = $('#toAchShop');
+    if (asb) asb.onclick = () => this.open('ashop', '成就商店');
+    $$('#pnBody [data-aq]').forEach((b) => { b.onclick = () => {
+      const r = E.claimTask(p, 'achieve', b.dataset.aq); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pickup'); this.open('task'); this.home(); }
+    }; });
     if (gb) gb.onclick = () => { this.close(); this.open('level', '章节'); };
     $$('#pnBody [data-mq]').forEach((b) => { b.onclick = () => {
-      const r = E.claimTask(p, b.dataset.mq, 'main'); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      const r = E.claimTask(p, 'main', b.dataset.mq); this.toast(r.msg, r.ok ? 'ok' : 'err');
       if (r.ok) { this.open('task'); this.home(); }
     }; });
+    $$('#pnBody [data-wq]').forEach((b) => { b.onclick = () => {
+      const r = E.claimTask(p, 'weekly', b.dataset.wq); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pickup'); this.open('task'); this.home(); }
+    }; });
     $$('#pnBody [data-dq]').forEach((b) => { b.onclick = () => {
-      const r = E.claimTask(p, b.dataset.dq, 'daily'); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      const r = E.claimTask(p, 'daily', b.dataset.dq); this.toast(r.msg, r.ok ? 'ok' : 'err');
       if (r.ok) { this.open('task'); this.home(); }
     }; });
   },
@@ -843,6 +889,42 @@ const UI = {
       <button class="btn g" id="mailAll" style="width:100%;margin-top:8px">一键领取</button>
     </div>`;
   },
+  /* ---------- 排行榜（含表33排名奖励） ---------- */
+  r_rank(p) {
+    const boards = ['无尽生存榜', '战力榜', '活动冲榜'];
+    const myRank = { '无尽生存榜': p.rankEndless || 0, '战力榜': p.rankPower || 0, '活动冲榜': p.rankEv || 0 };
+    return `<div class="card"><div class="card-t">我的排名</div>
+      ${boards.map((b) => {
+        const rk = myRank[b] || 0;
+        return `<div class="kv"><span>${b}</span><b style="color:${rk ? 'var(--yel)' : 'var(--txt3)'}">${rk ? '第 ' + rk + ' 名' : '未上榜'}</b></div>`;
+      }).join('')}
+    </div>
+    <div class="card"><div class="card-t">排名奖励 <span class="sub">表33</span></div>
+      ${boards.map((b) => `<div class="sub" style="color:var(--yel);font-weight:700;margin-top:6px">${b}</div>
+        ${(EX.rankRewards || []).filter((x) => x.board === b).map((rw) => {
+          const rk = myRank[b] || 0;
+          const inRank = rk >= rw.lo && rk <= rw.hi;
+          const got = (p.rankRwGot || {})['rk_' + b + '_' + rw.id];
+          return `<div class="zrow">
+            <div class="zav">🏅</div>
+            <div class="zi"><b>${rw.rank}</b><span>${rw.cyc}结算 · ${Object.keys(rw.rw).map((k) => E.itemName(k)).join('、')}</span></div>
+            ${got ? '<span class="st on">已领取</span>'
+              : (inRank ? `<button class="btn sm g" data-rk="${b}|${rw.id}">领取</button>`
+                        : '<span class="st off">未达名次</span>')}</div>`;
+        }).join('')}`).join('')}
+    </div>`;
+  },
+  b_rank(p) {
+    $$('#pnBody [data-rk]').forEach((b) => { b.onclick = () => {
+      const [board, id] = b.dataset.rk.split('|');
+      const rw = (EX.rankRewards || []).find((x) => x.id === id);
+      const rank = board === '战力榜' ? (p.rankPower || 0) : board === '活动冲榜' ? (p.rankEv || 0) : (p.rankEndless || 0);
+      const r = E.claimRankRw(p, board, rank);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); this.open('rank'); this.home(); }
+    }; });
+  },
+
   b_mail(p, tab) {
     const ab = $('#mailAll');
     if (ab) ab.onclick = () => {
@@ -910,7 +992,8 @@ const UI = {
           <div class="sub">${l.waves} 波 · 强度 ×${l.mul} · ${l.pool.map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')}</div>
           <div class="sub">${st ? '★'.repeat(st) : '未通关'} · 体力 ${cost} · 奖励：${this.rwTxt(l.rw)}</div>
           ${lock ? '<div class="sub" style="color:#ff8fa4">需先通关 ' + l.unlock + '</div>' : ''}</div>
-          <div class="act">${lock ? '<span class="tag r">未解锁</span>' : `<button class="btn c sm" data-lv="${l.id}">挑战</button>`}</div></div>`;
+          <div class="act">${lock ? '<span class="tag r">未解锁</span>' : `<button class="btn c sm" data-lv="${l.id}">挑战</button>`
+            + (st ? `<button class="btn sm o" data-sw="${l.id}" style="margin-top:4px">扫荡</button>` : '')}</div></div>`;
       }).join('')}</div>
       <div class="card"><div class="card-t">章节</div>
       <div class="lvgrid">${EX.chapters.map((c) => `<button class="lvc ${c.id === ch ? 'cur' : ''}" data-ch="${c.id}">
@@ -924,6 +1007,45 @@ const UI = {
   b_level(p) {
     $$('#pnBody [data-ch]').forEach((b) => { b.onclick = () => { this.curChapter = +b.dataset.ch; this.open('level'); }; });
     $$('#pnBody [data-lv]').forEach((b) => { b.onclick = () => { this.close(); startBattle('normal', b.dataset.lv); }; });
+    $$('#pnBody [data-sw]').forEach((b) => { b.onclick = () => this.sweepBox(b.dataset.sw); });
+  },
+
+  /* ---------- 扫荡弹窗（表29：已通关关卡快速扫荡） ---------- */
+  sweepBox(lvId) {
+    const p = this.P; if (!p) return;
+    const ck = E.canSweep(p, lvId);
+    if (!ck.ok) return this.toast(ck.msg, 'err');
+    const maxBySt = Math.floor((p.stamina || 0) / EX.SWEEP_STAMINA);
+    const max = Math.max(1, Math.min(EX.SWEEP_MAX, maxBySt));
+    const rw1 = EX.sweepRw(parseInt(String(lvId).split('-')[1] || '1', 10), 1);
+    /* 用通用面板层承载扫荡弹窗 */
+    const box = document.getElementById('sweepBox');
+    if (!box) return this.sweepQuick(lvId, 1);
+    box.innerHTML = `<div class="pn-box"><div class="pn-hd"><b>扫荡 ${lvId}</b>
+      <button id="swX">✕</button></div><div class="pn-main"><div class="pn-body">
+      <div class="card"><div class="card-t">扫荡设置</div>
+      <div class="sub">单次消耗体力 ${EX.SWEEP_STAMINA} · 当前体力 ${Math.floor(p.stamina || 0)}</div>
+      <div class="sub">单次产出：金币 ${E.fmt(rw1.gold)} · 金属 ${rw1.M01} · 经验 ${rw1.xp}</div>
+      <div class="kv"><span>扫荡次数</span><b><input type="number" id="swN" value="${max}" min="1" max="${max}"
+        style="width:64px;padding:4px;border-radius:6px;border:1px solid #555;background:#222;color:#fff"></b></div>
+      <button class="btn c blk" id="swGo">开始扫荡（最多 ${max} 次）</button>
+      <button class="btn d blk" id="swX2">取消</button></div></div></div></div>`;
+    box.classList.add('on');
+    const g = document.getElementById('swGo');
+    if (g) g.onclick = () => {
+      const el = document.getElementById('swN');
+      const n = Math.max(1, Math.min(max, parseInt((el && el.value) || '1', 10)));
+      const r = E.sweep(p, lvId, n);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pickup'); box.classList.remove('on'); this.open('level'); this.home(); }
+    };
+    const x1 = document.getElementById('swX'), x2 = document.getElementById('swX2');
+    if (x1) x1.onclick = () => box.classList.remove('on');
+    if (x2) x2.onclick = () => box.classList.remove('on');
+  },
+  sweepQuick(lvId, n) {
+    const r = E.sweep(this.P, lvId, n || 1);
+    this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) this.home();
   },
 
   /* ---------- 基地建筑 ---------- */
@@ -954,6 +1076,72 @@ const UI = {
   },
 
   /* ---------- 设置 ---------- */
+  /* ---------- 兑换商店（表42成就商店 / 表43活动商店） ---------- */
+  r_ashop(p, tab) {
+    const isAch = tab === '成就商店';
+    const list = isAch ? (EX.achShop || []) : (EX.eventShop || []);
+    const curName = isAch ? '成就点' : '活动代币';
+    const curVal = isAch ? (p.ach || 0) : (p.evToken || 0);
+    return `<div class="card"><div class="card-t">${tab}
+      <span class="sub">持有 <b style="color:var(--yel)">${E.fmt(curVal)}</b> ${curName}</span></div>
+      ${list.map((it) => {
+        const bought = isAch ? E.achShopBought(p, it.id)
+          : (() => { const b = p.evShopBuy || {}, k = 'es_' + it.id; return b[k] ? b[k].n : 0; })();
+        const full = bought >= it.limit;
+        const can = curVal >= it.cost && !full;
+        return `<div class="zrow">
+          <div class="zav">${it.t === '芯片' ? '💠' : it.t === '碎片' ? '🧩' : it.t === '皮肤' ? '👕' : it.t === '称号' ? '🏅' : '📦'}</div>
+          <div class="zi"><b>${it.n}</b><span>${it.cost} ${curName} · 限购 ${it.limit}（已兑 ${bought}）</span></div>
+          <button class="btn sm ${can ? '' : 'd'}" data-buy="${it.id}" ${can ? '' : 'disabled'}>兑换</button>
+        </div>`;
+      }).join('')}
+      <div class="sub" style="padding:6px 2px">限购按 ${isAch ? '每日/每周/每月' : '每日/活动期'} 刷新。</div>
+    </div>`;
+  },
+  b_ashop(p, tab) {
+    const isAch = tab === '成就商店';
+    $$('#pnBody [data-buy]').forEach((b) => { b.onclick = () => {
+      const r = isAch ? E.achShopBuyItem(p, b.dataset.buy) : E.eventShopBuy(p, b.dataset.buy);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('equip'); this.open('ashop', tab); this.home(); }
+    }; });
+  },
+
+  /* ---------- 图鉴收集（表29） ---------- */
+  r_codex(p, tab) {
+    const kindMap = { '怪物': 'zombie', '武器': 'gun', '皮肤': 'skin' };
+    const kind = kindMap[tab] || 'zombie';
+    const list = EX.codexOf(kind) || [];
+    const got = (p.codex || {})[kind] || [];
+    const cc = E.codexCount(p);
+    const rw = (EX.codexRw || {})[kind] || {};
+    return `<div class="card"><div class="card-t">收集进度
+      <span class="sub">${cc.got} / ${cc.all}</span></div>
+      <div class="sub">解锁奖励：+${rw.gold || 0} 金币 · +${rw.ach || 0} 成就点</div>
+    </div>
+    <div class="card"><div class="card-t">${tab}图鉴 <span class="sub">${got.length}/${list.length}</span></div>
+      <div class="grid4">${list.map((x) => {
+        const has = got.indexOf(x.id) >= 0;
+        return `<div class="gcell ${has ? '' : 'sel'}"${has ? '' : ` data-cdx="${kind}|${x.id}"`}>
+          ${x.img ? `<img src="${x.img}" style="width:60%;height:60%;object-fit:contain">`
+                  : `<div class="gi">${x.icon || '❓'}</div>`}
+          <div class="gn">${has ? x.n : '???'}</div>
+          ${has ? '<span class="gq">✔</span>' : '<span class="gq" style="background:#666">解锁</span>'}
+        </div>`;
+      }).join('')}</div>
+      <div class="sub" style="padding:6px 2px">点击未解锁条目可解锁并领奖。</div>
+    </div>`;
+  },
+  b_codex(p, tab) {
+    $$('#pnBody [data-cdx]').forEach((b) => { b.onclick = () => {
+      const [kind, id] = b.dataset.cdx.split('|');
+      const r = E.codexUnlock(p, kind, id);
+      if (r.ok) { this.toast(r.msg, 'ok'); if (window.SND) SND.play('pickup'); }
+      else this.toast(r.already ? '已解锁' : r.msg, r.already ? 'ok' : 'err');
+      this.open('codex', tab); this.home();
+    }; });
+  },
+
   r_set(p, tab) {
     if (tab === '网络') {
       return `<div class="card"><div class="card-t">网络状态</div>
