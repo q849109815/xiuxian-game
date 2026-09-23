@@ -53,13 +53,16 @@ const UI = {
 
   /* ================= 面板 ================= */
   PANELS: {
-    role: ['角色', ['角色', '皮肤']],
+    role: ['角色', ['装备', '宝石', '皮肤']],
     gun: ['武器', ['强化', '武器库']],
-    chip: ['芯片', ['装配', '背包']],
+    chip: ['芯片系统', ['芯片']],
     talent: ['天赋', ['天赋']],
-    task: ['任务', ['主线', '每日', '每周', '成就']],
-    bag: ['背包', ['材料', '消耗品']],
-    shop: ['商城', ['礼包', '直购']],
+    task: ['任务', ['主线', '日常', '成就']],
+    bag: ['我的背包', ['宝石', '装备', '材料', '芯片']],
+    shop: ['商店', ['每日', '武器', '宝石', '材料']],
+    gem: ['宝石镶嵌', ['镶嵌']],
+    friends: ['好友', ['好友列表', '申请', '聊天']],
+    mail: ['邮件', ['邮件']],
     act: ['活动', ['活动']],
     rank: ['排行榜', ['全服']],
     set: ['设置', ['账号', '网络', '数值']],
@@ -422,7 +425,18 @@ const UI = {
         </div></div>`).join('')}</div>
         <div class="lbl">合成：3 块同品质 → 升一级（白→蓝→红）。洗练：钻石重 roll 副词条。</div>`;
     }
-    return `<div class="card"><div class="card-t">芯片槽 <span class="sub">${Object.keys(p.chips || {}).length}/6</span></div>
+    /* 截图特征：顶部「全线战力」 */
+    return `<div class="card"><div class="card-t">全线战力
+      <span class="sub" style="color:var(--yel);font-size:13px;font-weight:800">${E.fmt(E.power(p))}</span></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="zav">🧟</div>
+        <div class="grid4" style="flex:1">${(p.bag || []).slice(0, 4).map((c) =>
+          `<div class="gcell"><div class="gi" style="color:${EX.qColor[c.q]}">🔲</div>
+           <div class="gn" style="color:${EX.qColor[c.q]}">${c.q}品</div></div>`).join('')
+          || '<div class="lbl">未装芯片</div>'}</div>
+        <div class="zav" style="background:linear-gradient(160deg,#78909c,#455a64)">🔫</div>
+      </div></div>
+      <div class="card"><div class="card-t">芯片槽 <span class="sub">${Object.keys(p.chips || {}).length}/6</span></div>
       <div class="lvgrid">${EX.chipSlots.map((s) => {
         const c = p.chips[s.k];
         return `<button class="lvc ${this.selChipSlot === s.k ? 'cur' : ''}" data-slot="${s.k}">
@@ -437,11 +451,23 @@ const UI = {
         <div class="info"><div class="nm" style="color:${EX.qColor[c.q]}">${E.chipName(c)}</div></div>
         <div class="act"><button class="btn c sm" data-wear="${c.id}">装上</button></div></div>`).join('')
         : '<div class="lbl">背包内暂无芯片</div>'}</div>
+      <button class="btn o" id="chipEquip" style="width:100%;margin:8px 0">装 备 芯 片</button>
       <div class="card"><div class="card-t">芯片图鉴 <span class="sub">资料 8 种</span></div>
       ${EX.chips.map((d) => `<div class="kv"><span style="color:${EX.qColor[d.q]}">${d.n}</span>
         <b style="font-size:10px">主+${(d.main.v * 100).toFixed(0)}%${d.subPool.length ? ' · 词条' + d.subPool.length : ''} · ${d.src}</b></div>`).join('')}</div>`;
   },
   b_chip(p, tab) {
+    const ce = $('#chipEquip');
+    if (ce) ce.onclick = () => {
+      const bag = p.bag || [];
+      if (!bag.length) return this.toast('背包内暂无芯片', 'err');
+      const free = EX.chipSlots.find((s) => !p.chips[s.k]);
+      if (!free) return this.toast('芯片槽已满', 'err');
+      const c = bag[0];
+      p.chips[free.k] = c; p.bag = bag.filter((x) => x.id !== c.id);
+      E.save(p); this.toast('已装备 ' + E.chipName(c), 'ok');
+      if (window.SND) SND.play('upgrade'); this.open('chip'); this.home();
+    };
     $$('#pnBody [data-slot]').forEach((b) => { b.onclick = () => { this.selChipSlot = b.dataset.slot; this.open('chip', tab); }; });
     $$('#pnBody [data-wear]').forEach((b) => {
       b.onclick = () => {
@@ -490,144 +516,285 @@ const UI = {
   },
 
   /* ---------- 任务 ---------- */
+  /* 任务图标（按条件类型） */
+  taskIcon(t) {
+    const m = {
+      clearLv: '🎯', kills: '🧟', dailyKill: '🔫', dailyClear: '🏁',
+      login: '📅', weekClear: '🏆', weekKill: '💀', bossKill: '👹',
+      noHitKill: '✨', endlessTime: '♾️',
+    };
+    return m[(t.cond || {}).t] || '📋';
+  },
+
+  /* ---------- 任务（截图：主线/日常/成就 + 黄色「前往任务」） ---------- */
   r_task(p, tab) {
-    E.resetTasks(p);
-    const map = { '主线': 'main', '每日': 'daily', '每周': 'weekly', '成就': 'achieve' };
-    const list = EX.tasks[map[tab] || 'main'] || [];
-    const claimedKey = { '主线': 'mainClaimed', '每日': 'dailyClaimed', '每周': 'weeklyClaimed', '成就': 'achieveClaimed' }[tab];
-    const claimed = p.tasks[claimedKey] || [];
-    return `<div class="card"><div class="card-t">${tab}任务 <span class="sub">${list.length} 条</span></div>
-    ${list.map((t) => {
-      const cur = E.taskProg(p, t), need = t.cond.v === 0 ? 1 : (typeof t.cond.v === 'string' ? 1 : t.cond.v);
-      const done = E.taskDone(p, t);
-      const got = claimed.indexOf(t.id) >= 0;
-      return `<div class="item"><div class="ic">${done ? '✅' : '⏳'}</div>
-        <div class="info"><div class="nm">${t.id} ${t.n}</div><div class="sub">${t.desc || ''}</div>
-        <div class="bar"><i style="width:${Math.min(100, cur / need * 100)}%"></i></div>
-        <div class="sub">${E.fmt(cur)} / ${need}</div></div>
-        <div class="act">${got ? '<span class="tag g">已领取</span>' :
-          `<button class="btn ${done ? 'c' : ''} sm" data-claim="${t.id}" ${done ? '' : 'disabled'}>${this.rwTxt(t.rw)}</button>`}</div></div>`;
-    }).join('')}</div>
-    <div class="card"><div class="card-t">成就点</div>
-      <div class="kv"><span>当前成就点</span><b style="color:var(--gold)">${E.fmt(p.ach || 0)}</b></div></div>`;
+    const DONE = '✔';
+    if (tab === '日常') {
+      return `<div class="card"><div class="card-t">日常任务 <span class="sub">每日刷新</span></div>
+        ${EX.tasks.daily.map((t) => {
+          const cur = E.taskProg(p, t), done = cur >= t.need;
+          return `<div class="zrow">
+            <div class="zav">${this.taskIcon(t)}</div>
+            <div class="zi"><b>${t.n}</b><span>${cur}/${t.need}</span></div>
+            ${done ? `<button class="btn sm g" data-dq="${t.id}">领取</button>`
+                   : '<span class="st off">未完成</span>'}</div>`;
+        }).join('')}
+      </div>
+      <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往任务</button>`;
+    }
+    if (tab === '成就') {
+      return `<div class="card"><div class="card-t">成就 <span class="sub">${Object.keys(p.achGot || {}).length}/${EX.tasks.achieve.length}</span></div>
+        ${EX.tasks.achieve.map((a) => {
+          const got = (p.achGot || {})[a.id];
+          return `<div class="zrow">
+            <div class="zav">${this.taskIcon(a)}</div>
+            <div class="zi"><b>${a.n}</b><span>${a.desc}</span></div>
+            ${got ? '<span class="st on">已达成</span>' : `<span class="st off">💎${a.rw.diamond || 0}</span>`}</div>`;
+        }).join('')}</div>`;
+    }
+    /* 主线（截图：清除僵尸/通关关卡/收集材料/领取奖励 + 紫宝石金币奖励） */
+    return `<div class="card"><div class="card-t">主线任务
+      <span class="sub">第 ${p.ch || 1} 章</span></div>
+      ${EX.tasks.main.map((t) => {
+        const cur = E.taskProg(p, t), done = cur >= t.need;
+        return `<div class="zrow">
+          <div class="zav">${this.taskIcon(t)}</div>
+          <div class="zi"><b>${t.n}</b><span>${Math.min(cur, t.need)}/${t.need}</span>
+            <span>💎${t.rw.diamond || 0} 🪙${t.rw.gold || 0}</span></div>
+          ${done ? `<button class="btn sm g" data-mq="${t.id}">领取</button>`
+                 : '<span class="st off">进行中</span>'}</div>`;
+      }).join('')}
+      </div>
+      <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往任务</button>`;
   },
   b_task(p, tab) {
-    $$('#pnBody [data-claim]').forEach((b) => {
-      b.onclick = () => {
-        const map = { '主线': 'main', '每日': 'daily', '每周': 'weekly', '成就': 'achieve' };
-        const r = E.claimTask(p, map[tab] || 'main', b.dataset.claim);
-        this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('task', tab); this.home(); }
-      };
-    });
+    const gb = $('#goTask');
+    if (gb) gb.onclick = () => { this.close(); this.open('level', '章节'); };
+    $$('#pnBody [data-mq]').forEach((b) => { b.onclick = () => {
+      const r = E.claimTask(p, b.dataset.mq, 'main'); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { this.open('task'); this.home(); }
+    }; });
+    $$('#pnBody [data-dq]').forEach((b) => { b.onclick = () => {
+      const r = E.claimTask(p, b.dataset.dq, 'daily'); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { this.open('task'); this.home(); }
+    }; });
   },
 
-  /* ---------- 背包 ---------- */
   r_bag(p, tab) {
-    if (tab === '消耗品') {
-      return `<div class="card"><div class="card-t">消耗品</div>
-      ${EX.items.filter((x) => x.type === '消耗').map((it) => {
-        const n = (p.use || {})[it.id] || 0;
-        return `<div class="item"><div class="ic">${it.img
-          ? `<img src="${it.img}" style="width:30px;height:30px;border-radius:6px;object-fit:cover">`
-          : it.icon}</div>
-          <div class="info"><div class="nm">${it.n} <span class="tag">${n}</span></div>
-          <div class="sub">${it.use || ''}</div><div class="sub">来源：${it.src}</div></div>
-          <div class="act"><button class="btn sm" data-use="${it.id}" ${n ? '' : 'disabled'}>使用</button></div></div>`;
-      }).join('')}</div>`;
+    const GEMC = { r: 'gem r', b: 'gem b', g: 'gem g', p: 'gem p' };
+    if (tab === '宝石') {
+      const gs = EX.gems || [];
+      return `<div class="card"><div class="card-t">宝石 <span class="sub">镶嵌到装备提升属性</span></div>
+        <div class="grid4">${gs.length ? gs.map((g) => {
+          const n = (p.gems || {})[g.id] || 0;
+          return `<div class="gcell ${n ? '' : 'sel'}" data-gem="${g.id}">
+            <div class="${GEMC[g.c] || 'gem'}">${g.icon || '💎'}</div>
+            <div class="gn">${g.n}</div>
+            ${n ? `<span class="gq">×${n}</span>` : ''}${n == 0 ? '' : '<i class="gdot"></i>'}</div>`;
+        }).join('') : '<div class="lbl">暂无宝石</div>'}</div>
+      </div>
+      <button class="btn" id="goGem" style="width:100%;margin-top:8px">💎 前往宝石镶嵌</button>`;
     }
-    const a = E.attrs(p);
-    return `<div class="card"><div class="card-t">货币</div>
-      <div class="kv"><span>金币</span><b style="color:var(--gold)">${E.fmt(p.gold)}</b></div>
-      <div class="kv"><span>钻石</span><b style="color:var(--blue)">${E.fmt(p.diamond)}</b></div>
-      <div class="kv"><span>成就点</span><b>${E.fmt(p.ach || 0)}</b></div>
-      <div class="kv"><span>体力</span><b>${Math.floor(p.stamina || 0)} / ${EX.STAMINA_MAX}</b></div></div>
-      <div class="card"><div class="card-t">材料 <span class="sub">武器进阶 / 合成</span></div>
-      ${EX.items.filter((x) => x.type === '材料' || x.type === '碎片').map((it) => {
+    if (tab === '装备') {
+      const eq = p.equip || {};
+      return `<div class="card"><div class="card-t">装备</div>
+        <div class="grid4">${(EX.equipSlots || []).map((sl) => {
+          const it = eq[sl.k];
+          return `<div class="gcell"><div class="gi">${it ? (it.icon || '🎽') : (sl.icon || '⬜')}</div>
+            <div class="gn">${sl.n}</div>${it ? '<i class="gdot"></i>' : ''}</div>`;
+        }).join('') || '<div class="lbl">暂无装备槽</div>'}</div>
+      </div>`;
+    }
+    if (tab === '芯片') {
+      const cs = Object.keys(p.chips || {});
+      return `<div class="card"><div class="card-t">芯片 <span class="sub">${cs.length} 个</span></div>
+        <div class="grid4">${cs.length ? cs.map((id) => {
+          const c = p.chips[id];
+          return `<div class="gcell"><div class="gi">${c.icon || '🔲'}</div>
+            <div class="gn">${c.n || '芯片'}</div><span class="gq">Lv${c.lv || 1}</span></div>`;
+        }).join('') : '<div class="lbl">芯片背包为空</div>'}</div>
+      </div>
+      <button class="btn o" id="goChip" style="width:100%;margin-top:8px">🔲 前往芯片系统</button>`;
+    }
+    /* 材料 */
+    return `<div class="card"><div class="card-t">材料</div>
+      <div class="grid4">${EX.items.filter((x) => x.type === '材料' || x.type === '碎片').map((it) => {
         const n = (p.mat || {})[it.id] || 0;
-        const im = it.img ? `<img src="${it.img}" style="width:22px;height:22px;border-radius:5px;object-fit:cover;vertical-align:middle;margin-right:4px">` : (it.icon + ' ');
-        return `<div class="kv"><span>${im}${it.n}</span><b>${E.fmt(n)}</b></div>`;
-      }).join('')}</div>
-      <div class="card"><div class="card-t">已装芯片加成</div>
-      ${['atk', 'hp', 'armor', 'crit', 'critDmg', 'ls', 'rate'].map((k) => {
-        const v = E.chipVal(p, k); if (!v) return '';
-        const nm = { atk: '攻击', hp: '生命', armor: '护甲', crit: '暴击率', critDmg: '暴击伤害', ls: '吸血', rate: '攻速' }[k];
-        return `<div class="kv"><span>${nm}</span><b style="color:var(--green)">+${(v * 100).toFixed(1)}%</b></div>`;
-      }).join('') || '<div class="lbl">尚未装备芯片</div>'}</div>
-      <div class="card"><div class="card-t">邮件 <span class="sub">${(p.mail || []).filter((m) => !m.got).length} 封未读</span></div>
-      ${(p.mail || []).length ? p.mail.slice(-5).reverse().map((m) => `<div class="item">
-        <div class="ic">📮</div><div class="info"><div class="nm">${m.t}</div><div class="sub">${m.b || ''}</div>
-        <div class="sub">🪙${m.gold || 0} 💎${m.dia || 0}</div></div>
-        <div class="act">${m.got ? '<span class="tag g">已领</span>' : ''}</div></div>`).join('')
-        : '<div class="lbl">暂无邮件</div>'}</div>`;
+        return `<div class="gcell ${n ? '' : 'sel'}">${it.img
+          ? `<img src="${it.img}">` : `<div class="gi">${it.icon}</div>`}
+          <div class="gn">${it.n}</div>${n ? `<span class="gq">${n > 9999 ? (n / 1000).toFixed(1) + 'k' : n}</span>` : ''}</div>`;
+      }).join('')}</div></div>
+      <div class="card"><div class="card-t">消耗品</div>
+      <div class="grid4">${EX.items.filter((x) => x.type === '消耗').map((it) => {
+        const n = (p.use || {})[it.id] || 0;
+        return `<div class="gcell ${n ? '' : 'sel'}">${it.img
+          ? `<img src="${it.img}">` : `<div class="gi">${it.icon}</div>`}
+          <div class="gn">${it.n}</div>${n ? `<span class="gq">×${n}</span>` : ''}</div>`;
+      }).join('')}</div></div>`;
   },
   b_bag(p, tab) {
-    $$('#pnBody [data-use]').forEach((b) => {
-      b.onclick = () => {
-        const id = b.dataset.use;
-        if (!(p.use || {})[id]) return;
-        p.use[id]--;
-        if (id === 'I01') this.toast('使用了急救包（恢复生命 50%）', 'ok');
-        else if (id === 'I02') this.toast('使用了护盾发生器', 'ok');
-        else this.toast('使用了攻击增幅药剂（攻击+30%，30秒）', 'ok');
-        this.open('bag', tab);
-      };
-    });
+    const g1 = $('#goGem'); if (g1) g1.onclick = () => this.open('gem');
+    const g2 = $('#goChip'); if (g2) g2.onclick = () => this.open('chip');
   },
 
-  /* ---------- 商城 ---------- */
+  /* ---------- 商店（截图：每日/武器/宝石/材料 三列网格） ---------- */
   r_shop(p, tab) {
-    const list = EX.shop.filter((k) => tab === '礼包'
-      ? (k.type === '礼包' || k.type === '月卡' || k.type === '战令') : (k.type === '直购'));
-    return `<div class="card"><div class="card-t">商城 <span class="sub">${tab}</span></div>
-    ${list.map((k) => `<div class="item"><div class="ic">${k.icon}</div>
-      <div class="info"><div class="nm">${k.n} <span class="tag">${k.type}</span>${k.limit ? '<span class="tag r">限购' + k.limit + '</span>' : ''}</div>
-      <div class="sub">${this.rwTxt(k.rw) || k.desc || ''}</div></div>
-      <div class="act"><button class="btn c sm" data-buy="${k.id}">${k.price ? '¥' + k.price : '免费'}</button></div></div>`).join('')}</div>
-      <div class="lbl">网页版为单机体验，点击直接发放（不产生真实支付）。</div>`;
+    const goods = (EX.shopGoods || {})[tab] || [];
+    return `<div class="card"><div class="card-t">${tab}
+      <span class="sub">🪙 ${E.fmt(p.gold)} · 💎 ${E.fmt(p.diamond)}</span></div>
+      <div class="grid3">${goods.length ? goods.map((g) => {
+        const can = (p[g.cur || 'gold'] || 0) >= g.price;
+        return `<div class="gcell">
+          ${g.img ? `<img src="${g.img}">` : `<div class="gi">${g.icon}</div>`}
+          <div class="gn">${g.n}</div>
+          <button class="btn sm" data-buy="${g.id}" ${can ? '' : 'disabled'}
+            style="font-size:9px;padding:3px 6px;margin-top:2px">
+            ${g.cur === 'diamond' ? '💎' : '🪙'}${g.price}</button>
+        </div>`;
+      }).join('') : '<div class="lbl">暂无商品</div>'}</div>
+    </div>`;
   },
   b_shop(p, tab) {
-    $$('#pnBody [data-buy]').forEach((b) => {
-      b.onclick = () => {
-        const k = EX.shop.find((x) => x.id === b.dataset.buy); if (!k) return;
-        if (k.limit && (p.shopBuy || {})[k.id] >= k.limit) return this.toast('已达限购次数', 'err');
-        p.shopBuy = p.shopBuy || {}; p.shopBuy[k.id] = (p.shopBuy[k.id] || 0) + 1;
-        for (const key in k.rw || {}) {
-          const v = k.rw[key];
-          if (key === 'gold') p.gold += v;
-          else if (key === 'diamond') p.diamond += v;
-          else if (key === 'skin') { p.skins = p.skins || []; if (p.skins.indexOf(v) < 0) p.skins.push(v); }
-          else if (key === 'chipRed') { for (let i = 0; i < v; i++) p.bag.push(E.rollChipById('CH06')); }
-          else p.mat[key] = (p.mat[key] || 0) + v;
-        }
-        this.toast('购买成功：' + k.n, 'ok'); this.open('shop', tab); this.home();
-      };
-    });
+    $$('#pnBody [data-buy]').forEach((b) => { b.onclick = () => {
+      const goods = (EX.shopGoods || {})[tab] || [];
+      const g = goods.find((x) => x.id === b.dataset.buy); if (!g) return;
+      const cur = g.cur || 'gold';
+      if ((p[cur] || 0) < g.price) return this.toast('货币不足', 'err');
+      p[cur] -= g.price;
+      if (g.give) for (const k in g.give) {
+        if (k === 'gold') p.gold += g.give[k];
+        else if (k === 'diamond') p.diamond += g.give[k];
+        else if (k === 'stamina') p.stamina = (p.stamina || 0) + g.give[k];
+        else p.mat[k] = (p.mat[k] || 0) + g.give[k];
+      }
+      E.save(p); this.toast('购买成功', 'ok');
+      if (window.SND) SND.play('get'); this.open('shop', tab); this.home();
+    }; });
   },
 
-  /* ---------- 活动 ---------- */
-  r_act(p) {
-    return `<div class="card"><div class="card-t">活动 <span class="sub">${EX.activities.length} 个</span></div>
-    ${EX.activities.map((a) => `<div class="item"><div class="ic">${a.icon}</div>
-      <div class="info"><div class="nm">${a.id} ${a.n} <span class="tag">${a.type}</span></div>
-      <div class="sub">${a.desc}</div><div class="sub">时间：${a.time} · 奖励：${a.rw}</div>
-      <div class="sub">规则：${a.rule}</div></div>
-      <div class="act"><button class="btn c sm" data-act="${a.id}">参与</button></div></div>`).join('')}</div>`;
+  /* ---------- 宝石镶嵌（截图：石质面板 + 僵尸头 + 红蓝绿紫宝石 + 黄色镶嵌） ---------- */
+  r_gem(p, tab) {
+    const gs = EX.gems || [];
+    const sel = this.gemSel || (gs[0] && gs[0].id);
+    const g = gs.find((x) => x.id === sel) || gs[0];
+    return `<div class="stone-panel">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div class="zav" style="width:52px;height:52px;font-size:30px">🧟</div>
+        <div><b style="font-size:14px">宝石镶嵌</b>
+          <div class="sub">镶嵌宝石可大幅提升属性</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        ${gs.map((x) => {
+          const n = (p.gems || {})[x.id] || 0;
+          const on = x.id === sel;
+          return `<div class="zrow" data-gsel="${x.id}" style="${on ? 'border-color:var(--yel);background:rgba(255,201,60,.12)' : ''}">
+            <div class="gem ${x.c === 'r' ? 'r' : x.c === 'b' ? 'b' : x.c === 'g' ? 'g' : 'p'}">${x.icon || '💎'}</div>
+            <div class="zi"><b>${x.n}</b><span>${x.desc}</span></div>
+            <span class="st ${on ? 'on' : 'off'}">${n} 颗</span>
+          </div>`;
+        }).join('') || '<div class="lbl">暂无宝石</div>'}
+      </div>
+      <div class="sub" style="margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.2)">
+        当前选中：<b style="color:var(--yel)">${g ? g.n : '—'}</b>
+        ${g ? ' · ' + g.desc : ''}
+      </div>
+      <button class="btn" id="gemInlay" style="width:100%;margin-top:10px">镶 嵌</button>
+    </div>`;
   },
-  b_act(p) {
-    $$('#pnBody [data-act]').forEach((b) => {
-      b.onclick = () => {
-        const id = b.dataset.act;
-        if (id === 'EV03') {
-          p.signin = (p.signin || 0) + 1;
-          p.diamond += 20; p.mat.M01 = (p.mat.M01 || 0) + 10;
-          this.toast('签到成功：钻石+20 金属+10（连续 ' + p.signin + ' 天）', 'ok');
-          this.open('act'); this.home();
-        } else { this.close(); startBattle('normal'); }
-      };
-    });
+  b_gem(p, tab) {
+    $$('#pnBody [data-gsel]').forEach((el) => { el.onclick = () => {
+      this.gemSel = el.dataset.gsel; this.open('gem');
+    }; });
+    const ib = $('#gemInlay');
+    if (ib) ib.onclick = () => {
+      const id = this.gemSel; const g = (EX.gems || []).find((x) => x.id === id);
+      if (!g) return this.toast('请选择宝石', 'err');
+      if (!((p.gems || {})[id] > 0)) return this.toast('该宝石数量不足', 'err');
+      p.gems[id]--; p.gemOn = id;
+      if (window.SND) SND.play('upgrade');
+      E.save(p); this.toast('镶嵌成功：' + g.n, 'ok'); this.open('gem'); this.home();
+    };
   },
 
-  /* ---------- 排行榜 ---------- */
+  /* ---------- 好友（截图：好友列表/申请/聊天 + 僵尸头像 + 添加好友） ---------- */
+  r_friends(p, tab) {
+    if (tab === '聊天') {
+      const msgs = (p.chat || []).slice(-20).reverse();
+      return `<div class="card"><div class="card-t">聊天</div>
+        ${msgs.length ? msgs.map((m) => `<div class="zrow"><div class="zav">🧟</div>
+          <div class="zi"><b>${m.n || '匿名'}</b><span>${m.t || ''}</span></div></div>`).join('')
+        : '<div class="lbl">暂无消息</div>'}</div>`;
+    }
+    if (tab === '申请') {
+      const reqs = p.friendReq || [];
+      return `<div class="card"><div class="card-t">好友申请 <span class="sub">${reqs.length}</span></div>
+        ${reqs.length ? reqs.map((r) => `<div class="zrow"><div class="zav">🧟</div>
+          <div class="zi"><b>${r.n}</b><span>战力 ${E.fmt(r.pw || 0)}</span></div>
+          <button class="btn g sm" data-accept="${r.id}">接受</button></div>`).join('')
+        : '<div class="lbl">暂无申请</div>'}</div>`;
+    }
+    const fs = p.friends || [];
+    return `<div class="card"><div class="card-t">好友列表
+      <span class="sub">${fs.length} 人 · 每个 +0.5% 攻击</span></div>
+      ${fs.length ? fs.map((f) => `<div class="zrow">
+        <div class="zav">🧟</div>
+        <div class="zi"><b>${f.n}</b><span>战力 ${E.fmt(f.pw || 0)} · 可发送体力</span></div>
+        <button class="btn sm g" data-sendst="${f.id}">送体力</button>
+        <span class="st ${f.online ? 'on' : 'off'}">${f.online ? '在线' : '离线'}</span>
+      </div>`).join('') : '<div class="lbl">还没有好友，点击下方添加</div>'}
+      <button class="btn" id="addFriend" style="width:100%;margin-top:8px">添加好友</button>
+    </div>`;
+  },
+  b_friends(p, tab) {
+    const ab = $('#addFriend');
+    if (ab) ab.onclick = () => {
+      const nm = '僵友' + Math.floor(Math.random() * 900 + 100);
+      (p.friends || (p.friends = [])).push({ id: 'f' + Date.now(), n: nm,
+        pw: Math.floor(Math.random() * 50000 + 5000), online: Math.random() > 0.5 });
+      E.save(p); this.toast('已添加好友 ' + nm, 'ok');
+      if (window.SND) SND.play('get'); this.open('friends'); this.home();
+    };
+    $$('#pnBody [data-sendst]').forEach((b) => { b.onclick = () => {
+      this.toast('体力已发送', 'ok'); if (window.SND) SND.play('get');
+    }; });
+    $$('#pnBody [data-accept]').forEach((b) => { b.onclick = () => {
+      const id = b.dataset.accept;
+      const r = (p.friendReq || []).find((x) => x.id === id);
+      if (r) { (p.friends || (p.friends = [])).push(r);
+        p.friendReq = p.friendReq.filter((x) => x.id !== id);
+        E.save(p); this.toast('已添加 ' + r.n, 'ok'); this.open('friends', '申请'); this.home(); }
+    }; });
+  },
+
+  /* ---------- 邮件（截图：列表 + 绿色一键领取） ---------- */
+  r_mail(p, tab) {
+    const ms = p.mail || [];
+    const un = ms.filter((m) => !m.got).length;
+    return `<div class="card"><div class="card-t">邮件 <span class="sub">${un} 封未读</span></div>
+      ${ms.length ? ms.slice().reverse().map((m) => `<div class="zrow">
+        <div class="zav">🧟</div>
+        <div class="zi"><b>${m.t}</b><span>${m.b || ''}</span>
+          <span>🪙${m.gold || 0} 💎${m.dia || 0}</span></div>
+        ${m.got ? '<span class="st off">已领</span>'
+          : `<button class="btn sm g" data-ml="${m.id || ''}">领取</button><i class="gdot"></i>`}
+      </div>`).join('') : '<div class="lbl">暂无邮件</div>'}
+      <button class="btn g" id="mailAll" style="width:100%;margin-top:8px">一键领取</button>
+    </div>`;
+  },
+  b_mail(p, tab) {
+    const ab = $('#mailAll');
+    if (ab) ab.onclick = () => {
+      const ms = (p.mail || []).filter((m) => !m.got);
+      if (!ms.length) return this.toast('没有可领取的邮件', 'err');
+      let g = 0, d = 0;
+      ms.forEach((m) => { m.got = true; g += m.gold || 0; d += m.dia || 0; });
+      p.gold += g; p.diamond += d; E.save(p);
+      if (window.SND) SND.play('get');
+      this.toast('领取成功：🪙' + E.fmt(g) + ' 💎' + E.fmt(d), 'ok');
+      this.open('mail'); this.home();
+    };
+  },
+
   r_rank(p) {
     const lb = window.LB || [];
     if (!lb.length) return '<div class="empty"><span class="ic">🏆</span>暂无排行数据<br><span style="font-size:10px">通关后自动上传，每小时刷新</span></div>';
@@ -635,6 +802,34 @@ const UI = {
       <div class="ic" style="font-size:15px;background:${i < 3 ? 'linear-gradient(135deg,#ffe9a8,#f0a020)' : 'rgba(10,16,28,.7)'};color:${i < 3 ? '#2a1a00' : '#fff'}">${i + 1}</div>
       <div class="info"><div class="nm">${x.n}</div><div class="sub">${x.lv || '—'} · 无尽 ${x.eb || 0} 层</div></div>
       <div class="act"><span class="tag y">${E.fmt(x.pw)}</span></div></div>`).join('');
+  },
+
+  /* ---------- 活动 ---------- */
+  r_act(p, tab) {
+    const acts = EX.acts || EX.activities || [];
+    return `<div class="card"><div class="card-t">活动
+      <span class="sub">${acts.length} 个进行中</span></div>
+      ${acts.length ? acts.map((a) => `<div class="zrow">
+        <div class="zav">${a.icon || '🎪'}</div>
+        <div class="zi"><b>${a.n}</b><span>${a.desc || ''}</span></div>
+        <span class="st ${a.hot ? 'on' : 'off'}">${a.hot ? '进行中' : '即将开始'}</span>
+      </div>`).join('') : '<div class="lbl">暂无活动</div>'}
+    </div>
+    <div class="card"><div class="card-t">签到 <span class="sub">每日登录领取</span></div>
+      <div class="grid4">${[1, 2, 3, 4, 5, 6, 7].map((d) => {
+        const got = (p.signDays || 0) >= d;
+        return `<div class="gcell ${got ? 'sel' : ''}">
+          <div class="gi">${got ? '✔' : '🎁'}</div><div class="gn">第${d}天</div></div>`;
+      }).join('')}</div>
+      <button class="btn" id="actSign" style="width:100%;margin-top:8px">每日签到</button>
+    </div>`;
+  },
+  b_act(p, tab) {
+    const sb = $('#actSign');
+    if (sb) sb.onclick = () => {
+      const r = E.sign(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); this.open('act'); this.home(); }
+    };
   },
 
   /* ---------- 关卡选择 ---------- */
@@ -871,8 +1066,26 @@ const UI = {
 
   /* ---------- 技能三选一 ---------- */
   showSkillChoice(picks) {
+    /* 截图特征：顶部「选择技能」+ 15 秒倒计时 */
+    const chT = $('#chTitle'); if (chT) chT.textContent = '选择技能';
+    this.chTime = 15;
+    const tm = $('#chTimer');
+    if (tm) {
+      tm.textContent = '15';
+      clearInterval(this._chIv);
+      this._chIv = setInterval(() => {
+        this.chTime--;
+        if (tm) tm.textContent = Math.max(0, this.chTime);
+        if (this.chTime <= 0) {
+          clearInterval(this._chIv);
+          /* 超时自动选第一个 */
+          if (picks[0]) BT.pickSkill(picks[0].id);
+          this.hideChoice();
+        }
+      }, 1000);
+    }
     $('#chCards').innerHTML = picks.map((s) => {
-      const L = (BT.run.skills[s.id] || 0);
+      const L = ((BT.run && BT.run.skills ? BT.run.skills[s.id] : 0) || 0);
       const el = EX.elements.find((x) => x.k === s.el) || { c: '#ffd76a' };
       const kindTxt = s.kind === 'passive' ? '被动强化（自动生效）' : s.kind === 'summon' ? '召唤' : '主动释放';
       return `<button class="ccard" data-pick="${s.id}">
@@ -883,14 +1096,15 @@ const UI = {
           ${L ? `<span class="tag y">Lv.${L}→${L + 1}</span>` : '<span class="tag g">NEW</span>'}</div>
           <div class="cd2">${s.desc}</div>
           <div class="cl">${kindTxt} · ${s.up}${s.conflict ? ' · ⚠️与' + (EX.skills.find((x) => x.id === s.conflict) || {}).n + '互斥' : ''}</div>
-        </div></button>`;
+        </div>
+        <div class="ch-arrow">▼</div></button>`;
     }).join('');
     $$('#chCards .ccard').forEach((b) => {
       b.onclick = () => { $('#choice').classList.remove('on'); BT.pickSkill(b.dataset.pick); };
     });
     $('#choice').classList.add('on');
   },
-  hideChoice() { $('#choice').classList.remove('on'); },
+  hideChoice() { clearInterval(this._chIv); $('#choice').classList.remove('on'); },
 
   /* ---------- 结算 ---------- */
   showResult(res, d) {
