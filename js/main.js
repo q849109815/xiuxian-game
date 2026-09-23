@@ -24,8 +24,15 @@ const MAIN = {
     UI.show('login');
   },
 
+  /* 进入游戏（供微信登录 / 自动登录复用） */
+  async enterWith(uid, name, gender) {
+    UID = uid || WX.uid();
+    localStorage.setItem('zb_uid', UID);
+    return this.login(name, gender);
+  },
+
   async login(name, gender) {
-    UID = localStorage.getItem('zb_uid');
+    UID = localStorage.getItem('zb_uid') || UID;
     if (!UID) { UID = 'u' + Math.random().toString(36).slice(2, 8); localStorage.setItem('zb_uid', UID); }
     const path = 'data/zb/players/' + UID + '.json';
     let p = null;
@@ -300,6 +307,40 @@ function bindAll() {
       if (nx) startBattle('normal', nx); else { UI.home(); UI.show('home'); }
     }
   };
+  /* ===== 微信登录 / 自动登录 ===== */
+  const wxBtn = document.getElementById('wxLoginBtn');
+  const wxTip = document.getElementById('wxTip');
+  const lgSwitch = document.getElementById('lgSwitch');
+  const lgManual = document.getElementById('lgManual');
+
+  if (lgSwitch) lgSwitch.onclick = () => {
+    const on = lgManual.style.display !== 'none';
+    lgManual.style.display = on ? 'none' : 'block';
+    lgSwitch.textContent = on ? '切换账户 · 手动建号' : '返回微信登录';
+  };
+
+  if (wxBtn) wxBtn.onclick = async () => {
+    wxBtn.disabled = true;
+    wxTip.textContent = '正在唤起微信授权…';
+    const r = await WX.login();
+    if (r.pending) return;               /* 跳真 OAuth 中 */
+    if (r.ok) {
+      wxTip.textContent = '授权成功，正在进入…';
+      localStorage.setItem('zb_uid', r.uid);
+      await MAIN.login(r.name, r.gender);
+    } else { wxBtn.disabled = false; wxTip.textContent = '授权失败，请重试'; }
+  };
+
+  /* 已记住账户 → 下次打开自动进入，无需任何点击 */
+  if (WX.shouldAuto()) {
+    const rm = WX.remembered();
+    if (wxTip) wxTip.textContent = '正在自动登录…';
+    (async () => {
+      try { await MAIN.login(rm.name || '先锋官', rm.gender || 'm'); }
+      catch (e) { /* 失败则留在登录页 */ }
+    })();
+  }
+
   const rb = document.getElementById('rsBack');
   if (rb) rb.onclick = () => { UI.hideResult(); UI.home(); UI.show('home'); if (window.SND) SND.bgm('base'); };
 
