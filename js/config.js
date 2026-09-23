@@ -62,17 +62,17 @@ const EX = {
    * =================================================== */
   guns: [
     { id: 'W01', n: '突击步枪', img: 'assets/icon/w_rifle.jpg', kind: '主', type: '自动', dmg: 25, rate: 8, mag: 30, reload: 1.8,
-      bullet: '普通弹', pierce: 0, pellets: 1, icon: '🔫', q: '白', unlockLv: 0 },
+      bullet: '普通弹', pierce: 0, pellets: 1, range: 40, spread: 2, recoil: '中', bspd: 800, icon: '🔫', q: '白', unlockLv: 0 },
     { id: 'W02', n: '散弹枪', img: 'assets/icon/w_shotgun.jpg', kind: '主', type: '散弹', dmg: 70, rate: 1.6, mag: 6, reload: 2.4,
-      bullet: '散弹', pierce: 0, pellets: 5, icon: '💥', q: '绿', unlockLv: '1-2' },
+      bullet: '散弹', pierce: 0, pellets: 5, range: 15, spread: 8, recoil: '高', bspd: 600, icon: '💥', q: '绿', unlockLv: '1-2' },
     { id: 'W03', n: '榴弹枪', img: 'assets/icon/w_grenade.jpg', kind: '主', type: '爆炸', dmg: 120, rate: 0.8, mag: 3, reload: 3.0,
-      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 0.6, er: 62, icon: '🎇', q: '绿', unlockLv: '1-4' },
+      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 0.6, er: 62, range: 25, spread: 0, recoil: '高', bspd: 400, icon: '🎇', q: '绿', unlockLv: '1-4' },
     { id: 'W04', n: '狙击枪', img: 'assets/icon/w_sniper.jpg', kind: '主', type: '狙击', dmg: 260, rate: 0.7, mag: 5, reload: 2.8,
-      bullet: '穿甲弹', pierce: 2, pellets: 1, icon: '🎯', q: '蓝', unlockLv: '2-2' },
+      bullet: '穿甲弹', pierce: 2, pellets: 1, range: 80, spread: 0, recoil: '高', bspd: 1400, icon: '🎯', q: '蓝', unlockLv: '2-2' },
     { id: 'W05', n: '冲锋枪', img: 'assets/icon/w_smg.jpg', kind: '主', type: '自动', dmg: 12, rate: 14, mag: 45, reload: 1.5,
-      bullet: '普通弹', pierce: 0, pellets: 1, icon: '🔦', q: '绿', unlockLv: '2-1' },
+      bullet: '普通弹', pierce: 0, pellets: 1, range: 25, spread: 3, recoil: '低', bspd: 750, icon: '🔦', q: '绿', unlockLv: '2-1' },
     { id: 'W06', n: '加特林', img: 'assets/icon/w_gatling.jpg', kind: '主', type: '重机枪', dmg: 20, rate: 16, mag: 120, reload: 4.0,
-      bullet: '普通弹', pierce: 0, pellets: 1, icon: '⚙️', q: '紫', unlockLv: '3-1' },
+      bullet: '普通弹', pierce: 0, pellets: 1, range: 35, spread: 2, recoil: '高', bspd: 850, icon: '⚙️', q: '紫', unlockLv: '3-1' },
     { id: 'S01', n: '手雷', img: 'assets/icon/w_handgrenade.jpg', kind: '副', type: '投掷', dmg: 150, rate: 0.6, mag: 2, reload: 2.0,
       bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 0.8, er: 78, icon: '🧨', q: '蓝', unlockLv: '1-3' },
     { id: 'S02', n: '燃烧瓶', img: 'assets/icon/w_molotov.jpg', kind: '副', type: '投掷', dmg: 80, rate: 0.6, mag: 2, reload: 2.0,
@@ -88,12 +88,70 @@ const EX = {
     { q: '紫', lv: 15, slot: 3 }, { q: '橙', lv: 20, slot: 4 },
   ],
   /* 词条池（进阶解锁词条槽） */
+  /* 【30_武器词条池】AF01~AF12 共 12 条，品质 蓝/紫/红 */
   gunStats: [
-    { k: 'dmg', n: '伤害', unit: '%', base: 0.06 },
-    { k: 'rate', n: '射速', unit: '%', base: 0.05 },
-    { k: 'mag', n: '弹夹容量', unit: '', base: 3 },
-    { k: 'pierce', n: '穿透', unit: '', base: 0.34 },
-    { k: 'crit', n: '暴击率', unit: '%', base: 0.02 },
+    { id: 'AF01', k: 'dmg', n: '伤害强化', q: '蓝', unit: '%', base: 0.05, stack: 1, desc: '伤害+5%' },
+    { id: 'AF02', k: 'rate', n: '攻速强化', q: '蓝', unit: '%', base: 0.05, stack: 1, desc: '攻速+5%' },
+    { id: 'AF03', k: 'crit', n: '暴击率', q: '蓝', unit: '%', base: 0.03, stack: 1, desc: '暴击率+3%' },
+    { id: 'AF04', k: 'critDmg', n: '暴击伤害', q: '紫', unit: '%', base: 0.10, stack: 1, desc: '暴伤+10%' },
+    { id: 'AF05', k: 'pierce', n: '穿透', q: '紫', unit: '', base: 1, stack: 0, desc: '穿透+1' },
+    { id: 'AF06', k: 'lifesteal', n: '吸血', q: '紫', unit: '%', base: 0.03, stack: 1, desc: '吸血+3%' },
+    { id: 'AF07', k: 'mag', n: '弹夹容量', q: '紫', unit: '', base: 2, stack: 1, desc: '弹夹+2' },
+    { id: 'AF08', k: 'reload', n: '换弹速度', q: '紫', unit: 's', base: -0.2, stack: 1, desc: '换弹-0.2秒' },
+    { id: 'AF09', k: 'blastR', n: '爆炸范围', q: '红', unit: '%', base: 0.10, stack: 1, desc: '爆炸范围+10%' },
+    { id: 'AF10', k: 'pierce2', n: '穿透强化', q: '红', unit: '', base: 2, stack: 0, desc: '穿透+2' },
+    { id: 'AF11', k: 'double', n: '双倍伤害', q: '红', unit: '%', base: 0.05, stack: 0, desc: '5%概率双倍伤害' },
+    { id: 'AF12', k: 'extraB', n: '额外子弹', q: '红', unit: '', base: 1, stack: 0, desc: '额外发射1颗子弹' },
+  ],
+  /* 洗练消耗（钻石） */
+  REROLL_GUN_COST: 20,
+
+  /* =====================================================
+   * 【28_地图布局配置】障碍物 / 掩体 / 可破坏油桶
+   * =================================================== */
+  mapLayouts: {
+    '1-1': { n: '废弃街道', terrain: '开阔街道', covers: [['废弃车辆', 4], ['沙袋', 2]], barrels: 3 },
+    '1-2': { n: '停车场', terrain: '半开放场地', covers: [['立柱', 6], ['废弃巴士', 2]], barrels: 4 },
+    '1-3': { n: '废墟大楼', terrain: '室内走廊+大厅', covers: [['承重柱', 4], ['桌椅', 3]], barrels: 3 },
+    '1-4': { n: '天台(BOSS)', terrain: '开阔平台', covers: [['集装箱', 5], ['矮墙', 2]], barrels: 6 },
+    '2-1': { n: '地下实验室', terrain: '室内长通道', covers: [['实验台', 3], ['隔离门', 2]], barrels: 3 },
+    '2-2': { n: '废弃医院', terrain: '多层室内', covers: [['病床', 4], ['隔离墙', 3]], barrels: 3 },
+    '2-3': { n: '母体巢穴(BOSS)', terrain: '密闭大厅', covers: [['黏液柱', 4], ['残骸', 2]], barrels: 4 },
+    '3-1': { n: '城市中心', terrain: '开阔广场', covers: [['雕像', 2], ['路灯', 4], ['车阵', 3]], barrels: 8 },
+    '3-2': { n: '桥梁防线', terrain: '长直线桥梁', covers: [['桥墩', 3], ['护栏', 4]], barrels: 4 },
+    '3-3': { n: '最终战场(BOSS)', terrain: '超开阔战场', covers: [['巨型掩体', 6]], barrels: 10 },
+  },
+  /* 障碍物通用参数 */
+  COVER_HP: 120,        /* 掩体血量，被打坏后消失 */
+  BARREL_HP: 30,        /* 油桶血量 */
+  BARREL_DMG: 260,      /* 油桶爆炸伤害 */
+  BARREL_R: 96,         /* 油桶爆炸半径 */
+
+  /* =====================================================
+   * 【45_全局掉落掉率明细表】21 条，按怪物来源精确掉率
+   * =================================================== */
+  globalDrops: [
+    { src: '普通僵尸', item: 'M01', rate: 0.80, min: 1, max: 1, ch: 1.0, q: '白' },
+    { src: '普通僵尸', item: 'M04', rate: 0.05, min: 1, max: 1, ch: 1.0, q: '白' },
+    { src: '疾跑僵尸', item: 'M01', rate: 0.85, min: 1, max: 2, ch: 1.0, q: '白' },
+    { src: '疾跑僵尸', item: 'M02', rate: 0.03, min: 1, max: 1, ch: 1.1, q: '蓝' },
+    { src: '自爆僵尸', item: 'M04', rate: 0.60, min: 1, max: 1, ch: 1.0, q: '白' },
+    { src: '吐液僵尸', item: 'M01', rate: 0.80, min: 2, max: 3, ch: 1.1, q: '白' },
+    { src: '毒僵尸', item: 'M02', rate: 0.50, min: 1, max: 1, ch: 1.2, q: '蓝' },
+    { src: '毒僵尸', item: 'M05', rate: 0.10, min: 1, max: 1, ch: 1.2, q: '蓝' },
+    { src: '重甲僵尸', item: 'M02', rate: 0.60, min: 1, max: 2, ch: 1.2, q: '蓝' },
+    { src: '护盾僵尸', item: 'M02', rate: 0.55, min: 1, max: 2, ch: 1.2, q: '蓝' },
+    { src: '炸弹僵尸', item: 'M04', rate: 0.70, min: 1, max: 2, ch: 1.3, q: '白' },
+    { src: '分裂僵尸', item: 'M01', rate: 0.75, min: 2, max: 3, ch: 1.3, q: '白' },
+    { src: '飞行僵尸', item: 'M01', rate: 0.75, min: 2, max: 3, ch: 1.3, q: '白' },
+    { src: 'BOSS巨型丧尸', item: 'M03', rate: 1.00, min: 3, max: 5, ch: 1.5, q: '紫', first: 1 },
+    { src: 'BOSS巨型丧尸', item: 'C01', rate: 0.60, min: 1, max: 1, ch: 1.5, q: '白' },
+    { src: 'BOSS巨型丧尸', item: 'P01', rate: 0.50, min: 2, max: 4, ch: 1.5, q: '蓝' },
+    { src: 'BOSS感染母体', item: 'M03', rate: 1.00, min: 4, max: 6, ch: 1.8, q: '紫', first: 1 },
+    { src: 'BOSS感染母体', item: 'C02', rate: 0.40, min: 1, max: 1, ch: 1.8, q: '蓝' },
+    { src: 'BOSS感染母体', item: 'P02', rate: 0.30, min: 1, max: 2, ch: 1.8, q: '紫' },
+    { src: 'BOSS巨型母体', item: 'M03', rate: 1.00, min: 5, max: 8, ch: 2.0, q: '紫', first: 1 },
+    { src: 'BOSS巨型母体', item: 'C03', rate: 0.30, min: 1, max: 1, ch: 2.0, q: '红', first: 1 },
   ],
 
   /* =====================================================
