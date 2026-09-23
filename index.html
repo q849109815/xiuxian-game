@@ -3,173 +3,142 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#1a2637">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>向僵尸开炮</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div id="app">
 
-  <!-- ============ 加载 ============ -->
-  <div id="loading" class="screen on">
-    <div class="ld-logo">💥</div>
-    <div class="ld-title">向 僵 尸 开 炮</div>
-    <div class="ld-sub">末 日 尸 潮 · 守 住 防 线</div>
-    <div class="ld-bar"><i id="ldBar"></i></div>
-    <div class="ld-txt" id="ldTxt">正在装填弹药…</div>
-  </div>
-
-  <!-- ============ 登录 / 创角 ============ -->
-  <div id="login" class="screen">
-    <div class="lg-bg"></div>
-    <div class="lg-box">
-      <div class="lg-title">向僵尸开炮</div>
-      <div class="lg-slogan">ZOMBIES BOOM · 末日先锋官</div>
-      <div class="lg-field">
-        <label>先锋官代号</label>
-        <input id="lgName" maxlength="8" placeholder="请输入代号（2-8字）" value="先锋官">
-      </div>
-      <div class="lg-field">
-        <label>性别</label>
-        <div class="lg-gender" id="lgGender">
-          <button class="gd on" data-g="m"><i>👨‍🚀</i><span>男</span></button>
-          <button class="gd" data-g="f"><i>👩‍🚀</i><span>女</span></button>
-        </div>
-      </div>
-      <button class="lg-btn" id="lgBtn">进 入 战 区</button>
-      <div class="lg-tip">已有存档将自动读取 · 数据存于云端</div>
-      <div class="lg-net">网络：<span id="lgNet">检测中…</span></div>
-    </div>
-  </div>
-
-  <!-- ============ 基地主界面 ============ -->
-  <div id="home" class="screen">
-    <div class="hm-bg"></div>
-    <!-- 顶部信息 -->
-    <div class="hm-top">
-      <div class="hm-av" id="hmAv"><i id="hmAvIco">👨‍🚀</i><em id="hmLv">Lv.1</em></div>
-      <div class="hm-mid">
-        <div class="hm-nm" id="hmName">先锋官</div>
-        <div class="hm-pw"><span>⚔</span><b id="hmPower">0</b></div>
-      </div>
-      <div class="hm-cur">
-        <div class="cu"><i>🪙</i><b id="cuGold">0</b></div>
-        <div class="cu"><i>💎</i><b id="cuDia">0</b></div>
-      </div>
-    </div>
-
-    <!-- 关卡入口大按钮 -->
-    <div class="hm-main">
-      <button class="hm-go" id="hmGo">
-        <div class="go-t">主 线 关 卡</div>
-        <div class="go-l" id="hmLevel">第 1 关</div>
-        <div class="go-s" id="hmLevelName">城市大街</div>
-      </button>
-      <div class="hm-side">
-        <button class="hm-sbtn" id="hmEndless"><i>♾️</i><span>无尽</span></button>
-        <button class="hm-sbtn" id="hmRank"><i>🏆</i><span>排行</span></button>
-      </div>
-    </div>
-
-    <!-- 基地模块 -->
-    <div class="hm-sec">基 地</div>
-    <div class="hm-base" id="hmBase"></div>
-
-    <!-- 底部导航 -->
-    <div class="hm-nav">
-      <button class="hn on" data-p="role"><i>🧍</i><span>角色</span></button>
-      <button class="hn" data-p="gun"><i>🔫</i><span>枪械</span></button>
-      <button class="hn" data-p="bag"><i>🎒</i><span>背包</span></button>
-      <button class="hn" data-p="merc"><i>👥</i><span>佣兵</span></button>
-      <button class="hn" data-p="shop"><i>🏪</i><span>商城</span></button>
-      <button class="hn" data-p="set"><i>⚙️</i><span>设置</span></button>
-    </div>
-  </div>
-
-  <!-- ============ 战斗 ============ -->
-  <div id="battle" class="screen">
-    <canvas id="C"></canvas>
-    <!-- 顶部 HUD -->
-    <div class="bt-top">
-      <button class="bt-ic" id="btPause">⏸</button>
-      <div class="bt-info">
-        <div class="bt-lv" id="btLevel">第 1 关</div>
-        <div class="bt-wv" id="btWave">第 1 / 3 波</div>
-      </div>
-      <div class="bt-timer" id="btTime">00:00</div>
-    </div>
-    <!-- 左上：局内等级 + 经验条 -->
-    <div class="bt-xp">
-      <div class="xp-n">Lv.<b id="btLv">1</b></div>
-      <div class="xp-bar"><i id="btXpBar"></i></div>
-    </div>
-    <!-- 右上：金币/击杀 -->
-    <div class="bt-st">
-      <div><i>🪙</i><b id="btGold">0</b></div>
-      <div><i>☠️</i><b id="btKill">0</b></div>
-    </div>
-    <!-- 右侧技能 -->
-    <div class="bt-skill" id="btSkill"></div>
-    <!-- 右下能量条 -->
-    <div class="bt-energy">
-      <div class="en-bar"><i id="btEnergy"></i></div>
-      <div class="en-t">能量</div>
-    </div>
-    <!-- 底部炮台建造 -->
-    <div class="bt-build" id="btBuild"></div>
-  </div>
-
-  <!-- ============ 通用面板 ============ -->
-  <div id="panel">
-    <div class="pn-mask" id="pnMask"></div>
-    <div class="pn-box">
-      <div class="pn-head">
-        <b id="pnTitle">面板</b>
-        <button class="pn-x" id="pnX">✕</button>
-      </div>
-      <div class="pn-tabs" id="pnTabs"></div>
-      <div class="pn-body" id="pnBody"></div>
-    </div>
-  </div>
-
-  <!-- ============ 技能三选一 ============ -->
-  <div id="choice">
-    <div class="ch-mask"></div>
-    <div class="ch-box">
-      <div class="ch-t">选择技能</div>
-      <div class="ch-sub" id="chSub">击杀升级！选择一项强化</div>
-      <div class="ch-cards" id="chCards"></div>
-      <button class="ch-refresh" id="chRefresh">🔄 刷新（观看后重置）</button>
-    </div>
-  </div>
-
-  <!-- ============ 结算 ============ -->
-  <div id="result">
-    <div class="rs-mask"></div>
-    <div class="rs-box">
-      <div class="rs-t" id="rsTitle">战斗胜利</div>
-      <div class="rs-lv" id="rsLevel">第 1 关</div>
-      <div class="rs-grid" id="rsGrid"></div>
-      <div class="rs-btns">
-        <button class="rs-b c" id="rsAgain">再 战</button>
-        <button class="rs-b" id="rsNext">下 一 关</button>
-        <button class="rs-b d" id="rsBack">返 回 基 地</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ 暂停 ============ -->
-  <div id="pause">
-    <div class="ps-mask"></div>
-    <div class="ps-box">
-      <div class="ps-t">已暂停</div>
-      <button class="ps-b c" id="psResume">继续战斗</button>
-      <button class="ps-b d" id="psQuit">放弃并结算</button>
-    </div>
-  </div>
-
-  <div id="toasts"></div>
+<!-- ========== 加载 ========== -->
+<div class="screen on" id="loading">
+  <div class="ld-logo">💥</div>
+  <div class="ld-title">向 僵 尸 开 炮</div>
+  <div class="ld-sub">ZOMBIES BOOM · 末日尸潮</div>
+  <div class="ld-bar"><i id="ldBar"></i></div>
+  <div class="ld-txt" id="ldTxt">正在装填弹药…</div>
 </div>
+
+<!-- ========== 登录 ========== -->
+<div class="screen" id="login">
+  <div class="lg-box">
+    <div class="lg-logo">💥</div>
+    <div class="lg-t">向 僵 尸 开 炮</div>
+    <div class="lg-s">末 日 尸 潮 · 守 住 最 后 防 线</div>
+    <div class="lg-gender" id="lgGender">
+      <button class="gd on" data-g="m">👨‍🚀 男</button>
+      <button class="gd" data-g="f">👩‍🚀 女</button>
+    </div>
+    <input id="lgName" maxlength="8" placeholder="输入你的代号（2-8字）">
+    <button class="lg-btn" id="lgBtn">进 入 战 区</button>
+    <div class="lg-net" id="lgNet">○ 检测网络…</div>
+  </div>
+</div>
+
+<!-- ========== 基地主界面 ========== -->
+<div class="screen" id="home">
+  <div class="hm-top">
+    <div class="hm-av" id="hmAv"><i id="hmAvIco">👨‍🚀</i></div>
+    <div class="hm-info">
+      <div class="hm-name"><b id="hmName">—</b><span class="hm-lv" id="hmLv">Lv.1</span></div>
+      <div class="hm-pw">战力 <b id="hmPower">0</b></div>
+      <div class="hm-prog">进度 <span id="hmLevel">第 1 关</span></div>
+    </div>
+    <div class="hm-cur">
+      <span>🪙 <b id="cuGold">0</b></span>
+      <span>💎 <b id="cuDia">0</b></span>
+    </div>
+  </div>
+
+  <div class="hm-acts">
+    <button class="ha go" id="hmGo"><i>🎯</i><b>出击</b><span id="hmLevelName">第 1 关</span></button>
+    <button class="ha" id="hmEndless"><i>♾️</i><b>无尽模式</b><span id="hmEndBest">最佳 0 层</span></button>
+  </div>
+
+  <div class="hm-base" id="hmBase"></div>
+
+  <nav class="hm-nav">
+    <button class="hn" data-p="role"><i>👤</i><span>角色</span></button>
+    <button class="hn" data-p="gun"><i>🔫</i><span>武器</span></button>
+    <button class="hn" data-p="chip"><i>🔲</i><span>芯片</span></button>
+    <button class="hn" data-p="talent"><i>⭐</i><span>天赋</span></button>
+    <button class="hn" data-p="task"><i>📋</i><span>任务</span></button>
+    <button class="hn" data-p="bag"><i>🎒</i><span>背包</span></button>
+    <button class="hn" data-p="shop"><i>🛒</i><span>商城</span></button>
+    <button class="hn" data-p="act"><i>🎪</i><span>活动</span></button>
+    <button class="hn" data-p="rank"><i>🏆</i><span>排行</span></button>
+    <button class="hn" data-p="set"><i>⚙️</i><span>设置</span></button>
+  </nav>
+</div>
+
+<!-- ========== 战斗 ========== -->
+<div class="screen" id="battle">
+  <canvas id="C"></canvas>
+  <div class="bt-top">
+    <div class="bt-l"><span id="btLevel">第 1 关</span><span id="btWave">第 1/3 波</span></div>
+    <div class="bt-r"><span id="btTime">00:00</span><button id="btPause">⏸</button></div>
+  </div>
+  <div class="bt-hp">
+    <div class="hpbar"><i id="btHpBar"></i><b id="btHpTxt">100/100</b></div>
+    <div class="shbar" id="btShWrap"><i id="btShBar"></i></div>
+  </div>
+  <div class="bt-stats">
+    <span>☠ <b id="btKill">0</b></span><span>🪙 <b id="btGold">0</b></span><span>Lv.<b id="btLv">1</b></span>
+  </div>
+  <div class="bt-skills" id="btSkills"></div>
+  <!-- 虚拟摇杆（资料 06：左侧摇杆） -->
+  <div class="joy" id="joy"><i id="joyKnob"></i></div>
+  <!-- 换弹（资料 06：点武器图标手动换弹 / R 键） -->
+  <button class="bt-reload" id="btReload"><i>🔫</i><span id="btMag">30/30</span><em id="btReloadBar"></em></button>
+  <div class="bt-tip">左摇杆移动 · 自动瞄准射击 · 点击枪械换弹</div>
+</div>
+
+<!-- ========== 技能三选一 ========== -->
+<div class="modal" id="choice">
+  <div class="ch-box">
+    <div class="ch-t">升 级 · 选 择 技 能</div>
+    <div class="ch-sub">选择一项强化，可叠加至 10 级</div>
+    <div id="chCards"></div>
+    <button class="ch-rf" id="chRefresh">🔄 刷新选项</button>
+  </div>
+</div>
+
+<!-- ========== 结算 ========== -->
+<div class="modal" id="result">
+  <div class="rs-box">
+    <div class="rs-t" id="rsTitle">战 斗 胜 利</div>
+    <div class="rs-lv" id="rsLevel">第 1 关</div>
+    <div class="rs-grid" id="rsGrid"></div>
+    <div class="rs-btns">
+      <button class="btn c" id="rsNext">下一关</button>
+      <button class="btn" id="rsAgain">再挑战</button>
+      <button class="btn d" id="rsBack">返回基地</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 暂停 ========== -->
+<div class="modal" id="pause">
+  <div class="ps-box">
+    <div class="ps-t">已 暂 停</div>
+    <button class="btn c blk" id="psResume">继续战斗</button>
+    <button class="btn d blk" id="psQuit">放弃本关</button>
+  </div>
+</div>
+
+<!-- ========== 通用面板 ========== -->
+<div class="modal" id="panel">
+  <div class="pn-mask" id="pnMask"></div>
+  <div class="pn-box">
+    <div class="pn-hd">
+      <b id="pnTitle">标题</b>
+      <button id="pnX">✕</button>
+    </div>
+    <div class="pn-tabs" id="pnTabs"></div>
+    <div class="pn-body" id="pnBody"></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
 
 <script src="js/net.js"></script>
 <script src="js/config.js"></script>
