@@ -37,7 +37,7 @@ const MAIN = {
 
   /* 进入游戏（供微信登录 / 自动登录复用） */
   async enterWith(uid, name, gender) {
-    UID = uid || WX.uid();
+    UID = uid || (window.UA ? UA.acctId(UA.remembered().name || '') : '') || localStorage.getItem('zb_uid');
     localStorage.setItem('zb_uid', UID);
     return this.login(name, gender);
   },
@@ -47,7 +47,8 @@ const MAIN = {
     if (!UID) { UID = 'u' + Math.random().toString(36).slice(2, 8); localStorage.setItem('zb_uid', UID); }
     const path = 'data/zb/players/' + UID + '.json';
     let p = null;
-    try { const r = await Net.read(path); if (r && r.data) p = r.data; } catch (e) {}
+    const rr = await window.TMO(Net.read(path), 9000);
+    if (rr && rr.data) p = rr.data;
     if (!p) {
       p = E.newPlayer(UID, name, gender);
       UI.toast('欢迎加入，先锋官！', 'ok');
@@ -116,7 +117,7 @@ const MAIN = {
     }
     /* 2) 后台全服/定向邮件（云端 mail.json） */
     try {
-      const r = await Net.read('data/zb/mail.json');
+      const r = await window.TMO(Net.read('data/zb/mail.json'), 5000);
       const db = (r && r.data) || null;
       if (db && (db.list || []).length) {
         const now = Date.now();
@@ -142,7 +143,7 @@ const MAIN = {
     } catch (e) {}
     /* 3) 检查维护模式 */
     try {
-      const r = await Net.read('data/zb/server.json');
+      const r = await window.TMO(Net.read('data/zb/server.json'), 4000);
       if (r && r.data && r.data.mode === '维护') {
         UI.toast('🖥️ ' + (r.data.msg || '服务器维护中'), 'err');
         MAINT = r.data;
@@ -239,7 +240,9 @@ function startBattle(mode, levelId) {
   if (knob) knob.style.transform = 'translate(0,0)';
   BT.attach(document.getElementById('C'));
   BT.start(P, id, { endless: id === 'endless', cb: onBattleEnd });
-  UI.btInit(P, id, id === 'endless');
+  /* HUD 初始化失败也不能影响战斗本体 */
+  try { UI.btInit(P, id, id === 'endless'); }
+  catch (e) { console.error('btInit:', e); }
   if (hudT) clearInterval(hudT);
   hudT = setInterval(() => { if (BT.on || (BT.run && !BT.run.over)) UI.btTick(); }, 100);
 
@@ -452,69 +455,104 @@ function bindAll() {
       if (nx) startBattle('normal', nx); else { UI.home(); UI.show('home'); }
     }
   };
-  /* ===== 微信登录 / 自动登录 / 扫码登录 ===== */
-  const wxBtn = document.getElementById('wxLoginBtn');
-  const wxTip = document.getElementById('wxTip');
-  const lgSwitch = document.getElementById('lgSwitch');
-  const lgManual = document.getElementById('lgManual');
+  /* ================= 账号密码登录 / 注册 ================= */
+  const lgTip = document.getElementById('lgTip');
+  const rgTip = document.getElementById('rgTip');
+  const lgForm = document.getElementById('lgLoginForm');
+  const rgForm = document.getElementById('lgRegForm');
+  let rgGender = 'm';
 
-  const lgScanBtn = document.getElementById('lgScan');
-  if (lgScanBtn) lgScanBtn.onclick = () => {
-    if (!WX.phone()) {
-      if (wxTip) wxTip.textContent = '请先完成微信登录后才能生成登录码';
-      return;
+  const sayTip = (el, m, ok) => {
+    if (!el) return;
+    el.textContent = m || '';
+    el.style.color = ok ? 'var(--green)' : '#ff8fa4';
+  };
+
+  /* 登录 ⇄ 注册 切换 */
+  const goReg = document.getElementById('lgGoReg');
+  if (goReg) goReg.onclick = () => {
+    if (lgForm) lgForm.style.display = 'none';
+    if (rgForm) rgForm.style.display = 'flex';
+    sayTip(lgTip, ''); sayTip(rgTip, '');
+  };
+  const goLogin = document.getElementById('lgGoLogin');
+  if (goLogin) goLogin.onclick = () => {
+    if (rgForm) rgForm.style.display = 'none';
+    if (lgForm) lgForm.style.display = 'flex';
+    sayTip(lgTip, ''); sayTip(rgTip, '');
+  };
+  const gbtns = document.querySelectorAll('#rgGender .gd');
+  gbtns.forEach((b) => { b.onclick = () => {
+    gbtns.forEach((x) => x.classList.remove('on'));
+    b.classList.add('on'); rgGender = b.dataset.g || 'm';
+  }; });
+
+  /* 记住的账号自动填入 */
+  const rem = UA.remembered();
+  const lgUser = document.getElementById('lgUser');
+  if (lgUser && rem.name) lgUser.value = rem.name;
+
+  /* ---- 登录 ---- */
+  const lgBtn = document.getElementById('lgBtn');
+  if (lgBtn) lgBtn.onclick = async () => {
+    const u = (document.getElementById('lgUser') || {}).value || '';
+    const w = (document.getElementById('lgPwd') || {}).value || '';
+    if (!u.trim()) { sayTip(lgTip, '请输入账号'); return; }
+    if (!w) { sayTip(lgTip, '请输入密码'); return; }
+    lgBtn.disabled = true; lgBtn.textContent = '登录中…';
+    sayTip(lgTip, '正在验证…', true);
+    let r;
+    try { r = await UA.login(u.trim(), w); }
+    catch (e) { r = { ok: false, msg: '登录异常：' + e.message }; }
+    lgBtn.disabled = false; lgBtn.textContent = '登 录';
+    if (!r.ok) { sayTip(lgTip, r.msg); return; }
+    const keep = document.getElementById('lgKeep');
+    if (keep && !keep.checked) localStorage.removeItem('zb_auto');
+    sayTip(lgTip, '登录成功，正在进入…', true);
+    localStorage.setItem('zb_uid', r.id);
+    await MAIN.login(r.nick || u.trim(), r.gender || 'm');
+  };
+
+  /* ---- 注册 ---- */
+  const rgBtn = document.getElementById('rgBtn');
+  if (rgBtn) rgBtn.onclick = async () => {
+    const u = (document.getElementById('rgUser') || {}).value || '';
+    const w = (document.getElementById('rgPwd') || {}).value || '';
+    const w2 = (document.getElementById('rgPwd2') || {}).value || '';
+    const nk = (document.getElementById('rgNick') || {}).value || '';
+    if (!u.trim()) { sayTip(rgTip, '请输入账号'); return; }
+    if (!w) { sayTip(rgTip, '请输入密码'); return; }
+    if (w !== w2) { sayTip(rgTip, '两次输入的密码不一致'); return; }
+    rgBtn.disabled = true; rgBtn.textContent = '注册中…';
+    sayTip(rgTip, '正在创建账号…', true);
+    let r;
+    try { r = await UA.register(u.trim(), w, nk.trim(), rgGender); }
+    catch (e) { r = { ok: false, msg: '注册异常：' + e.message }; }
+    rgBtn.disabled = false; rgBtn.textContent = '注 册 并 进 入';
+    if (!r.ok) { sayTip(rgTip, r.msg); return; }
+    sayTip(rgTip, '注册成功，正在进入…', true);
+    localStorage.setItem('zb_uid', r.id);
+    await MAIN.login(r.nick, r.gender);
+  };
+
+  /* 忘记密码 */
+  const lgFind = document.getElementById('lgFind');
+  if (lgFind) lgFind.onclick = () => {
+    const u = ((document.getElementById('lgUser') || {}).value || '').trim();
+    if (!u) { sayTip(lgTip, '请先填写账号名'); return; }
+    sayTip(lgTip, '提示：账号数据保存在云端仓库。如需重置密码，请联系管理员在后台「账号管理 → 重置密码」操作。', true);
+  };
+
+  /* ---- 自动登录 ---- */
+  if (UA.shouldAuto()) {
+    const rr = UA.remembered();
+    if (rr.uid) {
+      sayTip(lgTip, '正在自动登录…', true);
+      (async () => {
+        try { await MAIN.login(rr.nick || rr.name || '先锋官', rr.gender || 'm'); }
+        catch (e) { sayTip(lgTip, ''); }
+      })();
     }
-    WX.showScan();
-  };
-
-  if (lgSwitch) lgSwitch.onclick = () => {
-    const on = lgManual.style.display !== 'none';
-    lgManual.style.display = on ? 'none' : 'block';
-    lgSwitch.textContent = on ? '切换账户 · 手动建号' : '返回微信登录';
-  };
-
-  if (wxBtn) wxBtn.onclick = async () => {
-    wxBtn.disabled = true;
-    wxTip.textContent = WX.phone() ? '微信一键登录中…' : '正在唤起微信授权…';
-    const r = await WX.login();
-    if (r.pending) return;               /* 跳真 OAuth 中 */
-    if (r.ok) {
-      wxTip.textContent = r.quick ? '授权成功，正在进入…' : '绑定成功，正在进入…';
-      localStorage.setItem('zb_uid', r.uid);
-      await MAIN.login(r.name, r.gender);
-    } else {
-      wxBtn.disabled = false;
-      wxTip.textContent = r.msg || '授权失败，请重试';
-      setTimeout(() => { if (wxTip && !wxTip.dataset.busy) wxTip.textContent = WX.tipText(); }, 2600);
-    }
-  };
-  /* 登录页提示：已绑定则显示脱敏手机号 */
-  if (wxTip && WX.phone()) wxTip.textContent = WX.tipText();
-
-  /* 扫码登录：URL 带 ?wx=<账号ID> → 直接进该账号 */
-  const wxParam = new URLSearchParams(location.search).get('wx');
-  if (wxParam) {
-    (async () => {
-      try {
-        localStorage.setItem('zb_uid', wxParam);
-        /* 昵称用记忆的，若无则用微信风格昵称 */
-        const nm = localStorage.getItem('zb_name') || WX.randomWxName();
-        const gd = localStorage.getItem('zb_gender') || 'm';
-        if (wxTip) { wxTip.dataset.busy = '1'; wxTip.textContent = '扫码登录中…'; }
-        await MAIN.login(nm, gd);
-      } catch (e) { /* 失败留登录页 */ }
-    })();
-    return;
-  }
-
-  /* 已记住账户 → 下次打开自动进入，无需任何点击 */
-  if (WX.shouldAuto()) {
-    const rm = WX.remembered();
-    if (wxTip) { wxTip.dataset.busy = '1'; wxTip.textContent = '微信一键登录中…'; }
-    (async () => {
-      try { await MAIN.login(rm.name || '先锋官', rm.gender || 'm'); }
-      catch (e) { /* 失败则留在登录页 */ }
-    })();
   }
 
   const rb = document.getElementById('rsBack');
