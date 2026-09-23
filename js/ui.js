@@ -64,6 +64,7 @@ const UI = {
   },
 
   open(key, tab) {
+    if (window.SND) SND.play('panel');
     this.curPanel = key;
     const def = this.PANELS[key]; if (!def) return;
     if (tab) this.curTab[key] = tab;
@@ -112,11 +113,22 @@ const UI = {
       }).join('')}</div>`;
     }
     const a = E.attrs(p);
-    return `<div class="card"><div class="card-t">角色选择 <span class="sub">通关解锁</span></div>
+    const ci = (E.char(p) || {}).img;
+    return `<div class="card"><div class="card-t">当前先锋官</div>
+      <div style="text-align:center;padding:6px 0">
+        ${ci ? `<img src="${ci}" style="width:88px;height:88px;border-radius:14px;border:2px solid var(--gold);object-fit:cover"
+             onerror="this.outerHTML='<div style=\'font-size:52px\'>${E.char(p).icon}</div>'">`
+             : `<div style="font-size:52px">${E.char(p).icon}</div>`}
+        <div style="color:var(--gold);font-weight:700;margin-top:4px">${E.char(p).n}</div>
+        <div style="font-size:10px;color:#7d8ca8">${E.skin(p).n}</div>
+      </div></div>
+      <div class="card"><div class="card-t">角色选择 <span class="sub">通关解锁</span></div>
       ${EX.chars.map((c) => {
         const ok = E.charUnlocked(p, c.id);
         const on = p.char === c.id;
-        return `<div class="item"><div class="ic" style="font-size:20px">${c.icon}</div>
+        return `<div class="item"><div class="ic">${c.img
+            ? `<img src="${c.img}" style="width:30px;height:30px;border-radius:7px;object-fit:cover">`
+            : `<span style="font-size:20px">${c.icon}</span>`}</div>
           <div class="info"><div class="nm">${c.n} ${on ? '<span class="tag g">使用中</span>' : ''}</div>
           <div class="sub">生命${c.hp} 移速${c.spd} 护甲${c.armor} 暴击${(c.crit * 100).toFixed(0)}%</div>
           <div class="sub">${c.desc}</div>
