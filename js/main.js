@@ -466,20 +466,26 @@ function bindAll() {
 
   if (wxBtn) wxBtn.onclick = async () => {
     wxBtn.disabled = true;
-    wxTip.textContent = '正在唤起微信授权…';
+    wxTip.textContent = WX.phone() ? '微信一键登录中…' : '正在唤起微信授权…';
     const r = await WX.login();
     if (r.pending) return;               /* 跳真 OAuth 中 */
     if (r.ok) {
-      wxTip.textContent = '授权成功，正在进入…';
+      wxTip.textContent = r.quick ? '授权成功，正在进入…' : '绑定成功，正在进入…';
       localStorage.setItem('zb_uid', r.uid);
       await MAIN.login(r.name, r.gender);
-    } else { wxBtn.disabled = false; wxTip.textContent = '授权失败，请重试'; }
+    } else {
+      wxBtn.disabled = false;
+      wxTip.textContent = r.msg || '授权失败，请重试';
+      setTimeout(() => { if (wxTip && !wxTip.dataset.busy) wxTip.textContent = WX.tipText(); }, 2600);
+    }
   };
+  /* 登录页提示：已绑定则显示脱敏手机号 */
+  if (wxTip && WX.phone()) wxTip.textContent = WX.tipText();
 
   /* 已记住账户 → 下次打开自动进入，无需任何点击 */
   if (WX.shouldAuto()) {
     const rm = WX.remembered();
-    if (wxTip) wxTip.textContent = '正在自动登录…';
+    if (wxTip) { wxTip.dataset.busy = '1'; wxTip.textContent = '微信一键登录中…'; }
     (async () => {
       try { await MAIN.login(rm.name || '先锋官', rm.gender || 'm'); }
       catch (e) { /* 失败则留在登录页 */ }
