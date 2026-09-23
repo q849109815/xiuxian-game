@@ -274,6 +274,25 @@ const Net = {
   },
 
   /** 列出目录 */
+  /** 删除文件（后台用） */
+  async del(path) {
+    const d = await ghReq(path, { method: 'GET' });
+    if (!d || !d.sha) return false;
+    const eps = allEps();
+    const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
+    for (const ep of eps.slice(0, 6)) {
+      try {
+        const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
+          method: 'DELETE',
+          headers: { ...H, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'delete ' + path, sha: d.sha, branch: GH.branch }),
+        }, 12000);
+        if (r.ok || r.status === 200) return true;
+      } catch (e) {}
+    }
+    return false;
+  },
+
   async list(path) {
     const d = await ghReq(path, { method: 'GET' });
     if (Array.isArray(d)) return d.map((x) => x.name);
