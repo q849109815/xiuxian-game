@@ -62,25 +62,25 @@ const EX = {
    * =================================================== */
   guns: [
     { id: 'W01', n: '突击步枪', img: 'assets/icon/w_rifle.jpg', kind: '主', type: '自动', dmg: 25, rate: 8, mag: 30, reload: 1.8,
-      bullet: '普通弹', pierce: 0, pellets: 1, range: 40, spread: 2, recoil: '中', bspd: 800, icon: '🔫', q: '白', unlockLv: 0 },
+      bullet: '普通弹', pierce: 0, pellets: 1, range: 40, spread: 2, recoil: '中', bspd: 800, icon: '🔫', q: '白', unlockLv: 0, slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 22, dmgMax: 28},
     { id: 'W02', n: '散弹枪', img: 'assets/icon/w_shotgun.jpg', kind: '主', type: '散弹', dmg: 70, rate: 1.6, mag: 6, reload: 2.4,
-      bullet: '散弹', pierce: 0, pellets: 5, range: 15, spread: 8, recoil: '高', bspd: 600, icon: '💥', q: '绿', unlockLv: '1-2' },
+      bullet: '散弹', pierce: 0, pellets: 5, range: 15, spread: 8, recoil: '高', bspd: 600, icon: '💥', q: '绿', unlockLv: '1-2', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 60, dmgMax: 80},
     { id: 'W03', n: '榴弹枪', img: 'assets/icon/w_grenade.jpg', kind: '主', type: '爆炸', dmg: 120, rate: 0.8, mag: 3, reload: 3.0,
-      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 0.6, er: 62, range: 25, spread: 0, recoil: '高', bspd: 400, icon: '🎇', q: '绿', unlockLv: '1-4' },
+      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 0.6, er: 62, range: 25, spread: 0, recoil: '高', bspd: 400, icon: '🎇', q: '绿', unlockLv: '1-4', slots: 2, crit: 0.08, critDmg: 1.5, dmgMin: 100, dmgMax: 140},
     { id: 'W04', n: '狙击枪', img: 'assets/icon/w_sniper.jpg', kind: '主', type: '狙击', dmg: 260, rate: 0.7, mag: 5, reload: 2.8,
-      bullet: '穿甲弹', pierce: 2, pellets: 1, range: 80, spread: 0, recoil: '高', bspd: 1400, icon: '🎯', q: '蓝', unlockLv: '2-2' },
+      bullet: '穿甲弹', pierce: 2, pellets: 1, range: 80, spread: 0, recoil: '高', bspd: 1400, icon: '🎯', q: '蓝', unlockLv: '2-2', slots: 3, crit: 0.15, critDmg: 2.0, dmgMin: 230, dmgMax: 290},
     { id: 'W05', n: '冲锋枪', img: 'assets/icon/w_smg.jpg', kind: '主', type: '自动', dmg: 12, rate: 14, mag: 45, reload: 1.5,
-      bullet: '普通弹', pierce: 0, pellets: 1, range: 25, spread: 3, recoil: '低', bspd: 750, icon: '🔦', q: '绿', unlockLv: '2-1' },
+      bullet: '普通弹', pierce: 0, pellets: 1, range: 25, spread: 3, recoil: '低', bspd: 750, icon: '🔦', q: '绿', unlockLv: '2-1', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 10, dmgMax: 14},
     { id: 'W06', n: '加特林', img: 'assets/icon/w_gatling.jpg', kind: '主', type: '重机枪', dmg: 20, rate: 16, mag: 120, reload: 4.0,
-      bullet: '普通弹', pierce: 0, pellets: 1, range: 35, spread: 2, recoil: '高', bspd: 850, icon: '⚙️', q: '紫', unlockLv: '3-1' },
+      bullet: '普通弹', pierce: 0, pellets: 1, range: 35, spread: 2, recoil: '高', bspd: 850, icon: '⚙️', q: '紫', unlockLv: '3-1', slots: 3, crit: 0.05, critDmg: 1.5, dmgMin: 17, dmgMax: 23},
     { id: 'S01', n: '手雷', img: 'assets/icon/w_handgrenade.jpg', kind: '副', type: '投掷', dmg: 150, rate: 0.6, mag: 2, reload: 2.0,
-      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 0.8, er: 78, icon: '🧨', q: '蓝', unlockLv: '1-3' },
+      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 0.8, er: 78, icon: '🧨', q: '蓝', unlockLv: '1-3', slots: 2, crit: 0.08, critDmg: 1.5, dmgMin: 120, dmgMax: 180},
     { id: 'S02', n: '燃烧瓶', img: 'assets/icon/w_molotov.jpg', kind: '副', type: '投掷', dmg: 80, rate: 0.6, mag: 2, reload: 2.0,
-      bullet: '燃烧弹', pierce: 0, pellets: 1, burn: 0.7, icon: '🔥', q: '蓝', unlockLv: '2-2' },
+      bullet: '燃烧弹', pierce: 0, pellets: 1, burn: 0.7, icon: '🔥', q: '蓝', unlockLv: '2-2', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 60, dmgMax: 100},
     { id: 'S03', n: '地雷', img: 'assets/icon/w_mine.jpg', kind: '副', type: '布置', dmg: 200, rate: 0.3, mag: 3, reload: 3.0,
-      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 1.0, er: 70, icon: '💣', q: '紫', unlockLv: '3-2' },
+      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 1.0, er: 70, icon: '💣', q: '紫', unlockLv: '3-2', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 160, dmgMax: 240},
     { id: 'S04', n: '电击棒', img: 'assets/icon/w_taser.jpg', kind: '副', type: '近战', dmg: 90, rate: 1.2, mag: 1, reload: 0.5,
-      bullet: '近战', pierce: 0, pellets: 1, icon: '⚡', q: '绿', unlockLv: '2-3' },
+      bullet: '近战', pierce: 0, pellets: 1, icon: '⚡', q: '绿', unlockLv: '2-3', slots: 2, crit: 0.08, critDmg: 2.0, dmgMin: 70, dmgMax: 110},
   ],
   /* 武器进阶：每 5 级进阶一次，品质 白→绿→蓝→紫→橙 */
   gunAdvance: [
@@ -452,6 +452,44 @@ const EX = {
       { id: 'A03', n: '首次通关BOSS', cond: { t: 'bossKill', v: 1 }, rw: { ach: 150 }, desc: '通关第一个 BOSS 关' },
       { id: 'A04', n: '无尽达10分钟', cond: { t: 'endlessTime', v: 600 }, rw: { ach: 200 }, desc: '无尽模式存活 10 分钟' },
     ],
+  },
+
+  /* =====================================================
+   * 【30_武器词条池】AF01~AF12，按品质分档
+   * =================================================== */
+  affixes: [
+    { id: 'AF01', n: '伤害强化', q: '蓝', eff: '伤害+5%', k: 'dmg', v: 0.05, stack: true, src: '洗练/掉落', pr: 'P1' },
+    { id: 'AF02', n: '攻速强化', q: '蓝', eff: '攻速+5%', k: 'rate', v: 0.05, stack: true, src: '洗练/掉落', pr: 'P1' },
+    { id: 'AF03', n: '暴击率', q: '蓝', eff: '暴击率+3%', k: 'crit', v: 0.03, stack: true, src: '洗练/掉落', pr: 'P1' },
+    { id: 'AF04', n: '暴击伤害', q: '紫', eff: '暴伤+10%', k: 'critDmg', v: 0.10, stack: true, src: '洗练/掉落', pr: 'P1' },
+    { id: 'AF05', n: '穿透', q: '紫', eff: '穿透+1', k: 'pierce', v: 1, stack: false, src: '洗练/掉落', pr: 'P1' },
+    { id: 'AF06', n: '吸血', q: '紫', eff: '吸血+3%', k: 'lifesteal', v: 0.03, stack: true, src: '洗练/掉落', pr: 'P1' },
+    { id: 'AF07', n: '弹夹容量', q: '紫', eff: '弹夹+2', k: 'mag', v: 2, stack: true, src: '洗练/掉落', pr: 'P1' },
+    { id: 'AF08', n: '换弹速度', q: '紫', eff: '换弹-0.2秒', k: 'reload', v: 0.2, stack: true, src: '洗练/掉落', pr: 'P2' },
+    { id: 'AF09', n: '爆炸范围', q: '红', eff: '爆炸范围+10%', k: 'er', v: 0.10, stack: true, src: '传说洗练', pr: 'P2' },
+    { id: 'AF10', n: '穿透强化', q: '红', eff: '穿透+2', k: 'pierce', v: 2, stack: false, src: '传说洗练', pr: 'P2' },
+    { id: 'AF11', n: '双倍伤害', q: '红', eff: '5%概率双倍伤害', k: 'double', v: 0.05, stack: false, src: '传说洗练', pr: 'P2' },
+    { id: 'AF12', n: '额外子弹', q: '红', eff: '额外发射1颗子弹', k: 'extra', v: 1, stack: false, src: '传说洗练', pr: 'P2' },
+  ],
+  /* 词条洗练消耗：普通洗练金币，传说洗练钻石 */
+  AFFIX_REROLL_GOLD: 5000,
+  AFFIX_REROLL_LEGEND_DIA: 50,
+  /* 按品质随机取词条 */
+  rollAffixOne(legend) {
+    const pool = this.affixes.filter((a) => legend ? a.q === '红' : a.q !== '红');
+    const src = pool.length ? pool : this.affixes;
+    const a = src[Math.floor(Math.random() * src.length)];
+    /* 数值在基础值上下浮动 ±40% */
+    const v = a.v * (0.6 + Math.random() * 0.8);
+    return { id: a.id, v: a.k === 'pierce' || a.k === 'mag' || a.k === 'extra'
+      ? Math.max(1, Math.round(v)) : Math.round(v * 1000) / 1000 };
+  },
+  affixOf(id) { return this.affixes.find((x) => x.id === id) || null; },
+  affixTxt(af) {
+    const a = this.affixOf(af.id); if (!a) return '';
+    if (a.k === 'pierce' || a.k === 'mag' || a.k === 'extra') return a.n + ' +' + af.v;
+    if (a.k === 'reload') return a.n + ' -' + af.v.toFixed(1) + '秒';
+    return a.n + ' +' + (af.v * 100).toFixed(1) + '%';
   },
 
   /* =====================================================
