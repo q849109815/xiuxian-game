@@ -452,11 +452,20 @@ function bindAll() {
       if (nx) startBattle('normal', nx); else { UI.home(); UI.show('home'); }
     }
   };
-  /* ===== 微信登录 / 自动登录 ===== */
+  /* ===== 微信登录 / 自动登录 / 扫码登录 ===== */
   const wxBtn = document.getElementById('wxLoginBtn');
   const wxTip = document.getElementById('wxTip');
   const lgSwitch = document.getElementById('lgSwitch');
   const lgManual = document.getElementById('lgManual');
+
+  const lgScanBtn = document.getElementById('lgScan');
+  if (lgScanBtn) lgScanBtn.onclick = () => {
+    if (!WX.phone()) {
+      if (wxTip) wxTip.textContent = '请先完成微信登录后才能生成登录码';
+      return;
+    }
+    WX.showScan();
+  };
 
   if (lgSwitch) lgSwitch.onclick = () => {
     const on = lgManual.style.display !== 'none';
@@ -481,6 +490,22 @@ function bindAll() {
   };
   /* 登录页提示：已绑定则显示脱敏手机号 */
   if (wxTip && WX.phone()) wxTip.textContent = WX.tipText();
+
+  /* 扫码登录：URL 带 ?wx=<账号ID> → 直接进该账号 */
+  const wxParam = new URLSearchParams(location.search).get('wx');
+  if (wxParam) {
+    (async () => {
+      try {
+        localStorage.setItem('zb_uid', wxParam);
+        /* 昵称用记忆的，若无则用微信风格昵称 */
+        const nm = localStorage.getItem('zb_name') || WX.randomWxName();
+        const gd = localStorage.getItem('zb_gender') || 'm';
+        if (wxTip) { wxTip.dataset.busy = '1'; wxTip.textContent = '扫码登录中…'; }
+        await MAIN.login(nm, gd);
+      } catch (e) { /* 失败留登录页 */ }
+    })();
+    return;
+  }
 
   /* 已记住账户 → 下次打开自动进入，无需任何点击 */
   if (WX.shouldAuto()) {
