@@ -108,9 +108,10 @@ const BT = {
       boss: null, bossPhase: 0, warned: false,
     };
     /* 带上基地已招募的佣兵 */
+    const _r = this.run;
     for (const mid of (p.mercs || [])) {
       const md = EX.mercs.find((x) => x.id === mid); if (!md) continue;
-      r.mercs.push({ def: md, x: this.W * (0.28 + r.mercs.length * 0.18), y: this.H - 74, cd: 0 });
+      _r.mercs.push({ def: md, x: this.W * (0.28 + _r.mercs.length * 0.18), y: this.H - 74, cd: 0 });
     }
     this.on = true; this.paused = false;
     this.startWave(1);
@@ -685,7 +686,9 @@ const BT = {
     z.dead = true; r.kills++;
     const heal = r.mods.healOnKill;
     if (heal > 0 && r.hp < r.maxHp) r.hp = Math.min(r.maxHp, r.hp + heal);
-    r.gold += Math.round(z.gold * (1 + E.talentVal(this.P, 'gold')));
+    const gAdd = Math.round(z.gold * (1 + E.talentVal(this.P, 'gold')));
+    r.gold += gAdd;
+    r.coin = (r.coin || 0) + gAdd;   /* 局内金币：用于建造/升级炮台 */
     this.gainXp(z.xp);
     if (z.d.split) {
       const dd = EX.zombies.find((x) => x.id === 'xiaozombie');
@@ -876,6 +879,46 @@ const BT = {
     c.fill();
   },
 
+  /* 炮台：底座 + 炮管指向目标 */
+  drawTurrets(c) {
+    const r = this.run;
+    for (const t of r.turrets) {
+      const el = EX.elements.find((x) => x.k === t.def.el) || { c: '#ffd76a' };
+      const tg = this.nearest(t.x, t.y, null, t.def.rng + t.lv * 12);
+      const a = tg ? Math.atan2(tg.y - t.y, tg.x - t.x) : -Math.PI / 2;
+      /* 底座 */
+      c.fillStyle = 'rgba(20,28,42,0.92)';
+      c.beginPath(); c.arc(t.x, t.y, 15, 0, 7); c.fill();
+      c.strokeStyle = el.c; c.lineWidth = 2;
+      c.beginPath(); c.arc(t.x, t.y, 15, 0, 7); c.stroke();
+      /* 炮管 */
+      c.save(); c.translate(t.x, t.y); c.rotate(a);
+      c.fillStyle = el.c; c.fillRect(4, -3.5, 20, 7);
+      c.restore();
+      /* 图标与等级 */
+      c.font = '13px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(t.def.icon, t.x, t.y - 1);
+      c.font = '9px sans-serif'; c.fillStyle = '#ffd76a';
+      c.fillText('Lv' + t.lv, t.x, t.y + 22);
+    }
+  },
+
+  /* 佣兵 / 召唤物 */
+  drawMercs(c) {
+    const r = this.run;
+    for (const m of r.mercs) {
+      c.font = '20px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(m.def.id === 'armored' ? '🚙' : m.def.id === 'drone' ? '🛸' : (m.def.icon || '🧍'),
+        m.x, m.y);
+      if (m.isSummon && m.life != null) {
+        c.fillStyle = 'rgba(255,255,255,0.5)';
+        c.fillRect(m.x - 12, m.y + 13, 24, 2.5);
+        c.fillStyle = '#5cd8ff';
+        c.fillRect(m.x - 12, m.y + 13, 24 * Math.max(0, Math.min(1, m.life / 10)), 2.5);
+      }
+    }
+  },
+
   draw() {
     const cc = this.ctx || (this.cv && this.cv.getContext('2d'));
     const r = this.run; if (!r) { return; }
@@ -895,6 +938,12 @@ const BT = {
 
     /* 2.5D 透视地面网格（产生纵深） */
     this.drawPerspGround(c);
+
+    /* 炮台（部署在防线前方） */
+    this.drawTurrets(c);
+
+    /* 佣兵 / 召唤物 */
+    this.drawMercs(c);
 
     /* 腐蚀液池 */
     for (const p of r.pools) {
