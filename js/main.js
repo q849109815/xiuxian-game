@@ -11,6 +11,17 @@ const MAIN = {
   savePath: null,
 
   async boot() {
+    /* 表02 第15项 / 表23 第9项：热更新检查 */
+    let up = { updated: false };
+    try { up = OPS.checkUpdate(); } catch (e) { up = { updated: false }; }
+    if (up.updated) {
+      console.log('[热更新]', up.from, '→', up.ver);
+      setTimeout(() => {
+        if (window.UI && UI.toast) UI.toast('已更新到 ' + up.ver, 'ok');
+      }, 1500);
+    }
+    /* 表37 埋点：game_start */
+    try { OPS.track('game_start', { ver: up.ver }); } catch (e) {}
     const steps = [['正在装填弹药…', 12], ['加载武器数据…', 34], ['连接云端存档…', 58], ['读取先锋官档案…', 80], ['准备完毕', 100]];
     for (const [txt, v] of steps) {
       const b = document.getElementById('ldBar'), t = document.getElementById('ldTxt');
