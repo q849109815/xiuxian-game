@@ -28,13 +28,13 @@ const EX = {
    * 移速 6.0 → 按 ×22 映射为像素速度 132
    * =================================================== */
   chars: [
-    { id: 'C01', n: '幸存者-杰克', icon: '🧑‍🚀', hp: 1000, spd: 6.0, armor: 0, crit: 0.05,
+    { id: 'C01', n: '幸存者-杰克', icon: '🧑‍🚀', img: 'assets/char/c01_jack.jpg', hp: 1000, spd: 6.0, armor: 0, crit: 0.05,
       unlockLv: 0, unlockTxt: '初始解锁', desc: '均衡型先锋官，无短板' },
-    { id: 'C02', n: '医疗兵-艾拉', icon: '👩‍⚕️', hp: 900, spd: 6.5, armor: 5, crit: 0.05,
+    { id: 'C02', n: '医疗兵-艾拉', icon: '👩‍⚕️', img: 'assets/char/c02_aila.jpg', hp: 900, spd: 6.5, armor: 5, crit: 0.05,
       unlockLv: '1-3', unlockTxt: '通关 1-3 解锁', desc: '高移速轻护甲，灵活游走' },
-    { id: 'C03', n: '重装兵-雷', icon: '🧑‍🏭', hp: 1200, spd: 5.0, armor: 15, crit: 0.03,
+    { id: 'C03', n: '重装兵-雷', icon: '🧑‍🏭', img: 'assets/char/c03_lei.jpg', hp: 1200, spd: 5.0, armor: 15, crit: 0.03,
       unlockLv: '2-3', unlockTxt: '通关 2-3 解锁', desc: '厚血高护甲，正面硬扛' },
-    { id: 'C04', n: '狙击手-妮可', icon: '🕵️‍♀️', hp: 850, spd: 6.0, armor: 3, crit: 0.08,
+    { id: 'C04', n: '狙击手-妮可', icon: '🕵️‍♀️', img: 'assets/char/c04_nike.jpg', hp: 850, spd: 6.0, armor: 3, crit: 0.08,
       unlockLv: '3-3', unlockTxt: '通关 3-3 解锁', desc: '高暴击脆皮，爆发输出' },
   ],
   /* 【皮肤表】每个角色 2 款，第二款用钻石解锁 */
@@ -55,7 +55,7 @@ const EX = {
    * pellets 弹丸数（散弹枪 5）/ pierce 穿透
    * =================================================== */
   guns: [
-    { id: 'W01', n: '突击步枪', kind: '主', type: '自动', dmg: 25, rate: 8, mag: 30, reload: 1.8,
+    { id: 'W01', n: '突击步枪', img: 'assets/icon/w_rifle.jpg', kind: '主', type: '自动', dmg: 25, rate: 8, mag: 30, reload: 1.8,
       bullet: '普通弹', pierce: 0, pellets: 1, icon: '🔫', q: '白', unlockLv: 0 },
     { id: 'W02', n: '散弹枪', kind: '主', type: '散弹', dmg: 70, rate: 1.6, mag: 6, reload: 2.4,
       bullet: '散弹', pierce: 0, pellets: 5, icon: '💥', q: '绿', unlockLv: '1-2' },
@@ -249,41 +249,41 @@ const EX = {
    * 【怪物表】资料 09 表：12 种（保持已对齐）
    * =================================================== */
   zombies: [
-    { id: 'putong', n: '普通僵尸', icon: '🧟', hp: 30, spd: 34, dmg: 8, atkR: 26, ai: 'chase',
+    { id: 'putong', n: '普通僵尸', icon: '🧟', img: 'assets/icon/z_putong.jpg', hp: 30, spd: 34, dmg: 8, atkR: 26, ai: 'chase',
       skill: '扑咬', sk: '近战伤害，靠近玩家撕咬', xp: 4, gold: 3 },
-    { id: 'jipao', n: '疾跑僵尸', icon: '🏃', hp: 22, spd: 78, dmg: 14, atkR: 24, ai: 'rush',
+    { id: 'jipao', n: '疾跑僵尸', icon: '🏃', img: 'assets/icon/z_jipao.jpg', hp: 22, spd: 78, dmg: 14, atkR: 24, ai: 'rush',
       skill: '冲刺', sk: '高速冲向玩家，接触造成高伤害', xp: 6, gold: 4 },
-    { id: 'zhongjia', n: '重甲僵尸', icon: '🥋', hp: 180, spd: 26, dmg: 18, atkR: 28, ai: 'chase',
+    { id: 'zhongjia', n: '重甲僵尸', icon: '🥋', img: 'assets/icon/z_zhongjia.jpg', hp: 180, spd: 26, dmg: 18, atkR: 28, ai: 'chase',
       skill: '护甲', sk: '减伤高，需穿透/爆炸破甲', def: 0.55, xp: 14, gold: 12, elite: true },
-    { id: 'zibao', n: '自爆僵尸', icon: '💣', hp: 45, spd: 62, dmg: 34, atkR: 30, ai: 'boomer',
+    { id: 'zibao', n: '自爆僵尸', icon: '💣', img: 'assets/icon/z_zibao.jpg', hp: 45, spd: 62, dmg: 34, atkR: 30, ai: 'boomer',
       skill: '自爆', sk: '接近后自爆，范围伤害，死亡解体', xp: 10, gold: 8 },
-    { id: 'du', n: '毒僵尸', icon: '☠️', hp: 90, spd: 34, dmg: 10, atkR: 120, ai: 'ranged',
+    { id: 'du', n: '毒僵尸', icon: '☠️', img: 'assets/icon/z_du.jpg', hp: 90, spd: 34, dmg: 10, atkR: 120, ai: 'ranged',
       skill: '毒雾', sk: '喷洒毒雾，玩家中毒持续掉血', poison: 6, xp: 13, gold: 10, elite: true },
-    { id: 'tuye', n: '吐液僵尸', icon: '🤮', hp: 70, spd: 30, dmg: 12, atkR: 150, ai: 'ranged',
+    { id: 'tuye', n: '吐液僵尸', icon: '🤮', img: 'assets/icon/z_tuye.jpg', hp: 70, spd: 30, dmg: 12, atkR: 150, ai: 'ranged',
       skill: '腐蚀液', sk: '远程喷吐，落地区域持续伤害', pool: 5, xp: 12, gold: 9 },
-    { id: 'zhadan', n: '炸弹僵尸', icon: '🧨', hp: 55, spd: 44, dmg: 26, atkR: 28, ai: 'boomer',
+    { id: 'zhadan', n: '炸弹僵尸', icon: '🧨', img: 'assets/icon/z_zhadan.jpg', hp: 55, spd: 44, dmg: 26, atkR: 28, ai: 'boomer',
       skill: '死亡爆炸', sk: '死亡时爆炸范围伤害，可引爆油桶', xp: 11, gold: 9 },
-    { id: 'dun', n: '护盾僵尸', icon: '🔰', hp: 130, spd: 32, dmg: 16, atkR: 26, ai: 'chase',
+    { id: 'dun', n: '护盾僵尸', icon: '🔰', img: 'assets/icon/z_dun.jpg', hp: 130, spd: 32, dmg: 16, atkR: 26, ai: 'chase',
       skill: '能量护盾', sk: '正面免疫伤害，需绕后或破盾', front: 0.85, xp: 16, gold: 13, elite: true },
-    { id: 'fenlie', n: '分裂僵尸', icon: '🪱', hp: 85, spd: 36, dmg: 12, atkR: 26, ai: 'chase',
+    { id: 'fenlie', n: '分裂僵尸', icon: '🪱', img: 'assets/icon/z_fenlie.jpg', hp: 85, spd: 36, dmg: 12, atkR: 26, ai: 'chase',
       skill: '分裂', sk: '死亡分裂成 2 个小僵尸', split: 2, xp: 12, gold: 10 },
-    { id: 'feixing', n: '飞行僵尸', icon: '🦅', hp: 60, spd: 58, dmg: 15, atkR: 30, ai: 'chase',
+    { id: 'feixing', n: '飞行僵尸', icon: '🦅', img: 'assets/icon/z_feixing.jpg', hp: 60, spd: 58, dmg: 15, atkR: 30, ai: 'chase',
       skill: '飞行', sk: '越过地面障碍，空中移动', fly: true, xp: 13, gold: 11 },
-    { id: 'jinying', n: '精英僵尸', icon: '👹', hp: 320, spd: 40, dmg: 26, atkR: 30, ai: 'chase',
+    { id: 'jinying', n: '精英僵尸', icon: '👹', img: 'assets/icon/z_jinying.jpg', hp: 320, spd: 40, dmg: 26, atkR: 30, ai: 'chase',
       skill: '强化体魄', sk: '高血量高伤害的精英单位', def: 0.3, xp: 30, gold: 26, elite: true },
-    { id: 'xiaozombie', n: '小僵尸', icon: '🐛', hp: 12, spd: 50, dmg: 5, atkR: 20, ai: 'chase',
+    { id: 'xiaozombie', n: '小僵尸', icon: '🐛', img: 'assets/icon/z_xiaozombie.jpg', hp: 12, spd: 50, dmg: 5, atkR: 20, ai: 'chase',
       skill: '扑咬', sk: '分裂产生的小体型僵尸', xp: 2, gold: 1 },
   ],
   /* BOSS */
   bosses: [
-    { id: 'juxing', n: '巨型丧尸', icon: '🦖', hp: 2600, spd: 22, dmg: 40, atkR: 46, def: 0.25,
+    { id: 'juxing', n: '巨型丧尸', icon: '🦖', img: 'assets/char/boss_juxing.jpg', hp: 2600, spd: 22, dmg: 40, atkR: 46, def: 0.25,
       phases: 2, xp: 220, gold: 260,
       skills: [
         { n: '巨爪拍击', sk: '大范围近战，击退玩家', trig: 'contact' },
         { n: '召唤小怪', sk: '召唤普通僵尸群助战', trig: 0.7 },
         { n: '召唤小怪', sk: '再次召唤僵尸群', trig: 0.4 },
       ] },
-    { id: 'mama', n: '感染母体', icon: '🕷️', hp: 3400, spd: 26, dmg: 34, atkR: 150, def: 0.2,
+    { id: 'mama', n: '感染母体', icon: '🕷️', img: 'assets/char/boss_mama.jpg', hp: 3400, spd: 26, dmg: 34, atkR: 150, def: 0.2,
       phases: 3, xp: 320, gold: 380,
       skills: [
         { n: '孢子喷吐', sk: '喷出感染孢子，落地分裂小怪', trig: 0.8 },
@@ -425,6 +425,13 @@ const EX = {
   /* 体力：上限 100，每 5 分钟 +1 */
   STAMINA_MAX: 100,
   STAMINA_MS: 300000,
+
+  /* 场景图映射 */
+  sceneImg: {
+    city: 'assets/scene/city.jpg', wasteland: 'assets/scene/wasteland.jpg',
+    factory: 'assets/scene/factory.jpg', tunnel: 'assets/scene/tunnel.jpg',
+    field: 'assets/scene/field.jpg', snow: 'assets/scene/snow.jpg',
+  },
 
   /* 品质与元素 */
   qualities: ['白', '绿', '蓝', '紫', '橙', '红'],
