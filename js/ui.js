@@ -32,7 +32,17 @@ const UI = {
   /* ================= 主界面 ================= */
   home() {
     const p = this.P; if (!p) return;
-    $('#hmAvIco').textContent = p.avatar || '👨‍🚀';
+    const avEl = $('#hmAvIco');
+    if (p.avatarImg) {
+      avEl.style.backgroundImage = 'url(' + p.avatarImg + ')';
+      avEl.style.backgroundSize = 'cover';
+      avEl.style.backgroundPosition = 'center top';
+      avEl.style.width = '100%'; avEl.style.height = '100%';
+      avEl.style.borderRadius = '50%';
+      avEl.textContent = '';
+    } else {
+      avEl.textContent = p.avatar || '👨‍🚀';
+    }
     $('#hmLv').textContent = 'Lv.' + (p.lv || 1);
     $('#hmName').textContent = p.name;
     $('#hmPower').textContent = E.fmt(E.power(p));
