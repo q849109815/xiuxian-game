@@ -372,12 +372,14 @@ const E = {
     const spdUp = this.chipVal(p, 'spd') + ((sk && sk.bonus && sk.bonus.spd) || 0);
     const moveSpd = c.spd * this.SPD_MUL * (1 + spdUp);
     return {
-      atk, hp: Math.round(hp), gunBase, armor: Math.round(armor),
+      atk: atk + this.gemBonus(p).atk,
+      hp: Math.round(hp) + this.gemBonus(p).hp,
+      gunBase, armor: Math.round(armor),
       rate: g.rate * (1 + this.chipVal(p, 'rate') + this.gunStatVal(p, 'rate')),
       mag: g.mag + Math.round(this.gunStatVal(p, 'mag')),
       pierce: g.pierce + Math.floor(this.gunStatVal(p, 'pierce')),
       pellets: g.pellets || 1, range: 300, spread: 0,
-      crit, critDmg,
+      crit: Math.min(0.85, crit + this.gemBonus(p).crit), critDmg,
       moveSpd: Math.round(moveSpd),
       ls: this.talentVal(p, 'ls') + this.chipVal(p, 'ls'),
       revive: Math.floor(p.talents.t_revive || 0),
@@ -388,9 +390,13 @@ const E = {
   },
   power(p) {
     const a = this.attrs(p);
+    const gb = this.gemBonus(p);
+    const eq = p.equip || {};
+    const eqP = Object.values(eq).reduce((s, e) => s + (e.lv || 0) * 45 + (e.adv || 0) * 160, 0);
     return Math.round(a.atk * 12 + a.hp * 0.6 + p.gunLv * 60
       + Object.keys(p.chips || {}).length * 220
-      + Object.values(p.talents || {}).reduce((s, v) => s + v, 0) * 90);
+      + Object.values(p.talents || {}).reduce((s, v) => s + v, 0) * 90
+      + gb.atk * 6 + gb.hp * 0.3 + eqP);
   },
 
   /* =================================================
@@ -472,6 +478,37 @@ const E = {
     const rw = { gold: 100 * p.signDays, diamond: p.signDays >= 7 ? 50 : 0 };
     p.gold += rw.gold; p.diamond += rw.diamond;
     return { ok: true, msg: '签到成功 第' + p.signDays + '天 🪙' + rw.gold + (rw.diamond ? ' 💎' + rw.diamond : '') };
+  },
+
+  /* 宝石合成：3 颗同级 → 1 颗高一级（截图「宝石合成」） */
+  gemFuse(p, id) {
+    const tiers = ['G_R', 'G_B', 'G_G', 'G_P'];
+    const need = 3;
+    if (!((p.gems || {})[id] >= need)) return { ok: false, msg: '需要 ' + need + ' 颗同色宝石' };
+    p.gems[id] -= need;
+    p.gemLv = (p.gemLv || 0) + 1;
+    const lv = p.gemLv;
+    return { ok: true, msg: '合成成功！宝石等级提升至 Lv.' + lv };
+  },
+  /* 宝石属性加成（按等级放大） */
+  gemBonus(p) {
+    const lv = p.gemLv || 0;
+    if (!lv) return { atk: 0, hp: 0, crit: 0 };
+    return { atk: 1200 * lv, hp: 2000 * lv, crit: 0.15 * lv };
+  },
+  /* 装备锻造：强化 + 进阶（截图「装备设造 / 装备锻造」） */
+  forgeEquip(p, slot) {
+    const eq = p.equip || (p.equip = {});
+    const cur = eq[slot] || { lv: 0 };
+    const cost = 500 + cur.lv * 300;
+    if ((p.gold || 0) < cost) return { ok: false, msg: '金币不足，需要 ' + cost };
+    if (cur.lv >= 20) return { ok: false, msg: '已达最高强化等级' };
+    p.gold -= cost;
+    cur.lv = (cur.lv || 0) + 1;
+    /* 每 5 级进阶一次 */
+    if (cur.lv % 5 === 0) cur.adv = (cur.adv || 0) + 1;
+    eq[slot] = cur;
+    return { ok: true, msg: '强化成功！' + slot + ' Lv.' + cur.lv + (cur.lv % 5 === 0 ? ' · 进阶 +1' : '') };
   },
 
   taskProg(p, t) {
