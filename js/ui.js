@@ -446,7 +446,19 @@ const UI = {
           <b style="color:var(--green)">+${d && d.unit === '%' ? (st.v * 100).toFixed(1) + '%' : st.v.toFixed(2)}</b></div>`;
       }).join('') : '<div class="lbl">尚未进阶，暂无词条</div>'}
       <button class="btn o blk" id="gunReroll" ${E.gunAffixSlots(p, p.gun) <= 0 ? 'disabled' : ''}>🔄 洗练词条（💎${EX.REROLL_GUN_COST}）</button>
-      <div class="lbl">洗练将重随机全部已解锁词条，按品质加权：蓝60% / 紫30% / 红10%。</div></div>`;
+      <div class="lbl">洗练将重随机全部已解锁词条，按品质加权：蓝60% / 紫30% / 红10%。</div></div>
+
+      <div class="card"><div class="card-t">武器词条 <span class="sub">表30 · ${g.slots || 2} 槽位</span></div>
+      ${E.gunAffixes(p).map((af, i) => {
+        const a = EX.affixOf(af.id); if (!a) return '';
+        const qc = EX.qColor[a.q] || '#ccc';
+        return `<div class="kv"><span><span class="tag" style="background:${qc}22;color:${qc}">${a.q}</span> ${EX.affixTxt(af)}</span>
+          <b style="color:var(--green)">${a.eff}</b></div>`;
+      }).join('') || '<div class="lbl">暂无词条</div>'}
+      <div class="sub" style="margin-top:4px">词条加成已计入战斗属性（伤害/攻速/暴击/穿透/吸血/弹夹…）</div>
+      <button class="btn blk" id="gunAfReroll">🔄 普通洗练（🪙${E.fmt(EX.AFFIX_REROLL_GOLD)}）</button>
+      <button class="btn o blk" id="gunAfRerollL">🔴 传说洗练（💎${EX.AFFIX_REROLL_LEGEND_DIA}）必出红词条</button>
+    </div>`;
   },
   b_gun(p, tab) {
     const rr = $('#gunReroll');
@@ -456,6 +468,17 @@ const UI = {
     };
     const u = $('#gunUp'); if (u) u.onclick = () => {
       const r = E.upgradeGun(p); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('gun', tab); this.home(); }
+    };
+    /* 表30 武器词条洗练 */
+    const ar = $('#gunAfReroll');
+    if (ar) ar.onclick = () => {
+      const r = E.rerollAffix(p, false); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('gun', tab); this.home(); }
+    };
+    const arl = $('#gunAfRerollL');
+    if (arl) arl.onclick = () => {
+      const r = E.rerollAffix(p, true); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('gun', tab); this.home(); }
     };
     $$('#pnBody [data-gun]').forEach((b) => {
       b.onclick = () => { const r = E.switchGun(p, b.dataset.gun); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('gun', '武器库'); this.home(); } };
