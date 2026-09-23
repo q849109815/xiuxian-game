@@ -711,6 +711,67 @@ const E = {
   /* =========================================================
    * 武器词条系统（表30 AF01~AF12 + 表44 词条槽位）
    * ======================================================== */
+  /* =========================================================
+   * 宝箱开箱 / 活动掉落（表31 DR11 / DR12）
+   * ======================================================== */
+  /* =========================================================
+   * 背包碎片分解（表05 第9项：分解碎片 → 金币）
+   * ======================================================== */
+  DISMANTLE_RATE: { P01: 60, P02: 120, C01: 200, C02: 500, C03: 1200 },
+  canDismantle(id) { return !!this.DISMANTLE_RATE[id]; },
+  dismantleMat(p, id, n) {
+    const rate = this.DISMANTLE_RATE[id];
+    if (!rate) return { ok: false, msg: '该物品无法分解' };
+    const have = (p.mat || {})[id] || 0;
+    if (have < 1) return { ok: false, msg: '数量不足' };
+    const t = Math.max(1, Math.min(have, n || 1));
+    p.mat[id] = have - t;
+    const gold = rate * t;
+    p.gold = (p.gold || 0) + gold;
+    return { ok: true, msg: '分解 ' + this.itemName(id) + '×' + t + ' → 金币 +' + this.fmt(gold), gold: gold };
+  },
+  dismantleAll(p) {
+    let gold = 0, cnt = 0;
+    Object.keys(this.DISMANTLE_RATE).forEach((id) => {
+      const have = (p.mat || {})[id] || 0;
+      if (have > 0) { gold += this.DISMANTLE_RATE[id] * have; cnt += have; p.mat[id] = 0; }
+    });
+    if (!cnt) return { ok: false, msg: '没有可分解的物品' };
+    p.gold = (p.gold || 0) + gold;
+    return { ok: true, msg: '分解 ' + cnt + ' 个 → 金币 +' + this.fmt(gold), gold: gold };
+  },
+
+  openChest(p, times) {
+    const t = Math.max(1, Math.min(10, times || 1));
+    const have = (p.mat || {}).I04 || 0;   /* 宝箱道具 I04 */
+    if (have < t) return { ok: false, msg: '宝箱不足（现有 ' + have + '）' };
+    p.mat.I04 = have - t;
+    const got = {};
+    for (let i = 0; i < t; i++) {
+      const list = EX.dropBySrc('宝箱开箱') || [];
+      const r = EX.rollDrop(list);
+      r.forEach((g) => { got[g.item] = (got[g.item] || 0) + g.n; });
+    }
+    this.grantByMap(p, got);
+    const txt = Object.keys(got).map((k) => this.itemName(k) + '×' + got[k]).join('、') || '（本次未出货）';
+    return { ok: true, msg: '开启 ' + t + ' 个宝箱：' + txt };
+  },
+  /* 活动掉落结算（表31 DR12：精英芯片 30%） */
+  eventDropRoll(p) {
+    const list = EX.dropBySrc('活动掉落') || [];
+    const r = EX.rollDrop(list);
+    r.forEach((g) => { p.mat = p.mat || {}; p.mat[g.item] = (p.mat[g.item] || 0) + g.n; });
+    return r;
+  },
+  grantByMap(p, map) {
+    p.mat = p.mat || {};
+    Object.keys(map || {}).forEach((k) => {
+      if (k === 'gold') p.gold = (p.gold || 0) + map[k];
+      else if (k === 'diamond') p.diamond = (p.diamond || 0) + map[k];
+      else p.mat[k] = (p.mat[k] || 0) + map[k];
+    });
+  },
+
   gunSlots(p) {
     const g = this.gun(p); return (g && g.slots) || 2;
   },
