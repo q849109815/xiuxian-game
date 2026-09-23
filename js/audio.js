@@ -74,9 +74,13 @@ const SND = {
         this.noise(0.22, { freq: 1500, freqTo: 200, vol: 0.32 });
         this.tone(90, 0.2, { type: 'square', to: 40, vol: 0.16 });
         break;
-      case 'reload':                      // 换弹：两声金属咔
+      case 'reload':                      // SX_002 换弹开始：两声金属咔
         this.tone(820, 0.05, { type: 'square', vol: 0.12 });
         setTimeout(() => this.tone(620, 0.07, { type: 'square', vol: 0.12 }), 120);
+        break;
+      case 'reloadDone':                  // SX_012 换弹完成：上扬确认音
+        this.tone(520, 0.06, { type: 'triangle', vol: 0.13 });
+        setTimeout(() => this.tone(780, 0.09, { type: 'triangle', vol: 0.15 }), 90);
         break;
       case 'hit':                         // 命中肉体
         this.noise(0.06, { freq: 700, freqTo: 200, vol: 0.14 });
