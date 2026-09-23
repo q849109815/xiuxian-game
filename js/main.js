@@ -281,10 +281,11 @@ function bindAll() {
   /* 战斗：倍速 / 暂停 / 自动 / 切换 */
   const spBtn = $('#btSpeed');
   if (spBtn) spBtn.onclick = () => {
-    const seq = [1, 2, 3];
+    /* 截图：X1 → X1.5 → X2 */
+    const seq = [1, 1.5, 2];
     const i = seq.indexOf(BT.speed || 1);
     BT.speed = seq[(i + 1) % seq.length];
-    spBtn.textContent = '×' + BT.speed;
+    spBtn.textContent = 'X' + BT.speed;
     if (window.SND) SND.play('click');
   };
   const psBtn = $('#btPause');
