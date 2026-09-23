@@ -7,6 +7,21 @@
  *   - 10 局内技能表（12 项，含互斥规则）
  * ========================================================= */
 
+/* 素材图缓存 */
+const IMG = {
+  cache: {},
+  get(src) {
+    if (!src) return null;
+    if (this.cache[src] !== undefined) return this.cache[src];
+    const im = new Image();
+    im.onload = () => { this.cache[src] = im; };
+    im.onerror = () => { this.cache[src] = null; };
+    im.src = src;
+    this.cache[src] = null;   // 加载中先回落 emoji
+    return null;
+  },
+};
+
 const BT = {
   cv: null, ctx: null, W: 360, H: 640,
   P: null, run: null, on: false, paused: false, raf: null, last: 0,
@@ -63,6 +78,7 @@ const BT = {
   start(p, levelNo, opt = {}) {
     const def = this.levelDef(levelNo);
     const a = E.attrs(p);
+    this.charImg = (E.char(p) || {}).img || null;
     this.P = p; this._heroImg = undefined;
     this.scene = this.sceneFor(def.ch); this.img(this.scene);
 
@@ -656,9 +672,15 @@ const BT = {
     for (const z of r.zombies) {
       if (z.dead) continue;
       const sz = z.isBoss ? 46 : (z.d.elite ? 28 : 24);
-      c.font = sz + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
       if (z.slowT > 0) { c.fillStyle = 'rgba(92,216,255,0.28)'; c.beginPath(); c.arc(z.x, z.y, sz * 0.62, 0, 7); c.fill(); }
-      c.fillText(z.icon, z.x, z.y);
+      const zim = IMG.get(z.img);
+      if (zim) {
+        const w = sz * 1.5, h = sz * 1.5;
+        c.drawImage(zim, z.x - w / 2, z.y - h / 2, w, h);
+      } else {
+        c.font = sz + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(z.icon, z.x, z.y);
+      }
       if (z.hp < z.maxHp) {
         const bw = sz * 0.9;
         c.fillStyle = 'rgba(0,0,0,0.55)'; c.fillRect(z.x - bw / 2, z.y - sz * 0.72, bw, 3.5);
@@ -679,12 +701,14 @@ const BT = {
         const hh = 44, hw = hh * heroImg.naturalWidth / heroImg.naturalHeight;
         c.drawImage(heroImg, r.px - hw / 2, r.py - hh + 14, hw, hh);
       } catch (e) {
-        c.font = '30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-        c.fillText(this.P.avatar || '👨‍🚀', r.px, r.py);
+        const cim = IMG.get(this.charImg);
+        if (cim) c.drawImage(cim, r.px - 26, r.py - 26, 52, 52);
+        else { c.font = '30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(this.P.avatar || '👨‍🚀', r.px, r.py); }
       }
     } else {
-      c.font = '30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText((this.P && this.P.avatar) || '👨‍🚀', r.px, r.py);
+      const cim2 = IMG.get(this.charImg);
+      if (cim2) c.drawImage(cim2, r.px - 26, r.py - 26, 52, 52);
+      else { c.font = '30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText((this.P && this.P.avatar) || '👨‍🚀', r.px, r.py); }
     }
     if (r.shield > 0) {
       c.strokeStyle = 'rgba(92,216,255,0.75)'; c.lineWidth = 2.5;
