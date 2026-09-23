@@ -602,8 +602,15 @@ const UI = {
     if (r.maxShield > 0) { sh.style.display = ''; sb.style.width = (r.shield / r.maxShield * 100) + '%'; }
     else sh.style.display = 'none';
     $('#btKill').textContent = r.kills;
-    $('#btGold').textContent = E.fmt(r.gold);
+    const cg = $('#btCoin'); if (cg) cg.textContent = E.fmt(r.coin != null ? r.coin : r.gold);
     $('#btLv').textContent = r.lv;
+    /* 防线血条 */
+    const wb = $('#btWallBar'), wt = $('#btWallTxt');
+    if (wb) {
+      const wm = r.wallMax || r.maxHp, wv = r.wallHp != null ? r.wallHp : r.hp;
+      wb.style.width = Math.max(0, wv / wm * 100) + '%';
+      if (wt) wt.textContent = Math.ceil(Math.max(0, wv)) + '/' + Math.round(wm);
+    }
     const rl = $('#btReload');
     if (r.reloading) {
       rl.classList.add('reloading');
@@ -616,13 +623,46 @@ const UI = {
       $('#btReloadBar').style.width = '0';
     }
     const sk = $('#btSkills');
-    const ids = Object.keys(r.skills);
-    if (sk.dataset.n !== String(ids.length)) {
-      sk.dataset.n = String(ids.length);
+    const ids = Object.keys(r.skills).filter((id) => {
+      const d = EX.skills.find((x) => x.id === id); return d && d.kind === 'periodic';
+    });
+    const key = ids.join(',') + '|' + ids.map((i) => (r.cd[i] || 0).toFixed(1)).join(',');
+    if (sk.dataset.k !== key) {
+      sk.dataset.k = key;
       sk.innerHTML = ids.map((id) => {
         const d = EX.skills.find((x) => x.id === id); if (!d) return '';
-        return `<div class="bs">${d.icon}<u>${r.skills[id]}</u></div>`;
+        const cd = r.cd[id] || 0;
+        const el = EX.elements.find((x) => x.k === d.el) || { c: '#ffd76a' };
+        return `<div class="bs ${cd > 0 ? 'cd' : ''}" data-cast="${id}"
+          style="border-color:${el.c}66">
+          ${d.img ? `<img src="${d.img}" style="width:26px;height:26px;border-radius:6px;object-fit:cover">`
+                  : d.icon}<b>${r.skills[id]}</b>
+          <u style="width:${cd > 0 ? Math.min(100, cd / (d.cd || 5) * 100) : 0}%"></u></div>`;
       }).join('');
+      $$('#btSkills [data-cast]').forEach((b) => {
+        b.onclick = () => {
+          const res = BT.castSkill(b.dataset.cast);
+          if (res && res.msg) this.toast(res.msg, res.ok ? 'ok' : 'err');
+        };
+      });
+    }
+    /* 炮台建造栏 */
+    const tb = $('#btTurret');
+    if (tb && !tb.dataset.init) {
+      tb.dataset.init = '1';
+      tb.innerHTML = EX.turrets.map((t) => {
+        const el = EX.elements.find((x) => x.k === t.el) || { c: '#ffd76a' };
+        return `<button data-turret="${t.id}" style="border-color:${el.c}55">${t.icon}${t.n}<br>${t.cost}金</button>`;
+      }).join('');
+      $$('#btTurret [data-turret]').forEach((b) => {
+        b.onclick = () => {
+          const slot = this.pickFreeSlot();
+          if (!slot) return this.toast('炮台槽位已满', 'err');
+          const res = BT.buildTurret(slot, b.dataset.turret);
+          this.toast(res.msg, res.ok ? 'ok' : 'err');
+          if (res.ok && window.SND) SND.play('equip');
+        };
+      });
     }
   },
 
@@ -679,6 +719,15 @@ const UI = {
       };
     }
     $('#result').classList.add('on');
+  },
+  pickFreeSlot() {
+    const r = BT.run; if (!r) return null;
+    for (const s of EX.turretSlots) {
+      const has = r.turrets.find((t) => t.k === s.k);
+      if (!has) return s.k;
+    }
+    /* 全满则升级第一个 */
+    return r.turrets.length ? r.turrets[0].k : null;
   },
   hideResult() { $('#result').classList.remove('on'); },
 };
