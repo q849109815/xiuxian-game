@@ -1351,7 +1351,12 @@ const UI = {
         <div class="card"><div class="card-t">成长曲线</div>
         ${EX.growth.map((g) => `<div class="kv"><span style="font-size:10px">${g.n}</span><b style="font-size:10px">${g.curve}</b></div>`).join('')}</div>`;
     }
-    return `<div class="card"><div class="card-t">账号信息</div>
+    return `<div class="card"><div class="card-t">微信账号 <span class="sub">一键登录</span></div>
+      <div class="kv"><span>登录方式</span><b class="g">${window.WX && WX.phone() ? '微信 · 已绑定' : '微信'}</b></div>
+      <div class="kv"><span>手机号</span><b>${window.WX && WX.phone() ? WX.phoneMask() : '未绑定'}</b></div>
+      <div class="kv"><span>下次登录</span><b style="font-size:10px">${window.WX && WX.shouldAuto() ? '微信一键登录（免验证）' : '需重新授权'}</b></div>
+      <button class="btn n blk" id="setSwitchAcct">🔁 切换账户 / 解除绑定</button></div>
+    <div class="card"><div class="card-t">账号信息</div>
       <div class="kv"><span>代号</span><b>${p.name}</b></div>
       <div class="kv"><span>UID</span><b style="font-size:10px">${p.uid}</b></div>
       <div class="kv"><span>角色</span><b>${E.char(p).n}</b></div>
@@ -1370,6 +1375,12 @@ const UI = {
       <button class="btn blk" id="setAdmin">进入管理后台</button></div>`;
   },
   b_set(p, tab) {
+    /* 切换账户 / 解除微信绑定 */
+    const sw = $('#setSwitchAcct');
+    if (sw) sw.onclick = () => {
+      if (!confirm('解除微信绑定并退出？\n下次登录需重新授权并绑定手机号。')) return;
+      if (window.WX) WX.logout();
+    };
     /* 礼包码兑换 */
     const cdg = $('#cdGo');
     if (cdg) cdg.onclick = async () => {
