@@ -56,6 +56,57 @@
   </div>
 </div>
 
+<!-- ========== 微信授权弹窗（模拟微信客户端授权页） ========== -->
+<div class="wxa" id="wxAuth">
+  <div class="wxa-box">
+    <div class="wxa-hd">
+      <div class="wxa-ico">
+        <svg viewBox="0 0 24 24">
+          <path d="M8.7 3C4.9 3 1.8 5.6 1.8 8.8c0 1.8 1 3.4 2.6 4.5l-.6 1.8 2.1-1.1c.8.2 1.6.4 2.5.4h.5c-.1-.3-.2-.7-.2-1 0-3.1 3-5.6 6.7-5.6h.5C15.6 5.2 12.5 3 8.7 3zM6.4 6.2c.5 0 .9.4.9.9s-.4.9-.9.9-.9-.4-.9-.9.4-.9.9-.9zm5.4 0c.5 0 .9.4.9.9s-.4.9-.9.9-.9-.4-.9-.9.4-.9.9-.9z"/>
+          <path d="M22.2 13.4c0-2.7-2.7-4.9-6-4.9s-6 2.2-6 4.9c0 2.7 2.7 4.9 6 4.9c.7 0 1.4-.1 2-.3l1.8 1-.5-1.5c1.3-.9 2.1-2.2 2.1-3.7zm-8-2.1c.4 0 .8.3.8.8s-.3.8-.8.8-.8-.3-.8-.8.3-.8.8-.8zm4 0c.4 0 .8.3.8.8s-.3.8-.8.8-.8-.3-.8-.8.3-.8.8-.8z"/>
+        </svg>
+      </div>
+      <div class="wxa-app">向僵尸开炮</div>
+      <div class="wxa-sub">申请获取你的公开信息</div>
+    </div>
+    <div class="wxa-scope">
+      <div class="wxa-scope-t">获取你的昵称、头像、地区及性别</div>
+      <div class="wxa-scope-l">
+        <div class="wxa-li"><i>👤</i><span>昵称</span></div>
+        <div class="wxa-li"><i>🖼️</i><span>头像</span></div>
+        <div class="wxa-li"><i>⚧️</i><span>性别</span></div>
+        <div class="wxa-li"><i>📍</i><span>地区</span></div>
+      </div>
+    </div>
+    <div class="wxa-note">该信息仅用于游戏内展示，不会用于其他用途。同意即表示已阅读《用户协议》与《隐私政策》。</div>
+    <div class="wxa-btns">
+      <button class="wxa-no" id="wxaCancel">取消</button>
+      <button class="wxa-yes" id="wxaAllow">允许</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 手机号绑定（首次登录） ========== -->
+<div class="wxt" id="wxTel">
+  <div class="wxt-box">
+    <div class="wxt-t">绑定手机号</div>
+    <div class="wxt-s">首次登录需验证手机号<br>绑定后下次可微信一键登录</div>
+    <div class="wxt-phone">
+      <span class="wxt-cc">+86 ▾</span>
+      <input id="wxtPhone" type="tel" inputmode="numeric" maxlength="11" placeholder="请输入手机号" autocomplete="tel">
+    </div>
+    <div class="wxt-code">
+      <input id="wxtCode" type="tel" inputmode="numeric" maxlength="6" placeholder="请输入验证码" autocomplete="one-time-code">
+      <button id="wxtSend">获取验证码</button>
+    </div>
+    <div class="wxt-tip" id="wxtTip"></div>
+    <label class="wxt-agree"><input type="checkbox" id="wxtAgree" checked><span>已阅读并同意《用户协议》《隐私政策》</span></label>
+    <button class="wxt-go" id="wxtGo">登 录</button>
+    <div class="wxt-skip"><a href="javascript:;" id="wxtBack">← 返回微信登录</a></div>
+    <div class="wxt-demo">演示环境：验证码填写任意 6 位数字即可</div>
+  </div>
+</div>
+
 <!-- ========== 基地主界面 ========== -->
 <div class="screen" id="home">
   <div class="hm-top">
