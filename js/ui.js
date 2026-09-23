@@ -437,13 +437,23 @@ const UI = {
       <div class="kv"><span>子弹类型</span><b>${g.bullet}</b></div>
       <button class="btn c blk" id="gunUp" ${p.gold < c ? 'disabled' : ''}>强化 · ${E.fmt(c)} 金币</button>
       <div class="lbl">每级 +${(E.GUN_GROW * 100).toFixed(0)}% 伤害；每 5 级进阶一次（${adv.q}→${nextAdv.q}），进阶解锁词条槽。</div></div>
-      <div class="card"><div class="card-t">已解锁词条</div>
+      <div class="card"><div class="card-t">已解锁词条
+        <span class="sub">${Object.keys(p.gunStats || {}).length} / ${E.gunAffixSlots(p, p.gun)} 槽</span></div>
       ${Object.keys(p.gunStats || {}).length ? Object.values(p.gunStats || {}).map((st) => {
-        const d = EX.gunStats.find((x) => x.k === st.k);
-        return `<div class="kv"><span>${d ? d.n : st.k}</span><b style="color:var(--green)">+${d && d.unit === '%' ? (st.v * 100).toFixed(1) + '%' : st.v.toFixed(2)}</b></div>`;
-      }).join('') : '<div class="lbl">尚未进阶，暂无词条</div>'}</div>`;
+        const d = EX.gunStats.find((x) => (st.id ? x.id === st.id : x.k === st.k));
+        const qc = st.q === '红' ? '#ff5c7a' : st.q === '紫' ? '#c98bff' : st.q === '蓝' ? '#5cb8ff' : '#9fb3d0';
+        return `<div class="kv"><span style="color:${qc}">${d ? d.n : st.k}${st.q ? ' <span class="tag" style="background:' + qc + '22;color:' + qc + '">' + st.q + '</span>' : ''}</span>
+          <b style="color:var(--green)">+${d && d.unit === '%' ? (st.v * 100).toFixed(1) + '%' : st.v.toFixed(2)}</b></div>`;
+      }).join('') : '<div class="lbl">尚未进阶，暂无词条</div>'}
+      <button class="btn o blk" id="gunReroll" ${E.gunAffixSlots(p, p.gun) <= 0 ? 'disabled' : ''}>🔄 洗练词条（💎${EX.REROLL_GUN_COST}）</button>
+      <div class="lbl">洗练将重随机全部已解锁词条，按品质加权：蓝60% / 紫30% / 红10%。</div></div>`;
   },
   b_gun(p, tab) {
+    const rr = $('#gunReroll');
+    if (rr) rr.onclick = () => {
+      const r = E.rerollGun(p, p.gun); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('gun', tab); this.home(); }
+    };
     const u = $('#gunUp'); if (u) u.onclick = () => {
       const r = E.upgradeGun(p); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('gun', tab); this.home(); }
     };
@@ -1076,6 +1086,50 @@ const UI = {
   },
 
   /* ---------- 设置 ---------- */
+  /* ---------- 新手引导（表21：12 节点） ---------- */
+  showGuide(id) {
+    const p = this.P; if (!p) return;
+    const g = (EX.guides || []).find((x) => x.id === id);
+    if (!g) return;
+    /* 已完成则不弹 */
+    if ((p.guide || {})[id]) return;
+    const box = document.getElementById('guide');
+    if (!box) return;
+    const t = document.getElementById('gdTitle'), c = document.getElementById('gdText');
+    if (t) t.textContent = g.n;
+    if (c) c.textContent = g.txt || g.desc || '';
+    box.classList.add('on');
+    this._curGuide = id;
+    const ok = document.getElementById('gdOk');
+    if (ok) ok.onclick = () => {
+      E.guideDone(p, id);
+      box.classList.remove('on');
+      this._curGuide = null;
+      if (window.MAIN && MAIN.save) MAIN.save();
+    };
+  },
+  /* 战斗内按事件触发（表21 触发时机） */
+  guideTrigger(ev) {
+    const p = this.P; if (!p) return;
+    /* 表21 触发时机 → 引导节点 id */
+    const map = {
+      enter: 1,          /* 进入第一关：移动引导 */
+      moved: 2,          /* 移动后：射击引导 */
+      firstUpgrade: 3,   /* 第一次升级：技能三选一 */
+      firstKill: 4,      /* 击杀后：拾取引导 */
+      win: 5,            /* 第一次通关 */
+      home: 6,           /* 返回基地 */
+      gunUnlock: 7,      /* 通关1-2：武器引导 */
+      taskUnlock: 8,     /* 通关1-2：任务引导 */
+      chipUnlock: 9,     /* 通关1-4：芯片引导 */
+      talentUnlock: 10,  /* 通关1-3：天赋引导 */
+      endless: 11,       /* 通关3-3：无尽引导 */
+      fail: 12,          /* 首次失败：广告复活 */
+    };
+    const id = map[ev];
+    if (id) setTimeout(() => this.showGuide(id), 420);
+  },
+
   /* ---------- 兑换商店（表42成就商店 / 表43活动商店） ---------- */
   r_ashop(p, tab) {
     const isAch = tab === '成就商店';
