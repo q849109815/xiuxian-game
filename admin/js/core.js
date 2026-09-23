@@ -163,9 +163,9 @@ const AUDIT = {
 const PERM = {
   ROLES: {
     admin: { n: '超级管理员', p: ['all'] },
-    ops: { n: '运营', p: ['account.query', 'account.asset', 'account.ban', 'mail.*', 'cdkey.*', 'activity.*', 'rank.*', 'stat.*', 'log.view'] },
+    ops: { n: '运营', p: ['account.query', 'account.asset', 'account.ban', 'account.resetpwd', 'account.destroy', 'mail.*', 'cdkey.*', 'activity.*', 'rank.*', 'stat.*', 'log.view'] },
     plan: { n: '策划', p: ['cfg.*', 'hotfix.*', 'activity.*', 'achshop.*', 'gm.unlock', 'stat.*'] },
-    gm: { n: 'GM', p: ['account.query', 'account.asset', 'account.compensate', 'gm.*', 'mail.single'] },
+    gm: { n: 'GM', p: ['account.query', 'account.asset', 'account.compensate', 'account.resetpwd', 'gm.*', 'mail.single'] },
     devops: { n: '运维', p: ['server.*', 'log.*', 'backup.*', 'perm.view'] },
     audit: { n: '只读审计', p: ['log.view', 'stat.view', 'account.query'] },
   },
