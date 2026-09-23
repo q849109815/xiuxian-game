@@ -397,6 +397,7 @@ const EX = {
     { id: 'I01', n: '急救包', type: '消耗', q: '白', icon: '🧰', img: 'assets/icon/i_medkit.jpg', stack: 99, src: '关卡/商店', use: '恢复生命50%' },
     { id: 'I02', n: '护盾发生器', type: '消耗', q: '蓝', icon: '🛡️', img: 'assets/icon/i_shield.jpg', stack: 99, src: '商店/任务', use: '获得护盾' },
     { id: 'I03', n: '攻击增幅药剂', type: '消耗', q: '蓝', icon: '💉', img: 'assets/icon/i_potion.jpg', stack: 99, src: '商店/掉落', use: '攻击+30%持续30秒' },
+    { id: 'I04', n: '宝箱', type: '消耗', q: '紫', icon: '🎁', img: 'assets/icon/i_chip.jpg', stack: 99, src: '活动/商城', use: '开启获得材料（表31 DR11）' },
   ],
   /* 成就点（任务奖励货币） */
   ACH_POINT: '成就点',
@@ -838,6 +839,43 @@ const EX = {
     { id: 'D10', item: 'I03', rate: 0.05, min: 1, max: 1, w: 3, from: '商店/掉落' },
   ],
   /* 掉落权重池（按关卡章节取用） */
+  /* =====================================================
+   * 【31_掉落概率表】DR01~DR12：按怪物/来源的真实掉落
+   * =================================================== */
+  dropTable: [
+    { id: 'DR01', src: '普通僵尸', item: 'M01', n: '金属', rate: 0.80, min: 1, max: 1, w: 80 },
+    { id: 'DR02', src: '疾跑僵尸', item: 'M01', n: '金属', rate: 0.85, min: 1, max: 2, w: 85 },
+    { id: 'DR03', src: '自爆僵尸', item: 'M04', n: '火药', rate: 0.60, min: 1, max: 1, w: 60 },
+    { id: 'DR04', src: '吐液僵尸', item: 'M01', n: '金属', rate: 0.80, min: 2, max: 3, w: 80 },
+    { id: 'DR05', src: '毒僵尸', item: 'M02', n: '合金', rate: 0.50, min: 1, max: 1, w: 50 },
+    { id: 'DR06', src: '重甲僵尸', item: 'M02', n: '合金', rate: 0.60, min: 1, max: 2, w: 60 },
+    { id: 'DR07', src: '炸弹僵尸', item: 'M04', n: '火药', rate: 0.70, min: 1, max: 2, w: 70 },
+    { id: 'DR08', src: 'BOSS掉落', item: 'M03', n: '稀有金属', rate: 1.00, min: 3, max: 5, w: 100 },
+    { id: 'DR09', src: 'BOSS掉落', item: 'C01', n: '普通芯片', rate: 0.60, min: 1, max: 1, w: 60 },
+    { id: 'DR10', src: 'BOSS掉落', item: 'P01', n: '枪械碎片', rate: 0.50, min: 2, max: 4, w: 50 },
+    { id: 'DR11', src: '宝箱开箱', item: 'M02', n: '合金', rate: 0.70, min: 3, max: 5, w: 70 },
+    { id: 'DR12', src: '活动掉落', item: 'C02', n: '精英芯片', rate: 0.30, min: 1, max: 1, w: 30 },
+  ],
+  /* 按僵尸名取掉落（表31） */
+  dropOf(zName) {
+    return (this.dropTable || []).filter((d) => d.src === zName);
+  },
+  /* 按来源取掉落（BOSS掉落/宝箱开箱/活动掉落） */
+  dropBySrc(src) {
+    return (this.dropTable || []).filter((d) => d.src === src);
+  },
+  /* 执行一次掉落判定 */
+  rollDrop(list) {
+    const got = [];
+    (list || []).forEach((d) => {
+      if (Math.random() < d.rate) {
+        const n = d.min + Math.floor(Math.random() * (d.max - d.min + 1));
+        if (n > 0) got.push({ item: d.item, n: n, name: d.n });
+      }
+    });
+    return got;
+  },
+
   dropPool(ch) {
     return this.drops.filter((d) => {
       if (d.from === 'BOSS关' || d.from === 'BOSS关/活动') return ch >= 1;
