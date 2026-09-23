@@ -279,7 +279,7 @@ const EX = {
     { id: 'juxing', n: '巨型丧尸', icon: '🦖', img: 'assets/char/boss_juxing.jpg', hp: 2600, spd: 22, dmg: 40, atkR: 46, def: 0.25,
       phases: 2, xp: 220, gold: 260,
       skills: [
-        { n: '巨爪拍击', sk: '大范围近战，击退玩家', trig: 'contact' },
+        { n: '巨爪拍击', sk: '大范围近战，击退防线', trig: 'contact' },
         { n: '召唤小怪', sk: '召唤普通僵尸群助战', trig: 0.7 },
         { n: '召唤小怪', sk: '再次召唤僵尸群', trig: 0.4 },
       ] },
@@ -295,36 +295,142 @@ const EX = {
     { n: '阶段切换', sk: '血量 70% / 40% 触发新技能，全屏警告' },
     { n: '狂暴免疫', sk: '狂暴阶段免疫控制，伤害提升' },
   ],
+  /* 真实 BOSS（资料） */
+  realBosses: ['开垦者', '巢穴之母', '深渊领主', '暴食者', '修道士', '尸王'],
 
-  /* =====================================================
-   * 【局内技能表】资料 10 表：12 项
-   * =================================================== */
+  /* 【局内技能表】资料 10 表：12 项（三选一池，可叠加，含冲突规则） */
   skills: [
-    { id: 'duochong', n: '多重射击', icon: '🎯', kind: 'gun', el: '物', max: 10, conflict: null,
+    { id: 'duochong', n: '多重射击', icon: '🎯', img: 'assets/icon/s_duochong.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
       desc: '额外发射 1 颗子弹', up: '每级 +1 颗子弹', mods: { spread: 1 } },
-    { id: 'chantou', n: '穿透强化', icon: '➤', kind: 'gun', el: '物', max: 10, conflict: null,
+    { id: 'chuantou', n: '穿透强化', icon: '➤', img: 'assets/icon/s_chuantou.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
       desc: '子弹穿透 +1 个目标', up: '每级 +1 穿透', mods: { pierce: 1 } },
-    { id: 'shanghai', n: '伤害强化', icon: '💪', kind: 'passive', el: '物', max: 10, conflict: null,
+    { id: 'shanghai', n: '伤害强化', icon: '💪', img: 'assets/icon/s_shanghai.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
       desc: '伤害 +15%', up: '每级 +15%', mods: { dmgMul: 0.15 } },
-    { id: 'gongsu', n: '攻速强化', icon: '⚡', kind: 'passive', el: '物', max: 10, conflict: null,
+    { id: 'gongsu', n: '攻速强化', icon: '⚡', img: 'assets/icon/s_gongsu.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
       desc: '攻击速度 +15%', up: '每级 +15%', mods: { rateMul: 0.15 } },
-    { id: 'baoji', n: '暴击强化', icon: '✨', kind: 'passive', el: '物', max: 10, conflict: null,
-      desc: '暴击率 +10%、暴击伤害 +20%', up: '每级叠加', mods: { crit: 0.10, critDmg: 0.20 } },
-    { id: 'xixue', n: '吸血', icon: '🩸', kind: 'passive', el: '物', max: 10, conflict: null,
-      desc: '击杀回复生命', up: '每级提升回复量', mods: { healOnKill: 6 } },
-    { id: 'shandian', n: '闪电链', icon: '⚡', kind: 'proc', el: '电', max: 10, conflict: 'huohuan',
-      desc: '子弹命中后概率触发闪电，连锁 3 个目标', up: '每级 +1 连锁', mods: { chain: 0.18, chainN: 3 } },
-    { id: 'huohuan', n: '火环', icon: '🔥', kind: 'aura', el: '火', max: 10, conflict: 'shandian',
-      desc: '角色周围火圈持续灼烧，击退近身怪', up: '每级提升范围与伤害', mods: { auraR: 62, auraDps: 0.55, knock: 1 } },
-    { id: 'binghuan', n: '冰霜新星', icon: '❄️', kind: 'aura', el: '冰', max: 8, conflict: null,
-      desc: '定期释放冰环，减速并冰冻范围内怪', up: '每级提升范围与控制时长', mods: { novaR: 90, novaSlow: 0.5, novaCd: 3.2 } },
-    { id: 'baozha', n: '爆炸子弹', icon: '💥', kind: 'proc', el: '火', max: 10, conflict: null,
-      desc: '子弹命中后爆炸，造成范围伤害', up: '每级提升爆炸范围', mods: { explode: 0.45, er: 46 } },
-    { id: 'hudun', n: '护盾', icon: '🛡️', kind: 'passive', el: '物', max: 10, conflict: null,
-      desc: '获得护盾吸收伤害', up: '每级 +护盾值', mods: { shield: 120 } },
-    { id: 'yisu', n: '移速强化', icon: '👟', kind: 'passive', el: '风', max: 10, conflict: null,
+    { id: 'baoji', n: '暴击强化', icon: '💥', img: 'assets/icon/s_baoji.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
+      desc: '暴击率 +10%、暴伤 +20%', up: '每级叠加', mods: { crit: 0.10, critDmg: 0.20 } },
+    { id: 'xixue', n: '吸血', icon: '🩸', img: 'assets/icon/s_xixue.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
+      desc: '击杀回复生命', up: '每级提升回复量', mods: { healOnKill: 8 } },
+    { id: 'shandian', n: '闪电链', icon: '⚡', img: 'assets/icon/s_shandian.jpg', kind: 'active', el: '电', max: 10, cd: 3.5,
+      conflict: 'huohuan',
+      desc: '子弹命中后概率触发闪电，连锁 3 目标', up: '每级 +1 连锁', mods: { chain: 0.35, chainN: 3 } },
+    { id: 'huohuan', n: '火环', icon: '🔥', img: 'assets/icon/s_huohuan.jpg', kind: 'active', el: '火', max: 10, cd: 5.0,
+      conflict: 'shandian',
+      desc: '角色周围火圈持续灼烧，击退近身怪', up: '每级提升范围伤害',
+      mods: { auraR: 90, auraDps: 0.55, knock: 1 } },
+    { id: 'bingshuang', n: '冰霜新星', icon: '❄️', img: 'assets/icon/s_bingshuang.jpg', kind: 'active', el: '冰', max: 10, cd: 6.0,
+      desc: '定期释放冰环，减速 + 冰冻范围内怪', up: '每级提升范围/控制时长',
+      mods: { novaR: 110, novaSlow: 0.5, novaCd: 5 } },
+    { id: 'baozha', n: '爆炸子弹', icon: '💣', img: 'assets/icon/s_baozha.jpg', kind: 'passive', el: '火', max: 10, cd: 0,
+      desc: '子弹命中爆炸，范围伤害', up: '每级提升爆炸范围', mods: { explode: 0.45, er: 42 } },
+    { id: 'hudun', n: '护盾', icon: '🛡️', img: 'assets/icon/i_shield.jpg', kind: 'active', el: '物', max: 10, cd: 18.0,
+      desc: '获得护盾吸收伤害', up: '每级 +护盾值', mods: { shield: 60 } },
+    { id: 'yisu', n: '移速强化', icon: '👟', img: 'assets/icon/i_medkit.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
       desc: '移动速度 +10%', up: '每级 +10%', mods: { moveMul: 0.10 } },
   ],
+
+  /* 【炮台表】局内用金币建造/升级，部署在防线前 */
+  turrets: [
+    { id: 'T_HB', n: '寒冰炮台', icon: '❄️', el: '冰', dmg: 14, rate: 1.0, rng: 150,
+      cost: 120, upCost: 90, desc: '减速命中的僵尸' },
+    { id: 'T_HY', n: '火焰炮台', icon: '🔥', el: '火', dmg: 22, rate: 0.9, rng: 140,
+      cost: 150, upCost: 110, desc: '持续灼烧伤害' },
+    { id: 'T_DC', n: '电磁炮台', icon: '⚡', el: '电', dmg: 18, rate: 1.3, rng: 165,
+      cost: 180, upCost: 130, desc: '链式电击多个目标' },
+    { id: 'T_JJ', n: '狙击炮台', icon: '🎯', el: '物', dmg: 55, rate: 0.5, rng: 210,
+      cost: 220, upCost: 160, desc: '高单体伤害，优先攻击精英' },
+  ],
+  /* 炮台部署槽位（防线前 4 个位置，按屏幕比例） */
+  turretSlots: [
+    { k: 's1', x: 0.18, y: 0.62 }, { k: 's2', x: 0.40, y: 0.58 },
+    { k: 's3', x: 0.60, y: 0.58 }, { k: 's4', x: 0.82, y: 0.62 },
+  ],
+
+  /* 【佣兵表】基地酒馆招募，战斗中协同作战 */
+  mercs: [
+    { id: 'M_SD', n: '霰弹枪士', icon: '🔫', dmg: 26, rate: 1.1, rng: 130, cost: 800,
+      desc: '近距离扇形霰弹，清小怪快' },
+    { id: 'M_JQ', n: '机枪大兵', icon: '⚙️', dmg: 15, rate: 3.0, rng: 150, cost: 1200,
+      desc: '高射速持续压制' },
+    { id: 'M_JZ', n: '精准狙击手', icon: '🎯', dmg: 90, rate: 0.45, rng: 240, cost: 1600,
+      desc: '远程高伤，点杀精英' },
+    { id: 'M_SJ', n: '哨箭达人', icon: '🏹', dmg: 34, rate: 1.6, rng: 180, cost: 1000,
+      desc: '穿透箭矢，命中一排' },
+  ],
+
+  /* =====================================================
+   * 【掉落表】资料 02 表第 8 项
+   * =================================================== */
+  drops: [
+    { id: 'D01', item: 'R01', rate: 1.00, min: 8, max: 20, w: 60, from: '普通僵尸' },
+    { id: 'D02', item: 'M01', rate: 0.35, min: 1, max: 3, w: 20, from: '普通/疾跑僵尸' },
+    { id: 'D03', item: 'M04', rate: 0.18, min: 1, max: 2, w: 10, from: '自爆/炸弹僵尸' },
+    { id: 'D04', item: 'M02', rate: 0.22, min: 1, max: 3, w: 12, from: '第2章起精英' },
+    { id: 'D05', item: 'M03', rate: 0.10, min: 1, max: 2, w: 6, from: 'BOSS关' },
+    { id: 'D06', item: 'P01', rate: 0.16, min: 1, max: 2, w: 14, from: '关卡/分解' },
+    { id: 'D07', item: 'M05', rate: 0.12, min: 1, max: 2, w: 8, from: '商店/掉落' },
+    { id: 'D08', item: 'chip', rate: 0.06, min: 1, max: 1, w: 4, from: 'BOSS关/活动' },
+    { id: 'D09', item: 'I01', rate: 0.08, min: 1, max: 1, w: 5, from: '关卡/商店' },
+    { id: 'D10', item: 'I03', rate: 0.05, min: 1, max: 1, w: 3, from: '商店/掉落' },
+  ],
+  /* 掉落权重池（按关卡章节取用） */
+  dropPool(ch) {
+    return this.drops.filter((d) => {
+      if (d.from === 'BOSS关' || d.from === 'BOSS关/活动') return ch >= 1;
+      if (d.from === '第2章起精英') return ch >= 2;
+      if (d.from === '商店/掉落' || d.from === '关卡/商店') return true;
+      return true;
+    });
+  },
+
+  /* =====================================================
+   * 【提示文本表】资料 02 表第 14 项（飘字/弹窗/系统/报错）
+   * =================================================== */
+  tips: {
+    /* 飘字 */
+    float: {
+      crit: '暴击', miss: '闪避', block: '格挡',
+      heal: '+{v}', dmg: '-{v}', gold: '+{v} 金币', xp: '+{v} 经验',
+      lvup: '等级提升！', wallHit: '防线受损！',
+      immune: '免疫', frozen: '冰冻', burn: '灼烧', poison: '中毒',
+    },
+    /* 弹窗 */
+    popup: {
+      noStamina: '体力不足，每 5 分钟恢复 1 点',
+      noCoin: '金币不足',
+      noDiamond: '钻石不足',
+      lvLocked: '通关 {v} 后解锁',
+      buyOk: '购买成功',
+      adLimit: '今日广告次数已用完',
+      reviveOk: '复活成功，继续战斗',
+      quitConfirm: '退出将放弃本关奖励，确定退出？',
+      clearConfirm: '确定清空全部存档？此操作不可恢复',
+      resetConfirm: '确定重置该玩家数据？',
+    },
+    /* 系统提示 */
+    sys: {
+      saveOk: '存档已保存',
+      saveFail: '存档失败，已保存到本地',
+      offline: '当前离线模式，数据仅存本机',
+      online: '已连接云端',
+      netRetry: '正在重新连接…',
+      reload: '换弹中…',
+      waveIn: '第 {v} 波来袭',
+      bossIn: '警告：BOSS 出现',
+      newWave: '新一波尸潮接近',
+    },
+    /* 报错文本 */
+    err: {
+      netErr: '网络异常，请检查连接',
+      dataErr: '数据读取失败，请重试',
+      loadErr: '资源加载失败',
+      opFail: '操作失败，请稍后重试',
+      notFound: '未找到该玩家',
+      nameErr: '昵称需 2-8 个字',
+      dupName: '该代号已被占用',
+    },
+  },
 
   /* =====================================================
    * 【永久天赋表】资料 10 表：8 项
