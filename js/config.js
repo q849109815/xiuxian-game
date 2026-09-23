@@ -456,6 +456,118 @@ const EX = {
   },
 
   /* =====================================================
+   * 【热更新清单】表02 第15项 + 表23 第9项
+   * 资源路径 / 版本号 / 大小，启动时比对云端决定是否需要刷新缓存
+   * =================================================== */
+  HOT_UPDATE: {
+    enabled: true,
+    version: '20260923b',      /* 主版本号，改这个会强制全量刷新缓存 */
+    /* 资源清单：path / ver / size(KB) */
+    manifest: [
+      { p: 'css/style.css', ver: '20260923b', size: 0 },
+      { p: 'js/net.js', ver: '20260923b', size: 0 },
+      { p: 'js/config.js', ver: '20260923b', size: 0 },
+      { p: 'js/engine.js', ver: '20260923b', size: 0 },
+      { p: 'js/battle.js', ver: '20260923b', size: 0 },
+      { p: 'js/ui.js', ver: '20260923b', size: 0 },
+      { p: 'js/main.js', ver: '20260923b', size: 0 },
+      { p: 'js/audio.js', ver: '20260923b', size: 0 },
+    ],
+  },
+  /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
+  resUrl(p) {
+    const it = (this.HOT_UPDATE.manifest || []).find((x) => x.p === p);
+    const v = it ? it.ver : this.HOT_UPDATE.version;
+    return p + '?v=' + v;
+  },
+
+  /* =====================================================
+   * 【37_运营数据埋点表】12 个事件
+   * =================================================== */
+  TRACK_EVENTS: [
+    { id: 'game_start', n: '游戏启动', use: '激活/启动', trig: '启动游戏', pr: 'P0' },
+    { id: 'level_start', n: '进入关卡', use: '关卡参与率', trig: '进入关卡', pr: 'P0' },
+    { id: 'level_finish', n: '关卡结算', use: '通关率/难度', trig: '结算', pr: 'P0' },
+    { id: 'kill_monster', n: '击杀怪物', use: '怪物分布', trig: '击杀', pr: 'P1' },
+    { id: 'skill_select', n: '技能选择', use: '技能强度/平衡', trig: '选技能', pr: 'P0' },
+    { id: 'weapon_upgrade', n: '武器升级', use: '养成深度', trig: '武器升级', pr: 'P1' },
+    { id: 'ad_watch', n: '观看广告', use: '广告变现', trig: '看广告', pr: 'P0' },
+    { id: 'iap_purchase', n: '内购', use: '付费率/ARPU', trig: '购买', pr: 'P0' },
+    { id: 'resurrect', n: '复活', use: '失败流失点', trig: '看广告复活', pr: 'P1' },
+    { id: 'endless_time', n: '无尽时长', use: '无尽参与', trig: '无尽结束', pr: 'P1' },
+    { id: 'dau_retention', n: '留存', use: '次日/7日留存', trig: '每日', pr: 'P0' },
+    { id: 'funnel_convert', n: '新手漏斗', use: '引导转化', trig: '引导完成', pr: 'P0' },
+  ],
+
+  /* =====================================================
+   * 【39_多语言本地化表】TXT_001~TXT_008，5 种语言
+   * =================================================== */
+  LANGS: [
+    { k: 'zh', n: '简体中文' }, { k: 'en', n: 'English' },
+    { k: 'zhTW', n: '繁體中文' }, { k: 'ja', n: '日本語' }, { k: 'ru', n: 'Русский' },
+  ],
+  I18N: {
+    TXT_001: { zh: '开始游戏', en: 'Start', zhTW: '開始遊戲', ja: 'スタート', ru: 'Начать' },
+    TXT_002: { zh: '设置', en: 'Settings', zhTW: '設置', ja: '設定', ru: 'Настройки' },
+    TXT_003: { zh: '通关', en: 'Clear', zhTW: '通關', ja: 'クリア', ru: 'Пройдено' },
+    TXT_004: { zh: '看广告复活', en: 'Revive(Watch Ad)', zhTW: '復活(看廣告)', ja: '広告で復活', ru: 'Возродиться(реклама)' },
+    TXT_005: { zh: '武器升级', en: 'Weapon Upgrade', zhTW: '武器升級', ja: '武器強化', ru: 'Улучшение оружия' },
+    TXT_006: { zh: '技能选择', en: 'Choose Skill', zhTW: '技能選擇', ja: 'スキル選択', ru: 'Выбор навыка' },
+    TXT_007: { zh: '大量僵尸来袭', en: 'Massive Zombies!', zhTW: '大量殭屍來襲', ja: '大量ゾンビ襲来', ru: 'Массовые зомби!' },
+    TXT_008: { zh: '生存时间', en: 'Survival Time', zhTW: '生存時間', ja: '生存時間', ru: 'Время выживания' },
+  },
+  txt(id, lang) {
+    const e = this.I18N[id]; if (!e) return id;
+    return e[lang || 'zh'] || e.zh || id;
+  },
+
+  /* =====================================================
+   * 【38_版本开发排期表】V0.1 ~ V1.0 共 8 个版本
+   * =================================================== */
+  VERSIONS: [
+    { v: 'V0.1', n: '核心原型', wk: '第1-2周', c: '战斗+关卡+自动瞄准原型', ms: '战斗可玩', ok: '核心战斗可操作、可通关1-3关', pr: 'P0', done: true },
+    { v: 'V0.2', n: '核心玩法闭环', wk: '第3-5周', c: '武器+局内技能+角色养成', ms: '养成闭环', ok: '武器升级+技能选择+角色成长完整', pr: 'P0', done: true },
+    { v: 'V0.3', n: '系统整合', wk: '第6-8周', c: '基地+任务+背包+商城', ms: '全系统', ok: '基地/任务/背包/商城可访问', pr: 'P0', done: true },
+    { v: 'V0.4', n: '内容扩充', wk: '第9-12周', c: '第1-3章+BOSS+无尽', ms: '内容量', ok: '前3章完整+无尽+3个BOSS', pr: 'P0', done: true },
+    { v: 'V0.5', n: '付费与广告', wk: '第13-14周', c: '商城+广告+复活', ms: '变现闭环', ok: '充值/广告可正常变现', pr: 'P1', done: true },
+    { v: 'V0.6', n: '运营系统', wk: '第15-16周', c: '活动+排行榜+埋点', ms: '运营能力', ok: '活动/排行/数据上报可用', pr: 'P1', done: true },
+    { v: 'V0.7', n: '打磨优化', wk: '第17-19周', c: '数值平衡+性能+机型适配', ms: '品质', ok: 'FPS达标+低端机流畅', pr: 'P1', done: true },
+    { v: 'V1.0', n: '正式上线', wk: '第20周', c: '提审+上线', ms: '上线', ok: '过审+可正式发布', pr: 'P0', done: true },
+  ],
+
+  /* =====================================================
+   * 【40_后端接口清单】API_001~008 → GitHub 实现映射
+   * =================================================== */
+  APIS: [
+    { id: 'API_001', n: '玩家登录', m: 'POST /login', param: 'uid/token/version', ret: '用户信息/存档', sc: '启动登录', pr: 'P0', impl: 'GET data/ss/players/{uid}.json' },
+    { id: 'API_002', n: '上传存档', m: 'POST /save', param: 'uid/存档数据', ret: '存档ID/时间戳', sc: '离线/手动存档', pr: 'P0', impl: 'PUT data/ss/players/{uid}.json（git commit）' },
+    { id: 'API_003', n: '拉取存档', m: 'GET /load', param: 'uid', ret: '完整存档', sc: '登录/切换设备', pr: 'P0', impl: 'GET data/ss/players/{uid}.json' },
+    { id: 'API_004', n: '无尽排名', m: 'POST /endless/rank', param: 'uid/时长/战力', ret: '排名/榜单', sc: '无尽结算', pr: 'P2', impl: 'PUT data/ss/leaderboard.json' },
+    { id: 'API_005', n: '拉取排行榜', m: 'GET /leaderboard', param: '榜单类型/页', ret: '榜单列表', sc: '查看排行', pr: 'P2', impl: 'GET data/ss/leaderboard.json' },
+    { id: 'API_006', n: '订单支付回调', m: 'POST /pay/callback', param: '订单号/回执', ret: '验证结果', sc: '内购', pr: 'P1', impl: '本地直购（无服务端校验）' },
+    { id: 'API_007', n: '活动配置', m: 'GET /activity', param: '活动ID', ret: '活动数据', sc: '活动开启', pr: 'P2', impl: 'data/config/*.json（内置）' },
+    { id: 'API_008', n: '公告', m: 'GET /notice', param: '—', ret: '公告列表', sc: '登录拉公告', pr: 'P1', impl: 'data/config/meta.json.notice' },
+  ],
+
+  /* =====================================================
+   * 【36_资源命名规范】12 类前缀，用于新增资源时规范化
+   * =================================================== */
+  NAMING: [
+    { t: 'UI底图', pre: 'UI_', rule: 'UI_页面_用途_尺寸', eg: 'UI_Main_MainBase_1080', dir: 'Art/UI/Main', pr: 'P0' },
+    { t: '按钮', pre: 'BTN_', rule: 'BTN_按钮用途_状态', eg: 'BTN_Attack_Normal', dir: 'Art/UI/Base', pr: 'P0' },
+    { t: '图标', pre: 'ICO_', rule: 'ICO_物品类型_名称', eg: 'ICO_Weapon_Rifle', dir: 'Art/Icon', pr: 'P0' },
+    { t: '角色模型', pre: 'CH_', rule: 'CH_角色名_皮肤', eg: 'CH_Jack_Wasteland', dir: 'Art/Character/Player', pr: 'P0' },
+    { t: '怪物模型', pre: 'MO_', rule: 'MO_怪物名', eg: 'MO_Zombie_Normal', dir: 'Art/Character/Monster', pr: 'P0' },
+    { t: '武器模型', pre: 'WP_', rule: 'WP_武器名', eg: 'WP_Rifle_01', dir: 'Art/Weapon', pr: 'P0' },
+    { t: '特效', pre: 'FX_', rule: 'FX_技能名_效果', eg: 'FX_ChainLightning', dir: 'Art/VFX', pr: 'P0' },
+    { t: '场景', pre: 'SC_', rule: 'SC_地图名', eg: 'SC_Street_01', dir: 'Art/Scene', pr: 'P0' },
+    { t: 'BGM', pre: 'BGM_', rule: 'BGM_场景/用途', eg: 'BGM_Battle_01', dir: 'Audio/BGM', pr: 'P0' },
+    { t: '音效', pre: 'SFX_', rule: 'SFX_类型_用途', eg: 'SFX_Bullet_Fire', dir: 'Audio/SFX', pr: 'P0' },
+    { t: '配音', pre: 'VO_', rule: 'VO_角色/用途_台词ID', eg: 'VO_NPC_001', dir: 'Audio/VO', pr: 'P1' },
+    { t: '配置表', pre: 'DT_', rule: 'DT_表名', eg: 'DT_WeaponTable', dir: 'Data/Config', pr: 'P0' },
+  ],
+
+  /* =====================================================
    * 【30_武器词条池】AF01~AF12，按品质分档
    * =================================================== */
   affixes: [
