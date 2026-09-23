@@ -7,7 +7,7 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 
 const UI = {
-  P: null, curPanel: null, curTab: {}, selChipSlot: 'c1', selChipId: null, curChapter: 1,
+  P: null, curPanel: null, curTab: {}, selChipSlot: 'c1', curChapter: 1,
 
   show(id) {
     $$('.screen').forEach((s) => s.classList.remove('on'));
@@ -17,29 +17,28 @@ const UI = {
     const box = $('#toasts'); if (!box) return;
     const d = document.createElement('div');
     d.className = 'toast ' + (cls || ''); d.innerHTML = msg;
-    box.appendChild(d); setTimeout(() => d.remove(), cls === 'boss' ? 2600 : 2000);
+    box.appendChild(d); setTimeout(() => { if (d.remove) d.remove(); }, cls === 'boss' ? 2600 : 2000);
     while (box.children.length > 4 && box.firstElementChild) box.firstElementChild.remove();
   },
 
   /* ================= 基地主界面 ================= */
   home() {
     const p = this.P; if (!p) return;
+    E.resetTasks(p); E.tickStamina(p);
     $('#hmName').textContent = p.name;
     $('#hmLv').textContent = 'Lv.' + (p.lv || 1);
     $('#hmPower').textContent = E.fmt(E.power(p));
     $('#cuGold').textContent = E.fmt(p.gold);
     $('#cuDia').textContent = E.fmt(p.diamond);
-    const lv = Math.min(E.maxLevel(), p.level || 1);
-    $('#hmLevel').textContent = E.levelName(lv);
-    $('#hmLevelName').textContent = E.levelName(lv);
-    $('#hmEndBest').textContent = '最佳 ' + (p.endlessBest || 0) + ' 层';
+    const cur = E.curLevel(p);
+    $('#hmLevel').textContent = E.char(p).n + ' · ' + E.levelName(cur);
+    $('#hmLevelName').textContent = E.levelName(cur) + (E.staminaCost(cur) > 1 ? '（体力' + E.staminaCost(cur) + '）' : '');
+    const eb = $('#hmEndBest');
+    if (eb) eb.textContent = E.endlessUnlocked(p) ? ('最佳 ' + (p.endlessBest || 0) + ' 层') : '通关 3-3 解锁';
+    const st = $('#hmStamina');
+    if (st) st.textContent = Math.floor(p.stamina || 0) + '/' + EX.STAMINA_MAX;
     const avEl = $('#hmAvIco');
-    if (p.avatarImg) {
-      avEl.style.backgroundImage = 'url(' + p.avatarImg + ')';
-      avEl.style.backgroundSize = 'cover'; avEl.style.backgroundPosition = 'center top';
-      avEl.style.width = '100%'; avEl.style.height = '100%'; avEl.style.borderRadius = '50%';
-      avEl.textContent = '';
-    } else avEl.textContent = p.avatar || '👨‍🚀';
+    if (avEl) avEl.textContent = E.char(p).icon;
 
     $('#hmBase').innerHTML = EX.buildings.map((b) => {
       const l = p.build[b.id] || 1;
@@ -50,16 +49,16 @@ const UI = {
 
   /* ================= 面板 ================= */
   PANELS: {
-    role: ['角色', ['属性', '皮肤']],
-    gun: ['武器', ['强化', '更换']],
-    chip: ['芯片', ['装备', '背包']],
+    role: ['角色', ['角色', '皮肤']],
+    gun: ['武器', ['强化', '武器库']],
+    chip: ['芯片', ['装配', '背包']],
     talent: ['天赋', ['天赋']],
-    task: ['任务', ['主线', '每日', '成就']],
-    bag: ['背包', ['全部']],
-    shop: ['商城', ['礼包', '兑换']],
+    task: ['任务', ['主线', '每日', '每周', '成就']],
+    bag: ['背包', ['材料', '消耗品']],
+    shop: ['商城', ['礼包', '直购']],
     act: ['活动', ['活动']],
     rank: ['排行榜', ['全服']],
-    set: ['设置', ['账号', '网络']],
+    set: ['设置', ['账号', '网络', '数值']],
     level: ['关卡选择', ['章节']],
     base: ['基地建筑', ['建筑']],
   },
@@ -86,93 +85,136 @@ const UI = {
     const p = this.P; if (!p) return;
     const f = this['b_' + key]; if (f) f.call(this, p, tab);
   },
+  /* 奖励文本 */
+  rwTxt(rw) {
+    if (!rw) return '';
+    const out = [];
+    for (const k in rw) {
+      if (!rw[k]) continue;
+      out.push(E.itemName(k) + '×' + rw[k]);
+    }
+    return out.join(' ');
+  },
 
   /* ---------- 角色 ---------- */
   r_role(p, tab) {
     if (tab === '皮肤') {
-      return `<div class="card"><div class="card-t">外观 <span class="sub">通关解锁</span></div>
-      <div class="lvgrid">${EX.skins.map((s) => {
-        const ok = E.skinUnlocked(p, s.id);
-        return `<button class="lvc ${ok ? '' : 'lock'} ${p.skin === s.id ? 'cur' : ''}" data-skin="${s.id}">
-          <i style="font-size:20px;font-style:normal;display:block">${s.icon}</i>
-          <b style="font-size:10px">${s.n}</b></button>`;
-      }).join('')}</div>
-      <div class="lbl">当前：${(EX.skins.find((s) => s.id === p.skin) || {}).n || '默认'}</div></div>`;
+      return `<div class="card"><div class="card-t">皮肤 <span class="sub">钻石解锁，切换角色后需重新选</span></div>
+      ${EX.skins.filter((s) => s.char === (p.char || 'C01')).map((s) => {
+        const own = (p.skins || []).indexOf(s.id) >= 0;
+        const on = p.skin === s.id;
+        return `<div class="item"><div class="ic" style="font-size:20px">${s.icon}</div>
+          <div class="info"><div class="nm">${s.n} ${s.bonus ? '<span class="tag y">' + s.desc + '</span>' : ''}</div>
+          <div class="sub">${s.desc}</div></div>
+          <div class="act">${on ? '<span class="tag g">穿着中</span>'
+            : own ? `<button class="btn c sm" data-wear="${s.id}">穿上</button>`
+            : `<button class="btn sm" data-buyskin="${s.id}">💎${s.price}</button>`}</div></div>`;
+      }).join('')}</div>`;
     }
     const a = E.attrs(p);
-    return `<div class="card"><div class="card-t">战斗属性</div>
+    return `<div class="card"><div class="card-t">角色选择 <span class="sub">通关解锁</span></div>
+      ${EX.chars.map((c) => {
+        const ok = E.charUnlocked(p, c.id);
+        const on = p.char === c.id;
+        return `<div class="item"><div class="ic" style="font-size:20px">${c.icon}</div>
+          <div class="info"><div class="nm">${c.n} ${on ? '<span class="tag g">使用中</span>' : ''}</div>
+          <div class="sub">生命${c.hp} 移速${c.spd} 护甲${c.armor} 暴击${(c.crit * 100).toFixed(0)}%</div>
+          <div class="sub">${c.desc}</div>
+          ${ok ? '' : `<div class="sub" style="color:#ff8fa4">需通关 ${c.unlockLv} 解锁</div>`}</div>
+          <div class="act">${on ? '' : ok ? `<button class="btn c sm" data-char="${c.id}">切换</button>` : '<span class="tag r">未解锁</span>'}</div></div>`;
+      }).join('')}</div>
+      <div class="card"><div class="card-t">当前属性</div>
+      <div class="kv"><span>角色</span><b>${a.charName}</b></div>
       <div class="kv"><span>战力</span><b style="color:var(--gold)">${E.fmt(E.power(p))}</b></div>
+      <div class="kv"><span>武器</span><b>${a.gunName}</b></div>
       <div class="kv"><span>攻击力</span><b>${E.fmt(a.atk)}</b></div>
-      <div class="kv"><span>　枪械基础</span><b>${E.fmt(a.gunBase)}</b></div>
       <div class="kv"><span>生命值</span><b>${E.fmt(a.hp)}</b></div>
-      <div class="kv"><span>移动速度</span><b>${Math.round(a.moveSpd)}</b></div>
+      <div class="kv"><span>护甲</span><b>${a.armor}</b></div>
+      <div class="kv"><span>移动速度</span><b>${a.moveSpd}</b></div>
       <div class="kv"><span>暴击率</span><b>${(a.crit * 100).toFixed(1)}%</b></div>
       <div class="kv"><span>暴击伤害</span><b>${(a.critDmg * 100).toFixed(0)}%</b></div>
-      <div class="kv"><span>伤害减免</span><b>${(a.armor * 100).toFixed(1)}%</b></div>
-      <div class="kv"><span>金币加成</span><b>${((a.goldMul - 1) * 100).toFixed(0)}%</b></div>
-      <div class="kv"><span>经验加成</span><b>${((a.xpMul - 1) * 100).toFixed(0)}%</b></div>
+      <div class="kv"><span>吸血</span><b>${(a.ls * 100).toFixed(1)}%</b></div>
       <div class="kv"><span>复活次数</span><b>${a.revive}</b></div></div>
       <div class="card"><div class="card-t">进度</div>
-      <div class="kv"><span>通关关卡</span><b>${Object.keys(p.cleared || {}).length} / ${E.maxLevel()}</b></div>
+      <div class="kv"><span>通关关卡</span><b>${Object.keys(p.cleared || {}).length} / ${EX.levels.length}</b></div>
       <div class="kv"><span>总星数</span><b>${E.totalStars(p)}</b></div>
-      <div class="kv"><span>无尽最佳</span><b>第 ${p.endlessBest || 0} 层</b></div>
+      <div class="kv"><span>成就点</span><b>${E.fmt(p.ach || 0)}</b></div>
+      <div class="kv"><span>无尽最佳</span><b>${p.endlessBest || 0} 层</b></div>
       <div class="kv"><span>累计击杀</span><b>${E.fmt((p.stats && p.stats.kills) || 0)}</b></div></div>`;
   },
-  b_role(p, tab) {
-    $$('#pnBody [data-skin]').forEach((b) => {
-      b.onclick = () => { const r = E.wearSkin(p, b.dataset.skin); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) this.open('role', '皮肤'); };
+  b_role(p) {
+    $$('#pnBody [data-char]').forEach((b) => {
+      b.onclick = () => { const r = E.switchChar(p, b.dataset.char); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('role', '角色'); this.home(); } };
+    });
+    $$('#pnBody [data-wear]').forEach((b) => {
+      b.onclick = () => { p.skin = b.dataset.wear; this.toast('已更换外观', 'ok'); this.open('role', '皮肤'); this.home(); };
+    });
+    $$('#pnBody [data-buyskin]').forEach((b) => {
+      b.onclick = () => { const r = E.buySkin(p, b.dataset.buyskin); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('role', '皮肤'); this.home(); } };
     });
   },
 
   /* ---------- 武器 ---------- */
   r_gun(p, tab) {
-    if (tab === '更换') {
-      return `<div class="card"><div class="card-t">武器库 <span class="sub">通关解锁</span></div>
-      ${EX.guns.map((g) => {
-        const has = p.gun === g.id;
+    if (tab === '武器库') {
+      return `<div class="card"><div class="card-t">武器库 <span class="sub">主武器 6 + 副武器 4</span></div>
+      ${['主', '副'].map((kind) => `<div class="lbl" style="color:var(--gold);margin-top:6px">${kind}武器</div>
+      ${EX.guns.filter((g) => g.kind === kind).map((g) => {
+        const ok = E.gunUnlocked(p, g.id);
+        const on = p.gun === g.id;
         return `<div class="item"><div class="ic" style="border:1.5px solid ${EX.qColor[g.q]}">${g.icon}</div>
-          <div class="info"><div class="nm"><span style="color:${EX.qColor[g.q]}">${g.q}</span> ${g.n}</div>
-          <div class="sub">伤害${g.dmg} 射速${g.rate}/s 弹夹${g.mag} 换弹${g.reload}s 穿透${g.pierce}</div>
-          <div class="sub">${g.desc}</div></div>
-          <div class="act">${has ? '<span class="tag g">使用中</span>' : `<button class="btn c sm" data-gun="${g.id}">切换</button>`}</div></div>`;
-      }).join('')}</div>`;
+          <div class="info"><div class="nm"><span style="color:${EX.qColor[g.q]}">${g.q}</span> ${g.n} <span class="tag">${g.type}</span></div>
+          <div class="sub">伤害${g.dmg} 射速${g.rate}/s 弹夹${g.mag} 换弹${g.reload}s ${g.pellets > 1 ? '弹丸' + g.pellets : ''} ${g.pierce ? '穿透' + g.pierce : ''}</div>
+          <div class="sub">${g.bullet}${ok ? '' : ' · 需通关 ' + g.unlockLv}</div></div>
+          <div class="act">${on ? '<span class="tag g">使用中</span>' : ok ? `<button class="btn c sm" data-gun="${g.id}">装备</button>` : '<span class="tag r">未解锁</span>'}</div></div>`;
+      }).join('')}`).join('')}</div>`;
     }
     const g = E.gun(p), a = E.attrs(p), c = E.gunUpgradeCost(p);
-    return `<div class="card"><div class="card-t">${g.icon} ${g.n} <span class="sub">Lv.${p.gunLv}</span></div>
-      <div class="kv"><span>基础伤害</span><b>${g.dmg} → <span style="color:var(--gold)">${E.fmt(a.gunBase)}</span></b></div>
+    const adv = E.advInfo(p.gunLv);
+    const nextAdv = EX.gunAdvance[Math.min(EX.gunAdvance.length - 1, E.advOf(p.gunLv) + 1)];
+    return `<div class="card"><div class="card-t">${g.icon} ${g.n} <span class="sub">${g.kind}武器 · ${g.type}</span></div>
+      <div class="kv"><span>品质</span><b style="color:${EX.qColor[adv.q]}">${adv.q}品</b></div>
+      <div class="kv"><span>等级</span><b>Lv.${p.gunLv}</b></div>
+      <div class="kv"><span>面板伤害</span><b>${g.dmg} → <span style="color:var(--gold)">${E.fmt(a.gunBase)}</span></b></div>
       <div class="kv"><span>射速</span><b>${a.rate.toFixed(2)} /秒</b></div>
-      <div class="kv"><span>弹夹容量</span><b>${g.mag} 发</b></div>
+      <div class="kv"><span>弹夹容量</span><b>${a.mag} 发</b></div>
       <div class="kv"><span>换弹时间</span><b>${g.reload} 秒</b></div>
-      <div class="kv"><span>射程 / 穿透</span><b>${g.range} / ${g.pierce}</b></div>
-      <div class="kv"><span>齐射弹丸</span><b>${g.spread}</b></div>
+      <div class="kv"><span>弹丸 / 穿透</span><b>${g.pellets || 1} / ${a.pierce}</b></div>
+      <div class="kv"><span>子弹类型</span><b>${g.bullet}</b></div>
       <button class="btn c blk" id="gunUp" ${p.gold < c ? 'disabled' : ''}>强化 · ${E.fmt(c)} 金币</button>
-      <div class="lbl">武器强化是攻击成长的核心，每级 +${(E.GUN_GROW * 100).toFixed(0)}%。</div></div>`;
+      <div class="lbl">每级 +${(E.GUN_GROW * 100).toFixed(0)}% 伤害；每 5 级进阶一次（${adv.q}→${nextAdv.q}），进阶解锁词条槽。</div></div>
+      <div class="card"><div class="card-t">已解锁词条</div>
+      ${Object.keys(p.gunStats || {}).length ? Object.values(p.gunStats || {}).map((st) => {
+        const d = EX.gunStats.find((x) => x.k === st.k);
+        return `<div class="kv"><span>${d ? d.n : st.k}</span><b style="color:var(--green)">+${d && d.unit === '%' ? (st.v * 100).toFixed(1) + '%' : st.v.toFixed(2)}</b></div>`;
+      }).join('') : '<div class="lbl">尚未进阶，暂无词条</div>'}</div>`;
   },
   b_gun(p, tab) {
     const u = $('#gunUp'); if (u) u.onclick = () => {
       const r = E.upgradeGun(p); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('gun', tab); this.home(); }
     };
     $$('#pnBody [data-gun]').forEach((b) => {
-      b.onclick = () => { p.gun = b.dataset.gun; this.toast('已切换武器', 'ok'); this.open('gun', '更换'); this.home(); };
+      b.onclick = () => { const r = E.switchGun(p, b.dataset.gun); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('gun', '武器库'); this.home(); } };
     });
   },
 
   /* ---------- 芯片 ---------- */
   r_chip(p, tab) {
+    if (!E.chipUnlocked(p)) return '<div class="empty"><span class="ic">🔲</span>芯片系统未解锁<br><span style="font-size:10px">通关 1-4 后开启</span></div>';
     if (tab === '背包') {
       const bag = p.bag || [];
-      if (!bag.length) return '<div class="empty"><span class="ic">🔲</span>暂无芯片<br><span style="font-size:10px">通关或商城可获得</span></div>';
-      return `<div class="card"><div class="card-t">芯片背包 <span class="sub">${bag.length} 块 · 碎片 ${p.shards || 0}</span></div>
+      if (!bag.length) return '<div class="empty"><span class="ic">🔲</span>暂无芯片<br><span style="font-size:10px">BOSS 关掉落 / 活动获取</span></div>';
+      return `<div class="card"><div class="card-t">芯片背包 <span class="sub">${bag.length} 块</span></div>
       ${bag.map((c) => `<div class="item">
         <div class="ic" style="border:1.5px solid ${EX.qColor[c.q]}">🔲</div>
-        <div class="info"><div class="nm" style="color:${EX.qColor[c.q]}">${c.q}品芯片</div>
-        <div class="sub">${E.chipName(c).split(' · ')[1] || ''}</div></div>
+        <div class="info"><div class="nm" style="color:${EX.qColor[c.q]}">${E.chipName(c)}</div>
+        <div class="sub">${(E.chipDef(c.def) || {}).src || ''}</div></div>
         <div class="act">
           <button class="btn sm" data-fuse="${c.id}">合成</button>
           <button class="btn sm" data-rr="${c.id}">洗练</button>
           <button class="btn d sm" data-dec="${c.id}">拆解</button>
         </div></div>`).join('')}</div>
-        <div class="lbl">合成：选 3 块同品质 → 升一级品质。洗练消耗钻石重 roll 词条。</div>`;
+        <div class="lbl">合成：3 块同品质 → 升一级（白→蓝→红）。洗练：钻石重 roll 副词条。</div>`;
     }
     return `<div class="card"><div class="card-t">芯片槽 <span class="sub">${Object.keys(p.chips || {}).length}/6</span></div>
       <div class="lvgrid">${EX.chipSlots.map((s) => {
@@ -184,11 +226,12 @@ const UI = {
       <div class="card"><div class="card-t">可装备芯片</div>
       ${(p.bag || []).length ? (p.bag || []).map((c) => `<div class="item">
         <div class="ic" style="border:1.5px solid ${EX.qColor[c.q]}">🔲</div>
-        <div class="info"><div class="nm" style="color:${EX.qColor[c.q]}">${c.q}品芯片</div>
-        <div class="sub">${E.chipName(c).split(' · ')[1] || ''}</div></div>
+        <div class="info"><div class="nm" style="color:${EX.qColor[c.q]}">${E.chipName(c)}</div></div>
         <div class="act"><button class="btn c sm" data-wear="${c.id}">装上</button></div></div>`).join('')
         : '<div class="lbl">背包内暂无芯片</div>'}</div>
-      <div class="lbl">芯片提供百分比加成，品质越高词条越多。可拆解换碎片。</div>`;
+      <div class="card"><div class="card-t">芯片图鉴 <span class="sub">资料 8 种</span></div>
+      ${EX.chips.map((d) => `<div class="kv"><span style="color:${EX.qColor[d.q]}">${d.n}</span>
+        <b style="font-size:10px">主+${(d.main.v * 100).toFixed(0)}%${d.subPool.length ? ' · 词条' + d.subPool.length : ''} · ${d.src}</b></div>`).join('')}</div>`;
   },
   b_chip(p, tab) {
     $$('#pnBody [data-slot]').forEach((b) => { b.onclick = () => { this.selChipSlot = b.dataset.slot; this.open('chip', tab); }; });
@@ -216,6 +259,7 @@ const UI = {
 
   /* ---------- 天赋 ---------- */
   r_talent(p) {
+    if (!E.sysUnlocked(p, 'talent')) return '<div class="empty"><span class="ic">⭐</span>天赋系统未解锁<br><span style="font-size:10px">通关 1-3 后开启</span></div>';
     return `<div class="card"><div class="card-t">永久天赋 <span class="sub">全局生效，不随关卡重置</span></div>
     ${EX.talents.map((t) => {
       const cur = p.talents[t.id] || 0;
@@ -226,7 +270,7 @@ const UI = {
         <div class="info"><div class="nm">${t.n} <span class="tag y">Lv.${cur}/${t.max}</span></div>
         <div class="sub">${t.desc}</div>
         <div class="bar"><i style="width:${cur / t.max * 100}%"></i></div>
-        ${lock ? `<div class="sub" style="color:#ff8fa4">需通关第 ${t.unlock + 1} 关解锁</div>` : ''}</div>
+        ${lock ? `<div class="sub" style="color:#ff8fa4">需通关 ${t.unlock} 解锁</div>` : ''}</div>
         <div class="act">${full ? '<span class="tag g">已满</span>' : lock ? '<span class="tag r">未解锁</span>'
           : `<button class="btn ${p.gold >= cost ? 'c' : ''} sm" data-tal="${t.id}" ${p.gold < cost ? 'disabled' : ''}>${E.fmt(cost)}</button>`}</div></div>`;
     }).join('')}</div>`;
@@ -239,28 +283,30 @@ const UI = {
 
   /* ---------- 任务 ---------- */
   r_task(p, tab) {
-    E.resetDaily(p);
-    const map = { '主线': 'main', '每日': 'daily', '成就': 'achieve' };
-    const list = EX.tasks[map[tab] || 'main'];
-    const claimedKey = tab === '主线' ? 'mainClaimed' : tab === '每日' ? 'dailyClaimed' : 'achieveClaimed';
+    E.resetTasks(p);
+    const map = { '主线': 'main', '每日': 'daily', '每周': 'weekly', '成就': 'achieve' };
+    const list = EX.tasks[map[tab] || 'main'] || [];
+    const claimedKey = { '主线': 'mainClaimed', '每日': 'dailyClaimed', '每周': 'weeklyClaimed', '成就': 'achieveClaimed' }[tab];
     const claimed = p.tasks[claimedKey] || [];
-    return `<div class="card"><div class="card-t">${tab}任务</div>
+    return `<div class="card"><div class="card-t">${tab}任务 <span class="sub">${list.length} 条</span></div>
     ${list.map((t) => {
-      const cur = Math.min(E.taskVal(p, t.goal.t), t.goal.v);
+      const cur = E.taskProg(p, t), need = t.cond.v === 0 ? 1 : (typeof t.cond.v === 'string' ? 1 : t.cond.v);
       const done = E.taskDone(p, t);
       const got = claimed.indexOf(t.id) >= 0;
       return `<div class="item"><div class="ic">${done ? '✅' : '⏳'}</div>
-        <div class="info"><div class="nm">${t.n}</div><div class="sub">${t.desc || ''}</div>
-        <div class="bar"><i style="width:${cur / t.goal.v * 100}%"></i></div>
-        <div class="sub">${E.fmt(cur)} / ${E.fmt(t.goal.v)}</div></div>
+        <div class="info"><div class="nm">${t.id} ${t.n}</div><div class="sub">${t.desc || ''}</div>
+        <div class="bar"><i style="width:${Math.min(100, cur / need * 100)}%"></i></div>
+        <div class="sub">${E.fmt(cur)} / ${need}</div></div>
         <div class="act">${got ? '<span class="tag g">已领取</span>' :
-          `<button class="btn ${done ? 'c' : ''} sm" data-claim="${t.id}" ${done ? '' : 'disabled'}>🪙${t.rw.gold} 💎${t.rw.dia}</button>`}</div></div>`;
-    }).join('')}</div>`;
+          `<button class="btn ${done ? 'c' : ''} sm" data-claim="${t.id}" ${done ? '' : 'disabled'}>${this.rwTxt(t.rw)}</button>`}</div></div>`;
+    }).join('')}</div>
+    <div class="card"><div class="card-t">成就点</div>
+      <div class="kv"><span>当前成就点</span><b style="color:var(--gold)">${E.fmt(p.ach || 0)}</b></div></div>`;
   },
   b_task(p, tab) {
     $$('#pnBody [data-claim]').forEach((b) => {
       b.onclick = () => {
-        const map = { '主线': 'main', '每日': 'daily', '成就': 'achieve' };
+        const map = { '主线': 'main', '每日': 'daily', '每周': 'weekly', '成就': 'achieve' };
         const r = E.claimTask(p, map[tab] || 'main', b.dataset.claim);
         this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('task', tab); this.home(); }
       };
@@ -268,16 +314,33 @@ const UI = {
   },
 
   /* ---------- 背包 ---------- */
-  r_bag(p) {
+  r_bag(p, tab) {
+    if (tab === '消耗品') {
+      return `<div class="card"><div class="card-t">消耗品</div>
+      ${EX.items.filter((x) => x.type === '消耗').map((it) => {
+        const n = (p.use || {})[it.id] || 0;
+        return `<div class="item"><div class="ic">${it.icon}</div>
+          <div class="info"><div class="nm">${it.n} <span class="tag">${n}</span></div>
+          <div class="sub">${it.use || ''}</div><div class="sub">来源：${it.src}</div></div>
+          <div class="act"><button class="btn sm" data-use="${it.id}" ${n ? '' : 'disabled'}>使用</button></div></div>`;
+      }).join('')}</div>`;
+    }
     const a = E.attrs(p);
-    return `<div class="card"><div class="card-t">资源</div>
+    return `<div class="card"><div class="card-t">货币</div>
       <div class="kv"><span>金币</span><b style="color:var(--gold)">${E.fmt(p.gold)}</b></div>
       <div class="kv"><span>钻石</span><b style="color:var(--blue)">${E.fmt(p.diamond)}</b></div>
-      <div class="kv"><span>芯片碎片</span><b>${E.fmt(p.shards || 0)}</b></div></div>
+      <div class="kv"><span>成就点</span><b>${E.fmt(p.ach || 0)}</b></div>
+      <div class="kv"><span>体力</span><b>${Math.floor(p.stamina || 0)} / ${EX.STAMINA_MAX}</b></div></div>
+      <div class="card"><div class="card-t">材料 <span class="sub">武器进阶 / 合成</span></div>
+      ${EX.items.filter((x) => x.type === '材料' || x.type === '碎片').map((it) => {
+        const n = (p.mat || {})[it.id] || 0;
+        return `<div class="kv"><span>${it.icon} ${it.n}</span><b>${E.fmt(n)}</b></div>`;
+      }).join('')}</div>
       <div class="card"><div class="card-t">已装芯片加成</div>
-      ${EX.chipStats.map((s) => {
-        const v = E.chipVal(p, s.k); if (!v) return '';
-        return `<div class="kv"><span>${s.n}</span><b style="color:var(--green)">+${s.unit === '%' ? (v * 100).toFixed(1) + '%' : v.toFixed(2)}</b></div>`;
+      ${['atk', 'hp', 'armor', 'crit', 'critDmg', 'ls', 'rate'].map((k) => {
+        const v = E.chipVal(p, k); if (!v) return '';
+        const nm = { atk: '攻击', hp: '生命', armor: '护甲', crit: '暴击率', critDmg: '暴击伤害', ls: '吸血', rate: '攻速' }[k];
+        return `<div class="kv"><span>${nm}</span><b style="color:var(--green)">+${(v * 100).toFixed(1)}%</b></div>`;
       }).join('') || '<div class="lbl">尚未装备芯片</div>'}</div>
       <div class="card"><div class="card-t">邮件 <span class="sub">${(p.mail || []).filter((m) => !m.got).length} 封未读</span></div>
       ${(p.mail || []).length ? p.mail.slice(-5).reverse().map((m) => `<div class="item">
@@ -286,56 +349,70 @@ const UI = {
         <div class="act">${m.got ? '<span class="tag g">已领</span>' : ''}</div></div>`).join('')
         : '<div class="lbl">暂无邮件</div>'}</div>`;
   },
+  b_bag(p, tab) {
+    $$('#pnBody [data-use]').forEach((b) => {
+      b.onclick = () => {
+        const id = b.dataset.use;
+        if (!(p.use || {})[id]) return;
+        p.use[id]--;
+        if (id === 'I01') this.toast('使用了急救包（恢复生命 50%）', 'ok');
+        else if (id === 'I02') this.toast('使用了护盾发生器', 'ok');
+        else this.toast('使用了攻击增幅药剂（攻击+30%，30秒）', 'ok');
+        this.open('bag', tab);
+      };
+    });
+  },
 
   /* ---------- 商城 ---------- */
   r_shop(p, tab) {
-    if (tab === '兑换') {
-      return `<div class="card"><div class="card-t">兑换码</div>
-      <input id="codeInp" placeholder="输入兑换码" style="width:100%;padding:10px;border-radius:9px;
-        background:rgba(10,16,28,.85);border:1px solid var(--line);color:var(--txt);font-size:13px;outline:none">
-      <button class="btn c blk" id="codeBtn">兑 换</button>
-      <div class="lbl">可用：VIP666、VIP888、SVIP999、xjskp888、dz789</div></div>`;
-    }
-    return `<div class="card"><div class="card-t">礼包商城</div>
-    ${EX.shop.map((k) => `<div class="item"><div class="ic">${k.icon}</div>
-      <div class="info"><div class="nm">${k.n}</div><div class="sub">${k.desc}</div></div>
-      <div class="act"><button class="btn c sm" data-buy="${k.id}">${k.cur === 'free' ? '免费' : '💎' + k.price}</button></div></div>`).join('')}</div>`;
+    const list = EX.shop.filter((k) => tab === '礼包'
+      ? (k.type === '礼包' || k.type === '月卡' || k.type === '战令') : (k.type === '直购'));
+    return `<div class="card"><div class="card-t">商城 <span class="sub">${tab}</span></div>
+    ${list.map((k) => `<div class="item"><div class="ic">${k.icon}</div>
+      <div class="info"><div class="nm">${k.n} <span class="tag">${k.type}</span>${k.limit ? '<span class="tag r">限购' + k.limit + '</span>' : ''}</div>
+      <div class="sub">${this.rwTxt(k.rw) || k.desc || ''}</div></div>
+      <div class="act"><button class="btn c sm" data-buy="${k.id}">${k.price ? '¥' + k.price : '免费'}</button></div></div>`).join('')}</div>
+      <div class="lbl">网页版为单机体验，点击直接发放（不产生真实支付）。</div>`;
   },
   b_shop(p, tab) {
     $$('#pnBody [data-buy]').forEach((b) => {
       b.onclick = () => {
         const k = EX.shop.find((x) => x.id === b.dataset.buy); if (!k) return;
-        if (k.cur === 'diamond' && p.diamond < k.price) return this.toast('钻石不足', 'err');
-        p.diamond -= (k.cur === 'diamond' ? k.price : 0);
-        p.gold += k.g || 0; p.diamond += k.d || 0;
-        if (k.chip) for (let i = 0; i < k.chip; i++) p.bag.push(E.rollChip('紫', null));
+        if (k.limit && (p.shopBuy || {})[k.id] >= k.limit) return this.toast('已达限购次数', 'err');
+        p.shopBuy = p.shopBuy || {}; p.shopBuy[k.id] = (p.shopBuy[k.id] || 0) + 1;
+        for (const key in k.rw || {}) {
+          const v = k.rw[key];
+          if (key === 'gold') p.gold += v;
+          else if (key === 'diamond') p.diamond += v;
+          else if (key === 'skin') { p.skins = p.skins || []; if (p.skins.indexOf(v) < 0) p.skins.push(v); }
+          else if (key === 'chipRed') { for (let i = 0; i < v; i++) p.bag.push(E.rollChipById('CH06')); }
+          else p.mat[key] = (p.mat[key] || 0) + v;
+        }
         this.toast('购买成功：' + k.n, 'ok'); this.open('shop', tab); this.home();
       };
     });
-    const cb = $('#codeBtn');
-    if (cb) cb.onclick = () => {
-      const v = ($('#codeInp').value || '').trim().toUpperCase();
-      const codes = { VIP666: [8000, 60], VIP888: [15000, 100], SVIP999: [30000, 200], XJSKP888: [20000, 150], DZ789: [50000, 300] };
-      if (!codes[v]) return this.toast('兑换码无效', 'err');
-      p.usedCodes = p.usedCodes || [];
-      if (p.usedCodes.indexOf(v) >= 0) return this.toast('该码已使用', 'err');
-      p.usedCodes.push(v); p.gold += codes[v][0]; p.diamond += codes[v][1];
-      this.toast('兑换成功：金币+' + E.fmt(codes[v][0]) + ' 钻石+' + codes[v][1], 'ok');
-      this.open('shop', '兑换'); this.home();
-    };
   },
 
   /* ---------- 活动 ---------- */
   r_act(p) {
-    return `<div class="card"><div class="card-t">限时活动</div>
+    return `<div class="card"><div class="card-t">活动 <span class="sub">${EX.activities.length} 个</span></div>
     ${EX.activities.map((a) => `<div class="item"><div class="ic">${a.icon}</div>
-      <div class="info"><div class="nm">${a.n} <span class="tag ${a.state === '进行中' ? 'g' : 'r'}">${a.state}</span></div>
-      <div class="sub">${a.desc}</div><div class="sub">奖励：${a.rw}</div></div>
-      <div class="act">${a.state === '进行中' ? `<button class="btn c sm" data-act="${a.id}">参与</button>` : '<span class="tag">未开启</span>'}</div></div>`).join('')}</div>`;
+      <div class="info"><div class="nm">${a.id} ${a.n} <span class="tag">${a.type}</span></div>
+      <div class="sub">${a.desc}</div><div class="sub">时间：${a.time} · 奖励：${a.rw}</div>
+      <div class="sub">规则：${a.rule}</div></div>
+      <div class="act"><button class="btn c sm" data-act="${a.id}">参与</button></div></div>`).join('')}</div>`;
   },
   b_act(p) {
     $$('#pnBody [data-act]').forEach((b) => {
-      b.onclick = () => { this.close(); startBattle('normal'); };
+      b.onclick = () => {
+        const id = b.dataset.act;
+        if (id === 'EV03') {
+          p.signin = (p.signin || 0) + 1;
+          p.diamond += 20; p.mat.M01 = (p.mat.M01 || 0) + 10;
+          this.toast('签到成功：钻石+20 金属+10（连续 ' + p.signin + ' 天）', 'ok');
+          this.open('act'); this.home();
+        } else { this.close(); startBattle('normal'); }
+      };
     });
   },
 
@@ -345,36 +422,40 @@ const UI = {
     if (!lb.length) return '<div class="empty"><span class="ic">🏆</span>暂无排行数据<br><span style="font-size:10px">通关后自动上传，每小时刷新</span></div>';
     return lb.map((x, i) => `<div class="item">
       <div class="ic" style="font-size:15px;background:${i < 3 ? 'linear-gradient(135deg,#ffe9a8,#f0a020)' : 'rgba(10,16,28,.7)'};color:${i < 3 ? '#2a1a00' : '#fff'}">${i + 1}</div>
-      <div class="info"><div class="nm">${x.n}</div><div class="sub">第 ${x.lv} 关 · 无尽 ${x.eb || 0} 层</div></div>
+      <div class="info"><div class="nm">${x.n}</div><div class="sub">${x.lv || '—'} · 无尽 ${x.eb || 0} 层</div></div>
       <div class="act"><span class="tag y">${E.fmt(x.pw)}</span></div></div>`).join('');
   },
 
   /* ---------- 关卡选择 ---------- */
   r_level(p) {
-    const per = EX.LEVELS_PER_CHAPTER;
-    const ch = this.curChapter || E.chapterOf(p.level || 1);
-    const cd = EX.chapters[ch - 1];
-    const unlocked = E.chapterUnlocked(p, ch);
-    const start = (ch - 1) * per + 1;
-    return `<div class="card"><div class="card-t">${cd.icon} ${cd.n} <span class="sub">${unlocked ? '' : '未解锁'}</span></div>
-      <div class="lvgrid">${Array.from({ length: per }, (_, i) => {
-        const no = start + i;
-        const isBoss = i === per - 1;
-        const lock = no > (p.level || 1);
-        const st = (p.cleared || {})[no] || 0;
-        return `<button class="lvc ${lock ? 'lock' : ''} ${no === (p.level || 1) ? 'cur' : ''} ${isBoss ? 'boss' : ''}" data-lv="${no}" ${lock ? 'disabled' : ''}>
-          <b>${isBoss ? '👹' : no}</b><div class="st">${st ? '★'.repeat(st) : ''}</div></button>`;
+    const ch = this.curChapter || E.chapterOf(E.curLevel(p));
+    const cd = EX.chapters.find((x) => x.id === ch) || EX.chapters[0];
+    const list = EX.levels.filter((x) => x.ch === ch);
+    return `<div class="card"><div class="card-t">${cd.icon} ${cd.n}</div>
+      ${list.map((l) => {
+        const lock = !E.levelUnlocked(p, l.id);
+        const st = (p.cleared || {})[l.id] || 0;
+        const isBoss = l.cond === 'boss' || l.cond === 'bossAll';
+        const cost = E.staminaCost(l.id);
+        return `<div class="item"><div class="ic">${isBoss ? '👹' : '🎯'}</div>
+          <div class="info"><div class="nm">${l.id} ${l.n} ${isBoss ? '<span class="tag r">BOSS</span>' : ''}</div>
+          <div class="sub">${l.waves} 波 · 强度 ×${l.mul} · ${l.pool.map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')}</div>
+          <div class="sub">${st ? '★'.repeat(st) : '未通关'} · 体力 ${cost} · 奖励：${this.rwTxt(l.rw)}</div>
+          ${lock ? '<div class="sub" style="color:#ff8fa4">需先通关 ' + l.unlock + '</div>' : ''}</div>
+          <div class="act">${lock ? '<span class="tag r">未解锁</span>' : `<button class="btn c sm" data-lv="${l.id}">挑战</button>`}</div></div>`;
       }).join('')}</div>
-      <div class="lbl">通关条件：清空全部波次。星级按剩余生命评定（>60% 三星）。</div></div>
       <div class="card"><div class="card-t">章节</div>
-      <div class="lvgrid">${EX.chapters.map((c) => `<button class="lvc ${c.id === ch ? 'cur' : ''} ${E.chapterUnlocked(p, c.id) ? '' : 'lock'}" data-ch="${c.id}">
-        <i style="font-size:17px;font-style:normal;display:block">${c.icon}</i><b style="font-size:9px">${c.n.split(' · ')[0]}</b></button>`).join('')}</div></div>`;
+      <div class="lvgrid">${EX.chapters.map((c) => `<button class="lvc ${c.id === ch ? 'cur' : ''}" data-ch="${c.id}">
+        <i style="font-size:17px;font-style:normal;display:block">${c.icon}</i><b style="font-size:9px">${c.n.split(' · ')[0]}</b></button>`).join('')}</div></div>
+      <div class="card"><div class="card-t">无尽模式</div>
+      ${E.endlessUnlocked(p)
+        ? `<div class="kv"><span>最佳层数</span><b>${p.endlessBest || 0}</b></div>
+           <button class="btn c blk" data-lv="endless">进入无尽（体力 2）</button>`
+        : '<div class="lbl">通关 3-3 后解锁</div>'}</div>`;
   },
   b_level(p) {
     $$('#pnBody [data-ch]').forEach((b) => { b.onclick = () => { this.curChapter = +b.dataset.ch; this.open('level'); }; });
-    $$('#pnBody [data-lv]').forEach((b) => {
-      b.onclick = () => { this.close(); startBattle('normal', +b.dataset.lv); };
-    });
+    $$('#pnBody [data-lv]').forEach((b) => { b.onclick = () => { this.close(); startBattle('normal', b.dataset.lv); }; });
   },
 
   /* ---------- 基地建筑 ---------- */
@@ -386,8 +467,7 @@ const UI = {
     return `<div class="card"><div class="card-t">${b.icon} ${b.n} <span class="sub">Lv.${cur}/${b.max}</span></div>
       <div class="kv"><span>效果</span><b style="color:var(--green)">${val}</b></div>
       <div class="kv"><span>说明</span><b style="font-size:11px">${b.desc}</b></div>
-      <button class="btn c blk" id="buUp" ${p.gold < cost ? 'disabled' : ''}>升级 · ${E.fmt(cost)} 金币</button>
-      <div class="lbl">建筑加成永久生效，不随关卡重置。</div></div>
+      <button class="btn c blk" id="buUp" ${p.gold < cost ? 'disabled' : ''}>升级 · ${E.fmt(cost)} 金币</button></div>
       <div class="card"><div class="card-t">离线产出</div>
       <div class="kv"><span>仓库离线收益</span><b style="color:var(--gold)">${E.fmt(E.offlineIncome(p))} 金币</b></div>
       <button class="btn blk" id="buClaim">领取离线收益</button>
@@ -419,13 +499,23 @@ const UI = {
           style="width:100%;padding:8px;border-radius:8px;background:rgba(10,16,28,.85);border:1px solid var(--line);color:var(--txt);font-size:11px;outline:none">${(GH.extra || []).join('\n')}</textarea>
         <button class="btn c blk" id="setSaveEps">保存加速地址</button></div>`;
     }
+    if (tab === '数值') {
+      return `<div class="card"><div class="card-t">伤害公式 <span class="sub">资料 10 条</span></div>
+        ${EX.formulas.map((f) => `<div class="kv"><span style="font-size:10px">${f.n}</span><b style="font-size:10px">${f.f}</b></div>`).join('')}</div>
+        <div class="card"><div class="card-t">成长曲线</div>
+        ${EX.growth.map((g) => `<div class="kv"><span style="font-size:10px">${g.n}</span><b style="font-size:10px">${g.curve}</b></div>`).join('')}</div>`;
+    }
     return `<div class="card"><div class="card-t">账号信息</div>
       <div class="kv"><span>代号</span><b>${p.name}</b></div>
       <div class="kv"><span>UID</span><b style="font-size:10px">${p.uid}</b></div>
-      <div class="kv"><span>通关关卡</span><b>${Object.keys(p.cleared || {}).length} / ${E.maxLevel()}</b></div>
-      <div class="kv"><span>总星数</span><b>${E.totalStars(p)}</b></div>
-      <div class="kv"><span>累计击杀</span><b>${E.fmt((p.stats && p.stats.kills) || 0)}</b></div>
-      <div class="kv"><span>无尽最佳</span><b>第 ${p.endlessBest || 0} 层</b></div></div>
+      <div class="kv"><span>角色</span><b>${E.char(p).n}</b></div>
+      <div class="kv"><span>通关关卡</span><b>${Object.keys(p.cleared || {}).length} / ${EX.levels.length}</b></div>
+      <div class="kv"><span>体力</span><b>${Math.floor(p.stamina || 0)}/${EX.STAMINA_MAX} <button class="btn sm" id="setAdStam">看广告+10</button></b></div>
+      <div class="kv"><span>成就点</span><b>${E.fmt(p.ach || 0)}</b></div>
+      <div class="kv"><span>累计击杀</span><b>${E.fmt((p.stats && p.stats.kills) || 0)}</b></div></div>
+      <div class="card"><div class="card-t">引导进度 <span class="sub">${Object.keys(p.guide || {}).length}/${EX.guides.length}</span></div>
+      ${EX.guides.filter((g) => g.must).map((g) => `<div class="kv"><span style="font-size:10px">${g.n}</span>
+        <b style="font-size:10px;color:${(p.guide || {})[g.id] ? 'var(--green)' : '#6b7899'}">${(p.guide || {})[g.id] ? '✔ 已完成' : '待引导'}</b></div>`).join('')}</div>
       <div class="card"><div class="card-t">数据</div>
       <button class="btn blk" id="setSave">立即保存存档</button>
       <button class="btn d blk" id="setReset">重置存档（清空全部进度）</button>
@@ -440,6 +530,12 @@ const UI = {
       localStorage.removeItem('zb_uid'); location.reload();
     };
     const ad = $('#setAdmin'); if (ad) ad.onclick = () => { location.href = 'admin/'; };
+    const st = $('#setAdStam'); if (st) st.onclick = () => {
+      const r = E.useAd(p, 'AD03');
+      if (!r.ok) return this.toast(r.msg, 'err');
+      E.addStamina(p, 10); this.toast('体力 +10（今日剩余 ' + E.adLeft(p, 'AD03') + ' 次）', 'ok');
+      this.open('set', '账号'); this.home();
+    };
     const rn = $('#setReNet'); if (rn) rn.onclick = async () => { this.toast('检测中…'); await Net.reset(); this.open('set', '网络'); };
     const dg = $('#setDiag'); if (dg) dg.onclick = async () => {
       const box = $('#diagBox'); box.innerHTML = '<div class="lbl">测试中…</div>';
@@ -458,8 +554,9 @@ const UI = {
   },
 
   /* ================= 战斗 HUD ================= */
-  btInit(p, levelNo, endless) {
-    $('#btLevel').textContent = endless ? ('无尽 第 ' + levelNo + ' 层') : E.levelName(levelNo);
+  btInit(p, levelId, endless) {
+    const d = BT.run ? BT.run.def : null;
+    $('#btLevel').textContent = endless ? '无尽模式' : (d ? d.n : E.levelName(levelId));
     $('#btKill').textContent = '0';
     $('#btGold').textContent = '0';
     $('#btLv').textContent = '1';
@@ -467,7 +564,7 @@ const UI = {
   },
   btTick() {
     const r = BT.run; if (!r) return;
-    $('#btWave').textContent = '第 ' + r.wave + '/' + r.waveTotal + ' 波';
+    $('#btWave').textContent = r.endless ? ('第 ' + r.wave + ' 层') : ('第 ' + r.wave + '/' + r.waveTotal + ' 波');
     const s = Math.floor(r.time);
     $('#btTime').textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
     $('#btHpBar').style.width = Math.max(0, r.hp / r.maxHp * 100) + '%';
@@ -478,7 +575,6 @@ const UI = {
     $('#btKill').textContent = r.kills;
     $('#btGold').textContent = E.fmt(r.gold);
     $('#btLv').textContent = r.lv;
-    /* 换弹 */
     const rl = $('#btReload');
     if (r.reloading) {
       rl.classList.add('reloading');
@@ -490,7 +586,6 @@ const UI = {
       $('#btMag').textContent = r.mag + '/' + r.magMax;
       $('#btReloadBar').style.width = '0';
     }
-    /* 已获技能 */
     const sk = $('#btSkills');
     const ids = Object.keys(r.skills);
     if (sk.dataset.n !== String(ids.length)) {
@@ -528,14 +623,32 @@ const UI = {
     const win = res === 'win';
     $('#rsTitle').textContent = win ? '战 斗 胜 利' : (res === 'lose' ? '防 线 失 守' : '撤 离 战 场');
     $('#rsTitle').className = 'rs-t ' + (win ? 'win' : 'lose');
-    $('#rsLevel').textContent = BT.run.endless ? ('无尽 第 ' + BT.run.def.levelNo + ' 层') : BT.run.def.name;
+    $('#rsLevel').textContent = (BT.run && BT.run.def) ? BT.run.def.n : '';
     const mm = Math.floor((d.time || 0) / 60), ss = Math.floor((d.time || 0) % 60);
     $('#rsGrid').innerHTML = `
       <div class="rs-i"><div class="v">${d.kills}</div><div class="l">击杀僵尸</div></div>
       <div class="rs-i"><div class="v">${mm}:${String(ss).padStart(2, '0')}</div><div class="l">战斗时长</div></div>
       <div class="rs-i"><div class="v">${E.fmt(d.rw.gold)}</div><div class="l">获得金币</div></div>
-      <div class="rs-i"><div class="v">${d.rw.diamond}</div><div class="l">获得钻石</div></div>`;
-    $('#rsNext').style.display = win ? '' : 'none';
+      <div class="rs-i"><div class="v">${E.fmt(d.rw.diamond || 0)}</div><div class="l">获得钻石</div></div>`;
+    $('#rsNext').style.display = win && !BT.run.endless ? '' : 'none';
+    /* 广告：双倍奖励 / 复活 */
+    const adBox = $('#rsAd');
+    if (adBox) {
+      if (win) adBox.innerHTML = `<button class="btn c blk" id="rsAd2x">📺 看广告双倍奖励（剩 ${E.adLeft(this.P, 'AD02')} 次）</button>`;
+      else adBox.innerHTML = `<button class="btn c blk" id="rsAdRev">📺 看广告原地复活（剩 ${E.adLeft(this.P, 'AD01')} 次）</button>`;
+      const b2 = $('#rsAd2x');
+      if (b2) b2.onclick = () => {
+        const r = E.useAd(this.P, 'AD02'); if (!r.ok) return this.toast(r.msg, 'err');
+        this.P.gold += Math.floor((d.rw.gold || 0));
+        this.toast('奖励翻倍！金币 +' + E.fmt(d.rw.gold), 'ok');
+        b2.disabled = true; b2.textContent = '已领取双倍'; this.home(); MAIN.save();
+      };
+      const br = $('#rsAdRev');
+      if (br) br.onclick = () => {
+        const r = E.useAd(this.P, 'AD01'); if (!r.ok) return this.toast(r.msg, 'err');
+        this.hideResult(); startBattle(battleMode, BT.run.def.id);
+      };
+    }
     $('#result').classList.add('on');
   },
   hideResult() { $('#result').classList.remove('on'); },
