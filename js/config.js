@@ -1,12 +1,14 @@
 /* =========================================================
- * config.js —— 《向僵尸开炮》游戏数据层
- * 资料依据：官网 xjskp.scgame.com.cn + 百度百科 + 玩家攻略
- * 风格：低饱和灰蓝 + Q 版卡通末日
+ * config.js —— 《向僵尸开炮》数据层
+ * 资料依据：向僵尸开炮游戏开发资料大全.xlsx
+ *   - 09 怪物/BOSS技能机制表（12 种怪物 + BOSS 通用机制）
+ *   - 10 局内技能+永久天赋表（12 局内技能 + 8 永久天赋）
+ *   - 02 配置表清单（角色/武器/技能/天赋/怪物/BOSS/关卡/掉落/芯片/任务/活动/商城）
+ *   - 06 操作方案（移动端摇杆 + PC 备选）
  * ========================================================= */
 
 const CFG = {
   core: null, meta: null,
-
   async load() {
     if (this.core) return;
     const g = async (p) => {
@@ -19,225 +21,284 @@ const CFG = {
 };
 
 /* =========================================================
- * EX —— 静态扩展（技能/僵尸/BOSS/枪械/宝石/佣兵）
+ * EX —— 静态数据表
  * ========================================================= */
 const EX = {
 
-  /* ---------- 元素 ---------- */
-  elements: [
-    { k: '火', c: '#ff7a3c', n: '火' },
-    { k: '冰', c: '#5cd8ff', n: '冰' },
-    { k: '电', c: '#c08cff', n: '电' },
-    { k: '风', c: '#7be8a0', n: '风' },
-    { k: '物', c: '#ffd76a', n: '物' },
-  ],
-
-  /* ---------- 技能（局内三选一） ----------
-   * kind: active=主动(消耗能量) / passive=被动 / gun=枪械强化
-   * fx  : 主动技能的释放效果类型
-   * mods: 被动提供的属性修正
-   */
-  skills: [
-    /* ===== 火系 ===== */
-    { id: 'wenya', n: '温压弹', el: '火', kind: 'active', icon: '💥', fx: 'explode',
-      desc: '发射温压弹，命中后大范围爆炸并留下燃烧区域持续灼烧',
-      cost: 40, cd: 6.5, p0: { dmg: 3.2, r: 78, burn: 0.35 }, pg: { dmg: 0.9, r: 6, burn: 0.06 } },
-    { id: 'ranyou', n: '燃油弹', el: '火', kind: 'active', icon: '🔥', fx: 'explode',
-      desc: '抛洒燃油，落地形成大范围火海，对范围内敌人持续造成高额灼烧',
-      cost: 55, cd: 9, p0: { dmg: 1.1, r: 96, burn: 0.9 }, pg: { dmg: 0.3, r: 8, burn: 0.2 } },
-    { id: 'bomb', n: '子弹爆炸', el: '火', kind: 'gun', icon: '🎇',
-      desc: '子弹命中怪物后发生爆炸，造成小范围溅射伤害',
-      p0: { explode: 0.45, er: 46 }, pg: { explode: 0.16, er: 4 } },
-
-    /* ===== 冰系 ===== */
-    { id: 'ganbing', n: '干冰弹', el: '冰', kind: 'active', icon: '❄️', fx: 'freeze',
-      desc: '发射干冰弹，冻结范围内敌人并造成冰霜伤害',
-      cost: 38, cd: 7, p0: { dmg: 2.4, r: 88, slow: 0.55, time: 2.4 }, pg: { dmg: 0.7, r: 6, slow: 0.05, time: 0.3 } },
-    { id: 'bingbao', n: '冰暴发生器', el: '冰', kind: 'active', icon: '🌨️', fx: 'freeze',
-      desc: '召唤冰暴持续轰击随机区域，大范围减速冻结',
-      cost: 50, cd: 8.5, p0: { dmg: 1.5, r: 74, slow: 0.65, time: 3.2 }, pg: { dmg: 0.45, r: 5, slow: 0.04, time: 0.35 } },
-    { id: 'bingbao2', n: '冰雹', el: '冰', kind: 'active', icon: '🧊', fx: 'freeze',
-      desc: '天降冰雹砸击全场敌人，附带冻结效果',
-      cost: 62, cd: 11, p0: { dmg: 2.0, r: 999, slow: 0.45, time: 2.0 }, pg: { dmg: 0.6, slow: 0.04, time: 0.25 } },
-
-    /* ===== 电系 ===== */
-    { id: 'dianci', n: '电磁穿刺', el: '电', kind: 'active', icon: '⚡', fx: 'chain',
-      desc: '释放电磁穿刺，在敌人之间弹射传导并造成百分比生命伤害',
-      cost: 45, cd: 7.5, p0: { dmg: 2.2, chain: 4, pct: 0.02 }, pg: { dmg: 0.65, chain: 0.5, pct: 0.006 } },
-    { id: 'yueqian', n: '跃迁电子', el: '电', kind: 'active', icon: '🌀', fx: 'chain',
-      desc: '跃迁电子在敌群中反复弹射，每次弹射伤害递增',
-      cost: 58, cd: 10, p0: { dmg: 1.6, chain: 6, pct: 0.012 }, pg: { dmg: 0.5, chain: 0.7, pct: 0.004 } },
-    { id: 'shexian', n: '高能射线', el: '电', kind: 'active', icon: '📡', fx: 'laser',
-      desc: '发射贯穿性高能射线，直线穿透所有敌人',
-      cost: 42, cd: 6, p0: { dmg: 2.8, w: 26, time: 1.1 }, pg: { dmg: 0.85, w: 2, time: 0.1 } },
-    { id: 'zhidao', n: '制导激光', el: '电', kind: 'active', icon: '🎯', fx: 'laser',
-      desc: '锁定血量最高的敌人发射制导激光，单体爆发',
-      cost: 48, cd: 8, p0: { dmg: 4.5, w: 16, time: 1.4 }, pg: { dmg: 1.3, time: 0.1 } },
-
-    /* ===== 风系 ===== */
-    { id: 'xuanfeng', n: '旋风加农', el: '风', kind: 'active', icon: '🌪️', fx: 'vortex',
-      desc: '生成旋风将周围敌人聚拢并持续切割',
-      cost: 52, cd: 9, p0: { dmg: 1.3, r: 108, pull: 1 }, pg: { dmg: 0.4, r: 7 } },
-    { id: 'longjuan', n: '风暴旋风', el: '风', kind: 'active', icon: '🌀', fx: 'vortex',
-      desc: '召唤大型风暴，持续吸附并绞杀范围内敌人',
-      cost: 66, cd: 12, p0: { dmg: 1.8, r: 132, pull: 1.4 }, pg: { dmg: 0.55, r: 8 } },
-    { id: 'qiren', n: '压缩气刃', el: '风', kind: 'active', icon: '🗡️', fx: 'wave',
-      desc: '向前释放压缩气刃，横扫前方扇形区域',
-      cost: 40, cd: 5.5, p0: { dmg: 3.0, w: 130 }, pg: { dmg: 0.9, w: 8 } },
-
-    /* ===== 召唤 ===== */
-    { id: 'zhuangjia', n: '装甲车', el: '物', kind: 'active', icon: '🚙', fx: 'summon',
-      desc: '召唤装甲车冲入尸潮，撞击聚怪并承伤',
-      cost: 60, cd: 14, p0: { dmg: 2.6, hp: 900, time: 8 }, pg: { dmg: 0.8, hp: 260, time: 0.8 } },
-    { id: 'wurenji', n: '无人机', el: '物', kind: 'active', icon: '🛸', fx: 'summon',
-      desc: '召唤无人机环绕自动攻击附近敌人',
-      cost: 55, cd: 13, p0: { dmg: 1.4, time: 10, n: 1 }, pg: { dmg: 0.42, time: 0.9 } },
-    { id: 'feiji', n: '脉冲飞机', el: '电', kind: 'active', icon: '✈️', fx: 'summon',
-      desc: '呼叫脉冲飞机对全场进行扫射轰炸',
-      cost: 70, cd: 16, p0: { dmg: 2.2, time: 4 }, pg: { dmg: 0.66, time: 0.3 } },
-
-    /* ===== 枪械强化（被动） ===== */
-    { id: 'lianfa', n: '连发', el: '物', kind: 'gun', icon: '🔫',
-      desc: '每次射击额外发射一发子弹', p0: { extra: 1 }, pg: { extra: 0.34 } },
-    { id: 'qishe', n: '齐射', el: '物', kind: 'gun', icon: '🎯',
-      desc: '增加同时射出的弹道数量', p0: { spread: 1 }, pg: { spread: 0.34 } },
-    { id: 'fenlie', n: '分裂子弹', el: '物', kind: 'gun', icon: '✳️',
-      desc: '子弹命中后分裂出次级子弹', p0: { split: 2 }, pg: { split: 0.5 } },
-    { id: 'sifenlie', n: '四分裂', el: '物', kind: 'gun', icon: '❉',
-      desc: '子弹命中后向四方向分裂', p0: { split4: 1 }, pg: { split4: 0.34 } },
-    { id: 'tanshe', n: '弹射', el: '物', kind: 'gun', icon: '↩️',
-      desc: '子弹命中后弹射至附近敌人', p0: { bounce: 1 }, pg: { bounce: 0.4 } },
-    { id: 'tuanchuan', n: '穿透', el: '物', kind: 'gun', icon: '➡️',
-      desc: '子弹可穿透更多敌人', p0: { pierce: 1 }, pg: { pierce: 0.5 } },
-    { id: 'zengshang', n: '子弹增伤', el: '物', kind: 'gun', icon: '💪',
-      desc: '提升子弹基础伤害', p0: { dmgMul: 0.35 }, pg: { dmgMul: 0.18 } },
-    { id: 'sheshu', n: '急速射击', el: '物', kind: 'gun', icon: '⏩',
-      desc: '提升射击速度', p0: { rateMul: 0.25 }, pg: { rateMul: 0.12 } },
-    { id: 'shecheng', n: '炮管延长', el: '物', kind: 'gun', icon: '📏',
-      desc: '提升攻击射程', p0: { rangeMul: 0.2 }, pg: { rangeMul: 0.1 } },
-
-    /* ===== 通用被动 ===== */
-    { id: 'baoji', n: '暴击强化', el: '物', kind: 'passive', icon: '💢',
-      desc: '提升暴击率与暴击伤害', p0: { crit: 0.1, critDmg: 0.3 }, pg: { crit: 0.04, critDmg: 0.15 } },
-    { id: 'shaguai', n: '杀怪加血', el: '物', kind: 'passive', icon: '❤️',
-      desc: '击杀敌人恢复防线生命', p0: { heal: 3 }, pg: { heal: 1.6 } },
-    { id: 'jinbi', n: '金币加成', el: '物', kind: 'passive', icon: '🪙',
-      desc: '提升金币获取量', p0: { goldMul: 0.3 }, pg: { goldMul: 0.15 } },
-    { id: 'jingyan', n: '经验加成', el: '物', kind: 'passive', icon: '💎',
-      desc: '提升经验获取，更快升级', p0: { xpMul: 0.3 }, pg: { xpMul: 0.15 } },
-    { id: 'citie', n: '磁力场', el: '物', kind: 'passive', icon: '🧲',
-      desc: '扩大拾取范围', p0: { magnet: 40 }, pg: { magnet: 18 } },
-    { id: 'fangxian', n: '防线强化', el: '物', kind: 'passive', icon: '🧱',
-      desc: '提升防线最大生命值', p0: { wallHp: 400 }, pg: { wallHp: 220 } },
-    { id: 'jianshang', n: '减伤护盾', el: '物', kind: 'passive', icon: '🛡️',
-      desc: '降低受到的伤害', p0: { dr: 0.1 }, pg: { dr: 0.05 } },
-    { id: 'miaosha', n: '秒杀', el: '物', kind: 'passive', icon: '☠️',
-      desc: '攻击有概率直接秒杀普通敌人', p0: { exec: 0.02 }, pg: { exec: 0.012 } },
-  ],
-
-  /* ---------- 僵尸 ---------- */
-  zombies: [
-    { id: 'z1', n: '普通僵尸', icon: '🧟', hp: 100, spd: 26, dmg: 12, gold: 3, xp: 6, r: 15 },
-    { id: 'z2', n: '快速僵尸', icon: '🏃', hp: 70, spd: 48, dmg: 9, gold: 4, xp: 7, r: 13 },
-    { id: 'z3', n: '装甲僵尸', icon: '🛡️', hp: 380, spd: 20, dmg: 18, gold: 9, xp: 14, r: 18, def: 0.35 },
-    { id: 'z4', n: '隐身僵尸', icon: '👻', hp: 150, spd: 34, dmg: 15, gold: 7, xp: 11, r: 15, stealth: 1 },
-    { id: 'z5', n: '瘟疫僵尸', icon: '🤢', hp: 240, spd: 24, dmg: 14, gold: 8, xp: 12, r: 16, poison: 1 },
-    { id: 'z6', n: '冰雪僵尸', icon: '🥶', hp: 300, spd: 22, dmg: 16, gold: 8, xp: 13, r: 17, res: '冰' },
-    { id: 'z7', n: '飞行僵尸', icon: '🦅', hp: 130, spd: 42, dmg: 13, gold: 8, xp: 12, r: 14, fly: 1 },
-    { id: 'z8', n: '木乃伊僵尸', icon: '🧻', hp: 260, spd: 23, dmg: 15, gold: 9, xp: 13, r: 16, revive: 1 },
-    { id: 'z9', n: '咸鱼僵尸', icon: '🐟', hp: 200, spd: 30, dmg: 12, gold: 6, xp: 10, r: 15, immune: 1 },
-    { id: 'z10', n: '自爆僵尸', icon: '💣', hp: 160, spd: 36, dmg: 40, gold: 7, xp: 11, r: 15, boom: 1 },
-    { id: 'z11', n: '精英僵尸', icon: '👹', hp: 900, spd: 24, dmg: 30, gold: 26, xp: 40, r: 22, elite: 1, def: 0.2 },
-  ],
-
-  /* ---------- BOSS ---------- */
-  bosses: [
-    { id: 'b1', n: '机械开垦者', icon: '🤖', hp: 3000, spd: 16, dmg: 55, gold: 180, xp: 260, r: 34, boss: 1, def: 0.15 },
-    { id: 'b2', n: '巢穴之母', icon: '🕷️', hp: 4200, spd: 14, dmg: 48, gold: 220, xp: 320, r: 36, boss: 1, spawn: 1 },
-    { id: 'b3', n: '深渊领主', icon: '👺', hp: 5600, spd: 18, dmg: 70, gold: 300, xp: 420, r: 38, boss: 1, def: 0.18 },
-    { id: 'b4', n: '裂骨者', icon: '💀', hp: 7200, spd: 20, dmg: 85, gold: 380, xp: 520, r: 38, boss: 1, def: 0.20 },
-    { id: 'b5', n: '暴食者', icon: '🦖', hp: 9200, spd: 15, dmg: 95, gold: 450, xp: 620, r: 40, boss: 1, heal: 1 },
-    { id: 'b6', n: '深渊巨兽', icon: '🐉', hp: 12000, spd: 17, dmg: 120, gold: 560, xp: 780, r: 42, boss: 1, res: '火' },
-    { id: 'b7', n: '猛犸象', icon: '🦣', hp: 16000, spd: 13, dmg: 150, gold: 700, xp: 980, r: 44, boss: 1, def: 0.25 },
-  ],
-
-  /* ---------- 枪械 ---------- */
-  guns: [
-    { id: 'g1', n: '突击步枪', icon: '🔫', dmg: 22, rate: 3.2, range: 210, pierce: 0, q: '绿' },
-    { id: 'g2', n: '霰弹枪', icon: '🔫', dmg: 16, rate: 1.6, range: 150, pierce: 0, spread: 5, q: '绿' },
-    { id: 'g3', n: '冲锋枪', icon: '🔫', dmg: 13, rate: 6.5, range: 175, pierce: 0, q: '蓝' },
-    { id: 'g4', n: '狙击枪', icon: '🎯', dmg: 68, rate: 0.9, range: 320, pierce: 2, q: '蓝' },
-    { id: 'g5', n: '加特林', icon: '🔫', dmg: 15, rate: 9.0, range: 190, pierce: 1, q: '紫' },
-    { id: 'g6', n: '激光炮', icon: '📡', dmg: 46, rate: 2.4, range: 280, pierce: 3, q: '紫' },
-    { id: 'g7', n: '等离子炮', icon: '☄️', dmg: 88, rate: 1.5, range: 300, pierce: 4, q: '橙' },
-  ],
-
-  /* ---------- 装备部位 ---------- */
-  slots: [
-    { k: 'head', n: '头盔', icon: '🪖' },
-    { k: 'cloth', n: '衣服', icon: '🥋' },
-    { k: 'shoe', n: '鞋子', icon: '👟' },
-    { k: 'arm', n: '护臂', icon: '🧤' },
-    { k: 'pants', n: '裤子', icon: '👖' },
-    { k: 'glove', n: '手套', icon: '✋' },
-  ],
-
   /* ---------- 品质 ---------- */
-  qualities: [
-    { n: '白', c: '#b8b8b8', mul: 1.0 },
-    { n: '绿', c: '#5fd07a', mul: 1.25 },
-    { n: '蓝', c: '#4aa8ff', mul: 1.6 },
-    { n: '紫', c: '#c07bff', mul: 2.1 },
-    { n: '橙', c: '#ffa030', mul: 2.8 },
-    { n: '红', c: '#ff4d6d', mul: 3.8 },
+  qualities: ['白', '绿', '蓝', '紫', '橙', '红'],
+  qColor: { '白': '#b9c4d4', '绿': '#5fd07a', '蓝': '#5cd8ff', '紫': '#c08cff', '橙': '#ffa53c', '红': '#ff4d6d' },
+
+  /* =================================================
+   * 一、局内技能表（资料 10 表，12 项）
+   * kind: gun=枪械强化 / passive=被动 / aura=光环 / proc=命中触发
+   * conflict: 互斥技能（资料明确：闪电链 ↔ 火环）
+   * ================================================ */
+  skills: [
+    { id: 'duochong', n: '多重射击', icon: '🎯', kind: 'gun', el: '物', max: 10, conflict: null,
+      desc: '额外发射 1 颗子弹', up: '每级 +1 颗子弹', mods: { spread: 1 } },
+    { id: 'chantou', n: '穿透强化', icon: '➤', kind: 'gun', el: '物', max: 10, conflict: null,
+      desc: '子弹穿透 +1 个目标', up: '每级 +1 穿透', mods: { pierce: 1 } },
+    { id: 'shanghai', n: '伤害强化', icon: '💪', kind: 'passive', el: '物', max: 10, conflict: null,
+      desc: '伤害 +15%', up: '每级 +15%', mods: { dmgMul: 0.15 } },
+    { id: 'gongsu', n: '攻速强化', icon: '⚡', kind: 'passive', el: '物', max: 10, conflict: null,
+      desc: '攻击速度 +15%', up: '每级 +15%', mods: { rateMul: 0.15 } },
+    { id: 'baoji', n: '暴击强化', icon: '✨', kind: 'passive', el: '物', max: 10, conflict: null,
+      desc: '暴击率 +10%、暴击伤害 +20%', up: '每级叠加', mods: { crit: 0.10, critDmg: 0.20 } },
+    { id: 'xixue', n: '吸血', icon: '🩸', kind: 'passive', el: '物', max: 10, conflict: null,
+      desc: '击杀回复生命', up: '每级提升回复量', mods: { healOnKill: 6 } },
+    { id: 'shandian', n: '闪电链', icon: '⚡', kind: 'proc', el: '电', max: 10, conflict: 'huohuan',
+      desc: '子弹命中后概率触发闪电，连锁 3 个目标', up: '每级 +1 连锁', mods: { chain: 0.18, chainN: 3 } },
+    { id: 'huohuan', n: '火环', icon: '🔥', kind: 'aura', el: '火', max: 10, conflict: 'shandian',
+      desc: '角色周围火圈持续灼烧，击退近身怪', up: '每级提升范围与伤害', mods: { auraR: 62, auraDps: 0.55, knock: 1 } },
+    { id: 'binghuan', n: '冰霜新星', icon: '❄️', kind: 'aura', el: '冰', max: 10, conflict: null,
+      desc: '定期释放冰环，减速并冰冻范围内怪', up: '每级提升范围与控制时长', mods: { novaR: 90, novaSlow: 0.5, novaCd: 3.2 } },
+    { id: 'baozha', n: '爆炸子弹', icon: '💥', kind: 'proc', el: '火', max: 10, conflict: null,
+      desc: '子弹命中后爆炸，造成范围伤害', up: '每级提升爆炸范围', mods: { explode: 0.45, er: 46 } },
+    { id: 'hudun', n: '护盾', icon: '🛡️', kind: 'passive', el: '物', max: 10, conflict: null,
+      desc: '获得护盾吸收伤害', up: '每级 +护盾值', mods: { shield: 120 } },
+    { id: 'yisu', n: '移速强化', icon: '👟', kind: 'passive', el: '风', max: 10, conflict: null,
+      desc: '移动速度 +10%', up: '每级 +10%', mods: { moveMul: 0.10 } },
   ],
 
-  /* ---------- 宝石词条 ---------- */
-  gems: [
-    { id: 'gm1', n: '暴击率', icon: '💢', v: 0.05, unit: '%', desc: '暴击率 +5%' },
-    { id: 'gm2', n: '技能冷却', icon: '⏱️', v: 0.04, unit: '%', desc: '技能冷却缩减 +4%' },
-    { id: 'gm3', n: '枪械穿透', icon: '➡️', v: 1, unit: '', desc: '枪械穿透 +1' },
-    { id: 'gm4', n: '枪械齐射', icon: '🎯', v: 1, unit: '', desc: '枪械齐射 +1' },
-    { id: 'gm5', n: '枪械伤害', icon: '💪', v: 0.08, unit: '%', desc: '枪械伤害 +8%' },
-    { id: 'gm6', n: '传送', icon: '🌀', v: 0.03, unit: '%', desc: '攻击概率传送敌人' },
-    { id: 'gm7', n: '秒杀', icon: '☠️', v: 0.015, unit: '%', desc: '概率直接秒杀' },
-    { id: 'gm8', n: '杀怪加血', icon: '❤️', v: 4, unit: '', desc: '击杀恢复防线生命' },
-    { id: 'gm9', n: '防线免疫', icon: '🧱', v: 1, unit: '', desc: '免疫前 5 次受到的伤害' },
-    { id: 'gm10', n: '伤害追加', icon: '📈', v: 0.06, unit: '%', desc: '伤害追加百分比 +6%' },
-    { id: 'gm11', n: '负面延长', icon: '⏳', v: 0.15, unit: '%', desc: '负面状态持续延长 15%' },
-    { id: 'gm12', n: '暴击追加', icon: '🔥', v: 0.12, unit: '%', desc: '暴击追加伤害 +12%' },
+  /* =================================================
+   * 二、永久天赋表（资料 10 表，8 项）
+   * 解锁等级 = 需通关的关卡门槛
+   * ================================================ */
+  talents: [
+    { id: 't_hp', n: '基地生命强化', icon: '❤️', max: 20, cost0: 500, costGrow: 1.35, unlock: 0,
+      desc: '基地外永久生命 +5%', per: 0.05, stat: 'hp' },
+    { id: 't_atk', n: '伤害强化天赋', icon: '⚔️', max: 20, cost0: 600, costGrow: 1.38, unlock: 0,
+      desc: '全局伤害 +3%', per: 0.03, stat: 'atk' },
+    { id: 't_gold', n: '金币加成', icon: '🪙', max: 20, cost0: 400, costGrow: 1.32, unlock: 3,
+      desc: '金币获取 +5%', per: 0.05, stat: 'gold' },
+    { id: 't_xp', n: '经验加成', icon: '📘', max: 20, cost0: 450, costGrow: 1.33, unlock: 3,
+      desc: '经验获取 +5%', per: 0.05, stat: 'xp' },
+    { id: 't_crit', n: '暴击天赋', icon: '🎯', max: 20, cost0: 700, costGrow: 1.40, unlock: 6,
+      desc: '全局暴击率 +2%', per: 0.02, stat: 'crit' },
+    { id: 't_ls', n: '吸血天赋', icon: '🩸', max: 15, cost0: 800, costGrow: 1.42, unlock: 6,
+      desc: '全局吸血 +1%', per: 0.01, stat: 'ls' },
+    { id: 't_armor', n: '护甲天赋', icon: '🛡️', max: 20, cost0: 650, costGrow: 1.39, unlock: 10,
+      desc: '全局护甲 +3%（减伤）', per: 0.03, stat: 'armor' },
+    { id: 't_revive', n: '复活天赋', icon: '💚', max: 3, cost0: 5000, costGrow: 2.2, unlock: 12,
+      desc: '每局限一次免费复活（每级 +1 次）', per: 1, stat: 'revive' },
   ],
 
-  /* ---------- 佣兵（不可操作，辅助战斗） ---------- */
-  mercs: [
-    { id: 'm1', n: '霰弹枪士', icon: '🔫', atk: 18, rate: 1.4, q: '绿', desc: '近距离范围散射' },
-    { id: 'm2', n: '机枪大兵', icon: '🔫', atk: 12, rate: 4.2, q: '蓝', desc: '高射速持续压制' },
-    { id: 'm3', n: '精准狙击手', icon: '🎯', atk: 55, rate: 0.7, q: '蓝', desc: '优先点杀高血量目标' },
-    { id: 'm4', n: '哨箭达人', icon: '🏹', atk: 26, rate: 2.0, q: '紫', desc: '穿透射击' },
-    { id: 'm5', n: '工程师', icon: '🔧', atk: 8, rate: 1.0, q: '紫', desc: '持续修复防线' },
-    { id: 'm6', n: '超时空', icon: '⚡', atk: 40, rate: 1.2, q: '橙', desc: '概率秒杀精英' },
+  /* =================================================
+   * 三、怪物表（资料 09 表，12 种）
+   * ai: chase=追击 / rush=冲刺 / ranged=远程 / boomer=自爆
+   * ================================================ */
+  zombies: [
+    { id: 'putong', n: '普通僵尸', icon: '🧟', hp: 30, spd: 34, dmg: 8, atkR: 26, ai: 'chase',
+      skill: '扑咬', sk: '近战伤害，靠近玩家撕咬', xp: 4, gold: 3, elite: false },
+    { id: 'jipao', n: '疾跑僵尸', icon: '🏃', hp: 22, spd: 78, dmg: 14, atkR: 24, ai: 'rush',
+      skill: '冲刺', sk: '高速冲向玩家，接触造成高伤害', xp: 6, gold: 4, elite: false },
+    { id: 'zhongjia', n: '重甲僵尸', icon: '🥋', hp: 180, spd: 26, dmg: 18, atkR: 28, ai: 'chase',
+      skill: '护甲', sk: '减伤高，需穿透/爆炸破甲', def: 0.55, xp: 14, gold: 12, elite: true },
+    { id: 'zibao', n: '自爆僵尸', icon: '💣', hp: 45, spd: 62, dmg: 34, atkR: 30, ai: 'boomer',
+      skill: '自爆', sk: '接近后自爆，范围伤害，死亡解体', xp: 10, gold: 8, elite: false },
+    { id: 'du', n: '毒僵尸', icon: '☠️', hp: 90, spd: 34, dmg: 10, atkR: 120, ai: 'ranged',
+      skill: '毒雾', sk: '喷洒毒雾，玩家中毒持续掉血', poison: 6, xp: 13, gold: 10, elite: true },
+    { id: 'tuye', n: '吐液僵尸', icon: '🤮', hp: 70, spd: 30, dmg: 12, atkR: 150, ai: 'ranged',
+      skill: '腐蚀液', sk: '远程喷吐，落地区域持续伤害', pool: 5, xp: 12, gold: 9, elite: false },
+    { id: 'zhadan', n: '炸弹僵尸', icon: '🧨', hp: 55, spd: 44, dmg: 26, atkR: 28, ai: 'boomer',
+      skill: '死亡爆炸', sk: '死亡时爆炸范围伤害，可引爆油桶', xp: 11, gold: 9, elite: false },
+    { id: 'dun', n: '护盾僵尸', icon: '🔰', hp: 130, spd: 32, dmg: 16, atkR: 26, ai: 'chase',
+      skill: '能量护盾', sk: '正面免疫伤害，需绕后或破盾', front: 0.85, xp: 16, gold: 13, elite: true },
+    { id: 'fenlie', n: '分裂僵尸', icon: '🪱', hp: 85, spd: 36, dmg: 12, atkR: 26, ai: 'chase',
+      skill: '分裂', sk: '死亡分裂成 2 个小僵尸', split: 2, xp: 12, gold: 10, elite: false },
+    { id: 'feixing', n: '飞行僵尸', icon: '🦅', hp: 60, spd: 58, dmg: 15, atkR: 30, ai: 'chase',
+      skill: '飞行', sk: '越过地面障碍，空中移动', fly: true, xp: 13, gold: 11, elite: false },
+    { id: 'jinying', n: '精英僵尸', icon: '👹', hp: 320, spd: 40, dmg: 26, atkR: 30, ai: 'chase',
+      skill: '强化体魄', sk: '高血量高伤害的精英单位', def: 0.3, xp: 30, gold: 26, elite: true },
+    { id: 'xiaozombie', n: '小僵尸', icon: '🐛', hp: 12, spd: 50, dmg: 5, atkR: 20, ai: 'chase',
+      skill: '扑咬', sk: '分裂产生的小体型僵尸', xp: 2, gold: 1, elite: false },
   ],
 
-  /* ---------- 基地模块 ---------- */
-  base: [
-    { id: 'lab', n: '研究所', icon: '🔬', desc: '研发科技，永久提升属性' },
-    { id: 'wall', n: '防线', icon: '🧱', desc: '升级城墙，提升防线生命' },
-    { id: 'canteen', n: '食堂', icon: '🍚', desc: '补充体力，领取每日补给' },
-    { id: 'rank', n: '排行榜', icon: '🏆', desc: '查看全服通关排行' },
-    { id: 'fort', n: '远征堡垒', icon: '🏰', desc: '派遣佣兵远征获取资源' },
-    { id: 'tavern', n: '酒馆', icon: '🍺', desc: '招募雇佣兵并肩作战' },
+  /* =================================================
+   * 四、BOSS 表（资料 09 表）
+   * 阶段数量随章节递增；血量阈值触发技能
+   * ================================================ */
+  bosses: [
+    { id: 'juxing', n: '巨型丧尸', icon: '🦖', hp: 2600, spd: 22, dmg: 40, atkR: 46, def: 0.25,
+      phases: 2, xp: 220, gold: 260,
+      skills: [
+        { n: '巨爪拍击', sk: '大范围近战，击退玩家', trig: 'contact' },
+        { n: '召唤小怪', sk: '召唤普通僵尸群助战', trig: 0.7 },
+        { n: '召唤小怪', sk: '再次召唤僵尸群', trig: 0.4 },
+      ] },
+    { id: 'mama', n: '感染母体', icon: '🕷️', hp: 3400, spd: 26, dmg: 34, atkR: 150, def: 0.2,
+      phases: 3, xp: 320, gold: 380,
+      skills: [
+        { n: '孢子喷吐', sk: '喷出感染孢子，落地分裂小怪', trig: 0.8 },
+        { n: '狂暴', sk: '进入狂暴，攻速移速提升', trig: 0.5 },
+        { n: '阶段切换', sk: '血量阈值触发新技能，全屏警告', trig: 0.3 },
+      ] },
   ],
 
-  /* ---------- 研究所科技 ---------- */
-  techs: [
-    { id: 't1', n: '弹药改良', icon: '💪', max: 30, base: 120, grow: 1.28, desc: '攻击力 +2%/级' },
-    { id: 't2', n: '枪管工艺', icon: '📏', max: 30, base: 100, grow: 1.26, desc: '射程 +1.5%/级' },
-    { id: 't3', n: '自动装填', icon: '⏩', max: 30, base: 140, grow: 1.3, desc: '射速 +2%/级' },
-    { id: 't4', n: '装甲加固', icon: '🧱', max: 30, base: 110, grow: 1.27, desc: '防线生命 +3%/级' },
-    { id: 't5', n: '能量核心', icon: '⚡', max: 30, base: 160, grow: 1.32, desc: '能量恢复 +2.5%/级' },
-    { id: 't6', n: '幸运 scav', icon: '🍀', max: 30, base: 130, grow: 1.29, desc: '金币获取 +3%/级' },
+  /* BOSS 通用机制（资料 09 表 11/16 项） */
+  bossCommon: [
+    { n: '阶段切换', sk: '血量 70% / 40% 触发新技能，全屏警告' },
+    { n: '狂暴免疫', sk: '狂暴阶段免疫控制，伤害提升' },
+  ],
+
+  /* =================================================
+   * 五、武器表（资料：主副武器 + 弹夹容量 + 换弹时间）
+   * ================================================ */
+  guns: [
+    { id: 'ar', n: '突击步枪', icon: '🔫', q: '绿', dmg: 12, rate: 5.0, range: 300, mag: 30, reload: 1.5,
+      pierce: 0, spread: 1, bulletSpd: 620, unlock: 0, desc: '均衡型，射速与弹夹适中' },
+    { id: 'sg', n: '霰弹枪', icon: '💥', q: '蓝', dmg: 9, rate: 1.6, range: 170, mag: 6, reload: 2.2,
+      pierce: 1, spread: 6, bulletSpd: 520, unlock: 3, desc: '一次射出多颗弹丸，近距离爆发' },
+    { id: 'gl', n: '榴弹枪', icon: '🎇', q: '蓝', dmg: 34, rate: 1.1, range: 260, mag: 4, reload: 2.6,
+      pierce: 0, spread: 1, bulletSpd: 420, unlock: 6, explode: 0.6, er: 60, desc: '命中爆炸，范围伤害' },
+    { id: 'sn', n: '狙击枪', icon: '🎯', q: '紫', dmg: 90, rate: 0.8, range: 420, mag: 5, reload: 2.4,
+      pierce: 3, spread: 1, bulletSpd: 900, unlock: 10, desc: '高伤高穿透，射速较慢' },
+    { id: 'gat', n: '加特林', icon: '⚙️', q: '紫', dmg: 8, rate: 11.0, range: 280, mag: 90, reload: 3.4,
+      pierce: 0, spread: 1, bulletSpd: 700, unlock: 16, desc: '极高射速，弹夹大但换弹慢' },
+    { id: 'las', n: '激光枪', icon: '⚡', q: '橙', dmg: 46, rate: 4.0, range: 360, mag: 20, reload: 1.8,
+      pierce: 5, spread: 1, bulletSpd: 1200, unlock: 24, desc: '高穿透光束，直线贯穿' },
+  ],
+
+  /* =================================================
+   * 六、芯片表（资料 02 表 10 / GD-009）
+   * 芯片槽 + 品质 + 词条池；支持拆解 / 合成 / 洗练
+   * ================================================ */
+  chipSlots: [
+    { k: 'c1', n: '芯片槽 I', icon: '🔲' },
+    { k: 'c2', n: '芯片槽 II', icon: '🔲' },
+    { k: 'c3', n: '芯片槽 III', icon: '🔲' },
+    { k: 'c4', n: '芯片槽 IV', icon: '🔲' },
+    { k: 'c5', n: '芯片槽 V', icon: '🔲' },
+    { k: 'c6', n: '芯片槽 VI', icon: '🔲' },
+  ],
+  /* 词条池：芯片随机 1~N 条词 */
+  chipStats: [
+    { k: 'atk', n: '攻击力', unit: '%', base: 0.04 },
+    { k: 'hp', n: '生命值', unit: '%', base: 0.05 },
+    { k: 'crit', n: '暴击率', unit: '%', base: 0.015 },
+    { k: 'critDmg', n: '暴击伤害', unit: '%', base: 0.05 },
+    { k: 'rate', n: '攻击速度', unit: '%', base: 0.03 },
+    { k: 'move', n: '移动速度', unit: '%', base: 0.03 },
+    { k: 'armor', n: '伤害减免', unit: '%', base: 0.02 },
+    { k: 'gold', n: '金币获取', unit: '%', base: 0.06 },
+    { k: 'xp', n: '经验获取', unit: '%', base: 0.05 },
+    { k: 'pierce', n: '穿透', unit: '', base: 0.25 },
+  ],
+  /* 品质决定词条数量与数值倍率 */
+  chipQ: [
+    { q: '白', stats: 1, mul: 1.0, shards: 1 },
+    { q: '绿', stats: 2, mul: 1.4, shards: 2 },
+    { q: '蓝', stats: 2, mul: 1.9, shards: 4 },
+    { q: '紫', stats: 3, mul: 2.6, shards: 8 },
+    { q: '橙', stats: 4, mul: 3.5, shards: 16 },
+    { q: '红', stats: 5, mul: 4.8, shards: 32 },
+  ],
+
+  /* =================================================
+   * 七、基地建筑（资料 GD-010：医疗站/军械库/研究所/仓库）
+   * 升级消耗 + 离线产出
+   * ================================================ */
+  buildings: [
+    { id: 'hospital', n: '医疗站', icon: '🏥', desc: '提升角色生命上限', stat: 'hp', per: 0.06,
+      cost0: 800, grow: 1.45, max: 30, offline: null },
+    { id: 'armory', n: '军械库', icon: '🔧', desc: '提升武器伤害', stat: 'atk', per: 0.05,
+      cost0: 900, grow: 1.46, max: 30, offline: null },
+    { id: 'lab', n: '研究所', icon: '🔬', desc: '提升经验获取', stat: 'xp', per: 0.04,
+      cost0: 700, grow: 1.44, max: 30, offline: null },
+    { id: 'warehouse', n: '仓库', icon: '📦', desc: '离线产出金币（每小时）', stat: 'gold', per: 1,
+      cost0: 600, grow: 1.42, max: 30, offline: 120 },
+  ],
+
+  /* =================================================
+   * 八、任务表（资料 02 表 11：主线/每日/成就）
+   * ================================================ */
+  tasks: {
+    main: [
+      { id: 'm1', n: '初次出击', goal: { t: 'clear', v: 1 }, rw: { gold: 500, dia: 10 }, desc: '通关 1 个关卡' },
+      { id: 'm2', n: '清理街区', goal: { t: 'clear', v: 3 }, rw: { gold: 1200, dia: 20 }, desc: '通关 3 个关卡' },
+      { id: 'm3', n: '武器专家', goal: { t: 'gunLv', v: 10 }, rw: { gold: 2000, dia: 30 }, desc: '武器强化到 10 级' },
+      { id: 'm4', n: '芯片先驱', goal: { t: 'chip', v: 3 }, rw: { gold: 2500, dia: 40 }, desc: '装备 3 块芯片' },
+      { id: 'm5', n: '天赋觉醒', goal: { t: 'talent', v: 5 }, rw: { gold: 3000, dia: 50 }, desc: '点亮 5 个天赋' },
+      { id: 'm6', n: '深入第二章', goal: { t: 'chapter', v: 2 }, rw: { gold: 5000, dia: 80 }, desc: '通关第 2 章' },
+      { id: 'm7', n: '无尽试炼', goal: { t: 'endless', v: 10 }, rw: { gold: 6000, dia: 100 }, desc: '无尽模式到达第 10 层' },
+      { id: 'm8', n: '基地建设', goal: { t: 'build', v: 10 }, rw: { gold: 8000, dia: 120 }, desc: '基地建筑总等级达 10' },
+    ],
+    daily: [
+      { id: 'd1', n: '每日登录', goal: { t: 'login', v: 1 }, rw: { gold: 1000, dia: 10 } },
+      { id: 'd2', n: '出击 3 次', goal: { t: 'run', v: 3 }, rw: { gold: 1500, dia: 15 } },
+      { id: 'd3', n: '击杀 300 僵尸', goal: { t: 'kill', v: 300 }, rw: { gold: 2000, dia: 20 } },
+      { id: 'd4', n: '强化武器 3 次', goal: { t: 'upgrade', v: 3 }, rw: { gold: 1800, dia: 15 } },
+      { id: 'd5', n: '通关 2 关', goal: { t: 'clearDaily', v: 2 }, rw: { gold: 2200, dia: 25 } },
+    ],
+    achieve: [
+      { id: 'a1', n: '僵尸猎手', goal: { t: 'kills', v: 1000 }, rw: { gold: 3000, dia: 40 } },
+      { id: 'a2', n: '尸山血海', goal: { t: 'kills', v: 10000 }, rw: { gold: 15000, dia: 150 } },
+      { id: 'a3', n: '收割机器', goal: { t: 'kills', v: 50000 }, rw: { gold: 50000, dia: 400 } },
+      { id: 'a4', n: '关卡征服者', goal: { t: 'clears', v: 30 }, rw: { gold: 12000, dia: 120 } },
+      { id: 'a5', n: '无尽勇者', goal: { t: 'endlessBest', v: 30 }, rw: { gold: 18000, dia: 200 } },
+      { id: 'a6', n: '战力巅峰', goal: { t: 'power', v: 20000 }, rw: { gold: 20000, dia: 250 } },
+      { id: 'a7', n: 'BOSS 终结者', goal: { t: 'boss', v: 10 }, rw: { gold: 16000, dia: 180 } },
+      { id: 'a8', n: '芯片大师', goal: { t: 'chipQ', v: 5 }, rw: { gold: 14000, dia: 160 } },
+    ],
+  },
+
+  /* =================================================
+   * 九、章节表（资料 07 表：章节小节 / 星级 / 通关条件）
+   * 每章 10 关，第 10 关为 BOSS 关
+   * ================================================ */
+  chapters: [
+    { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️', boss: 'juxing', pool: ['putong', 'jipao', 'zhadan'], hpMul: 1.0 },
+    { id: 2, n: '第二章 · 废弃工厂', icon: '🏭', boss: 'mama', pool: ['putong', 'jipao', 'zhongjia', 'zibao'], hpMul: 1.8 },
+    { id: 3, n: '第三章 · 毒雾蔓延', icon: '☠️', boss: 'juxing', pool: ['putong', 'du', 'tuye', 'jipao'], hpMul: 3.0 },
+    { id: 4, n: '第四章 · 地下设施', icon: '🚇', boss: 'mama', pool: ['zhongjia', 'dun', 'fenlie', 'tuye'], hpMul: 5.0 },
+    { id: 5, n: '第五章 · 空中威胁', icon: '🌉', boss: 'juxing', pool: ['feixing', 'jipao', 'du', 'zhongjia'], hpMul: 8.0 },
+    { id: 6, n: '第六章 · 母体巢穴', icon: '🕳️', boss: 'mama', pool: ['jinying', 'dun', 'fenlie', 'feixing', 'zhongjia'], hpMul: 13.0 },
+  ],
+  LEVELS_PER_CHAPTER: 10,
+
+  /* =================================================
+   * 十、活动表（资料 02 表 12 / GD-013）
+   * ================================================ */
+  activities: [
+    { id: 'ac1', n: '限时挑战', icon: '⏱️', type: '限时', desc: '限时内击杀指定数量僵尸', rw: '金币 ×5000 · 钻石 ×50', state: '进行中' },
+    { id: 'ac2', n: '丧尸围城', icon: '🏰', type: '防守', desc: '抵御 20 波尸潮进攻', rw: '金币 ×12000 · 芯片 ×3', state: '进行中' },
+    { id: 'ac3', n: 'BOSS 突袭', icon: '👹', type: '挑战', desc: '限时击败巨型丧尸', rw: '钻石 ×100 · 橙色芯片', state: '进行中' },
+    { id: 'ac4', n: '节日狂欢', icon: '🎉', type: '节日', desc: '登录即领节日礼包', rw: '钻石 ×200 · 皮肤碎片', state: '未开启' },
+    { id: 'ac5', n: '无尽竞速', icon: '♾️', type: '排行', desc: '无尽模式层数排行', rw: '按排名发放钻石', state: '进行中' },
+    { id: 'ac6', n: '新手特训', icon: '🎓', type: '引导', desc: '完成新手引导任务', rw: '金币 ×3000 · 钻石 ×30', state: '进行中' },
+  ],
+
+  /* =================================================
+   * 十一、商城表（资料 02 表 13 / GD-012）
+   * ================================================ */
+  shop: [
+    { id: 's1', n: '新手礼包', icon: '🎁', price: 0, cur: 'free', desc: '金币 ×5000 · 钻石 ×50', g: 5000, d: 50 },
+    { id: 's2', n: '成长基金', icon: '💰', price: 30, cur: 'diamond', desc: '金币 ×30000 · 钻石 ×200', g: 30000, d: 200 },
+    { id: 's3', n: '至尊礼包', icon: '👑', price: 128, cur: 'diamond', desc: '金币 ×150000 · 钻石 ×800', g: 150000, d: 800 },
+    { id: 's4', n: '月卡', icon: '📅', price: 68, cur: 'diamond', desc: '每日返钻石 ×100，持续 30 天', g: 0, d: 0, monthly: true },
+    { id: 's5', n: '战令', icon: '🎖️', price: 98, cur: 'diamond', desc: '解锁战令奖励线', g: 10000, d: 300, pass: true },
+    { id: 's6', n: '芯片礼包', icon: '🔲', price: 45, cur: 'diamond', desc: '紫色芯片 ×2 · 碎片 ×200', g: 0, d: 0, chip: 2 },
+  ],
+
+  /* =================================================
+   * 十二、角色皮肤（资料 GD-003 皮肤解锁表）
+   * ================================================ */
+  skins: [
+    { id: 'default', n: '默认战术服', icon: '👨‍🚀', unlock: 0, desc: '初始装备' },
+    { id: 'swat', n: '特警制服', icon: '🥷', unlock: 5, desc: '通关 5 关解锁' },
+    { id: 'hazmat', n: '防化服', icon: '🦺', unlock: 12, desc: '通关 12 关解锁' },
+    { id: 'commando', n: '突击兵', icon: '🪖', unlock: 20, desc: '通关 20 关解锁' },
+    { id: 'reaper', n: '死神', icon: '💀', unlock: 30, desc: '通关 30 关解锁' },
+    { id: 'cyber', n: '赛博战士', icon: '🤖', unlock: 45, desc: '通关 45 关解锁' },
+  ],
+
+  /* ---------- 元素（技能系别） ---------- */
+  elements: [
+    { k: '火', c: '#ff7a3c' }, { k: '冰', c: '#5cd8ff' },
+    { k: '电', c: '#c08cff' }, { k: '风', c: '#7be8a0' }, { k: '物', c: '#ffd76a' },
   ],
 };
 
-window.CFG = CFG;
 window.EX = EX;
+window.CFG = CFG;
