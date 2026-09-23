@@ -175,7 +175,7 @@ const BT = {
     const loop = (t) => {
       this.raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (t - this.last) / 1000); this.last = t;
-      if (!this.paused) this.tick(dt);
+      if (!this.paused) this.tick(dt * (BT.speed || 1));
       this.draw();
     };
     if (this.raf) cancelAnimationFrame(this.raf);
@@ -1079,4 +1079,6 @@ const BT = {
 };
 
 BT.joy = { x: 0, y: 0 };
+BT.speed = 1;
+BT.auto = true;
 window.BT = BT;
