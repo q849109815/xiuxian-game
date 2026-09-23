@@ -86,6 +86,8 @@ const BT = {
     const maxHp = a.hp;
     this.run = {
       skillDmg: {},
+      obstacles: [],      /* 掩体（阻挡子弹/僵尸） */
+      barrels: [],        /* 可破坏油桶（击破爆炸） */
       def, endless: !!opt.endless, ch: def.ch,
       px: this.W / 2, py: this.H - 58,
       aimX: 0, aimY: -1, aiming: false,
@@ -171,9 +173,81 @@ const BT = {
     z.y = -m;
   },
 
+  /* ---------------- 地图障碍物（表28） ---------------- */
+  spawnObstacles() {
+    const r = this.run; if (!r) return;
+    r.obstacles = []; r.barrels = [];
+    const lay = (EX.mapLayouts || {})[r.def.id];
+    if (!lay) return;
+    /* 掩体：随机分布在中上部战场 */
+    const coverDefs = lay.covers || [];
+    let total = 0; coverDefs.forEach((c) => { total += c[1]; });
+    total = Math.min(total, 8);
+    for (let i = 0; i < total; i++) {
+      const cd = coverDefs[i % coverDefs.length];
+      r.obstacles.push({
+        n: cd[0], x: 30 + Math.random() * (this.W - 60),
+        y: this.H * 0.22 + Math.random() * (this.H * 0.36),
+        w: 22 + Math.random() * 16, h: 12 + Math.random() * 8,
+        hp: EX.COVER_HP, maxHp: EX.COVER_HP, dead: false,
+      });
+    }
+    /* 油桶：可破坏，爆炸伤僵尸 */
+    for (let i = 0; i < (lay.barrels || 0); i++) {
+      r.barrels.push({
+        x: 28 + Math.random() * (this.W - 56),
+        y: this.H * 0.24 + Math.random() * (this.H * 0.34),
+        hp: EX.BARREL_HP, maxHp: EX.BARREL_HP, dead: false, r: 13,
+      });
+    }
+  },
+  /* 油桶爆炸：范围伤害僵尸 + 连锁引爆附近油桶 */
+  blowBarrel(b) {
+    const r = this.run; if (!r || b.dead) return;
+    b.dead = true;
+    this.addFloat(b.x, b.y - 10, 'BOOM', 'crit');
+    if (window.SND) SND.play('explode');
+    const R = EX.BARREL_R;
+    (r.zombies || []).forEach((z) => {
+      if (z.dead) return;
+      const d = Math.hypot(z.x - b.x, z.y - b.y);
+      if (d <= R) this.hurt(z, EX.BARREL_DMG, false, 'barrel');
+    });
+    /* 连锁引爆 */
+    (r.barrels || []).forEach((o) => {
+      if (o === b || o.dead) return;
+      if (Math.hypot(o.x - b.x, o.y - b.y) <= R * 0.75) setTimeout(() => this.blowBarrel(o), 110);
+    });
+  },
+  /* 子弹是否击中障碍物/油桶 */
+  hitObstacle(x, y) {
+    const r = this.run; if (!r) return null;
+    for (const b of (r.barrels || [])) {
+      if (b.dead) continue;
+      if (Math.hypot(x - b.x, y - b.y) <= b.r + 3) return { t: 'barrel', o: b };
+    }
+    for (const o of (r.obstacles || [])) {
+      if (o.dead) continue;
+      if (x >= o.x - o.w / 2 && x <= o.x + o.w / 2 && y >= o.y - o.h / 2 && y <= o.y + o.h / 2) return { t: 'cover', o: o };
+    }
+    return null;
+  },
+  /* 僵尸被掩体阻挡（绕行减速） */
+  obsSlow(z) {
+    const r = this.run; if (!r) return 1;
+    for (const o of (r.obstacles || [])) {
+      if (o.dead) continue;
+      if (Math.abs(z.x - o.x) < o.w / 2 + 8 && Math.abs(z.y - o.y) < o.h / 2 + 8) return 0.55;
+    }
+    return 1;
+  },
+
   startLoop() {
     /* 开局台词（截图45/46） */
     if (window.UI && UI.btIntroTalk) setTimeout(() => UI.btIntroTalk(this.run), 700);
+    this.spawnObstacles();
+    /* 表21：进入第一关触发移动引导 */
+    if (window.UI && UI.guideTrigger) UI.guideTrigger('enter');
     this.last = performance.now();
     const loop = (t) => {
       this.raf = requestAnimationFrame(loop);
@@ -340,7 +414,8 @@ const BT = {
       if (z.isBoss) this.bossTick(z, dt, dist);
 
       /* 真实玩法：僵尸整体自上而下推进，向防线（屏幕底部）压 */
-      const downSp = sp * (z.ai === 'rush' ? (z.dashT > 0 ? 2.2 : 1) : 1);
+      /* 掩体减速（表28：障碍物阻挡僵尸推进） */
+      const downSp = sp * (z.ai === 'rush' ? (z.dashT > 0 ? 2.2 : 1) : 1) * (this.obsSlow ? this.obsSlow(z) : 1);
       if (z.ai === 'ranged') {
         /* 远程僵尸推进到射程内停下喷吐 */
         if (dist > z.atkR * 0.9) z.y += downSp * dt * 0.85;
@@ -396,6 +471,21 @@ const BT = {
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.x < -20 || b.x > this.W + 20 || b.y < -20 || b.y > this.H + 20) b.life = 0;
       if (b.life <= 0) continue;
+      /* 子弹击中障碍物/油桶（表28） */
+      const ob = this.hitObstacle(b.x, b.y);
+      if (ob) {
+        if (ob.t === 'barrel') {
+          ob.o.hp -= b.dmg;
+          if (ob.o.hp <= 0) this.blowBarrel(ob.o);
+          else this.addFloat(b.x, b.y, Math.round(b.dmg), 'dmg');
+        } else {
+          ob.o.hp -= b.dmg;
+          this.addFloat(b.x, b.y, Math.round(b.dmg), 'dmg');
+          if (ob.o.hp <= 0) { ob.o.dead = true; this.addFloat(ob.o.x, ob.o.y, '碎裂', 'dmg'); }
+        }
+        if (b.pierce <= 0) { b.life = 0; continue; }
+        b.pierce--;
+      }
       for (const z of r.zombies) {
         if (z.dead) continue;
         if (b.hit.indexOf(z) >= 0) continue;
@@ -692,6 +782,7 @@ const BT = {
   kill(z) {
     const r = this.run; if (z.dead) return;
     z.dead = true; r.kills++;
+    if (r.kills === 1 && window.UI && UI.guideTrigger) UI.guideTrigger('firstKill');
     const heal = r.mods.healOnKill;
     if (heal > 0 && r.hp < r.maxHp) r.hp = Math.min(r.maxHp, r.hp + heal);
     const gAdd = Math.round(z.gold * (1 + E.talentVal(this.P, 'gold')));
@@ -707,7 +798,29 @@ const BT = {
       }
     }
     if (z.ai === 'boomer' && z.d.id !== 'zibao') this.boom(z);
-    r.drops.push({ x: z.x, y: z.y, xp: 0, gold: 0 });
+    /* 表45 全局掉落掉率明细：按怪物来源精确掉落 */
+    const srcName = z.isBoss ? ('BOSS' + (z.bossDef ? z.bossDef.n : (z.d.n || ''))) : (z.d.n || '');
+    const table = (EX.globalDrops || []).filter((d) => d.src === srcName);
+    const got = [];
+    for (const d of table) {
+      /* 首杀必掉 */
+      const firstKill = d.first && !(this.P.firstBossDrop || {})[srcName + d.item];
+      if (firstKill || Math.random() < d.rate) {
+        if (firstKill) { this.P.firstBossDrop = this.P.firstBossDrop || {}; this.P.firstBossDrop[srcName + d.item] = 1; }
+        const n = d.min + Math.floor(Math.random() * (d.max - d.min + 1));
+        got.push({ item: d.item, n: n });
+      }
+    }
+    if (got.length) {
+      r.drops.push({ x: z.x, y: z.y, xp: 0, gold: 0, items: got });
+    } else {
+      r.drops.push({ x: z.x, y: z.y, xp: z.xp || 0, gold: 0 });
+    }
+    /* 图鉴解锁（表29：首次击杀解锁怪物图鉴） */
+    if (window.E && E.codexUnlock) {
+      const u = E.codexUnlock(this.P, 'zombie', z.id);
+      if (u.ok && window.UI) UI.toast(u.msg, 'ok');
+    }
   },
 
   boom(z) {
@@ -746,6 +859,17 @@ const BT = {
   pick(d) {
     const r = this.run;
     this.gainXp(Math.max(1, Math.round((d.xp || 2) * (1 + E.talentVal(this.P, 'xp')))));
+    /* 表45：掉落物品入包 */
+    if (d.items && d.items.length && this.P) {
+      this.P.mat = this.P.mat || {};
+      const txt = [];
+      d.items.forEach((it) => {
+        this.P.mat[it.item] = (this.P.mat[it.item] || 0) + it.n;
+        txt.push((E.itemName ? E.itemName(it.item) : it.item) + '+' + it.n);
+      });
+      this.addFloat(d.x, d.y - 12, txt.join(' '), 'gold');
+      if (window.SND) SND.play('pickup');
+    }
   },
 
   gainXp(v) {
@@ -756,6 +880,7 @@ const BT = {
       r.xpNeed = Math.round(r.xpNeed * 1.28 + 6);
       /* 升级弹窗（截图52）+ 奖励 R币 */
       if (window.UI && UI.showLvUp) UI.showLvUp(r.lv, 200);
+      if (window.UI && UI.guideTrigger) UI.guideTrigger('firstUpgrade');
       if (this.P) { this.P.gold = (this.P.gold || 0) + 200; }
       this.offerSkills();
     }
@@ -949,6 +1074,57 @@ const BT = {
 
     /* 2.5D 透视地面网格（产生纵深） */
     this.drawPerspGround(c);
+
+    /* 障碍物：掩体（表28） */
+    for (const o of (r.obstacles || [])) {
+      if (o.dead) continue;
+      const hpr = o.hp / o.maxHp;
+      /* 阴影 */
+      c.fillStyle = 'rgba(0,0,0,.34)';
+      c.beginPath(); c.ellipse(o.x, o.y + o.h / 2 + 2, o.w * 0.55, o.h * 0.3, 0, 0, 7); c.fill();
+      /* 主体：石块/金属灰 */
+      const g = c.createLinearGradient(o.x, o.y - o.h / 2, o.x, o.y + o.h / 2);
+      g.addColorStop(0, '#7d8899'); g.addColorStop(1, '#464f60');
+      c.fillStyle = g;
+      c.fillRect(o.x - o.w / 2, o.y - o.h / 2, o.w, o.h);
+      c.strokeStyle = 'rgba(255,255,255,.22)'; c.lineWidth = 1.5;
+      c.strokeRect(o.x - o.w / 2, o.y - o.h / 2, o.w, o.h);
+      /* 顶部高光 */
+      c.fillStyle = 'rgba(255,255,255,.14)';
+      c.fillRect(o.x - o.w / 2, o.y - o.h / 2, o.w, 3);
+      /* 血条（受损才显示） */
+      if (hpr < 1) {
+        c.fillStyle = 'rgba(0,0,0,.55)';
+        c.fillRect(o.x - o.w / 2, o.y - o.h / 2 - 6, o.w, 3);
+        c.fillStyle = hpr > 0.4 ? '#8bc34a' : '#ff7043';
+        c.fillRect(o.x - o.w / 2, o.y - o.h / 2 - 6, o.w * hpr, 3);
+      }
+    }
+
+    /* 可破坏油桶（表28：击破爆炸） */
+    for (const b of (r.barrels || [])) {
+      if (b.dead) continue;
+      c.fillStyle = 'rgba(0,0,0,.34)';
+      c.beginPath(); c.ellipse(b.x, b.y + 10, 12, 5, 0, 0, 7); c.fill();
+      /* 桶身：红橙色危险物 */
+      const g2 = c.createLinearGradient(b.x - 10, b.y, b.x + 10, b.y);
+      g2.addColorStop(0, '#c0392b'); g2.addColorStop(0.5, '#e74c3c'); g2.addColorStop(1, '#922b21');
+      c.fillStyle = g2;
+      c.beginPath(); c.roundRect ? c.roundRect(b.x - 10, b.y - 13, 20, 26, 3) : c.rect(b.x - 10, b.y - 13, 20, 26);
+      c.fill();
+      c.strokeStyle = 'rgba(255,220,120,.8)'; c.lineWidth = 1.5; c.stroke();
+      /* 危险标记 */
+      c.fillStyle = '#ffd76a'; c.font = 'bold 11px sans-serif'; c.textAlign = 'center';
+      c.fillText('!', b.x, b.y + 4);
+      /* 血量环 */
+      const hpr2 = b.hp / b.maxHp;
+      if (hpr2 < 1) {
+        c.strokeStyle = 'rgba(0,0,0,.6)'; c.lineWidth = 3;
+        c.beginPath(); c.arc(b.x, b.y, 15, 0, 7); c.stroke();
+        c.strokeStyle = '#ff5252'; c.lineWidth = 2.5;
+        c.beginPath(); c.arc(b.x, b.y, 15, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * hpr2); c.stroke();
+      }
+    }
 
     /* 炮台（部署在防线前方） */
     this.drawTurrets(c);
