@@ -652,7 +652,9 @@ const UI = {
       tb.dataset.init = '1';
       tb.innerHTML = EX.turrets.map((t) => {
         const el = EX.elements.find((x) => x.k === t.el) || { c: '#ffd76a' };
-        return `<button data-turret="${t.id}" style="border-color:${el.c}55">${t.icon}${t.n}<br>${t.cost}金</button>`;
+        return `<button data-turret="${t.id}" style="border-color:${el.c}55">${t.img
+          ? `<img src="${t.img}" style="width:24px;height:24px;border-radius:5px;object-fit:cover;display:block;margin:0 auto 2px">`
+          : t.icon + ' '}${t.n}<br>${t.cost}金</button>`;
       }).join('');
       $$('#btTurret [data-turret]').forEach((b) => {
         b.onclick = () => {
@@ -671,9 +673,11 @@ const UI = {
     $('#chCards').innerHTML = picks.map((s) => {
       const L = (BT.run.skills[s.id] || 0);
       const el = EX.elements.find((x) => x.k === s.el) || { c: '#ffd76a' };
-      const kindTxt = s.kind === 'gun' ? '枪械强化' : s.kind === 'passive' ? '被动强化' : s.kind === 'aura' ? '光环' : '命中触发';
+      const kindTxt = s.kind === 'passive' ? '被动强化（自动生效）' : s.kind === 'summon' ? '召唤' : '主动释放';
       return `<button class="ccard" data-pick="${s.id}">
-        <i style="background:${el.c}22">${s.icon}</i>
+        <i style="background:${el.c}22">${s.img
+          ? `<img src="${s.img}" style="width:38px;height:38px;border-radius:8px;object-fit:cover">`
+          : s.icon}</i>
         <div class="ci"><div class="cn"><span style="color:${el.c}">${s.n}</span>
           ${L ? `<span class="tag y">Lv.${L}→${L + 1}</span>` : '<span class="tag g">NEW</span>'}</div>
           <div class="cd2">${s.desc}</div>
