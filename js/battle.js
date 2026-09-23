@@ -77,6 +77,8 @@ const BT = {
 
   /* ---------------- 开局 ---------------- */
   start(p, levelNo, opt = {}) {
+    /* 表37 埋点：level_start */
+    try { OPS.track('level_start', { lv: levelNo, pw: E.power(p) }); } catch (e) {}
     const def = this.levelDef(levelNo);
     const a = E.attrs(p);
     this.charImg = (E.char(p) || {}).img || null;
@@ -799,6 +801,8 @@ const BT = {
   kill(z) {
     const r = this.run; if (z.dead) return;
     z.dead = true; r.kills++;
+    /* 表37 埋点：kill_monster */
+    try { OPS.track('kill_monster', { z: z.id || z.n }); } catch (e) {}
     if (r.kills === 1 && window.UI && UI.guideTrigger) UI.guideTrigger('firstKill');
     const heal = r.mods.healOnKill;
     if (heal > 0 && r.hp < r.maxHp) r.hp = Math.min(r.maxHp, r.hp + heal);
@@ -961,7 +965,10 @@ const BT = {
   /* ---------------- 结束 ---------------- */
   win() {
     const r = this.run; if (r.over) return;
-    r.over = true; this.on = false; this.stopLoop();
+    r.over = true;
+    /* 表37 埋点：endless_time / level_finish */
+    try { if (r.endless) OPS.track('endless_time', { t: Math.floor(r.time) }); } catch (e) {}
+    this.on = false; this.stopLoop();
     if (this.cb) this.cb('win', { kills: r.kills, time: r.time, rw: { gold: r.gold, diamond: 0 }, lv: r.lv });
   },
   onLose() {
