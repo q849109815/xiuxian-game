@@ -183,7 +183,8 @@ const E = {
       p.gunStats['s' + slot] = { id: st.id, k: st.k, n: st.n, q: st.q, v: +(st.v * (1 + newA * 0.5)).toFixed(4) };
       extra = ' ⬆进阶至' + EX.gunAdvance[newA].q + '品，解锁词条：' + st.n;
     }
-    return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra };
+        this.logAct(p, 'gunup', '武器升级 Lv.' + p.gunLv);
+return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra };
   },
   gunStatVal(p, k) {
     let v = 0;
@@ -770,6 +771,14 @@ const E = {
       else if (k === 'diamond') p.diamond = (p.diamond || 0) + map[k];
       else p.mat[k] = (p.mat[k] || 0) + map[k];
     });
+  },
+
+  /* 玩家行为日志（后台「日志查询 → 玩家操作」读取，只保留最近 60 条） */
+  logAct(p, t, d) {
+    if (!p) return;
+    p.logs = p.logs || [];
+    p.logs.unshift({ t: t, d: d || '', at: Date.now() });
+    if (p.logs.length > 60) p.logs.length = 60;
   },
 
   gunSlots(p) {
