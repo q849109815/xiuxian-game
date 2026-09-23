@@ -109,7 +109,14 @@ const UI = {
     const f = this['b_' + key]; if (f) f.call(this, p, tab);
   },
   /* ---------- 酒馆：招募佣兵（真实玩法：基地酒馆） ---------- */
-  r_tavern(p, tab) {
+    /* HTML 转义（防止昵称/账号名里的特殊字符破坏结构） */
+  esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+r_tavern(p, tab) {
     const hired = p.mercs || [];
     return `<div class="card"><div class="card-t">🍺 酒馆 · 雇佣兵
       <span class="sub">战斗中协同作战（已雇 ${hired.length}/${EX.mercs.length}）</span></div>
@@ -1351,13 +1358,24 @@ const UI = {
         <div class="card"><div class="card-t">成长曲线</div>
         ${EX.growth.map((g) => `<div class="kv"><span style="font-size:10px">${g.n}</span><b style="font-size:10px">${g.curve}</b></div>`).join('')}</div>`;
     }
-    return `<div class="card"><div class="card-t">微信账号 <span class="sub">一键登录</span></div>
-      <div class="kv"><span>登录方式</span><b class="g">${window.WX && WX.phone() ? '微信 · 已绑定' : '微信'}</b></div>
-      <div class="kv"><span>手机号</span><b>${window.WX && WX.phone() ? WX.phoneMask() : '未绑定'}</b></div>
-      <div class="kv"><span>下次登录</span><b style="font-size:10px">${window.WX && WX.shouldAuto() ? '微信一键登录（免验证）' : '需重新授权'}</b></div>
-      <button class="btn g blk" id="setScanLogin">📷 扫码登录（另一台设备）</button>
-      <button class="btn n blk" id="setSwitchAcct">🔁 切换账户 / 解除绑定</button>
-      <div class="lbl" style="text-align:left;margin-top:8px">扫码或复制链接在另一台设备打开，即可以同一账号继续游戏</div></div>
+    const ac = window.UA ? UA.remembered() : {};
+    return `<div class="card"><div class="card-t">账号 <span class="sub">账号密码登录</span></div>
+      <div class="kv"><span>账号名</span><b>${this.esc(ac.name || '—')}</b></div>
+      <div class="kv"><span>账号 ID</span><b style="font-size:10px">${this.esc(ac.uid || '—')}</b></div>
+      <div class="kv"><span>下次登录</span><b style="font-size:10px">${window.UA && UA.shouldAuto() ? '自动登录（已记住）' : '需重新输入'}</b></div>
+      <div class="lbl" style="text-align:left;margin-top:6px">换设备时用同一账号名+密码登录，存档自动继承</div></div>
+    <div class="card"><div class="card-t">修改密码</div>
+      <div class="fld"><label>原密码</label><input id="spOld" type="password" placeholder="原密码"></div>
+      <div class="fld"><label>新密码</label><input id="spNew" type="password" placeholder="新密码（至少6位）"></div>
+      <div class="fld"><label>确认新密码</label><input id="spNew2" type="password" placeholder="再输入一次"></div>
+      <button class="btn blk" id="spGo">🔑 修改密码</button>
+      <div class="lbl" id="spTip"></div></div>
+    <div class="card"><div class="card-t">注销账号 <span class="sub">不可恢复</span></div>
+      <div class="lbl" style="text-align:left;color:#ff8fa4">注销会删除云端存档并封禁该账号，无法恢复</div>
+      <div class="fld"><label>输入密码确认</label><input id="spDel" type="password" placeholder="当前密码"></div>
+      <button class="btn d blk" id="spDelGo">🗑 确认注销</button></div>
+    <div class="card">
+      <button class="btn n blk" id="setSwitchAcct">🔁 退出登录 / 切换账号</button></div>
     <div class="card"><div class="card-t">账号信息</div>
       <div class="kv"><span>代号</span><b>${p.name}</b></div>
       <div class="kv"><span>UID</span><b style="font-size:10px">${p.uid}</b></div>
@@ -1377,17 +1395,37 @@ const UI = {
       <button class="btn blk" id="setAdmin">进入管理后台</button></div>`;
   },
   b_set(p, tab) {
-    /* 扫码登录（生成二维码） */
-    const sl = $('#setScanLogin');
-    if (sl) sl.onclick = () => {
-      if (window.WX && WX.phone()) WX.showScan();
-      else this.toast('当前账号未绑定手机号，无法生成登录码', 'err');
+    /* 修改密码 */
+    const sp = $('#spGo');
+    if (sp) sp.onclick = async () => {
+      const tip = $('#spTip');
+      const ac = UA.remembered();
+      const o = ($('#spOld') || {}).value || '';
+      const n1 = ($('#spNew') || {}).value || '';
+      const n2 = ($('#spNew2') || {}).value || '';
+      if (!ac.name) { if (tip) tip.textContent = '未获取到账号名'; return; }
+      if (!o) { if (tip) tip.textContent = '请输入原密码'; return; }
+      if (n1 !== n2) { if (tip) tip.textContent = '两次新密码不一致'; return; }
+      const r = await UA.changePwd(ac.name, o, n1);
+      if (tip) tip.textContent = r.ok ? (r.msg || '修改成功') : r.msg;
+      this.toast(r.ok ? '密码已修改' : r.msg, r.ok ? 'ok' : 'err');
     };
-    /* 切换账户 / 解除微信绑定 */
+    /* 注销账号 */
+    const sd = $('#spDelGo');
+    if (sd) sd.onclick = async () => {
+      const ac = UA.remembered();
+      const w = ($('#spDel') || {}).value || '';
+      if (!w) { this.toast('请输入密码确认', 'err'); return; }
+      if (!confirm('确定注销账号「' + (ac.name || '') + '」？\n云端存档将一并删除，无法恢复！')) return;
+      const r = await UA.destroy(ac.name, w);
+      this.toast(r.msg || (r.ok ? '已注销' : '注销失败'), r.ok ? 'ok' : 'err');
+      if (r.ok) setTimeout(() => { if (window.UA) UA.logout(); }, 800);
+    };
+    /* 退出登录 / 切换账号 */
     const sw = $('#setSwitchAcct');
     if (sw) sw.onclick = () => {
-      if (!confirm('解除微信绑定并退出？\n下次登录需重新授权并绑定手机号。')) return;
-      if (window.WX) WX.logout();
+      if (!confirm('退出当前账号？')) return;
+      if (window.UA) UA.logout();
     };
     /* 礼包码兑换 */
     const cdg = $('#cdGo');
@@ -1445,11 +1483,22 @@ const UI = {
   /* ================= 战斗 HUD ================= */
   btInit(p, levelId, endless) {
     const d = BT.run ? BT.run.def : null;
-    $('#btLevel').textContent = endless ? '无尽模式' : (d ? d.n : E.levelName(levelId));
-    $('#btKill').textContent = '0';
-    $('#btGold').textContent = '0';
-    $('#btLv').textContent = '1';
-    $('#btSkills').innerHTML = '';
+    /* 全部做判空：任何一个元素缺失都不能让战斗初始化中断 */
+    const set = (id, v) => { const e = $(id); if (e) e.textContent = v; };
+    const setH = (id, v) => { const e = $(id); if (e) e.innerHTML = v; };
+    const setV = (id, v) => { const e = $(id); if (e) e.value = v; };
+    set('#btLevel', endless ? '无尽模式' : (d ? d.n : E.levelName(levelId)));
+    set('#btKill', '0');
+    set('#btGold', '0');
+    set('#btLv', '1');
+    setH('#btSkills', '');
+    set('#btTime', '00:00');
+    set('#btWave', '1');
+    set('#btWaveMax', d ? d.waves : 20);
+    set('#btMag2', BT.run ? BT.run.mag : 30);
+    set('#btMagMax', BT.run ? BT.run.magMax : 30);
+    set('#btCoin', '0');
+    this.btTick();
   },
   /* 战斗对话气泡（截图45/46：核心G-94 协同作战） */
   btTalk(text, ms) {
@@ -1494,6 +1543,9 @@ const UI = {
       else sh.style.display = 'none'; }
     const bk = $('#btKill'); if (bk) bk.textContent = r.kills;
     const cg = $('#btCoin'); if (cg) cg.textContent = E.fmt(r.coin != null ? r.coin : r.gold);
+    /* BUG：局内金币 HUD 从未刷新，一直是 0 */
+    const bg = $('#btGold'); if (bg) bg.textContent = E.fmt(r.coin != null ? r.coin : r.gold);
+    const bd2 = $('#btDia2'); if (bd2) bd2.textContent = E.fmt((BT.P && BT.P.diamond) || 0);
     $('#btLv').textContent = r.lv;
     /* 顶部波次 */
     const bw = $('#btWave'); if (bw) bw.textContent = r.wave;
