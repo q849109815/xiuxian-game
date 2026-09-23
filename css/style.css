@@ -896,3 +896,7 @@ input{font-family:inherit}
 @keyframes lvPop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 .lvup-t{font-size:15px;font-weight:800;color:var(--yel);letter-spacing:2px}
 .lvup-rw{margin-top:8px;font-size:12px;color:#fff}
+/* 角色升星（表15/42） */
+.stars{display:flex;gap:5px;justify-content:center;margin:6px 0}
+.star{font-size:22px;color:#4a4a55;transition:.2s}
+.star.on{color:var(--gold);text-shadow:0 0 10px rgba(255,201,60,.8);transform:scale(1.12)}
