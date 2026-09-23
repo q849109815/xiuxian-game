@@ -3,161 +3,171 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>凡人修仙传·星海飞驰</title>
+<meta name="theme-color" content="#1a2637">
+<title>向僵尸开炮</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div id="app">
 
-<!-- ============ 加载页 ============ -->
-<div id="loading" class="loading">
-  <div class="ld-bg"></div>
-  <div class="ld-inner">
-    <div class="ld-title">凡人修仙传</div>
-    <div class="ld-sub">星 海 飞 驰</div>
+  <!-- ============ 加载 ============ -->
+  <div id="loading" class="screen on">
+    <div class="ld-logo">💥</div>
+    <div class="ld-title">向 僵 尸 开 炮</div>
+    <div class="ld-sub">末 日 尸 潮 · 守 住 防 线</div>
     <div class="ld-bar"><i id="ldBar"></i></div>
-    <div class="ld-txt" id="ldTxt">正在连接星海…</div>
+    <div class="ld-txt" id="ldTxt">正在装填弹药…</div>
   </div>
-</div>
 
-<!-- ============ 登录 ============ -->
-<div id="login" class="login">
-  <div class="lg-stars"></div>
-  <div class="lg-box">
-    <div class="lg-logo">凡人修仙传</div>
-    <div class="lg-slogan">星海飞驰 · 乱星海篇</div>
-    <input class="lg-inp" id="lgName" placeholder="请输入道号（2-8字）" maxlength="8">
-    <input class="lg-inp" id="lgPwd" type="password" placeholder="请输入口令" maxlength="20">
-    <button class="lg-btn" id="btnLogin">进 入 星 海</button>
-    <div class="lg-net">网络：<span id="lgNet">检测中…</span></div>
-  </div>
-</div>
-
-<!-- ============ 创角 ============ -->
-<div id="create" class="create">
-  <div class="cr-stars"></div>
-  <div class="cr-inner">
-    <div class="cr-t">选择你的道体</div>
-    <!-- 伪3D 角色展示 -->
-    <div class="cr-stage">
-      <div class="cr-halo"></div>
-      <div class="cr-fig" id="crFig">🧙</div>
-      <div class="cr-shadow"></div>
-    </div>
-    <div class="cr-row" id="crGender"></div>
-    <div class="cr-lb">灵根（影响五行与功法适配）</div>
-    <div class="cr-row" id="crRoot"></div>
-    <div class="cr-info" id="crInfo"></div>
-    <button class="cr-btn" id="btnCreate">开 始 修 行</button>
-  </div>
-</div>
-
-<!-- ============ 主界面 ============ -->
-<div id="game" class="game">
-  <!-- 伪3D 星空背景（多层视差） -->
-  <div class="sky">
-    <div class="sky-l1" id="skyL1"></div>
-    <div class="sky-l2" id="skyL2"></div>
-    <div class="sky-l3" id="skyL3"></div>
-    <div class="sky-neb"></div>
-  </div>
-  <div class="scene" id="scene"></div>
-
-  <!-- 顶部状态栏 -->
-  <div class="topbar">
-    <div class="tb-avatar" id="tbAvatar">
-      <div class="tb-av-in" id="tbAvIn">🧙</div>
-      <div class="tb-av-frame"></div>
-    </div>
-    <div class="tb-mid">
-      <div class="tb-name" id="tbName">道号</div>
-      <div class="tb-realm" id="tbRealm">练气期</div>
-      <div class="tb-expbar"><i id="tbExpBar"></i></div>
-    </div>
-    <div class="tb-cur">
-      <div class="cur"><span class="ci stone">💎</span><b id="tbStone">0</b></div>
-      <div class="cur"><span class="ci jade">🪙</span><b id="tbJade">0</b></div>
+  <!-- ============ 登录 / 创角 ============ -->
+  <div id="login" class="screen">
+    <div class="lg-bg"></div>
+    <div class="lg-box">
+      <div class="lg-title">向僵尸开炮</div>
+      <div class="lg-slogan">ZOMBIES BOOM · 末日先锋官</div>
+      <div class="lg-field">
+        <label>先锋官代号</label>
+        <input id="lgName" maxlength="8" placeholder="请输入代号（2-8字）" value="先锋官">
+      </div>
+      <div class="lg-field">
+        <label>性别</label>
+        <div class="lg-gender" id="lgGender">
+          <button class="gd on" data-g="m"><i>👨‍🚀</i><span>男</span></button>
+          <button class="gd" data-g="f"><i>👩‍🚀</i><span>女</span></button>
+        </div>
+      </div>
+      <button class="lg-btn" id="lgBtn">进 入 战 区</button>
+      <div class="lg-tip">已有存档将自动读取 · 数据存于云端</div>
+      <div class="lg-net">网络：<span id="lgNet">检测中…</span></div>
     </div>
   </div>
 
-  <!-- 左上玩家信息（图32：头像 + Lv + 战力 + VIP） -->
-  <div class="pl-info" id="plInfo">
-    <div class="pl-av"><img id="plAvImg" src="assets/char/hanli.jpg" alt=""><i id="plAvLv">1</i></div>
-    <div class="pl-txt">
-      <div class="pl-nm" id="plName">道号</div>
-      <div class="pl-pw"><span class="pw-ic">⚔</span><b id="plPower">0</b><span class="vip" id="plVip">VIP0</span></div>
+  <!-- ============ 基地主界面 ============ -->
+  <div id="home" class="screen">
+    <div class="hm-bg"></div>
+    <!-- 顶部信息 -->
+    <div class="hm-top">
+      <div class="hm-av" id="hmAv"><i id="hmAvIco">👨‍🚀</i><em id="hmLv">Lv.1</em></div>
+      <div class="hm-mid">
+        <div class="hm-nm" id="hmName">先锋官</div>
+        <div class="hm-pw"><span>⚔</span><b id="hmPower">0</b></div>
+      </div>
+      <div class="hm-cur">
+        <div class="cu"><i>🪙</i><b id="cuGold">0</b></div>
+        <div class="cu"><i>💎</i><b id="cuDia">0</b></div>
+      </div>
+    </div>
+
+    <!-- 关卡入口大按钮 -->
+    <div class="hm-main">
+      <button class="hm-go" id="hmGo">
+        <div class="go-t">主 线 关 卡</div>
+        <div class="go-l" id="hmLevel">第 1 关</div>
+        <div class="go-s" id="hmLevelName">城市大街</div>
+      </button>
+      <div class="hm-side">
+        <button class="hm-sbtn" id="hmEndless"><i>♾️</i><span>无尽</span></button>
+        <button class="hm-sbtn" id="hmRank"><i>🏆</i><span>排行</span></button>
+      </div>
+    </div>
+
+    <!-- 基地模块 -->
+    <div class="hm-sec">基 地</div>
+    <div class="hm-base" id="hmBase"></div>
+
+    <!-- 底部导航 -->
+    <div class="hm-nav">
+      <button class="hn on" data-p="role"><i>🧍</i><span>角色</span></button>
+      <button class="hn" data-p="gun"><i>🔫</i><span>枪械</span></button>
+      <button class="hn" data-p="bag"><i>🎒</i><span>背包</span></button>
+      <button class="hn" data-p="merc"><i>👥</i><span>佣兵</span></button>
+      <button class="hn" data-p="shop"><i>🏪</i><span>商城</span></button>
+      <button class="hn" data-p="set"><i>⚙️</i><span>设置</span></button>
     </div>
   </div>
-  <!-- 右上角：地图 / 活动 / 排行 -->
-  <div class="topright">
-    <button class="tr-btn" id="btnMap">🗺️</button>
-    <button class="tr-btn" id="btnAct">🎪</button>
-    <button class="tr-btn" id="btnRank">🏆</button>
-  </div>
 
-  <!-- 左侧任务追踪栏 -->
-  <div class="taskbar" id="taskbar">
-    <div class="tsk-t">主线任务</div>
-    <div class="tsk-name" id="tskName">—</div>
-    <div class="tsk-goal" id="tskGoal">—</div>
-  </div>
-
-  <!-- 中央战斗区（图32：多角色 vs 多怪，海面场景） -->
-  <div class="center">
-    <div class="btl-scene" id="btlScene"></div>
-
-    <!-- 敌方阵列 -->
-    <div class="foe-line" id="foeLine"></div>
-
-    <!-- 我方阵列 -->
-    <div class="ally-line" id="allyLine"></div>
-
-    <!-- 伤害飘字层 -->
-    <div class="dmg-layer" id="dmgLayer"></div>
-
-    <!-- 战斗信息条 -->
-    <div class="btl-info" id="btlInfo">
-      <span class="bi-t" id="biTimer">00:00</span>
-      <span class="bi-r" id="biRound">—</span>
+  <!-- ============ 战斗 ============ -->
+  <div id="battle" class="screen">
+    <canvas id="C"></canvas>
+    <!-- 顶部 HUD -->
+    <div class="bt-top">
+      <button class="bt-ic" id="btPause">⏸</button>
+      <div class="bt-info">
+        <div class="bt-lv" id="btLevel">第 1 关</div>
+        <div class="bt-wv" id="btWave">第 1 / 3 波</div>
+      </div>
+      <div class="bt-timer" id="btTime">00:00</div>
     </div>
+    <!-- 左上：局内等级 + 经验条 -->
+    <div class="bt-xp">
+      <div class="xp-n">Lv.<b id="btLv">1</b></div>
+      <div class="xp-bar"><i id="btXpBar"></i></div>
+    </div>
+    <!-- 右上：金币/击杀 -->
+    <div class="bt-st">
+      <div><i>🪙</i><b id="btGold">0</b></div>
+      <div><i>☠️</i><b id="btKill">0</b></div>
+    </div>
+    <!-- 右侧技能 -->
+    <div class="bt-skill" id="btSkill"></div>
+    <!-- 右下能量条 -->
+    <div class="bt-energy">
+      <div class="en-bar"><i id="btEnergy"></i></div>
+      <div class="en-t">能量</div>
+    </div>
+    <!-- 底部炮台建造 -->
+    <div class="bt-build" id="btBuild"></div>
   </div>
 
-  <!-- 战斗技能栏（图32：普攻 + 4神通 + 灵宠 + 傀儡） -->
-  <div class="skillbar" id="skillbar">
-    <button class="sk-btn atk" id="skAtk"><span>⚔</span><em>普攻</em></button>
-    <button class="sk-btn" data-sk="0"><span>1</span><i class="cd" id="cd0"></i></button>
-    <button class="sk-btn" data-sk="1"><span>2</span><i class="cd" id="cd1"></i></button>
-    <button class="sk-btn" data-sk="2"><span>3</span><i class="cd" id="cd2"></i></button>
-    <button class="sk-btn" data-sk="3"><span>4</span><i class="cd" id="cd3"></i></button>
-    <button class="sk-btn pet" id="skPet"><span>🐛</span><em>灵宠</em><i class="cd" id="cdPet"></i></button>
-    <button class="sk-btn pup" id="skPup"><span>🗿</span><em>傀儡</em><i class="cd" id="cdPup"></i></button>
-  </div>
-
-  <!-- 战斗控制（图32：自动 / 升级 / 倍速 / 逃跑） -->
-  <div class="btl-top">
-    <button class="bt-btn auto on" id="btnAuto">自动</button>
-    <button class="bt-btn" id="btnSpeed" data-sp="1">×1</button>
-    <button class="bt-btn" id="btnFlee">逃跑</button>
-  </div>
-
-  <!-- 升级提示（图32右上） -->
-  <div class="lvlup" id="lvlup" style="display:none">
-    <i>⬆</i><span>可升级</span>
-  </div>
-
-  <!-- 面板容器 -->
-  <div class="panel" id="panel">
+  <!-- ============ 通用面板 ============ -->
+  <div id="panel">
     <div class="pn-mask" id="pnMask"></div>
     <div class="pn-box">
       <div class="pn-head">
         <b id="pnTitle">面板</b>
-        <button class="pn-close" id="pnClose">✕</button>
+        <button class="pn-x" id="pnX">✕</button>
       </div>
       <div class="pn-tabs" id="pnTabs"></div>
       <div class="pn-body" id="pnBody"></div>
     </div>
   </div>
 
-  <!-- 提示 -->
+  <!-- ============ 技能三选一 ============ -->
+  <div id="choice">
+    <div class="ch-mask"></div>
+    <div class="ch-box">
+      <div class="ch-t">选择技能</div>
+      <div class="ch-sub" id="chSub">击杀升级！选择一项强化</div>
+      <div class="ch-cards" id="chCards"></div>
+      <button class="ch-refresh" id="chRefresh">🔄 刷新（观看后重置）</button>
+    </div>
+  </div>
+
+  <!-- ============ 结算 ============ -->
+  <div id="result">
+    <div class="rs-mask"></div>
+    <div class="rs-box">
+      <div class="rs-t" id="rsTitle">战斗胜利</div>
+      <div class="rs-lv" id="rsLevel">第 1 关</div>
+      <div class="rs-grid" id="rsGrid"></div>
+      <div class="rs-btns">
+        <button class="rs-b c" id="rsAgain">再 战</button>
+        <button class="rs-b" id="rsNext">下 一 关</button>
+        <button class="rs-b d" id="rsBack">返 回 基 地</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 暂停 ============ -->
+  <div id="pause">
+    <div class="ps-mask"></div>
+    <div class="ps-box">
+      <div class="ps-t">已暂停</div>
+      <button class="ps-b c" id="psResume">继续战斗</button>
+      <button class="ps-b d" id="psQuit">放弃并结算</button>
+    </div>
+  </div>
+
   <div id="toasts"></div>
 </div>
 
