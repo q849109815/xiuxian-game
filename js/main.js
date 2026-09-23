@@ -278,6 +278,34 @@ function bindAll() {
   const he = document.getElementById('hmEndless');
   if (he) he.onclick = () => startBattle('endless');
 
+  /* 战斗：倍速 / 暂停 / 自动 / 切换 */
+  const spBtn = $('#btSpeed');
+  if (spBtn) spBtn.onclick = () => {
+    const seq = [1, 2, 3];
+    const i = seq.indexOf(BT.speed || 1);
+    BT.speed = seq[(i + 1) % seq.length];
+    spBtn.textContent = '×' + BT.speed;
+    if (window.SND) SND.play('click');
+  };
+  const psBtn = $('#btPause');
+  if (psBtn) psBtn.onclick = () => {
+    BT.paused = !BT.paused;
+    psBtn.textContent = BT.paused ? '▶' : '⏸';
+    if (window.SND) SND.play('click');
+  };
+  const auBtn = $('#btAuto');
+  if (auBtn) auBtn.onclick = () => {
+    BT.auto = !BT.auto;
+    auBtn.classList.toggle('on', BT.auto);
+    UI.toast(BT.auto ? '自动战斗 开' : '自动战斗 关', 'ok');
+    if (window.SND) SND.play('click');
+  };
+  const swBtn = $('#btSwitch');
+  if (swBtn) swBtn.onclick = () => {
+    UI.toast('长按战场可快速射击', 'ok');
+    if (window.SND) SND.play('click');
+  };
+
   $$('.hm-nav .hn').forEach((b) => {
     b.onclick = () => {
       const k = b.dataset.p;
