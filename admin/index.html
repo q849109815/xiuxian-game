@@ -2,13 +2,13 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>向僵尸开炮 · 管理后台</title>
 <link rel="stylesheet" href="css/admin.css">
 </head>
 <body>
 
-<!-- 登录 -->
+<!-- ============ 登录 ============ -->
 <div id="gate" class="on">
   <div class="gt-box">
     <div class="gt-logo">💥</div>
@@ -21,21 +21,24 @@
 </div>
 
 <div id="wrap">
-  <!-- 顶栏 -->
   <header class="hd">
     <button class="hd-menu" id="hdMenu">☰</button>
     <b>向僵尸开炮 · 后台</b>
     <span class="hd-net" id="hdNet">○</span>
   </header>
 
-  <!-- 侧栏 -->
   <nav class="nav" id="nav">
+    <div class="nav-t">运 营</div>
     <button class="nv on" data-pg="dash"><i>📊</i><span>数据看板</span></button>
     <button class="nv" data-pg="players"><i>👥</i><span>玩家管理</span></button>
     <button class="nv" data-pg="batch"><i>📮</i><span>批量操作</span></button>
     <button class="nv" data-pg="grant"><i>🎁</i><span>内容发放</span></button>
-    <button class="nv" data-pg="skill"><i>✨</i><span>技能数据</span></button>
+    <div class="nav-t">数 据</div>
     <button class="nv" data-pg="zombie"><i>🧟</i><span>僵尸图鉴</span></button>
+    <button class="nv" data-pg="skill"><i>✨</i><span>技能数据</span></button>
+    <button class="nv" data-pg="weapon"><i>🔫</i><span>武器词条</span></button>
+    <button class="nv" data-pg="ops"><i>📈</i><span>运营数据</span></button>
+    <div class="nav-t">系 统</div>
     <button class="nv" data-pg="config"><i>🎛️</i><span>数值配置</span></button>
     <button class="nv" data-pg="data"><i>🗄️</i><span>数据维护</span></button>
     <button class="nv" data-pg="sys"><i>⚙️</i><span>系统设置</span></button>
@@ -45,10 +48,12 @@
   <main class="main"><div id="body"></div></main>
 </div>
 
+<div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
 <div id="toasts"></div>
 
 <script src="../js/net.js"></script>
 <script src="../js/config.js"></script>
+<script src="../js/ops.js"></script>
 <script src="../js/engine.js"></script>
 <script src="js/admin.js"></script>
 </body>
