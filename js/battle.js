@@ -284,7 +284,11 @@ const BT = {
     /* --- 换弹 --- */
     if (r.reloading) {
       r.reloadT -= dt;
-      if (r.reloadT <= 0) { r.reloading = false; r.mag = r.magMax; }
+      if (r.reloadT <= 0) {
+        r.reloading = false; r.mag = r.magMax;
+        /* 表41 SX_012 换弹完成音效 */
+        if (window.SND) SND.play('reloadDone');
+      }
     }
 
     /* --- 自动瞄准射击 --- */
