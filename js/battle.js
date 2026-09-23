@@ -9,15 +9,20 @@
 
 /* 素材图缓存 */
 const IMG = {
-  cache: {},
+  cache: {}, fail: {},
   get(src) {
     if (!src) return null;
-    if (this.cache[src] !== undefined) return this.cache[src];
+    const v = this.cache[src];
+    if (v) return v;                        /* 已加载成功 */
+    if (v === null) {                       /* 曾失败/加载中：4 秒后才重试，避免狂刷请求 */
+      if (Date.now() - (this.fail[src] || 0) < 4000) return null;
+    }
     const im = new Image();
-    im.onload = () => { this.cache[src] = im; };
-    im.onerror = () => { this.cache[src] = null; };
+    im.onload = () => { this.cache[src] = im; delete this.fail[src]; };
+    im.onerror = () => { this.cache[src] = null; this.fail[src] = Date.now(); };
     im.src = src;
-    this.cache[src] = null;   // 加载中先回落 emoji
+    this.cache[src] = null;                 /* 加载中：先用几何图形兜底 */
+    this.fail[src] = Date.now();
     return null;
   },
 };
@@ -25,7 +30,7 @@ const IMG = {
 const BT = {
   cv: null, ctx: null, W: 360, H: 640,
   P: null, run: null, on: false, paused: false, raf: null, last: 0,
-  scene: 'city', _imgs: {}, _heroImg: undefined,
+  scene: 'city', _imgs: {}, _imgFail: {}, _heroImg: undefined,
 
   SCENES: {
     city: 'assets/scene/city.jpg', factory: 'assets/scene/factory.jpg',
@@ -36,10 +41,14 @@ const BT = {
   /* ---------------- 场景 ---------------- */
   sceneFor(ch) { return ['city', 'factory', 'wasteland', 'tunnel', 'field', 'snow'][(ch - 1) % 6]; },
   img(key) {
-    if (this._imgs[key] !== undefined) return this._imgs[key];
+    const v = this._imgs[key];
+    if (v) return v;
+    if (v === null && Date.now() - (this._imgFail[key] || 0) < 4000) return null;
     const url = this.SCENES[key]; if (!url) { this._imgs[key] = null; return null; }
-    const im = new Image(); im.crossOrigin = 'anonymous';
-    im.onload = () => { this._imgs[key] = im; }; im.onerror = () => { this._imgs[key] = null; };
+    this._imgFail[key] = Date.now();
+    const im = new Image();
+    im.onload = () => { this._imgs[key] = im; };
+    im.onerror = () => { this._imgs[key] = null; };
     im.src = url; this._imgs[key] = null; return null;
   },
 
@@ -1079,6 +1088,82 @@ const BT = {
     }
   },
 
+  /* =========================================================
+   * 几何图形兜底：图片加载失败/未就绪时也能看清人物与僵尸
+   * （此前用 emoji 文字兜底，缺字体环境下会显示成空白）
+   * ========================================================= */
+  drawZombieShape(c, x, y, sz, z) {
+    const d = (z && z.d) || {};
+    const big = !!z.isBoss || !!d.elite;
+    const skin = big ? '#5b7f8c' : '#6f9b6a';      /* 蓝绿尸皮 */
+    const dark = big ? '#33474f' : '#3f5c3c';
+    c.save();
+    /* 阴影椭圆 */
+    c.fillStyle = 'rgba(0,0,0,.32)';
+    c.beginPath(); c.ellipse(x, y + sz * 0.46, sz * 0.42, sz * 0.17, 0, 0, 7); c.fill();
+    /* 身体 */
+    c.fillStyle = dark;
+    c.beginPath();
+    c.roundRect ? c.roundRect(x - sz * 0.30, y - sz * 0.10, sz * 0.60, sz * 0.56, sz * 0.14)
+                : c.rect(x - sz * 0.30, y - sz * 0.10, sz * 0.60, sz * 0.56);
+    c.fill();
+    /* 双臂前伸 */
+    c.fillStyle = skin;
+    c.fillRect(x - sz * 0.50, y - sz * 0.02, sz * 0.22, sz * 0.13);
+    c.fillRect(x + sz * 0.28, y - sz * 0.02, sz * 0.22, sz * 0.13);
+    /* 头 */
+    c.fillStyle = skin;
+    c.beginPath(); c.arc(x, y - sz * 0.30, sz * 0.27, 0, 7); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 1; c.stroke();
+    /* 眼睛（发亮） */
+    c.fillStyle = z && z.slowT > 0 ? '#8be9ff' : '#ffe066';
+    c.beginPath(); c.arc(x - sz * 0.10, y - sz * 0.32, sz * 0.055, 0, 7); c.fill();
+    c.beginPath(); c.arc(x + sz * 0.10, y - sz * 0.32, sz * 0.055, 0, 7); c.fill();
+    /* 嘴 */
+    c.strokeStyle = '#2b1d1d'; c.lineWidth = Math.max(1, sz * 0.04);
+    c.beginPath(); c.moveTo(x - sz * 0.09, y - sz * 0.19); c.lineTo(x + sz * 0.09, y - sz * 0.19); c.stroke();
+    /* 精英/BOSS 标记 */
+    if (big) {
+      c.fillStyle = '#ff4d6d';
+      c.beginPath(); c.arc(x, y - sz * 0.56, sz * 0.10, 0, 7); c.fill();
+    }
+    c.restore();
+  },
+
+  drawHeroShape(c, x, y) {
+    const h = 46, w = 26;
+    c.save();
+    /* 阴影 */
+    c.fillStyle = 'rgba(0,0,0,.35)';
+    c.beginPath(); c.ellipse(x, y + 15, w * 0.55, 6, 0, 0, 7); c.fill();
+    /* 腿 */
+    c.fillStyle = '#2f3d52';
+    c.fillRect(x - 8, y + 2, 6, 12);
+    c.fillRect(x + 2, y + 2, 6, 12);
+    /* 身体（战术夹克） */
+    const g = c.createLinearGradient(x - w / 2, y - 14, x + w / 2, y + 4);
+    g.addColorStop(0, '#4a5c78'); g.addColorStop(1, '#28344a');
+    c.fillStyle = g;
+    c.beginPath();
+    c.roundRect ? c.roundRect(x - w / 2, y - 14, w, 18, 5) : c.rect(x - w / 2, y - 14, w, 18);
+    c.fill();
+    /* 护甲高光 */
+    c.fillStyle = 'rgba(255,180,80,.55)';
+    c.fillRect(x - w / 2 + 3, y - 11, w - 6, 3);
+    /* 头 + 头盔 */
+    c.fillStyle = '#e8c39a';
+    c.beginPath(); c.arc(x, y - 20, 8, 0, 7); c.fill();
+    c.fillStyle = '#3b4a63';
+    c.beginPath(); c.arc(x, y - 22, 9, Math.PI * 1.05, Math.PI * 1.95); c.fill();
+    c.fillRect(x - 9, y - 23, 18, 3);
+    /* 枪（朝上） */
+    c.fillStyle = '#8d97a8';
+    c.fillRect(x + 6, y - 22, 4, 22);
+    c.fillStyle = '#ffd76a';
+    c.fillRect(x + 6, y - 24, 4, 3);
+    c.restore();
+  },
+
   draw() {
     const cc = this.ctx || (this.cv && this.cv.getContext('2d'));
     const r = this.run; if (!r) { return; }
@@ -1212,8 +1297,7 @@ const BT = {
         const w = sz * 1.55, h = sz * 1.55;
         c.drawImage(zim, z.x - w / 2, z.y - h * 0.62, w, h);
       } else {
-        c.font = sz + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-        c.fillText(z.icon, z.x, z.y);
+        this.drawZombieShape(c, z.x, z.y, sz, z);
       }
       if (z.hp < z.maxHp) {
         const bw = sz * 0.95;
@@ -1249,26 +1333,34 @@ const BT = {
     }
 
     /* 玩家 */
-    const heroImg = this._heroImg !== undefined ? this._heroImg : (() => {
-      const url = this.P && this.P.avatarImg; if (!url) { this._heroImg = null; return null; }
-      const im = new Image(); im.crossOrigin = 'anonymous';
-      im.onload = () => { this._heroImg = im; }; im.onerror = () => { this._heroImg = null; };
-      im.src = url; this._heroImg = null; return null;
-    })();
+    /* 人物立绘：加载失败时允许 4 秒后重试；始终有几何士兵兜底 */
+    if (this._heroImg === undefined || (this._heroImg === null
+        && Date.now() - (this._heroFail || 0) > 4000)) {
+      this._heroFail = Date.now();
+      const url = this.P && this.P.avatarImg;
+      if (!url) { this._heroImg = null; }
+      else {
+        const im = new Image();
+        im.onload = () => { this._heroImg = im; };
+        im.onerror = () => { this._heroImg = null; };
+        im.src = url;
+        if (this._heroImg === undefined) this._heroImg = null;
+      }
+    }
+    const heroImg = this._heroImg;
+    let heroDrawn = false;
     if (heroImg && heroImg.complete && heroImg.naturalWidth) {
       try {
         const hh = 44, hw = hh * heroImg.naturalWidth / heroImg.naturalHeight;
         c.drawImage(heroImg, r.px - hw / 2, r.py - hh + 14, hw, hh);
-      } catch (e) {
-        const cim = IMG.get(this.charImg);
-        if (cim) c.drawImage(cim, r.px - 26, r.py - 26, 52, 52);
-        else { c.font = '30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(this.P.avatar || '👨‍🚀', r.px, r.py); }
-      }
-    } else {
-      const cim2 = IMG.get(this.charImg);
-      if (cim2) c.drawImage(cim2, r.px - 26, r.py - 26, 52, 52);
-      else { c.font = '30px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText((this.P && this.P.avatar) || '👨‍🚀', r.px, r.py); }
+        heroDrawn = true;
+      } catch (e) {}
     }
+    if (!heroDrawn) {
+      const cim = IMG.get(this.charImg);
+      if (cim) { c.drawImage(cim, r.px - 26, r.py - 26, 52, 52); heroDrawn = true; }
+    }
+    if (!heroDrawn) this.drawHeroShape(c, r.px, r.py);
     if (r.shield > 0) {
       c.strokeStyle = 'rgba(92,216,255,0.75)'; c.lineWidth = 2.5;
       c.beginPath(); c.arc(r.px, r.py, 26, 0, 7); c.stroke();
