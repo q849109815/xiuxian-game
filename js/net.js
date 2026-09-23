@@ -314,3 +314,17 @@ const Net = {
 
 window.Net = Net;
 window.GH = GH;
+
+/* =========================================================
+ * TMO —— 通用超时器：离线/慢网时防止界面永久卡住
+ *   用法：await TMO(Net.read(p), 6000)  → 超时返回 null
+ * ========================================================= */
+if (typeof window !== 'undefined') {
+  window.TMO = function (promise, ms, def) {
+    const d = def === undefined ? null : def;
+    return Promise.race([
+      Promise.resolve(promise).catch(() => d),
+      new Promise((r) => setTimeout(() => r(d), ms || 6000)),
+    ]);
+  };
+}
