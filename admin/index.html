@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>向僵尸开炮 · 管理后台</title>
+<title>向僵尸开炮 · 运营后台</title>
 <link rel="stylesheet" href="css/admin.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
   <div class="gt-box">
     <div class="gt-logo">💥</div>
     <div class="gt-t">向僵尸开炮</div>
-    <div class="gt-s">管 理 后 台</div>
+    <div class="gt-s">运 营 后 台</div>
     <input id="gtPwd" type="password" placeholder="请输入管理口令" autocomplete="current-password">
     <button id="gtBtn">进 入</button>
     <div class="gt-err" id="gtErr"></div>
@@ -23,26 +23,11 @@
 <div id="wrap">
   <header class="hd">
     <button class="hd-menu" id="hdMenu">☰</button>
-    <b>向僵尸开炮 · 后台</b>
+    <b>向僵尸开炮 · 运营后台</b>
     <span class="hd-net" id="hdNet">○</span>
   </header>
 
-  <nav class="nav" id="nav">
-    <div class="nav-t">运 营</div>
-    <button class="nv on" data-pg="dash"><i>📊</i><span>数据看板</span></button>
-    <button class="nv" data-pg="players"><i>👥</i><span>玩家管理</span></button>
-    <button class="nv" data-pg="batch"><i>📮</i><span>批量操作</span></button>
-    <button class="nv" data-pg="grant"><i>🎁</i><span>内容发放</span></button>
-    <div class="nav-t">数 据</div>
-    <button class="nv" data-pg="zombie"><i>🧟</i><span>僵尸图鉴</span></button>
-    <button class="nv" data-pg="skill"><i>✨</i><span>技能数据</span></button>
-    <button class="nv" data-pg="weapon"><i>🔫</i><span>武器词条</span></button>
-    <button class="nv" data-pg="ops"><i>📈</i><span>运营数据</span></button>
-    <div class="nav-t">系 统</div>
-    <button class="nv" data-pg="config"><i>🎛️</i><span>数值配置</span></button>
-    <button class="nv" data-pg="data"><i>🗄️</i><span>数据维护</span></button>
-    <button class="nv" data-pg="sys"><i>⚙️</i><span>系统设置</span></button>
-  </nav>
+  <nav class="nav" id="nav"></nav>
   <div class="mask" id="mask"></div>
 
   <main class="main"><div id="body"></div></main>
@@ -55,6 +40,9 @@
 <script src="../js/config.js"></script>
 <script src="../js/ops.js"></script>
 <script src="../js/engine.js"></script>
-<script src="js/admin.js"></script>
+<script src="js/core.js"></script>
+<script src="js/p1.js"></script>
+<script src="js/p2.js"></script>
+<script src="js/p3.js"></script>
 </body>
 </html>
