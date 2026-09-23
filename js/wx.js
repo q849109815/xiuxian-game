@@ -30,6 +30,9 @@ const WX = {
 
   /* ---------- 生成本机唯一账户 ID ---------- */
   uid() {
+    /* 已绑手机号 → 优先用手机号派生的稳定 ID（跨设备一致） */
+    const ph = localStorage.getItem(this.KEY_PHONE);
+    if (ph) return this.acctId(ph);
     let u = localStorage.getItem(this.KEY_UID);
     if (!u) {
       u = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -56,6 +59,21 @@ const WX = {
     const p = this.phone();
     return p ? ('已绑定 ' + this.phoneMask() + '，下次打开自动进入')
              : '首次登录需微信授权并绑定手机号';
+  },
+
+  /* =========================================================
+   * 手机号 → 账号 ID（稳定派生，换设备同号 = 同一存档）
+   * ========================================================= */
+  acctId(phone) {
+    const p = String(phone || '').replace(/\D/g, '');
+    if (!p) return '';
+    /* FNV-1a 32 位哈希 → base36，保证同一手机号永远得到同一 ID */
+    let h = 0x811c9dc5;
+    for (let i = 0; i < p.length; i++) {
+      h ^= p.charCodeAt(i);
+      h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+    }
+    return 'w' + h.toString(36) + p.slice(-4);
   },
 
   /* ---------- 手机号 ---------- */
@@ -102,11 +120,11 @@ const WX = {
     localStorage.setItem(this.KEY_AUTO, '1');
     localStorage.setItem(this.KEY_PHONE, tel.phone);
 
-    let nm = localStorage.getItem(this.KEY_NAME);
-    if (!nm) { nm = this.randomWxName(); localStorage.setItem(this.KEY_NAME, nm); }
-    const gd = localStorage.getItem(this.KEY_GENDER) || (tel.gender || 'm');
+    const nm = tel.name || localStorage.getItem(this.KEY_NAME) || this.randomWxName();
+    const gd = tel.gender || localStorage.getItem(this.KEY_GENDER) || 'm';
 
-    return { ok: true, uid, name: nm, gender: gd };
+    /* 账号 ID 由手机号派生 → 换设备同号即同一存档 */
+    return { ok: true, uid: this.acctId(tel.phone), name: nm, gender: gd };
   },
 
   /* =========================================================
@@ -135,72 +153,88 @@ const WX = {
   },
 
   /* =========================================================
-   * ② 手机号绑定页
+   * ② 绑定手机号页（免验证码：手机号即账号 ID，换设备通用）
    * ========================================================= */
   showTel() {
     return new Promise((res) => {
       const box = document.getElementById('wxTel');
-      if (!box) { res({ phone: '' }); return; }
+      if (!box) { res(null); return; }
+      const nm = document.getElementById('wxtName');
       const ph = document.getElementById('wxtPhone');
-      const cd = document.getElementById('wxtCode');
-      const send = document.getElementById('wxtSend');
       const go = document.getElementById('wxtGo');
       const back = document.getElementById('wxtBack');
       const tip = document.getElementById('wxtTip');
       const agree = document.getElementById('wxtAgree');
-      let timer = null;
 
-      ph.value = ''; cd.value = ''; tip.textContent = '';
-      send.disabled = false; send.textContent = '获取验证码';
+      /* 预填记忆中的昵称 */
+      nm.value = localStorage.getItem(this.KEY_NAME) || '';
+      ph.value = '';
+      tip.textContent = '';
       go.disabled = false; go.textContent = '登 录';
       box.classList.add('on');
-      setTimeout(() => ph.focus(), 320);
+      setTimeout(() => (nm.value ? ph.focus() : nm.focus()), 300);
 
       const say = (m, ok) => {
         tip.textContent = m;
         tip.style.color = ok ? '#07c160' : '#e64340';
       };
       const done = (v) => {
-        if (timer) clearInterval(timer);
         box.classList.remove('on');
-        send.onclick = null; go.onclick = null; back.onclick = null;
+        go.onclick = null; back.onclick = null;
         res(v);
       };
-      const valid = (v) => /^1[3-9]\d{9}$/.test(v || '');
+      const validTel = (v) => /^1[3-9]\d{9}$/.test(v || '');
 
-      /* 获取验证码 */
-      send.onclick = () => {
-        if (!valid(ph.value.trim())) { say('请输入正确的手机号'); ph.focus(); return; }
-        let n = 60;
-        send.disabled = true; send.textContent = n + 's 后重发';
-        if (timer) clearInterval(timer);
-        timer = setInterval(() => {
-          n--;
-          if (n <= 0) { clearInterval(timer); send.disabled = false; send.textContent = '重新获取'; }
-          else send.textContent = n + 's 后重发';
-        }, 1000);
-        say('验证码已发送至 ' + ph.value.trim().replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'), true);
-        cd.focus();
-      };
-
-      /* 登录 / 绑定 */
       go.onclick = () => {
-        const p = (ph.value || '').trim();
-        const c = (cd.value || '').trim();
-        if (!valid(p)) { say('请输入正确的手机号'); ph.focus(); return; }
-        if (!/^\d{6}$/.test(c)) { say('请输入 6 位数字验证码'); cd.focus(); return; }
+        const tel = (ph.value || '').trim();
+        let name = (nm.value || '').trim();
+        if (!validTel(tel)) { say('请输入正确的手机号'); ph.focus(); return; }
+        if (!name) name = this.randomWxName();
+        if (name.length < 2) { say('昵称至少 2 个字'); nm.focus(); return; }
         if (agree && !agree.checked) { say('请先阅读并同意用户协议'); return; }
         go.disabled = true; go.textContent = '登录中…';
         setTimeout(() => {
-          /* 演示环境：任意 6 位数字均通过；接真短信服务后改为校验接口 */
-          const g = parseInt(c.slice(-1), 10) % 2 === 0 ? 'f' : 'm';
+          /* 性别：本机记忆优先，否则按手机号末位奇偶 */
+          const g = localStorage.getItem(this.KEY_GENDER)
+            || (parseInt(tel.slice(-1), 10) % 2 === 0 ? 'f' : 'm');
+          localStorage.setItem(this.KEY_NAME, name);
           localStorage.setItem(this.KEY_GENDER, g);
-          done({ phone: p, gender: g });
-        }, 420);
+          done({ phone: tel, name: name, gender: g });
+        }, 380);
       };
-
       back.onclick = () => done(null);
     });
+  },
+
+  /* =========================================================
+   * 扫码登录：生成含账号 ID 的二维码，另一台设备扫后直接进同一账号
+   * ========================================================= */
+  showScan(onDone) {
+    const box = document.getElementById('wxScan');
+    if (!box) return;
+    const cv = document.getElementById('wxScanCv');
+    const url = location.origin + location.pathname + '?wx=' + encodeURIComponent(this.acctId(this.phone()));
+    box.classList.add('on');
+    if (cv && window.QR) {
+      window.QR.draw(cv, url, { size: 170 });
+    }
+    const txt = document.getElementById('wxScanUrl');
+    if (txt) txt.textContent = url;
+    const close = document.getElementById('wxScanClose');
+    if (close) close.onclick = () => box.classList.remove('on');
+    const copy = document.getElementById('wxScanCopy');
+    if (copy) copy.onclick = () => {
+      try {
+        navigator.clipboard.writeText(url);
+        if (window.UI) UI.toast('链接已复制，发给另一台设备打开即可', 'ok');
+      } catch (e) {
+        const ta = document.createElement('textarea');
+        ta.value = url; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch (e2) {}
+        ta.remove();
+        if (window.UI) UI.toast('链接已复制', 'ok');
+      }
+    };
   },
 
   /* ---------- 跳微信授权页（真 OAuth 时用） ---------- */
@@ -242,7 +276,7 @@ const WX = {
     localStorage.removeItem(this.KEY_NAME);
     localStorage.removeItem(this.KEY_PHONE);
     if (window.UI && UI.toast) UI.toast('已退出，可重新登录', 'ok');
-    setTimeout(() => { location.reload(); }, 500);
+    if (window.location && location.reload) setTimeout(() => { location.reload(); }, 500);
   },
 
   /* ---------- 是否应自动登录 ---------- */
