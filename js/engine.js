@@ -465,6 +465,119 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       default: return 0;
     }
   },
+  /* =========================================================
+   * 表35 礼包限购判定
+   * 支持：once 一次性 / daily 每日 / weekly 每周 / monthly 每月
+   *      level 按关卡等级分批 / bossFirst 首杀BOSS后免费领
+   * ========================================================= */
+  giftKey(g) {
+    const t = (g.limit && g.limit.t) || 'once';
+    if (t === 'daily') { const d = new Date(Date.now() + 8 * 3600000); return d.toISOString().slice(0, 10); }
+    if (t === 'weekly') {
+      const d = new Date(Date.now() + 8 * 3600000);
+      const y = new Date(Date.now() + 8 * 3600000);
+      const day = (d.getUTCDay() + 6) % 7;            /* 周一为一周起点 */
+      y.setUTCDate(d.getUTCDate() - day);
+      return y.toISOString().slice(0, 10);
+    }
+    if (t === 'monthly') { const d = new Date(Date.now() + 8 * 3600000); return d.toISOString().slice(0, 7); }
+    return 'all';                                      /* once / level / bossFirst */
+  },
+
+  /* 返回 {ok, msg, left} —— ok 表示还能买 */
+  giftCan(p, g) {
+    const L = g.limit || { t: 'once', v: 1 };
+    const rec = (p.giftBuy || (p.giftBuy = {}))[g.id] || { n: 0, k: '' };
+    const k = this.giftKey(g);
+
+    if (L.t === 'level') {
+      /* 每通关 v 关可领 1 次
+       * 注意：curLevel() 返回的是关卡ID字符串（如 "1-1"），不能直接参与运算，
+       *       此前用它做除法得到 NaN，导致提示"再通 NaN 关解锁" */
+      const lv = Object.keys(p.cleared || {}).length;
+      const allow = Math.floor(lv / (L.v || 5));
+      const left = Math.max(0, allow - rec.n);
+      return left > 0 ? { ok: true, left, msg: '可领 ' + left + ' 次' }
+                      : { ok: false, left: 0, msg: '再通 ' + ((rec.n + 1) * (L.v || 5) - lv) + ' 关解锁' };
+    }
+    if (L.t === 'bossFirst') {
+      const bk = (p.stats && p.stats.bossKill) || 0;
+      if (bk <= 0) return { ok: false, left: 0, msg: '需先击杀 1 个 BOSS' };
+      if (rec.n >= (L.v || 1)) return { ok: false, left: 0, msg: '已领取' };
+      return { ok: true, left: 1, msg: '免费领取' };
+    }
+    /* 周期型：周期 key 变了就重置计数 */
+    const used = (rec.k === k) ? rec.n : 0;
+    const left = Math.max(0, (L.v || 1) - used);
+    const nameMap = { once: '限购', daily: '今日', weekly: '本周', monthly: '本月' };
+    return left > 0 ? { ok: true, left, msg: (nameMap[L.t] || '') + '可买 ' + left + ' 次' }
+                    : { ok: false, left: 0, msg: (nameMap[L.t] || '') + '已售罄' };
+  },
+
+  /* ===== 表24 广告位 AD04 免费抽奖 / AD05 开箱 ===== */
+  /* 免费抽奖：随机产出，稀有度权重固定 */
+  adDraw(p) {
+    const pool = [
+      { w: 40, t: 'gold', v: 800, n: '金币 ×800' },
+      { w: 25, t: 'mat', k: 'M01', v: 20, n: '金属 ×20' },
+      { w: 15, t: 'mat', k: 'M02', v: 10, n: '合金 ×10' },
+      { w: 10, t: 'diamond', v: 20, n: '钻石 ×20' },
+      { w: 7, t: 'mat', k: 'M03', v: 5, n: '稀有金属 ×5' },
+      { w: 3, t: 'chip', v: 1, n: '芯片 ×1' },
+    ];
+    const tot = pool.reduce((a, b) => a + b.w, 0);
+    let r = Math.random() * tot, hit = pool[0];
+    for (const x of pool) { if (r < x.w) { hit = x; break; } r -= x.w; }
+    if (hit.t === 'gold') p.gold = (p.gold || 0) + hit.v;
+    else if (hit.t === 'diamond') p.diamond = (p.diamond || 0) + hit.v;
+    else if (hit.t === 'chip') {
+      p.bag = p.bag || [];
+      try { const c = this.rollChipById ? this.rollChipById('e') : null; if (c) p.bag.push(c); }
+      catch (e) { p.mat.M03 = (p.mat.M03 || 0) + 2; }
+    }
+    else p.mat[hit.k] = (p.mat[hit.k] || 0) + hit.v;
+    return { ok: true, n: hit.n };
+  },
+
+  /* 额外宝箱（AD05）：给宝箱道具，可在背包开启 */
+  adBoxReward(p) {
+    p.mat = p.mat || {};
+    p.mat.I04 = (p.mat.I04 || 0) + 1;          /* I04 = 宝箱，背包可开启 */
+    return { ok: true, n: '宝箱 ×1（背包内开启）' };
+  },
+
+  /* 记录一次购买 */
+  giftMark(p, g) {
+    const rec = (p.giftBuy || (p.giftBuy = {}))[g.id] || { n: 0, k: '' };
+    const k = this.giftKey(g);
+    const L = g.limit || { t: 'once', v: 1 };
+    if (L.t === 'level' || L.t === 'once' || L.t === 'bossFirst') {
+      p.giftBuy[g.id] = { n: rec.n + 1, k: 'all' };
+    } else {
+      p.giftBuy[g.id] = (rec.k === k) ? { n: rec.n + 1, k } : { n: 1, k };
+    }
+  },
+
+  /* 存档保存（转发到 MAIN.save）
+   * 修复：ui.js 中 15 处 E.save(p) 调用此前因方法不存在而抛错，
+   * 导致"提示已雇佣/已加入"但数据实际未保存、后续界面刷新也被中断 */
+  save(p) {
+    try {
+      if (p && window.P === p) P = p;         /* 确保全局引用同步 */
+      if (window.MAIN && typeof MAIN.save === 'function') {
+        const r = MAIN.save();
+        if (r && typeof r.catch === 'function') r.catch(() => {});
+        return true;
+      }
+      /* 兜底：MAIN 不可用时直接写本地 */
+      if (p && window.Net && window.MAIN && MAIN.savePath) {
+        Net.write(MAIN.savePath, p).catch(() => {});
+        return true;
+      }
+      return false;
+    } catch (e) { return false; }
+  },
+
   taskDone(p, t) {
     if (t.cond.t === 'clearLv') return !!p.cleared[t.cond.v];
     return this.taskVal(p, t.cond.t) >= t.cond.v;
