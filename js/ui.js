@@ -755,6 +755,22 @@ const UI = {
           ? `<img src="${it.img}">` : `<div class="gi">${it.icon}</div>`}
           <div class="gn">${it.n}</div>${n ? `<span class="gq">${n > 9999 ? (n / 1000).toFixed(1) + 'k' : n}</span>` : ''}</div>`;
       }).join('')}</div></div>
+      <div class="card"><div class="card-t">分解 <span class="sub">碎片/芯片 → 金币</span></div>
+        ${['P01', 'P02', 'C01', 'C02', 'C03'].map((id) => {
+          const n = (p.mat || {})[id] || 0;
+          const rate = E.DISMANTLE_RATE[id];
+          return `<div class="zrow"><div class="zav">🧩</div>
+            <div class="zi"><b>${E.itemName(id)}</b><span>×${n} · 单价 ${rate} 金币</span></div>
+            <button class="btn sm ${n ? '' : 'd'}" data-dec2="${id}" ${n ? '' : 'disabled'}>分解</button></div>`;
+        }).join('')}
+        <button class="btn o blk" id="bagDecAll">一键分解全部</button>
+      </div>
+      <div class="card"><div class="card-t">宝箱 <span class="sub">表31 DR11</span></div>
+        <div class="kv"><span>持有宝箱</span><b>${(p.mat || {}).I04 || 0}</b></div>
+        <div class="sub">开启可得：合金 3-5 个（70% 概率）</div>
+        <button class="btn blk" id="bagChest1">开启 1 个</button>
+        <button class="btn o blk" id="bagChest10">开启 10 个</button>
+      </div>
       <div class="card"><div class="card-t">消耗品</div>
       <div class="grid4">${EX.items.filter((x) => x.type === '消耗').map((it) => {
         const n = (p.use || {})[it.id] || 0;
@@ -764,6 +780,26 @@ const UI = {
       }).join('')}</div></div>`;
   },
   b_bag(p, tab) {
+    const c1 = $('#bagChest1'), c10 = $('#bagChest10');
+    if (c1) c1.onclick = () => {
+      const r = E.openChest(p, 1); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pick'); this.open('bag', '材料'); this.home(); }
+    };
+    if (c10) c10.onclick = () => {
+      const r = E.openChest(p, 10); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pick'); this.open('bag', '材料'); this.home(); }
+    };
+    /* 表05 第9项：分解碎片 */
+    $$('#pnBody [data-dec2]').forEach((b) => { b.onclick = () => {
+      const r = E.dismantleMat(p, b.dataset.dec2, 1);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('coin'); this.open('bag', '材料'); this.home(); }
+    }; });
+    const da = $('#bagDecAll');
+    if (da) da.onclick = () => {
+      const r = E.dismantleAll(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('coin'); this.open('bag', '材料'); this.home(); }
+    };
     const g1 = $('#goGem'); if (g1) g1.onclick = () => this.open('gem');
     const g2 = $('#goChip'); if (g2) g2.onclick = () => this.open('chip');
   },
