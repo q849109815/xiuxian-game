@@ -784,7 +784,18 @@ const BT = {
   /* ---------------- 伤害 ---------------- */
   hurt(z, dmg, crit, src) {
     const r = this.run;
+    /* 表20 公式2：暴击 = 基础 × (1 + 暴击伤害%) */
     let d = dmg * (1 + (crit ? r.critDmg : 0));
+    /* 表20 公式3：最终伤害 = 基础伤害 - 怪物护甲（最低造成 1 点）
+     * 此前怪物表无 armor 字段，护甲减伤完全未生效 */
+    const armor = Number((z.d && z.d.armor) || 0);
+    if (armor > 0) d = Math.max(1, d - armor);
+    /* 表20 公式5：吸血 = 最终伤害 × 吸血% */
+    const ls = Number(r.ls || 0);
+    if (ls > 0 && r.wallHp != null && r.wallMax) {
+      r.wallHp = Math.min(r.wallMax, r.wallHp + d * ls);
+      r.hp = r.wallHp;
+    }
     z.hp -= d;
     /* 技能伤害统计（截图51：突击步枪/干冰弹/温压弹/电磁穿刺…） */
     if (r.skillDmg) {
@@ -935,7 +946,19 @@ const BT = {
     if (!pool.length) return;
     const picks = [];
     const c = pool.slice();
-    for (let i = 0; i < 3 && c.length; i++) picks.push(c.splice(Math.floor(Math.random() * c.length), 1)[0]);
+    /* 表26 用例3(P0)：互斥技能不出现在同一选项
+     * 在候选里剔除与已选中技能互斥的项，避免同屏出现冲突组合 */
+    for (let i = 0; i < 3 && c.length; i++) {
+      let pick = null;
+      for (let guard = 0; guard < c.length; guard++) {
+        const cand = c[Math.floor(Math.random() * c.length)];
+        const clash = picks.some((p2) => p2.conflict === cand.id || cand.conflict === p2.id);
+        if (!clash) { pick = cand; break; }
+      }
+      if (!pick) pick = c[Math.floor(Math.random() * c.length)];   /* 全冲突则兜底 */
+      c.splice(c.indexOf(pick), 1);
+      picks.push(pick);
+    }
     this.paused = true;
     this._picks = picks;
     UI.showSkillChoice(picks);
@@ -1001,6 +1024,34 @@ const BT = {
     r.over = true; this.on = false; this.stopLoop();
     if (this.cb) this.cb('lose', { kills: r.kills, time: r.time, rw: { gold: Math.floor(r.gold * 0.3), diamond: 0 }, lv: r.lv });
   },
+  /* =========================================================
+   * 表24 AD01 / 表26 用例5：看广告「原地」复活
+   * 此前实现是 startBattle() 重开整关（波次/击杀/技能全清空），
+   * 与文档"原地复活、满状态"不符。现在保留当前进度，仅恢复血量
+   * ========================================================= */
+  revive() {
+    const r = this.run;
+    if (!r) return { ok: false, msg: '当前无战斗' };
+    r.over = false;
+    r.wallHp = (r.wallMax != null ? r.wallMax : r.maxHp);
+    r.hp = r.wallHp;
+    r.shield = r.maxShield || 0;
+    r.poison = 0; r.poisonT = 0;
+    /* 清掉贴近防线的僵尸，避免复活瞬间再次被秒 */
+    for (const z of r.zombies.slice()) {
+      if (Math.hypot(z.x - (r.px || this.W / 2), z.y - (r.py || this.H - 58)) < 190) {
+        z.dead = true;
+        this.addFloat(z.x, z.y - 14, '清除', 'dmg');
+      }
+    }
+    r.zombies = r.zombies.filter((z) => !z.dead);
+    r.bullets.length = 0;
+    r.mag = r.magMax; r.reloading = false; r.reloadT = 0;
+    this.on = true;
+    this.startLoop();
+    return { ok: true, msg: '原地复活成功！防线已回满' };
+  },
+
   quit() {
     const r = this.run; if (!r || r.over) return;
     r.over = true; this.on = false; this.stopLoop();
@@ -1110,6 +1161,8 @@ const BT = {
 
   /* 柔和椭圆投影：距离越远越小越淡 */
   shadow3d(c, x, y, r, sc) {
+    /* 防护：非有限值会让 createRadialGradient 抛错并中断整帧绘制 */
+    if (!isFinite(x) || !isFinite(y) || !isFinite(r) || r <= 0) return;
     c.save();
     const g = c.createRadialGradient(x, y, 0, x, y, r);
     g.addColorStop(0, 'rgba(0,0,0,.45)');
@@ -1122,6 +1175,7 @@ const BT = {
 
   /* 球体：径向渐变（光来自左上 → 高光偏左上，右下暗） */
   sphere(c, x, y, r, base, hi) {
+    if (!isFinite(x) || !isFinite(y) || !isFinite(r) || r <= 0) return;
     const g = c.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r * 1.15);
     g.addColorStop(0, hi);
     g.addColorStop(0.55, base);
@@ -1132,6 +1186,7 @@ const BT = {
 
   /* 圆柱：横截面受光（左暗-中亮-右暗），做出鼓起的立体感 */
   cylinder(c, x, y, w, h, base, hi, r) {
+    if (!isFinite(x) || !isFinite(y) || !isFinite(w) || !isFinite(h) || w <= 0 || h <= 0) return;
     const g = c.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
     g.addColorStop(0, 'rgba(0,0,0,.42)');
     g.addColorStop(0.28, base);
@@ -1147,6 +1202,7 @@ const BT = {
 
   /* ---------- 3D 僵尸 ---------- */
   drawZombieShape(c, x, y, sz, z) {
+    if (!isFinite(x) || !isFinite(y) || !isFinite(sz) || sz <= 0) return;
     const d = (z && z.d) || {};
     const big = !!z.isBoss || !!d.elite;
     const S = sz / 24;                       /* 缩放系数 */
