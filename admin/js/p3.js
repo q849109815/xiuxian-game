@@ -510,8 +510,12 @@ APP.pages['risk-cheat'] = {
     DA('#body [data-rcban]').forEach((b) => { b.onclick = async () => {
       const p = this.PLIST.find((x) => x.uid === b.dataset.rcban);
       if (!p) return;
-      p.ban = true; p.banReason = '外挂监控自动封禁'; p.banUntil = 0;
-      if (await this.save(p)) { AUDIT.log('风控封禁', p.uid, '外挂监控'); this.toast('已封禁 ' + p.name, 'ok'); this.render(); }
+      /* 与封禁管理页共用 setBan：账号文件也要写，否则玩家照样能登录 */
+      const r = await this.setBan(p, true, { until: 0, type: '永久', reason: '外挂监控自动封禁', op: '风控' });
+      AUDIT.log('风控封禁', p.uid, '外挂监控');
+      this.toast(r.acctOk ? '已封禁 ' + p.name + '（账号已锁定）'
+        : '已标记 ' + p.name + '，但账号记录未同步：' + (r.acctMsg || '未知'), r.acctOk ? 'ok' : 'err');
+      this.render();
     }; });
     DA('#body [data-rcsel]').forEach((b) => { b.onclick = () => {
       this.SEL = this.PLIST.find((x) => x.uid === b.dataset.rcsel) || null;
