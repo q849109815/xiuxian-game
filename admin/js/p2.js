@@ -436,22 +436,26 @@ APP.pages['rank-reward'] = {
     return `<div class="ph"><h2>🎖️ 排行榜奖励配置</h2><span class="tagx">按名次段</span></div>
       <div class="card"><div class="card-t">新增名次段</div>
         <div class="f3">
+          <div class="fld"><label>榜单类型</label><select id="rwBoard">
+            <option value="无尽生存榜">无尽生存榜</option>
+            <option value="战力榜">战力榜</option>
+            <option value="活动冲榜">活动冲榜</option></select></div>
           <div class="fld"><label>名次起</label><input id="rwA" type="number" value="1"></div>
           <div class="fld"><label>名次止</label><input id="rwB" type="number" value="3"></div>
-          <div class="fld"><label>奖励物品</label>${U.picker('rwItem', 'diamond')}</div>
         </div>
         <div class="f3">
+          <div class="fld"><label>奖励物品</label>${U.picker('rwItem', 'diamond')}</div>
           <div class="fld"><label>数量</label><input id="rwN" type="number" value="500"></div>
-          <div class="fld"><label>结算时间(天,0=立即)</label><input id="rwT" type="number" value="7"></div>
-          <div class="fld"><label>奖励叠加</label><select id="rwS">
-            <option value="0">不叠加</option><option value="1">叠加</option></select></div>
+          <div class="fld"><label>结算周期(天,0=无周期)</label><input id="rwT" type="number" value="7"></div>
         </div>
+        <div class="fld"><label>奖励叠加</label><select id="rwS">
+          <option value="0">不叠加</option><option value="1">叠加</option></select></div>
         <button class="btn blk" id="rwGo">➕ 添加名次段</button>
       </div>
       <div class="card"><div class="card-t">已配置</div>
         ${l.map((r) => `<div class="row"><div class="zav sm">🎖️</div>
-          <div class="rl"><b>第 ${r.a} - ${r.b} 名</b>
-            <span>${U.esc(U.itemName(r.item))} ×${r.n} · ${r.stack ? '叠加' : '不叠加'}</span></div>
+          <div class="rl"><b>${U.esc(r.board || '无尽生存榜')} 第 ${r.a} - ${r.b} 名</b>
+            <span>${U.esc(U.itemName(r.item))} ×${r.n} · 周期 ${r.settle || 0} 天 · ${r.stack ? '叠加' : '不叠加'}</span></div>
           <button class="btn d sm" data-rwdel="${U.esc(r.id)}">删除</button></div>`).join('')
           || '<div class="lbl">暂无配置</div>'}
       </div>
@@ -462,7 +466,8 @@ APP.pages['rank-reward'] = {
     if (go) go.onclick = async () => {
       const db = await DB.get(DBP.rankrw, { list: [] });
       db.list = db.list || [];
-      db.list.unshift({ id: 'RW' + Date.now(), a: this.num('#rwA'), b: this.num('#rwB'),
+      db.list.unshift({ id: 'RW' + Date.now(), board: this.val('#rwBoard') || '无尽生存榜',
+        a: this.num('#rwA'), b: this.num('#rwB'),
         item: this.val('#rwItem'), n: this.num('#rwN'), settle: this.num('#rwT'),
         stack: this.val('#rwS') === '1' });
       if (await DB.set(DBP.rankrw, db, '配置排行榜奖励')) { this.toast('已添加', 'ok'); this.render(); }
@@ -519,11 +524,28 @@ APP.pages['stat-retain'] = {
   g: '数据统计', n: '留存统计', i: '📈', perm: 'stat.view',
   render() {
     const now = Date.now();
+    /* 留存 = 第 N 天回访 / 第 N 天前注册的同批人（同期群口径）
+     *
+     * 严重 BUG 修复：原实现在判定里加了
+     *     || (p.lastSeen || 0) >= now - 864e5
+     * 含义是「最近 24 小时活跃过就算留存」—— 与窗口天数无关。
+     * 结果：只要玩家今天上线过，1/3/7/30 日留存全部命中，
+     * 实测三个窗口都是 100%，留存曲线完全失真、无法用于运营决策。
+     *
+     * 现在按标准同期群算法：
+     *   ① 分母 = 注册时间落在 [N+1 天前, N 天前) 这同一天的人
+     *   ② 分子 = 其中最后登录时间晚于「注册时间 + N 天」的人
+     * 这样 1/3/7/30 日留存才会呈现正常的递减曲线。 */
+    const dayStart = (ts) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
     const calc = (days) => {
-      const born = this.PLIST.filter((p) => (p.created || 0) <= now - days * 864e5);
+      /* 观察基准：days 天前的那个自然日 0 点 */
+      const base = dayStart(now - days * 864e5);
+      const born = this.PLIST.filter((p) => {
+        const c = p.created || 0;
+        return c >= base && c < base + 864e5;
+      });
       if (!born.length) return { n: 0, r: 0, born: 0 };
-      const back = born.filter((p) => (p.lastSeen || 0) >= (p.created || 0) + days * 864e5
-        || (p.lastSeen || 0) >= now - 864e5);
+      const back = born.filter((p) => (p.lastSeen || 0) >= (p.created || 0) + days * 864e5);
       return { n: back.length, r: Math.round(back.length / born.length * 100), born: born.length };
     };
     const r1 = calc(1), r3 = calc(3), r7 = calc(7), r30 = calc(30);
