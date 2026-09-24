@@ -390,6 +390,7 @@ const MAIN = {
       if (m.got) continue;
       m.got = 1; ch = true;
       this.giveRw(m.rw || { gold: m.gold || 0, dia: m.dia });
+      try { E.logAct(P, 'pick', '领取邮件：' + (m.t || '邮件')); } catch (e) {}
       UI.toast('📮 ' + (m.t || '邮件') + ' 奖励已发放', 'ok');
     }
     /* 2) 后台全服/定向邮件（云端 mail.json） */
@@ -489,6 +490,7 @@ const MAIN = {
     if (!tpl) return { ok: false, msg: '礼包模板缺失' };
     if (tpl.once && (c.usedBy || []).indexOf(P.uid) >= 0) return { ok: false, msg: '每人限领 1 次' };
     this.giveRw(tpl.items || {});
+    try { E.logAct(P, 'pick', '兑换码 ' + code + '（' + (tpl.n || '礼包') + '）'); } catch (e) {}
     c.used = (c.used || 0) + 1;
     c.usedBy = c.usedBy || [];
     c.usedBy.push(P.uid);
@@ -615,6 +617,13 @@ function onBattleEnd(res, d) {
    * 局内击杀金币在 d.rw.gold 里，两者相加；失败/退出分支 d.rw.gold 已含折算） */
   if (res === 'win') rw.gold += Math.round((d.rw && d.rw.gold) || 0);
   P.gold += rw.gold; P.diamond += rw.diamond;
+  /* 玩家操作日志：击杀
+   * 后台「日志查询 → 玩家操作」页头写着「拾取/击杀/升级/合成/兑换」，
+   * 但全项目只有 3 处 logAct（武器升级 + 2 个商店动作），
+   * 击杀/拾取/合成/兑换一条都没记 —— 页面常年显示「暂无操作日志」。
+   * 这里补齐最高频的战斗结算记录。 */
+  try { E.logAct(P, 'kill', (endless ? '无尽 ' : '') + (BT.run && BT.run.def ? BT.run.def.id + ' ' : '')
+    + (res === 'win' ? '通关' : res === 'lose' ? '失败' : '撤离') + ' 击杀 ' + kills); } catch (e) {}
 
   /* 表25 #1 角色等级：按击杀数结算经验（怪物表 xp 字段加权，受天赋/建筑经验加成） */
   const xpGain = Math.round(kills * 4 * (E.attrs(P).xpMul || 1));
