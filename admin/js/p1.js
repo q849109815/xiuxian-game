@@ -55,6 +55,7 @@ APP.pages['acc-query'] = {
     const dg = D('#qDiag');
     if (dg) dg.onclick = async () => {
       this.toast('扫描中…', 'ok');
+      await this.ensureNet();
       const r = await this.scanDiag();
       const txt = Object.keys(r).map((k) => k + '：' + r[k]).join('\n');
       alert('各来源扫描结果：\n\n' + txt + '\n\n若「存档目录」和「账号目录」都是 0/失败，说明云端目录枚举在当前网络不可用，只能靠索引。');
@@ -83,6 +84,7 @@ APP.pages['acc-query'] = {
 };
 /* 重建玩家索引：账号目录 + 存档目录 + 榜单，合并回写 data/zb/index.json */
 APP.rebuildIndex = async function () {
+  await this.ensureNet();
   const uids = [];
   const add = (u) => { if (u && !uids.includes(u)) uids.push(u); };
   this.IDX_SCAN = {};
@@ -123,6 +125,8 @@ APP.scanDiag = async function () {
   await t('存档目录 players/', async () => Net.list(PDIR));
   await t('战力榜', async () => { const r = await Net.read(DBP.rank); return r && r.data && r.data.list; });
   await t('无尽榜', async () => { const r = await Net.read(DBP.endless); return r && r.data && r.data.list; });
+  out['── 网络状态'] = (typeof Net !== 'undefined' && Net.online) ? '在线' : '离线';
+  out['── 当前端点'] = (typeof Net !== 'undefined' && Net.endpoint) ? Net.endpoint.replace('https://', '') : '未探测';
   out['当前列表'] = (this.PLIST || []).length + ' 人';
   out['── 收集UID'] = (this.PLIST_UIDS || []).length + ' 个';
   out['── 读取成功'] = ((this.PLIST || []).length - (this.PLIST_FAIL || []).length) + ' 个';
