@@ -1114,6 +1114,16 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
        *      ach 掉进 else 写进 p.mat['ach'] —— 而成就商店读的是 p.ach。
        * 结果：界面写着「解锁奖励 +5 成就点」，实际成就点一分没加。 */
       else if (k === 'ach') p.ach = (p.ach || 0) + give[k];
+      /* 消耗品别名兼容（防御）
+       * 表16 文档里用 U01/U02 编号，而物品表真实 ID 是 I01/I02（急救包/护盾发生器）。
+       * 成就商店 AS05/AS06 曾配成 give:{U01:1}/{U02:1}，兑换提示"成功"，
+       * 实际写进 p.mat['U01']，而消耗品使用与背包只读 I01/I02
+       * → 花 80/100 成就点兑换，背包消耗页永远 ×0，点了提示"数量不足"。
+       * 配置已改为 I01/I02，这里再加一层别名映射，防止后台/热更再写回 U0x。 */
+      else if (k === 'U01' || k === 'U02') {
+        const real = 'I' + k.slice(1);
+        p.mat[real] = (p.mat[real] || 0) + give[k];
+      }
       else if (k === 'title') { p.titles = p.titles || []; if (p.titles.indexOf(give[k]) < 0) p.titles.push(give[k]); }
       /* 皮肤
        * BUG（会崩溃）：此处原写 `p.skin = p.skin || []; p.skin.push(...)`。
