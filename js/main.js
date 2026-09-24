@@ -191,11 +191,45 @@ const MAIN = {
     try {
       const r = await Net.read('data/zb/leaderboard.json');
       const lb = (r && r.data && r.data.list) ? r.data.list : [];
-      const row = { u: P.uid, n: P.name, lv: E.curLevel(P), pw: E.power(P), eb: P.endlessBest || 0 };
-      const i = lb.findIndex((x) => x.u === P.uid);
+      /* 字段名必须同时兼容两端：
+       * 后台读 uid/name/t，游戏端面板读 u/n/eb/pw —— 此前只写 u/n/eb，
+       * 后台「排行榜刷新」里战力榜的名字和 UID 全是空的；
+       * 且游戏把无尽成绩也写进 leaderboard.json，而后台无尽榜读的是
+       * endless.json → 后台无尽榜恒为空，只能靠手动重建。
+       * 现在一条记录同时带两套键，并同步写 endless.json。 */
+      const row = { uid: P.uid, u: P.uid, name: P.name, n: P.name,
+        lv: E.curLevel(P), pw: E.power(P),
+        eb: P.endlessBest || 0, t: P.endlessBest || 0 };
+      const i = lb.findIndex((x) => (x.uid || x.u) === P.uid);
       if (i >= 0) lb[i] = row; else lb.push(row);
       lb.sort((a, b) => (b.eb || 0) - (a.eb || 0) || b.pw - a.pw);
       await Net.write('data/zb/leaderboard.json', { list: lb.slice(0, 50), updated: Date.now() });
+      /* 同步无尽榜：后台 DBP.endless 读的就是这个文件 */
+      const er = await Net.read('data/zb/endless.json');
+      const el = (er && er.data && er.data.list) ? er.data.list : [];
+      const erow = { uid: P.uid, name: P.name, t: P.endlessBest || 0, lv: E.curLevel(P) };
+      const j = el.findIndex((x) => (x.uid || x.u) === P.uid);
+      if (j >= 0) el[j] = erow; else el.push(erow);
+      el.sort((a, b) => (b.t || 0) - (a.t || 0));
+      await Net.write('data/zb/endless.json', { list: el.slice(0, 50), updated: Date.now() });
+      /* 回写「我的排名」
+       * BUG：UI 读 p.rankEndless / p.rankPower / p.rankEv，
+       * 但全项目从未给这三个字段赋过值 → 排行榜面板永远显示「未上榜」，
+       * 表33 排名奖励的领取判定 inRank 恒为 false，玩家一次都领不到。
+       * 榜单上传后按当前榜单顺序回算自己的名次（1 起算，0 = 未上榜）。 */
+      const byEndless = lb.slice().sort((a, b) => (b.eb || 0) - (a.eb || 0));
+      const byPower = lb.slice().sort((a, b) => (b.pw || 0) - (a.pw || 0));
+      const pos = (arr) => {
+        const k = arr.findIndex((x) => (x.uid || x.u) === P.uid);
+        return k >= 0 ? k + 1 : 0;
+      };
+      P.rankEndless = (P.endlessBest || 0) > 0 ? pos(byEndless) : 0;
+      P.rankPower = pos(byPower);
+      if (P.evScore != null) {
+        const byEv = lb.slice().sort((a, b) => (b.ev || 0) - (a.ev || 0));
+        P.rankEv = (P.evScore || 0) > 0 ? pos(byEv) : 0;
+      }
+      try { E.save(P); } catch (e) {}
     } catch (e) {}
   },
   async loadLeaderboard() {
@@ -547,10 +581,18 @@ function onBattleEnd(res, d) {
       }
     }
   } else {
+    /* 失败 / 中途退出
+     * BUG：battle 回调里的 rw.gold 已经是「按比例折算后」的局内金币
+     *   lose → floor(r.gold * 0.3)
+     *   quit → floor(r.gold * 0.5)
+     * 但下面那句「关卡掉落金币」又无条件加了一遍 d.rw.gold，
+     * 于是失败实际发 60%（30%×2），中途退出实际发 100%（50%×2，等于全额返还）。
+     * 现在按结局区分：胜利 = 关卡奖励 + 局内金币；失败/退出 = 直接用折算后的值。 */
     rw.gold = Math.floor((d.rw && d.rw.gold) || 0);
   }
-  /* 关卡掉落金币 */
-  rw.gold += Math.round((d.rw && d.rw.gold) || 0);
+  /* 关卡掉落金币（仅胜利时叠加：胜利分支的 rw.gold 是关卡奖励，
+   * 局内击杀金币在 d.rw.gold 里，两者相加；失败/退出分支 d.rw.gold 已含折算） */
+  if (res === 'win') rw.gold += Math.round((d.rw && d.rw.gold) || 0);
   P.gold += rw.gold; P.diamond += rw.diamond;
 
   /* 表25 #1 角色等级：按击杀数结算经验（怪物表 xp 字段加权，受天赋/建筑经验加成） */
