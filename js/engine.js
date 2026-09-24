@@ -357,6 +357,21 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     { minCh: 2, gold: [30, 80], metal: [1, 3], xp: [80, 150], n: '普通关' },
     { minCh: 0, gold: [20, 40], metal: [1, 1], xp: [50, 80], n: '关卡 1-1' },
   ],
+  /* 巡逻收益（远征堡垒）：按已解锁章节取档位
+   * BUG修复：p.patrolRate 从没被赋值过，UI 里一直用 `p.patrolRate || 16`，
+   *          导致无论玩家打到第几章，巡逻收益永远是 16 金币/小时，
+   *          表 patrolRateByCh（16→250）形同废纸 */
+  patrolRateOf(p) {
+    const arr = (EX.patrolRateByCh || [16]);
+    /* chapterOf 收的是关卡 id，不是玩家对象 */
+    const ch = Math.max(1, Math.min(arr.length, this.chapterOf(p.curLevel || '1-1') || 1));
+    return arr[ch - 1];
+  },
+  syncPatrol(p) {
+    const r = this.patrolRateOf(p);
+    if (p.patrolRate !== r) p.patrolRate = r;
+    return p.patrolRate;
+  },
   offlineTier(p) {
     const ch = this.maxChapter ? this.maxChapter(p) : 1;
     let maxCh = 1;
@@ -469,15 +484,15 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const moveSpd = c.spd * this.SPD_MUL * (1 + spdUp);
     return {
       /* 表25 #1：角色等级成长（每级 +攻击6 / +生命80） */
-      atk: ((atk + (p.lvBonusAtk || 0)) * (1 + af.dmg) + this.gemBonus(p).atk) * (1 + EX.starBonus(p.charStar)),
-      hp: (Math.round(hp) + (p.lvBonusHp || 0) + this.gemBonus(p).hp) * (1 + EX.starBonus(p.charStar)),
+      atk: ((atk + (p.lvBonusAtk || 0)) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct)) * (1 + EX.starBonus(p.charStar)),
+      hp: ((Math.round(hp) + (p.lvBonusHp || 0)) * (1 + this.gemBonus(p).hpPct)) * (1 + EX.starBonus(p.charStar)),
       gunBase, armor: Math.round(armor),
       mag: g.mag + af.mag + Math.round(this.gunStatVal(p, 'mag')),
       pierce: g.pierce + af.pierce + Math.floor(this.gunStatVal(p, 'pierce')),
       pellets: (g.pellets || 1) + af.extra, range: 300, spread: 0,
       crit: Math.min(0.85, crit + this.gemBonus(p).crit),
       critDmg: critDmg + this.gemBonus(p).critDmg,
-      rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gunStatVal(p, 'rate') + this.gemBonus(p).rate),
+      rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gunStatVal(p, 'rate') + this.gemBonus(p).ratePct),
       moveSpd: Math.round(moveSpd),
       /* 词条额外项：吸血 / 换弹 / 爆炸范围 / 双倍概率 */
       reloadCut: af.reload, erMul: 1 + af.er, doubleChance: af.double,
@@ -494,10 +509,16 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const gb = this.gemBonus(p);
     const eq = p.equip || {};
     const eqP = Object.values(eq).reduce((s, e) => s + (e.lv || 0) * 45 + (e.adv || 0) * 160, 0);
+    /* BUG修复：a.atk / a.hp 里已经乘过宝石百分比，
+     * 这里再 `(a.atk * gb.atkPct) * 6` 属于重复计算宝石加成。
+     * 同时战力只认攻击/生命，导致镶嵌紫宝石（暴伤+攻速）战力纹丝不动，
+     * 与"战力代表强度"的直觉不符 —— 补上暴击/暴伤/攻速/吸血权重 */
     return Math.round(a.atk * 12 + a.hp * 0.6 + p.gunLv * 60
       + Object.keys(p.chips || {}).length * 220
       + Object.values(p.talents || {}).reduce((s, v) => s + v, 0) * 90
-      + gb.atk * 6 + gb.hp * 0.3 + eqP) * (1 + EX.starBonus(p.charStar));
+      + a.crit * 800 + Math.max(0, a.critDmg - 1.5) * 200
+      + a.rate * 15 + a.ls * 500
+      + eqP) * (1 + EX.starBonus(p.charStar));
   },
 
   /* =================================================
@@ -510,6 +531,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* 解锁下一关（关卡表 unlock 链自动生效） */
     const nx = this.nextLevel(id);
     if (nx) p.curLevel = nx;
+    /* 通关后同步巡逻收益档位（进入新章节时提升） */
+    try { this.syncPatrol(p); } catch (e) {}
     return st;
   },
   totalStars(p) { return Object.values(p.cleared || {}).reduce((s, v) => s + v, 0); },
@@ -1264,22 +1287,82 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    *  2) 加成不分种类，红/蓝/绿/紫一律给 攻击+1200 生命+2000 暴击+15%
    *     → 与宝石表 desc 完全不符
    * 现按表：镶嵌种类决定加成类型，合成等级决定倍率 */
+  /* 宝石加成（改为百分比，每级数值）
+   * 原表给的固定值（攻击+1200 等）是按满级武器设计的终值，
+   * 直接套在新手身上会 +4600% 攻击、战力从 1011 飙到 22611 —— 完全失衡。
+   * 改为百分比后自动适配全期：前期温和，后期随属性增长。
+   * Lv.10 时等效强度 ≈ 原表终值区间（攻击 +60% ≈ 满级武器 +1600 攻击）。 */
+  /* 宝石加成改为「百分比」，且只与宝石合成等级有关，
+   * 与角色等级、武器等级完全无关（避免前期一颗宝石秒天秒地）
+   *
+   * 阶梯 = base + (Lv-1) * step，最高 GEM_MAX_LV 级
+   *
+   *  等级   红宝石(攻击)  蓝宝石(生命/暴击)  绿宝石(生命/吸血)  紫宝石(暴伤/攻速)
+   *  Lv1       +6%          +8% / +1%          +5% / +0.5%        +8% / +1.5%
+   *  Lv2      +10%         +13% / +2%          +8% / +1.0%       +14% / +2.5%
+   *  Lv3      +14%         +18% / +3%         +11% / +1.5%       +20% / +3.5%
+   *  Lv4      +18%         +23% / +4%         +14% / +2.0%       +26% / +4.5%
+   *  Lv5      +22%         +28% / +5%         +17% / +2.5%       +32% / +5.5%
+   *  ...     每级 +4%       +5% / +1%          +3% / +0.5%        +6% / +1%
+   *  Lv10     +42%         +53% / +10%        +32% / +5.0%       +62% / +10.5%
+   */
+  GEM_MAX_LV: 10,
   GEM_BASE: {
-    G_R: { atk: 1200, hp: 0, crit: 0, critDmg: 0, ls: 0, rate: 0 },
-    G_B: { atk: 0, hp: 2000, crit: 0.15, critDmg: 0, ls: 0, rate: 0 },
-    G_G: { atk: 0, hp: 1500, crit: 0, critDmg: 0, ls: 0.03, rate: 0 },
-    G_P: { atk: 0, hp: 0, crit: 0, critDmg: 0.30, ls: 0, rate: 0.05 },
+    G_R: { atkPct: 0.06, hpPct: 0,    crit: 0,    critDmg: 0,   ls: 0,     ratePct: 0 },
+    G_B: { atkPct: 0,    hpPct: 0.08, crit: 0.01, critDmg: 0,   ls: 0,     ratePct: 0 },
+    G_G: { atkPct: 0,    hpPct: 0.05, crit: 0,    critDmg: 0,   ls: 0.005, ratePct: 0 },
+    G_P: { atkPct: 0,    hpPct: 0,    crit: 0,    critDmg: 0.08, ls: 0,    ratePct: 0.015 },
   },
+  GEM_STEP: {
+    G_R: { atkPct: 0.04, hpPct: 0,    crit: 0,    critDmg: 0,   ls: 0,     ratePct: 0 },
+    G_B: { atkPct: 0,    hpPct: 0.05, crit: 0.01, critDmg: 0,   ls: 0,     ratePct: 0 },
+    G_G: { atkPct: 0,    hpPct: 0.03, crit: 0,    critDmg: 0,   ls: 0.005, ratePct: 0 },
+    G_P: { atkPct: 0,    hpPct: 0,    crit: 0,    critDmg: 0.06, ls: 0,    ratePct: 0.01 },
+  },
+  /* 面板展示用：把百分比换算成当前属性上的绝对值 */
+  GEM_TXT: { atkPct: '攻击', hpPct: '生命', critDmg: '暴伤', ratePct: '攻速', ls: '吸血', crit: '暴击' },
   gemBonus(p) {
-    const zero = { atk: 0, hp: 0, crit: 0, critDmg: 0, ls: 0, rate: 0 };
+    const zero = { atkPct: 0, hpPct: 0, crit: 0, critDmg: 0, ls: 0, ratePct: 0 };
     const id = p.gemOn;
     if (!id) return zero;
-    const base = this.GEM_BASE[id];
+    const base = this.GEM_BASE[id], step = this.GEM_STEP[id];
     if (!base) return zero;
-    const lv = Math.max(1, p.gemLv || 0);        /* 未合成时按 Lv.1 计 */
+    const lv = Math.max(1, Math.min(this.GEM_MAX_LV, p.gemLv || 0));
     const out = {};
-    for (const k in zero) out[k] = (base[k] || 0) * lv;
+    for (const k in zero) {
+      const b = base[k] || 0, st = (step && step[k]) || 0;
+      out[k] = b + st * (lv - 1);
+    }
     return out;
+  },
+  /* 指定宝石在当前合成等级下的加成文案（用于列表逐行展示） */
+  gemBonusOf(p, id) {
+    const base = this.GEM_BASE[id], step = this.GEM_STEP[id];
+    if (!base) return '—';
+    const lv = Math.max(1, Math.min(this.GEM_MAX_LV, p.gemLv || 0));
+    const parts = [];
+    ['atkPct', 'hpPct', 'critDmg', 'ratePct', 'ls', 'crit'].forEach((k) => {
+      const v = (base[k] || 0) + ((step && step[k]) || 0) * (lv - 1);
+      if (v > 0) parts.push(this.GEM_TXT[k] + ' +' + (v * 100).toFixed(v < 0.02 ? 1 : 0) + '%');
+    });
+    return parts.length ? parts.join(' · ') : '—';
+  },
+  /* 面板展示：返回人类可读的加成文案（如「攻击 +6% · 暴击 +1%」） */
+  gemBonusTxt(p) {
+    const gb = this.gemBonus(p);
+    const parts = [];
+    const pctKeys = ['atkPct', 'hpPct', 'critDmg', 'ratePct', 'ls', 'crit'];
+    pctKeys.forEach((k) => {
+      const v = gb[k] || 0;
+      if (v > 0) parts.push(this.GEM_TXT[k] + ' +' + (v * 100).toFixed(v < 0.02 ? 1 : 0) + '%');
+    });
+    return parts.length ? parts.join(' · ') : '无加成';
+  },
+  /* 宝石加成的绝对数值（仅用于面板展示） */
+  gemBonusFlat(p) {
+    const a = this.attrs(p), gb = this.gemBonus(p);
+    return { atk: Math.round(a.atk - a.atk / (1 + gb.atkPct || 1)),
+      hp: Math.round(a.hp - a.hp / (1 + (gb.hpPct || 0))) };
   },
   /* 装备锻造：强化 + 进阶（截图「装备设造 / 装备锻造」） */
   forgeEquip(p, slot) {
