@@ -335,12 +335,95 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     p.gold -= c; p.build[id] = cur + 1;
     return { ok: true, msg: '🏗️ ' + b.n + ' 升至 Lv.' + p.build[id] };
   },
-  offlineIncome(p) {
+  /* =========================================================
+   * 表34 离线挂机产出表（P1）
+   * 此前只产金币；文档要求同时产出「金属 + 经验」，且上限 8 小时
+   * 场景档位按已通关最高章节自动匹配：
+   *   ≥5 章 → 已通关最高关卡（金币50-200/金属2-5/经验100-300）
+   *   ≥2 章 → 已通关普通关（金币30-80/金属1-3/经验80-150）
+   *   其余   → 挂机关卡1-1（金币20-40/金属1/经验50-80）
+   * ========================================================= */
+  OFFLINE_TIERS: [
+    { minCh: 5, gold: [50, 200], metal: [2, 5], xp: [100, 300], n: '最高关卡' },
+    { minCh: 2, gold: [30, 80], metal: [1, 3], xp: [80, 150], n: '普通关' },
+    { minCh: 0, gold: [20, 40], metal: [1, 1], xp: [50, 80], n: '关卡 1-1' },
+  ],
+  offlineTier(p) {
+    const ch = this.maxChapter ? this.maxChapter(p) : 1;
+    let maxCh = 1;
+    for (const id in (p.cleared || {})) {
+      const c = Number(String(id).split('-')[0]) || 1;
+      if (c > maxCh) maxCh = c;
+    }
+    const use = Math.max(ch, maxCh);
+    return this.OFFLINE_TIERS.find((t) => use >= t.minCh) || this.OFFLINE_TIERS[2];
+  },
+  /* 返回 {hrs, gold, metal, xp, tier}，仅计算不发放 */
+  offlineCalc(p) {
     const b = EX.buildings.find((x) => x.id === 'warehouse');
     const lv = p.build.warehouse || 1;
-    const perHour = (b.offline || 120) * lv;
-    const hrs = Math.min(12, (Date.now() - (p.offlineAt || Date.now())) / 3600000);
-    return hrs < 0.05 ? 0 : Math.floor(perHour * hrs);
+    const t = this.offlineTier(p);
+    const hrsRaw = (Date.now() - (p.offlineAt || Date.now())) / 3600000;
+    const hrs = Math.min(8, Math.max(0, hrsRaw));           /* 表34：上限 8 小时 */
+    if (hrs < 0.05) return { hrs: 0, gold: 0, metal: 0, xp: 0, tier: t };
+    const mul = lv;                                          /* 仓库等级放大金币 */
+    const pick = (r) => Math.round((r[0] + (r[1] - r[0]) * 0.6) * hrs);
+    return {
+      hrs, tier: t,
+      gold: pick(t.gold) * mul,
+      metal: pick(t.metal),
+      xp: pick(t.xp),
+    };
+  },
+  /* 兼容旧调用：只返回金币 */
+  offlineIncome(p) { return this.offlineCalc(p).gold; },
+  /* 领取离线收益（金币 + 金属 + 经验） */
+  offlineClaim(p) {
+    const c = this.offlineCalc(p);
+    if (c.gold <= 0 && c.metal <= 0 && c.xp <= 0) {
+      p.offlineAt = Date.now();
+      return { ok: false, msg: '离线时间太短，暂无可领收益' };
+    }
+    p.gold = (p.gold || 0) + c.gold;
+    p.mat.M01 = (p.mat.M01 || 0) + c.metal;
+    p.offlineAt = Date.now();
+    if (c.xp > 0) { try { this.addExp(p, c.xp); } catch (e) {} }
+    const h = Math.floor(c.hrs), m = Math.round((c.hrs - h) * 60);
+    return { ok: true, msg: `离线 ${h}小时${m}分（${c.tier.n}）：金币 +${c.gold} 金属 +${c.metal} 经验 +${c.xp}` };
+  },
+
+  /* =========================================================
+   * 表25 #1 角色等级：击杀经验升级，前期快后期慢（对数曲线）
+   * 此前 p.xp 一直在累加，但 p.lv 永远停在 1 —— 升级系统完全没实现
+   * 每级 +生命 +攻击；每 10 级 +1 天赋点（表25：每10级解锁新技能槽）
+   * ========================================================= */
+  xpNeed(lv) {
+    return Math.round(50 * Math.pow(Math.max(1, lv), 1.45));   /* 对数曲线 */
+  },
+  addXp(p, amt) {
+    amt = Math.round(Number(amt) || 0);
+    if (amt <= 0) return { ok: false, lv: p.lv, ups: 0 };
+    p.xp = (p.xp || 0) + amt;
+    let ups = 0, guard = 0;
+    while (guard++ < 200) {
+      const need = this.xpNeed(p.lv || 1);
+      if ((p.xp || 0) < need) break;
+      p.xp -= need;
+      p.lv = (p.lv || 1) + 1;
+      ups++;
+      p.lvBonusHp = (p.lvBonusHp || 0) + 80;   /* 每级 +生命 */
+      p.lvBonusAtk = (p.lvBonusAtk || 0) + 6;  /* 每级 +攻击 */
+      if (p.lv % 10 === 0) p.tp = (p.tp || 0) + 1;   /* 每10级 +1天赋点 */
+    }
+    if (ups > 0) {
+      try { if (window.UI && UI.showLvUp) UI.showLvUp(p.lv, 0); } catch (e) {}
+      try { OPS.track('level_up', { lv: p.lv }); } catch (e) {}
+    }
+    return { ok: true, lv: p.lv, ups, msg: ups > 0 ? ('升级！Lv.' + p.lv + (ups > 1 ? '（连升 ' + ups + ' 级）' : '')) : '' };
+  },
+  xpProgress(p) {
+    const need = this.xpNeed(p.lv || 1);
+    return { cur: Math.floor(p.xp || 0), need, pct: Math.min(100, (p.xp || 0) / need * 100) };
   },
 
   /* =================================================
@@ -376,8 +459,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const spdUp = this.chipVal(p, 'spd') + ((sk && sk.bonus && sk.bonus.spd) || 0);
     const moveSpd = c.spd * this.SPD_MUL * (1 + spdUp);
     return {
-      atk: (atk * (1 + af.dmg) + this.gemBonus(p).atk) * (1 + EX.starBonus(p.charStar)),
-      hp: (Math.round(hp) + this.gemBonus(p).hp) * (1 + EX.starBonus(p.charStar)),
+      /* 表25 #1：角色等级成长（每级 +攻击6 / +生命80） */
+      atk: ((atk + (p.lvBonusAtk || 0)) * (1 + af.dmg) + this.gemBonus(p).atk) * (1 + EX.starBonus(p.charStar)),
+      hp: (Math.round(hp) + (p.lvBonusHp || 0) + this.gemBonus(p).hp) * (1 + EX.starBonus(p.charStar)),
       gunBase, armor: Math.round(armor),
       rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gunStatVal(p, 'rate')),
       mag: g.mag + af.mag + Math.round(this.gunStatVal(p, 'mag')),
@@ -797,8 +881,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     p.gold = (p.gold || 0) + rw.gold;
     p.mat = p.mat || {};
     p.mat.M01 = (p.mat.M01 || 0) + rw.M01;
-    p.xp = (p.xp || 0) + rw.xp;
-    return { ok: true, msg: '扫荡 ' + t + ' 次完成！', rw: rw, cost: cost };
+    /* 表25 #1：经验走角色等级系统（自动升级） */
+    const lr = this.addXp(p, rw.xp);
+    return { ok: true, msg: '扫荡 ' + t + ' 次完成！' + (lr.msg ? ' ' + lr.msg : ''), rw: rw, cost: cost, ups: lr.ups };
   },
 
   /* =========================================================
