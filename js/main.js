@@ -89,6 +89,33 @@ const MAIN = {
       }
       p.use = {};
     }
+    /* 旧存档兼容：芯片曾发到 p.mat.chipE/chipL/chipN/chipRed（发放分支缺失），
+     * 芯片真实存放在 p.bag。这里把历史残留补发成真实芯片并清掉伪键，
+     * 让老玩家已购买的礼包芯片能真正出现在芯片页、可装备/合成。
+     * 需要在 giveChipByQuality 可用后执行，故放在 E 就绪之后。 */
+    if (window.E && E.giveChipByQuality) {
+      const qmap = { chipN: '白', chipE: '蓝', chipL: '红', chipRed: '红' };
+      for (const k in qmap) {
+        const n = Math.floor(Number(p.mat[k]) || 0);
+        if (n > 0) {
+          for (let i = 0; i < n; i++) E.giveChipByQuality(p, qmap[k]);
+          delete p.mat[k];
+        }
+      }
+      /* 成就点也曾被误写进 p.mat.ach（grant 缺分支），这里补回 p.ach */
+      const achN = Math.floor(Number(p.mat.ach) || 0);
+      if (achN > 0) { p.ach = (p.ach || 0) + achN; delete p.mat.ach; }
+      /* 皮肤曾被误写成数组（grant 里 p.skin.push 崩溃/错写），这里矫正：
+       * p.skin 是字符串（当前穿戴），p.skins 是数组（已拥有） */
+      if (Array.isArray(p.skin)) {
+        const arr = p.skin.slice();
+        p.skins = p.skins || [];
+        arr.forEach((x) => { if (typeof x === 'string' && p.skins.indexOf(x) < 0) p.skins.push(x); });
+        p.skin = (typeof arr[0] === 'string' && arr[0]) ? arr[0] : (p.skins[0] || 'sk_c01a');
+      }
+      if (!Array.isArray(p.skins)) p.skins = p.skin ? [p.skin] : ['sk_c01a'];
+      if (typeof p.skin !== 'string' || !p.skin) p.skin = p.skins[0] || 'sk_c01a';
+    }
     p.gun = p.gun || 'W01'; p.gunLv = p.gunLv || 1; p.gunAdv = p.gunAdv || 0;
     p.gunStats = p.gunStats || {}; p.gunOwn = p.gunOwn || ['W01'];
     p.chips = p.chips || {}; p.bag = p.bag || []; p.talents = p.talents || {};
