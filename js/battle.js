@@ -84,6 +84,9 @@ const BT = {
       n: d.n, waves: d.waves,
       pool: d.pool, per: d.per, mul: d.mul, cond: d.cond,
       boss: d.boss || null, scene: d.scene, endless: false, rw: d.rw,
+      /* 章节收益系数：击杀金币/经验按关卡倍率同步放大，
+       * 使后期"刷关攒钱 → 升级武器 → 突破"的循环成立 */
+      rwMul: Math.max(1, d.mul || 1),
     };
   },
 
@@ -149,7 +152,7 @@ const BT = {
     const r = this.run, d = r.def;
     r.wave = w;
     r.waveT = 0;              /* 重置波次计时（配合超时推进） */
-    r.waveMaxT = (d.cond === 'boss' || d.cond === 'bossAll') && w === d.waves ? 999 : 14;
+    r.waveMaxT = (d.cond === 'boss' || d.cond === 'bossAll') && w === d.waves ? 999 : 20;
     /* BOSS 关：最后一波出 BOSS（资料通关条件：击杀BOSS） */
     const isBossWave = (d.cond === 'boss' || d.cond === 'bossAll') && w === d.waves;
     if (isBossWave) {
@@ -168,7 +171,14 @@ const BT = {
     const d = EX.bosses.find((x) => x.id === id) || EX.bosses[0];
     const r = this.run;
     const mul = (r.mul || 1) * (r.endless ? 1 + (r.wave - 1) * 0.35 : 1);
-    const z = this.mkZ(d, mul, Math.round(d.hp * mul));
+    /* BOSS 血量：bosses 表里的 hp 已是「按章节设计好的最终值」
+     * （依据对应武器等级 DPS × 25~40 秒），若再乘关卡 mul，
+     * 第10章尸王会变成 410万 × 131.75 = 5.4亿，需打 4000 秒 —— 完全不可通关。
+     * 无尽模式保留波次递增。 */
+    /* 双 BOSS 关（第3/8章）同时出场两只，总血量翻倍会过难，各按 0.6 折 */
+    const multi = Array.isArray(r.def && r.def.boss) ? 0.6 : 1;
+    const bossHp = Math.round(d.hp * multi * (r.endless ? 1 + (r.wave - 1) * 0.35 : 1));
+    const z = this.mkZ(d, mul, bossHp);
     z.isBoss = true; z.bossDef = d; z.phase = 0; z.maxHp = z.hp; z.img = d.img;
     r.boss = z; r.zombies.push(z);
   },
@@ -180,7 +190,13 @@ const BT = {
       x: 0, y: 0, hp, maxHp: hp, spd: d.spd, dmg: d.dmg, atkR: d.atkR,
       ai: d.ai, def: d.def || 0, front: d.front || 0, fly: !!d.fly,
       slow: 0, slowT: 0, burn: 0, burnT: 0, atkCd: 0, dashT: 0, facing: 0,
-      dead: false, boss: false, xp: d.xp || 4, gold: d.gold || 3,
+      dead: false, boss: false,
+      /* 击杀金币/经验随章节缩放：
+       * 原为固定值（普通僵尸 3 金币），后期武器升级需数千万，
+       * 杀怪收益完全可忽略 → 只能靠关卡奖励，循环断裂。
+       * 按关卡 mul 同步放大，使"多刷几关攒钱升级"成立 */
+      xp: Math.round((d.xp || 4) * (this.run ? this.run.rwMul : 1)),
+      gold: Math.round((d.gold || 3) * (this.run ? this.run.rwMul : 1)),
     };
   },
 
@@ -550,12 +566,23 @@ const BT = {
      *       僵尸卡在射程外（远程/飞行）整关就永不推进。
      * 改为：清空 或 波次超时 任一满足即推进（真实尸潮是持续压上的） */
     r.waveT = (r.waveT || 0) + dt;
-    const waveTimeout = r.waveT >= (r.waveMaxT || 14);
+    const waveTimeout = r.waveT >= (r.waveMaxT || 20);
     if ((r.spawnLeft === 0 && r.zombies.length === 0) || waveTimeout) {
       if (r.wave >= r.waveTotal) {
         /* 最后一波：仍需清完场上僵尸才算通关 */
         if (r.zombies.length === 0) { this.win(); return; }
+        /* 死锁修复：远程/飞行僵尸会停在射程外（atkR > 玩家射程 380）持续攻击，
+         * 玩家永远打不到它 → 场上僵尸数恒 > 0 → 永远无法 win。
+         * 实测 1-5 防线满血 2076/2076 却判负，就是这个原因。
+         * 兜底：最后一波超时 25 秒后强制清场通关；
+         * 但 BOSS 存活时不触发（BOSS 必须打死，否则靠防线破判负）。 */
+        const bossAlive = r.zombies.some((z) => z.isBoss && !z.dead);
+        if (!bossAlive) {
+          r.lastWaveT = (r.lastWaveT || 0) + dt;
+          if (r.lastWaveT > 25) { r.zombies.length = 0; this.win(); return; }
+        }
       } else {
+        r.lastWaveT = 0;
         r.waveT = 0;
         if (r.endless) { this.startWave(r.wave + 1); return; }
         r.waveGap -= dt;
@@ -936,7 +963,7 @@ const BT = {
   /* ---------------- 结束 ---------------- */
   win() {
     const r = this.run; if (r.over) return;
-    r.over = true;
+    r.over = true; r.win = true;   /* r.win 此前从未赋值，外部无法判定胜负 */
     /* 表37 埋点：endless_time / level_finish */
     try { if (r.endless) OPS.track('endless_time', { t: Math.floor(r.time) }); } catch (e) {}
     this.on = false; this.stopLoop();
@@ -955,7 +982,7 @@ const BT = {
       UI.toast('💚 复活成功！剩余 ' + r.reviveLeft + ' 次', 'ok');
       return;
     }
-    r.over = true; this.on = false; this.stopLoop();
+    r.over = true; r.win = false; this.on = false; this.stopLoop();
     if (this.cb) this.cb('lose', { kills: r.kills, time: r.time, rw: { gold: Math.floor(r.gold * 0.3), diamond: 0 }, lv: r.lv });
   },
   /* =========================================================
