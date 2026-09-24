@@ -39,7 +39,11 @@ const BT = {
   },
 
   /* ---------------- 场景 ---------------- */
-  sceneFor(ch) { return ['city', 'factory', 'wasteland', 'tunnel', 'field', 'snow'][(ch - 1) % 6]; },
+  sceneFor(ch) {
+    /* 保护：ch<=0（无尽/异常）时原先会取到下标 -1 → undefined → 场景图永远空白 */
+    const i = Math.max(0, (Number(ch) || 1) - 1) % 6;
+    return ['city', 'factory', 'wasteland', 'tunnel', 'field', 'snow'][i];
+  },
   img(key) {
     const v = this._imgs[key];
     if (v) return v;
@@ -70,9 +74,15 @@ const BT = {
 
   /* ---------------- 关卡定义（按章节生成） ---------------- */
   /* 关卡定义：资料关卡表（3 章 10 关）；levelId = '1-1' 或 'endless' */
-  levelDef(levelId) {
+  levelDef(levelId, p) {
     if (levelId === 'endless') {
-      return { id: 'endless', ch: 0, n: '无尽模式', waves: 9999,
+      /* 无尽模式 ch 原先写死 0，带来两个连带故障：
+       *   ① sceneFor(0) → 数组下标 -1 → undefined → 场景图永远加载不到
+       *   ② dropFor(src, 0) 把章节当成 1 → 精英僵尸只掉最低档材料，
+       *      后期该有的稀有金属/碎片全部掉不出来
+       * 现在按玩家当前进度章节取值，无尽打越深掉落档越高。 */
+      const ch = p ? Math.max(1, (E.chapterOf ? E.chapterOf(p.curLevel || '1-1') : 1)) : 1;
+      return { id: 'endless', ch: ch, n: '无尽模式', waves: 9999,
         pool: EX.zombies.map((z) => z.id), per: [8, 20], mul: 1.0,
         cond: 'endless', boss: null, scene: 'city', endless: true };
     }
@@ -101,6 +111,8 @@ const BT = {
     this.charImg = (E.char(p) || {}).img || null;
     this.P = p; this._heroImg = undefined;
     this.scene = this.sceneFor(def.ch); this.img(this.scene);
+    /* 无尽模式：按玩家进度章节取关（见 levelDef 注释） */
+    if (def.endless && p) def.ch = Math.max(1, (E.chapterOf ? E.chapterOf(p.curLevel || '1-1') : 1));
 
     const maxHp = a.hp;
     this.run = {
