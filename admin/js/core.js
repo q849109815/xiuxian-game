@@ -238,6 +238,10 @@ const APP = {
     /* 进入即全自动拉取：确保网络 → 四路合并 → 失败自动重试 → 自动补索引
      * 运营不需要点任何按钮 */
     await this.loadPlayers({ force: true, auto: true });
+    /* 自动执行到期的后台任务：计划合服 / 自动备份周期检查
+     * （单机架构无 cron，改为每次进入后台时按时间补做） */
+    try { if (this.runDueMerge) await this.runDueMerge(); } catch (e) {}
+    try { if (this.autoBackupIfDue) await this.autoBackupIfDue(); } catch (e) {}
     const first = Object.keys(this.pages)[0];
     this.go(first);
     AUDIT.log('登录后台', '', '角色 ' + PERM.curRole());
