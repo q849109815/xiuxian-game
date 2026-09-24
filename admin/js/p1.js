@@ -11,12 +11,14 @@ APP.pages['acc-query'] = {
   g: '账号管理', n: '玩家查询', i: '🔍', perm: 'account.query',
   render() {
     const list = this.view();
-    return `<div class="ph"><h2>🔍 玩家账号查询</h2><span class="tagx">${list.length} / ${this.PLIST.length}</span></div>
+    return `<div class="ph"><h2>🔍 玩家账号查询</h2><span class="tagx">${list.length} / ${this.PLIST.length}${APP.deadCount() ? '（含已注销 ' + APP.deadCount() + '）' : ''}</span></div>
       <div class="card">
         <div class="sb">
           <input id="qKey" placeholder="UID / 昵称 / 手机号" value="${U.esc(this.FILTER)}">
           <button class="btn n sm" id="qReload">刷新</button>
           <button class="btn o sm" id="qRebuild">🔨 重建索引</button>
+          <button class="btn n sm" id="qDead">${APP.SHOW_DEAD ? '隐藏' : '显示'}已注销 (${APP.deadCount()})</button>
+          <button class="btn n sm" id="qDiag">🩺 扫描诊断</button>
         </div>
         <div class="lbl" style="text-align:left;line-height:1.6">
           数据来源：<b style="color:var(--yel)">${U.esc(this.SRC_NOTE || '未知')}</b>
@@ -46,6 +48,16 @@ APP.pages['acc-query'] = {
     const s = D('#qKey'); if (s) s.oninput = () => { this.FILTER = s.value; this.render(); };
     const r = D('#qReload');
     if (r) r.onclick = async () => { this.toast('正在拉取…', 'ok'); await this.loadPlayers({ force: true }); this.toast('已刷新 '+this.PLIST.length+' 名玩家', 'ok'); };
+    const qd = D('#qDead');
+    if (qd) qd.onclick = () => { APP.SHOW_DEAD = !APP.SHOW_DEAD; this.render(); };
+    /* 扫描诊断：把四路来源各自扫到几个直接弹出来，方便定位"为什么只有一个人" */
+    const dg = D('#qDiag');
+    if (dg) dg.onclick = async () => {
+      this.toast('扫描中…', 'ok');
+      const r = await this.scanDiag();
+      const txt = Object.keys(r).map((k) => k + '：' + r[k]).join('\n');
+      alert('各来源扫描结果：\n\n' + txt + '\n\n若「存档目录」和「账号目录」都是 0/失败，说明云端目录枚举在当前网络不可用，只能靠索引。');
+    };
     /* 重建索引：把当前能扫到的所有 UID 回写到 data/zb/index.json，
      * 之后后台就不必依赖不稳的目录 list 了（解决"只显示一个玩家"） */
     const rb = D('#qRebuild');
@@ -72,10 +84,15 @@ APP.pages['acc-query'] = {
 APP.rebuildIndex = async function () {
   const uids = [];
   const add = (u) => { if (u && !uids.includes(u)) uids.push(u); };
-  try { (await window.TMO(Net.list('data/zb/users/'), 12000, []) || [])
-    .filter((x) => x.endsWith('.json')).forEach((f) => add(f.replace(/\.json$/, ''))); } catch (e) {}
-  try { (await window.TMO(Net.list(PDIR), 12000, []) || [])
-    .filter((x) => x.endsWith('.json')).forEach((f) => add(f.replace(/\.json$/, ''))); } catch (e) {}
+  this.IDX_SCAN = {};
+  let a = []; try { a = (await window.TMO(Net.list('data/zb/users/'), 12000, []) || []); } catch (e) {}
+  this.IDX_SCAN['账号目录'] = a.length;
+  a.filter((x) => x.endsWith('.json')).forEach((f) => add(f.replace(/\.json$/, '')));
+  let b2 = []; try { b2 = (await window.TMO(Net.list(PDIR), 12000, []) || []); } catch (e) {}
+  this.IDX_SCAN['存档目录'] = b2.length;
+  b2.filter((x) => x.endsWith('.json')).forEach((f) => add(f.replace(/\.json$/, '')));
+  /* 补充：也读一下当前 PLIST 里已知但目录没列出来的 */
+  this.IDX_SCAN['当前列表'] = (this.PLIST || []).length;
   for (const k of ['rank', 'endless']) {
     try {
       const r = await window.TMO(Net.read(DBP[k]), 10000, null);
@@ -92,6 +109,21 @@ APP.rebuildIndex = async function () {
   const ok = await Net.write('data/zb/index.json', { list: list, updAt: Date.now() }, '重建玩家索引 ' + list.length + ' 人');
   if (ok) AUDIT.log('重建玩家索引', list.length + '人', uids.slice(0, 5).join(','));
   return ok ? list.length : 0;
+};
+/* 扫描诊断：告诉运营每一路到底扫到几个，便于判断为何只有一个人 */
+APP.scanDiag = async function () {
+  const out = {};
+  const t = async (label, fn) => {
+    try { const v = await window.TMO(fn(), 12000, null); out[label] = v == null ? '失败' : (Array.isArray(v) ? v.length + ' 项' : '有数据'); }
+    catch (e) { out[label] = '失败'; }
+  };
+  await t('索引 index.json', async () => { const r = await Net.read('data/zb/index.json'); return r && r.data && r.data.list; });
+  await t('账号目录 users/', async () => Net.list('data/zb/users/'));
+  await t('存档目录 players/', async () => Net.list(PDIR));
+  await t('战力榜', async () => { const r = await Net.read(DBP.rank); return r && r.data && r.data.list; });
+  await t('无尽榜', async () => { const r = await Net.read(DBP.endless); return r && r.data && r.data.list; });
+  out['当前列表'] = (this.PLIST || []).length + ' 人';
+  return out;
 };
 
 /* 详情（共用） */
