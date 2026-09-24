@@ -109,6 +109,26 @@ const MAIN = {
     /* GM「加属性」若填了持续时间，到期需扣回 ——
      * 否则临时增益变成永久增益，与后台配置意图不符。 */
     this.tickTempBuff(p);
+    /* 登记到玩家索引：后台据此枚举全部玩家。
+     * 只在注册/登录时写是不够的 —— 老账号从未写过，
+     * 后台就只能靠不稳的目录枚举，结果长期只显示一个玩家。
+     * 这里在每次启动/初始化时补登记（本机节流 6 小时一次）。 */
+    this.tickIndex(p);
+  },
+
+  /* ---------- 玩家索引登记（节流） ---------- */
+  tickIndex(p) {
+    if (!p || !p.uid || !window.UA || !UA.idxAdd) return;
+    try {
+      const K = 'zb_idxat_' + p.uid;
+      const last = Number(localStorage.getItem(K) || 0);
+      if (Date.now() - last < 6 * 3600e3) return;
+      localStorage.setItem(K, String(Date.now()));
+      const name = (window.UA && UA.remembered ? UA.remembered().name : '') || p.name || '';
+      UA.idxAdd(p.uid, name, p.name || name);
+      /* 索引里补上等级与战力，后台列表不必逐个拉存档也能显示 */
+      try { UA.idxPatch && UA.idxPatch(p.uid, { lv: p.lv || 1, pw: (E.power ? E.power(p) : 0), lastSeen: Date.now() }); } catch (e) {}
+    } catch (e) {}
   },
   /* 临时增益到期回收 */
   tickTempBuff(p) {
