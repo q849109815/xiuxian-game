@@ -16,6 +16,12 @@ APP.pages['acc-query'] = {
         <div class="sb">
           <input id="qKey" placeholder="UID / 昵称 / 手机号" value="${U.esc(this.FILTER)}">
           <button class="btn n sm" id="qReload">刷新</button>
+          <button class="btn o sm" id="qRebuild">🔨 重建索引</button>
+        </div>
+        <div class="lbl" style="text-align:left;line-height:1.6">
+          数据来源：<b style="color:var(--yel)">${U.esc(this.SRC_NOTE || '未知')}</b>
+          ${(this.SRC_NOTE || '').indexOf('快照') >= 0 || (this.SRC_NOTE || '').indexOf('无数据') >= 0
+            ? '<br><span style="color:var(--red)">云端四路（索引/账号目录/存档目录/榜单）均未取到，当前显示的是本机缓存。请点「重建索引」或检查网络。</span>' : ''}
         </div>
         <div style="overflow-x:auto"><table class="tb"><thead><tr>
           <th>昵称</th><th>UID</th><th>区服</th><th>等级</th><th>战力</th><th>注册</th><th>最后登录</th><th>渠道</th><th>版本</th><th>状态</th>
@@ -40,6 +46,14 @@ APP.pages['acc-query'] = {
     const s = D('#qKey'); if (s) s.oninput = () => { this.FILTER = s.value; this.render(); };
     const r = D('#qReload');
     if (r) r.onclick = async () => { this.toast('正在拉取…', 'ok'); await this.loadPlayers({ force: true }); this.toast('已刷新 '+this.PLIST.length+' 名玩家', 'ok'); };
+    /* 重建索引：把当前能扫到的所有 UID 回写到 data/zb/index.json，
+     * 之后后台就不必依赖不稳的目录 list 了（解决"只显示一个玩家"） */
+    const rb = D('#qRebuild');
+    if (rb) rb.onclick = async () => {
+      const ok = await this.rebuildIndex();
+      this.toast(ok ? '索引已重建：' + ok + ' 名玩家' : '重建失败（网络不可达）', ok ? 'ok' : 'err');
+      if (ok) { await this.loadPlayers({ force: true }); this.render(); }
+    };
     DA('#body tr[data-sel]').forEach((t) => { t.onclick = () => {
       this.SEL = this.PLIST.find((p) => p.uid === t.dataset.sel) || null; this.render();
     }; });
@@ -54,6 +68,32 @@ APP.pages['acc-query'] = {
     };
   },
 };
+/* 重建玩家索引：账号目录 + 存档目录 + 榜单，合并回写 data/zb/index.json */
+APP.rebuildIndex = async function () {
+  const uids = [];
+  const add = (u) => { if (u && !uids.includes(u)) uids.push(u); };
+  try { (await window.TMO(Net.list('data/zb/users/'), 12000, []) || [])
+    .filter((x) => x.endsWith('.json')).forEach((f) => add(f.replace(/\.json$/, ''))); } catch (e) {}
+  try { (await window.TMO(Net.list(PDIR), 12000, []) || [])
+    .filter((x) => x.endsWith('.json')).forEach((f) => add(f.replace(/\.json$/, ''))); } catch (e) {}
+  for (const k of ['rank', 'endless']) {
+    try {
+      const r = await window.TMO(Net.read(DBP[k]), 10000, null);
+      if (r && r.data && r.data.list) r.data.list.forEach((x) => add(x.uid));
+    } catch (e) {}
+  }
+  (this.PLIST || []).forEach((p) => add(p.uid));
+  if (!uids.length) return 0;
+  /* 尽量带上昵称 */
+  const list = uids.map((u) => {
+    const hit = (this.PLIST || []).find((p) => p.uid === u);
+    return { uid: u, name: (hit && hit.name) || '', nick: (hit && hit.name) || '', at: Date.now() };
+  });
+  const ok = await Net.write('data/zb/index.json', { list: list, updAt: Date.now() }, '重建玩家索引 ' + list.length + ' 人');
+  if (ok) AUDIT.log('重建玩家索引', list.length + '人', uids.slice(0, 5).join(','));
+  return ok ? list.length : 0;
+};
+
 /* 详情（共用） */
 APP.accDetail = function () {
   const p = this.SEL; if (!p) return '';
