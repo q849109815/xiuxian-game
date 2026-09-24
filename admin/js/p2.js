@@ -65,8 +65,39 @@ APP.pages['hot-upload'] = {
         this.toast('已上传并生效', 'ok'); this.render();
       }
     };
+    /* 热更历史里的【对比】【回滚】：此前没有任何绑定代码，点了没反应 */
+    DA('#body [data-hfview]').forEach((b) => { b.onclick = () => {
+      this.diffId = b.dataset.hfview;
+      this.go('hot-diff');
+    }; });
+    DA('#body [data-hfback]').forEach((b) => { b.onclick = async () => {
+      const r = await APP.doRollback(b.dataset.hfback);
+      if (r.ok) this.toast(r.msg, 'ok'); else if (r.msg) this.toast(r.msg, 'err');
+      this.render();
+    }; });
   },
 };
+/* 回滚（共用）：此前只有 hot-rollback 页自己实现一份，
+ * 而 hotHistory() 生成在「配置上传」页的【对比】【回滚】按钮
+ * 从生成起就没有绑定代码 —— 点了完全没反应（死按钮）。
+ * 现在抽出共用方法，两个入口都走同一套「整体还原」逻辑。 */
+APP.doRollback = async function (id) {
+  const hf = await DB.get(DBP.hotfix, { list: [] });
+  const h = (hf.list || []).find((x) => x.id === id);
+  if (!h) return { ok: false, msg: '未找到该热更记录' };
+  if (!confirm('确定回滚 ' + h.name + ' ' + h.ver + '？')) return { ok: false };
+  const path = h.path || DBP.cfg;
+  /* 必须整体还原：热更若新增字段，旧文件没有该键，
+   * Object.assign(cur, old) 会保留新值 → 回滚等于没回滚。 */
+  const back = JSON.parse(JSON.stringify(h.old || {}));
+  delete back._hotfix;
+  if (await DB.set(path, back, '回滚 ' + h.ver)) {
+    AUDIT.log('热更回滚', h.name, '回滚到 ' + h.ver + ' 之前');
+    return { ok: true, msg: '已回滚 ' + h.ver };
+  }
+  return { ok: false, msg: '回滚失败（网络不可达）' };
+};
+
 APP.hotHistory = function () {
   const hf = DB.cache[DBP.hotfix] || { list: [] };
   const l = (hf.list || []).slice(0, 10);
@@ -138,20 +169,9 @@ APP.pages['hot-rollback'] = {
   },
   bind() {
     DA('#body [data-rollback]').forEach((b) => { b.onclick = async () => {
-      const hf = await DB.get(DBP.hotfix, { list: [] });
-      const h = (hf.list || []).find((x) => x.id === b.dataset.rollback);
-      if (!h) return;
-      if (!confirm('确定回滚 ' + h.name + ' ' + h.ver + '？')) return;
-      const path = h.path || DBP.cfg;
-      /* 回滚必须整体还原，不能用合并：
-       * 热更若是「新增字段」，旧文件里没有该键，Object.assign(cur, old)
-       * 会保留新值 → 回滚后新配置依然存在，等于没回滚。 */
-      const back = JSON.parse(JSON.stringify(h.old || {}));
-      delete back._hotfix;
-      if (await DB.set(path, back, '回滚 ' + h.ver)) {
-        AUDIT.log('热更回滚', h.name, '回滚到 ' + h.ver + ' 之前');
-        this.toast('已回滚', 'ok'); this.render();
-      }
+      const r = await APP.doRollback(b.dataset.rollback);
+      if (r.ok) this.toast(r.msg, 'ok'); else if (r.msg) this.toast(r.msg, 'err');
+      this.render();
     }; });
   },
 };
