@@ -252,6 +252,20 @@ APP.pages['ops-merge'] = {
       const hit = this.PLIST.filter((p) => ((p.ext && p.ext.server) || 'S1') === f);
       if (!hit.length) return this.toast('源服无玩家', 'err');
       if (!confirm('确定把 ' + f + '（' + hit.length + '人）合入 ' + t + '？')) return;
+      /* 合服时间：此前 omT 输入框填了完全不读 —— 无论填几小时都立即执行。
+       * 现在 0=立即；>0 则登记为定时任务，到点后自动执行（打开后台时检查）。 */
+      const delayH = Math.max(0, this.num('#omT'));
+      if (delayH > 0) {
+        const cfg = await DB.get(DBP.server, {});
+        cfg.merge = cfg.merge || [];
+        cfg.merge.push({ from: f, to: t, at: Date.now() + delayH * 3600e3, ren: !!(D('#omRen') && D('#omRen').checked), n: hit.length });
+        if (await DB.set(DBP.server, cfg, '计划合服 ' + f + '→' + t)) {
+          AUDIT.log('计划合服', f + '→' + t, delayH + '小时后执行，' + hit.length + '人');
+          this.toast('已计划：' + delayH + ' 小时后自动合服（到点打开后台即执行）', 'ok');
+          this.render();
+        }
+        return;
+      }
       let n = 0;
       for (const p of hit) {
         p.ext = p.ext || {}; p.ext.server = t;
@@ -279,6 +293,60 @@ APP.pages['ops-merge'] = {
 };
 
 /* 数据库备份 */
+/* 自动备份：单机架构无 cron，改为"每次打开后台时按周期检查并补做" */
+APP.BK_AUTO = 24;
+APP.BK_LAST = 0;
+/* 到点自动执行已计划的合服 */
+APP.runDueMerge = async function () {
+  try {
+    const cfg = await DB.get(DBP.server, {});
+    if (!cfg.merge || !cfg.merge.length) return;
+    const now = Date.now();
+    const due = (cfg.merge || []).filter((m) => (m.at || 0) <= now);
+    const keep = (cfg.merge || []).filter((m) => (m.at || 0) > now);
+    if (!due.length) { cfg.merge = keep; return; }
+    for (const m of due) {
+      const hit = (this.PLIST || []).filter((p) => ((p.ext && p.ext.server) || 'S1') === m.from);
+      let n = 0;
+      for (const p of hit) {
+        p.ext = p.ext || {}; p.ext.server = m.to;
+        if (m.ren) {
+          const dup = (this.PLIST || []).some((x) => x.uid !== p.uid && x.name === p.name
+            && ((x.ext && x.ext.server) || 'S1') === m.to);
+          if (dup) p.name = p.name + '_' + m.from;
+        }
+        if (await this.save(p)) n++;
+      }
+      AUDIT.log('自动合服', m.from + '→' + m.to, n + '人');
+    }
+    cfg.merge = keep;
+    await DB.set(DBP.server, cfg, '清理已完成合服计划');
+    await this.loadPlayers({ force: true });
+  } catch (e) {}
+};
+APP.autoBackupIfDue = async function (after) {
+  try {
+    const cfg = await DB.get(DBP.server, {});
+    const h = Number(cfg.bkAuto != null ? cfg.bkAuto : APP.BK_AUTO) || 0;
+    APP.BK_AUTO = h;
+    APP.BK_LAST = Number(cfg.bkLast || 0);
+    if (!h) return;                       // 0 = 关闭
+    if (!APP.BK_LAST) return;             // 无任何备份记录时不做（避免一进来就写）
+    if (Date.now() - APP.BK_LAST < h * 3600e3) return;   // 未到期
+    /* 到期 → 自动备份一次 */
+    const name = 'backup_auto_' + Date.now();
+    const ok = await DB.set('data/zb/' + name + '.json',
+      { n: (this.PLIST || []).length, at: Date.now(), list: this.PLIST }, '自动备份（周期' + h + 'h）');
+    if (ok) {
+      cfg.bkLast = Date.now();
+      await DB.set(DBP.server, cfg, '更新备份时间');
+      APP.BK_LAST = cfg.bkLast;
+      AUDIT.log('自动备份', name, (this.PLIST || []).length + '份');
+      if (after) after();
+    }
+  } catch (e) {}
+};
+
 APP.pages['ops-backup'] = {
   g: '服务器运维', n: '数据备份', i: '💾', perm: 'backup.manage',
   render() {
@@ -298,8 +366,9 @@ APP.pages['ops-backup'] = {
           || '<div class="lbl">点「扫描已有快照」读取</div>'}
       </div>
       <div class="card"><div class="card-t">自动备份周期</div>
-        <div class="fld"><label>周期(小时,0=关闭)</label><input id="obAuto" type="number" value="24"></div>
-        <div class="lbl">⚠ 单机架构无定时任务，自动备份需依赖外部 cron / GitHub Action 触发</div>
+        <div class="fld"><label>周期(小时,0=关闭)</label><input id="obAuto" type="number" value="${APP.BK_AUTO}"></div>
+        <button class="btn n sm" id="obAutoSave">💾 保存</button>
+        <div class="lbl">保存后，每次打开后台会自动检查：距上次备份超过该周期即自动备份一次（无需外部 cron）。上一次备份：${APP.BK_LAST ? U.dt(APP.BK_LAST) : '无记录'}</div>
       </div>`;
   },
   bind() {
@@ -321,9 +390,29 @@ APP.pages['ops-backup'] = {
       const name = (this.val('#obName') || ('backup_' + Date.now())).trim();
       const path = 'data/zb/' + (name.endsWith('.json') ? name : name + '.json');
       const ok = await DB.set(path, { n: this.PLIST.length, at: Date.now(), list: this.PLIST }, '全量备份');
-      if (ok) { AUDIT.log('数据备份', name, this.PLIST.length + '份'); this.toast('已备份', 'ok'); scan(); }
+      if (ok) {
+        AUDIT.log('数据备份', name, this.PLIST.length + '份');
+        try { const c = await DB.get(DBP.server, {}); c.bkLast = Date.now(); await DB.set(DBP.server, c, '更新备份时间'); APP.BK_LAST = c.bkLast; } catch (e) {}
+        this.toast('已备份', 'ok'); scan();
+      }
     };
     const sc = D('#obScan'); if (sc) sc.onclick = scan;
+    /* 自动备份周期：此前 obAuto 只是个摆设输入框，填了既不保存也不生效。
+     * 现在保存周期，并在每次进入本页时自动检查是否需要备份。 */
+    const sv = D('#obAutoSave');
+    if (sv) sv.onclick = async () => {
+      const h = Math.max(0, this.num('#obAuto'));
+      const cfg = await DB.get(DBP.server, {});
+      cfg.bkAuto = h;
+      if (await DB.set(DBP.server, cfg, '设置自动备份周期 ' + h + ' 小时')) {
+        APP.BK_AUTO = h;
+        AUDIT.log('设置自动备份周期', h + '小时', '');
+        this.toast(h ? ('已保存：每 ' + h + ' 小时自动备份') : '已关闭自动备份', 'ok');
+        this.render();
+      }
+    };
+    /* 自动检查：距上次备份超过周期则自动备份（天然实现"定时"，不依赖外部 cron） */
+    this.autoBackupIfDue(scan);
     DA('#body [data-obdl]').forEach((b) => { b.onclick = () => {
       const s = (APP.snaps || []).find((x) => x.name === b.dataset.obdl);
       if (!s) return;
