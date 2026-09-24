@@ -341,7 +341,7 @@ r_tavern(p, tab) {
             ${g.img ? `<div class="zav"><img src="${g.img}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>`
                     : `<div class="zav">${g.icon}</div>`}
             <div class="zi"><b>${g.n}</b><span>${g.desc}</span>
-              <span style="color:var(--yel)">当前加成 攻+${E.fmt(gb.atk)} 血+${E.fmt(gb.hp)}</span></div>
+              <span style="color:${on ? 'var(--yel)' : 'rgba(255,255,255,.55)'}">Lv.${p.gemLv || 0}：${E.gemBonusOf ? E.gemBonusOf(p, g.id) : '—'}${on ? '（已镶嵌）' : ''}</span></div>
             ${on ? '<button class="btn g sm" data-gemoff="1">卸下</button>'
                  : `<button class="btn sm" data-gemon="${g.id}">镶嵌</button>`}
           </div>`;
@@ -1006,7 +1006,8 @@ r_tavern(p, tab) {
       <button class="btn" id="gemInlay" style="width:100%;margin-top:10px">镶 嵌</button>
       <button class="btn o" id="gemFuse" style="width:100%;margin-top:6px">🔨 宝石合成（3 颗 → 升一级）</button>
       <div class="sub" style="margin-top:6px">当前宝石等级：<b style="color:var(--yel)">Lv.${p.gemLv || 0}</b>
-        加成：攻击 +${E.fmt(E.gemBonus(p).atk)} · 生命 +${E.fmt(E.gemBonus(p).hp)} · 暴击 +${((E.gemBonus(p).crit) * 100).toFixed(0)}%</div>
+        加成：${E.gemBonusTxt ? E.gemBonusTxt(p) : '—'}
+        <span style="opacity:.7">（百分比加成，只随宝石合成等级提升，与角色等级无关）</span></div>
     </div>`;
   },
   b_gem(p, tab) {
