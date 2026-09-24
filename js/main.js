@@ -66,7 +66,15 @@ const MAIN = {
     p.char = p.char || 'C01'; p.chars = p.chars || ['C01'];
     p.skin = p.skin || 'sk_c01a'; p.skins = p.skins || ['sk_c01a'];
     p.mat = p.mat || { M01: 0, M02: 0, M03: 0, M04: 0, M05: 0, P01: 0, P02: 0 };
-    p.use = p.use || { I01: 0, I02: 0, I03: 0 };
+    /* 旧存档兼容：把历史写入 p.use 的消耗品并回 p.mat（此前两字段分裂，
+     * 导致已领的急救包/护盾/药剂在背包显示 ×0 且点不了"使用"） */
+    if (p.use && typeof p.use === 'object') {
+      for (const k in p.use) {
+        const v = Number(p.use[k]) || 0;
+        if (v > 0) p.mat[k] = (p.mat[k] || 0) + v;
+      }
+      p.use = {};
+    }
     p.gun = p.gun || 'W01'; p.gunLv = p.gunLv || 1; p.gunAdv = p.gunAdv || 0;
     p.gunStats = p.gunStats || {}; p.gunOwn = p.gunOwn || ['W01'];
     p.chips = p.chips || {}; p.bag = p.bag || []; p.talents = p.talents || {};
@@ -80,6 +88,8 @@ const MAIN = {
     p.guide = p.guide || {}; p.ach = p.ach || 0; p.endlessTime = p.endlessTime || 0;
     p.mail = p.mail || [];
     E.resetTasks(p); E.tickStamina(p);
+    /* 图鉴回填：补录已拥有但历史未记账的武器/皮肤 */
+    try { if (E.codexBackfill) E.codexBackfill(p); } catch (e) {}
   },
 
   async save() {
@@ -171,9 +181,11 @@ const MAIN = {
       if (k === 'gold' || k === 'diamond' || k === 'ach' || k === 'stamina' || k === 'evToken') {
         P[k] = (P[k] || 0) + v;
       } else {
-        const it = (EX.items || []).find((x) => x.id === k);
-        if (it && it.type === '消耗') { P.use = P.use || {}; P.use[k] = (P.use[k] || 0) + v; }
-        else { P.mat = P.mat || {}; P.mat[k] = (P.mat[k] || 0) + v; }
+        /* BUG修复：消耗品此前写入 p.use，但背包「消耗」页与 useItem() 都读 p.mat，
+         * 导致邮件/礼包发的急救包、护盾等在背包里恒显示 ×0 且无法使用。
+         * 统一到 p.mat 一个字段。 */
+        P.mat = P.mat || {};
+        P.mat[k] = (P.mat[k] || 0) + v;
       }
     });
   },
@@ -289,6 +301,9 @@ function onBattleEnd(res, d) {
   /* 表25 #1 角色等级：按击杀数结算经验（怪物表 xp 字段加权，受天赋/建筑经验加成） */
   const xpGain = Math.round(kills * 4 * (E.attrs(P).xpMul || 1));
   const lvr = E.addXp(P, xpGain);
+  /* 结算面板读的是 rw.exp（此前未赋值，界面恒显示兜底值 15 EXP，
+   * 而玩家实际拿到的是按击杀计算的数百经验 —— 显示与实际严重不符） */
+  rw.exp = xpGain;
   rw.xp = xpGain;
   if (lvr.ups > 0) setTimeout(() => { if (window.UI) UI.toast('🎉 ' + lvr.msg, 'ok'); }, 900);
 
