@@ -76,8 +76,19 @@ const U = {
     return out;
   },
   /* 物品选择器 HTML */
+  /* 物品下拉选择器
+   * 致命 BUG 修复：此前只生成 data-pk="xxx"，没有 id="xxx"。
+   * 而全后台 10 处调用都用 U.val('#xxx') 取值 ——
+   * document.querySelector('#xxx') 找不到元素返回 null，val() 返回空串。
+   * 后果（全部无声失效，界面还提示成功）：
+   *   · 礼包模板：三个物品全读空 →「至少配置一个物品」，永远建不了模板
+   *   · 邮件附件：单发 / 全服 / 定向 三类邮件的物品全空 → 玩家收到空邮件
+   *   · 道具补发：单人 + 批量 → 实际什么都没发
+   *   · 成就商店 / 活动商店 / 排行榜奖励 / 合服奖励 → 配的道具全部丢失
+   * 现在补上 id，与 val('#xxx') / num('#xxx') 的读取方式对齐。 */
   picker(name, def) {
-    return `<select data-pk="${name}">${U.itemList().map((i) =>
+    const id = String(name).replace(/[^\w-]/g, '');
+    return `<select id="${id}" data-pk="${id}">${U.itemList().map((i) =>
       `<option value="${i.id}"${i.id === def ? ' selected' : ''}>${i.icon} ${U.esc(i.n)}</option>`).join('')}</select>`;
   },
 };
@@ -308,7 +319,7 @@ const APP = {
   },
   saveSnapshot(list) {
     try {
-      localStorage.setItem(this.PLIST_CACHE_KEY, JSON.stringify({ at: Date.now(), list: list.slice(0, 150) }));
+      localStorage.setItem(this.PLIST_CACHE_KEY, JSON.stringify({ at: Date.now(), list: list }));
     } catch (e) {}
   },
   async loadPlayers(opt = {}) {
@@ -320,20 +331,41 @@ const APP = {
       this.sortPlayers();
       if (!opt.silent) this.render();
     }
-    /* ② 已判定离线 → 直接用快照，不再狂试十几个代理端点
-     * （真实网络下每次失败要轮播十多个代理，各等 8~14 秒，这是卡顿主因） */
-    if (typeof Net !== 'undefined' && Net.online === false && snap) {
+    /* ② 离线短路
+     * BUG 修复：此前只要 Net.online === false 且有快照就直接 return，
+     * 连 force 强制刷新也被一并挡掉 —— 一旦某次判定离线，
+     * 此后玩家列表永远停留在那份旧快照（用户实测：明明有多个存档，
+     * 列表里始终只有最早缓存的那一个 UID，销户后重新刷新又"复活"）。
+     * 现在：强制刷新时不短路；普通进入时，仅当快照较新（<5 分钟）才短路。 */
+    const snapFresh = snap && (Date.now() - (snap.at || 0)) < 5 * 60e3;
+    if (typeof Net !== 'undefined' && Net.online === false && snapFresh && !opt.force) {
       return;
     }
-    /* ③ 后台并发拉取最新 */
+    /* ③ 并发拉取最新 */
     let names = [];
+    let srcNote = '';
     try { names = await window.TMO(Net.list(PDIR), 12000, []); } catch (e) {}
-    if (!names || !names.length) {
+    if (names && names.length) {
+      srcNote = '玩家存档目录';
+    } else {
+      /* 目录拉取失败（离线/代理被限）→ 退回排行榜名单兜底，
+       * 但这份名单只含上榜玩家，会严重漏人，必须显式告知数据来源。 */
       try {
         const r = await window.TMO(Net.read(DBP.rank), 10000, null);
-        if (r && r.data && r.data.list) names = r.data.list.map((x) => x.uid + '.json');
+        if (r && r.data && r.data.list) {
+          names = r.data.list.map((x) => x.uid + '.json');
+          srcNote = '排行榜名单兜底（不完整）';
+        }
       } catch (e) {}
     }
+    /* 若强制刷新后仍取不到目录，说明确实连不上 —— 保留快照但标明来源 */
+    if ((!names || !names.length) && snap) {
+      this.PLIST = snap.list; this.PLIST_AT = snap.at;
+      this.SRC_NOTE = '本地快照（云端不可达）';
+      if (!opt.silent) this.render();
+      return;
+    }
+    this.SRC_NOTE = srcNote || '云端';
     const files = (names || []).filter((x) => x.endsWith('.json')).slice(0, 150);
     if (!files.length) { if (!this.PLIST) this.PLIST = []; return; }
     const out = [];
@@ -355,7 +387,7 @@ const APP = {
     this.saveSnapshot(out);
     /* 选中项失效则清空，避免操作到已删除的玩家 */
     if (this.SEL && !out.find((p) => p.uid === this.SEL.uid)) {
-      this.SEL = out.find((p) => p.uid === this.SEL.uid) || this.SEL;
+      this.SEL = null;   /* 玩家已被删除 → 清空选中，避免后续操作到空对象 */
     }
     if (!opt.silent) this.render();
   },
@@ -425,7 +457,7 @@ const APP = {
     return `<div class="pcard ${this.SEL && this.SEL.uid === p.uid ? 'on' : ''}"
       data-sel="${U.esc(p.uid)}" ${attr || ''}>
       <div class="r1"><div class="zav">${U.esc((p.avatar || '🧑').slice(0, 2))}</div>
-        <b>${U.esc(p.name)}</b>${p.ban ? '<span class="ban">封禁</span>' : ''}</div>
+        <b>${U.esc(p.name)}</b>${p.destroyed ? '<span class="ban">已注销</span>' : p.ban ? '<span class="ban">封禁</span>' : ''}</div>
       <div class="r2">
         <span class="chipx y">Lv.${p.lv || 1}</span>
         <span class="chipx g">${U.fmt(U.pw(p))}</span>
