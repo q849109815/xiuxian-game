@@ -220,11 +220,20 @@ const MAIN = {
         const base = (EX.activities || []).slice();
         db.list.forEach((a) => {
           if (!a || !a.id) return;
+          /* 状态必须按时间算，不能只信后台存的 status 字段：
+           * 后台「活动启停」页显示的"运行中"是渲染时用时间算出来的，
+           * 但云端 status 字段自创建起就一直是 '待开启'，从没被回写。
+           * 此前 live = (status === '运行中') 恒为 false，
+           * 导致后台时间到了显示运行中、游戏端却判定为不可参与。 */
+          const nowT = Date.now();
+          const st = a.status === '强制下架' ? '强制下架'
+            : nowT < (a.startAt || 0) ? '待开启'
+            : nowT > (a.endAt || 0) ? '已结束' : '运行中';
           const it = {
             id: a.id, n: a.name || a.n || '活动',
             startAt: a.startAt || 0, endAt: a.endAt || 0,
             cond: a.cond || {}, levelId: a.levelId || '',
-            live: a.status === '运行中', status: a.status || '待开启',
+            live: st === '运行中', status: st,
             rw: a.rw || {}, desc: a.desc || '',
           };
           const i = base.findIndex((x) => x.id === a.id);
@@ -316,6 +325,12 @@ const MAIN = {
           if (m.startAt && m.startAt > now) continue;
           if (m.expireAt && m.expireAt < now) continue;
           if ((m.claimed || []).indexOf(P.uid) >= 0) continue;
+          /* 字段不一致修复：后台全服/定向邮件写入的是 title/body，
+           * 而玩家存档里的邮件用 t/b。此前统一读 m.t，
+           * 导致运营精心写的标题被吞掉，玩家只看到「邮件」两个字。
+           * 这里做兼容补齐，让 m.t / m.b 在云端邮件上也能取到值。 */
+          if (!m.t && m.title) m.t = m.title;
+          if (!m.b && m.body) m.b = m.body;
           /* 定向：检查 uid 列表或筛选条件 */
           if (m.type === 'target') {
             const hit = (m.uids || []).indexOf(P.uid) >= 0
