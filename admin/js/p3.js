@@ -264,7 +264,7 @@ APP.pages['ops-merge'] = {
       }
       AUDIT.log('合服', f + '→' + t, n + '人');
       this.toast('已合服 ' + n + ' 人', 'ok');
-      await this.loadPlayers(); this.render();
+      await this.loadPlayers({ force: true }); this.render();
     };
     const rw = D('#omRw');
     if (rw) rw.onclick = async () => {
