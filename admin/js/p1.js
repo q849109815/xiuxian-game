@@ -427,7 +427,19 @@ APP.pages['acc-rollback'] = {
       const old = (snap.data.list || []).find((x) => x.uid === p.uid);
       if (!old) return this.toast('该快照中没有此玩家', 'err');
       if (!confirm('确定把 ' + p.name + ' 回档到 ' + U.dt(snap.at) + '？')) return;
-      const np = Object.assign({}, p, old, { uid: p.uid });
+      /* 严重 BUG 修复：此前是【浅合并】Object.assign({}, p, old)。
+       * 嵌套对象（mat 材料、bag 芯片、cleared 通关记录、codex 图鉴、
+       * stats 统计、ext 扩展、mailGot/cdkGot 领取记录等）会被整块替换或整块保留，
+       * 只能二选一，无法逐字段回退：
+       *   · 快照里有 mat → 整块替换（这一步看似对）
+       *   · 快照里没有 bag（老快照早于芯片系统）→ 保留玩家【当前】的芯片
+       * 结果就是「材料退回去了、芯片没退」，回档出一个新旧混合的脏档，
+       * 作弊者刷的芯片原封不动留着 —— 回档作为反作弊手段直接失效。
+       * 现在改成整体还原：以快照数据为准，只把 uid 对齐到当前玩家。 */
+      const np = JSON.parse(JSON.stringify(old));
+      np.uid = p.uid;
+      /* 清空当前对象再写入，避免残留快照中不存在的字段 */
+      Object.keys(p).forEach((k) => { delete p[k]; });
       Object.assign(p, np);
       p.lastSeen = Date.now();
       if (await this.save(p)) {
