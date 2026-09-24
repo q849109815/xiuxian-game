@@ -1254,18 +1254,31 @@ r_tavern(p, tab) {
         }).join('')}`).join('')}
     </div>
     <div class="card"><div class="card-t">全服榜单 <span class="sub">通关后自动上传</span></div>
+      <div class="pn-tabs" style="padding:0 0 8px">${['无尽生存榜', '战力榜', '活动冲榜'].map((b) =>
+        `<div class="pt ${(this.rankBoard || '无尽生存榜') === b ? 'on' : ''}" data-rkb="${b}">${b}</div>`).join('')}</div>
       ${(function () {
-        const lb = window.LB || [];
+        const board = this.rankBoard || '无尽生存榜';
+        let lb = (window.LB || []).slice();
+        /* 三个榜单此前共用同一份列表：云端只按「无尽层数」排序，
+         * 于是切到战力榜/活动冲榜看到的名次仍是按无尽层数排的 ——
+         * 战力第一的人可能显示在第十名。现在按各榜自己的字段排序。 */
+        if (board === '战力榜') lb.sort((a, b) => (b.pw || 0) - (a.pw || 0));
+        else if (board === '活动冲榜') lb.sort((a, b) => (b.ev || 0) - (a.ev || 0));
+        else lb.sort((a, b) => (b.eb || 0) - (a.eb || 0) || (b.pw || 0) - (a.pw || 0));
         if (!lb.length) return '<div class="lbl">暂无排行数据，通关后自动上传</div>';
         return lb.map((x, i) => `<div class="item">
           <div class="ic" style="font-size:15px;background:${i < 3 ? 'linear-gradient(135deg,#ffe9a8,#f0a020)' : 'rgba(10,16,28,.7)'};color:${i < 3 ? '#2a1a00' : '#fff'}">${i + 1}</div>
           <div class="info"><div class="nm">${x.n || x.name || '匿名'}</div>
             <div class="sub">${x.lv || '—'} · 无尽 ${x.eb || 0} 层</div></div>
-          <div class="act"><span class="tag y">${E.fmt(x.pw || 0)}</span></div></div>`).join('');
-      })()}
+          <div class="act"><span class="tag y">${board === '活动冲榜' ? E.fmt(x.ev || 0) + ' 积分' : board === '战力榜' ? E.fmt(x.pw || 0) : E.fmt(x.pw || 0)}</span></div></div>`).join('');
+      }).call(this)}
     </div>`;
   },
   b_rank(p) {
+    /* 榜单切换：此前三个榜共用同一份按无尽层数排好的列表，没有切换入口 */
+    $$('#pnBody [data-rkb]').forEach((t) => { t.onclick = () => {
+      this.rankBoard = t.dataset.rkb; this.open('rank');
+    }; });
     $$('#pnBody [data-rk]').forEach((b) => { b.onclick = () => {
       const [board, id] = b.dataset.rk.split('|');
       const rw = (EX.rankRewards || []).find((x) => x.id === id);
