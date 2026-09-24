@@ -369,7 +369,12 @@ const BT = {
       const tz = this.nearest(t.x, t.y, null, t.def.rng + t.lv * 12);
       if (!tz) continue;
       t.cd = 1 / (t.def.rate * (1 + t.lv * 0.12));
-      const dmgT = t.def.dmg * (1 + t.lv * 0.35) * (1 + r.mods.dmgMul);
+      /* 炮台伤害此前完全不随章节缩放：
+       * 火焰炮台固定 22 伤害，而第 10 章普通僵尸血量 3953（关卡倍率 131.75）
+       * → 杀一只要 180 发 / 约 200 秒，后期炮台等于纯装饰，
+       *   玩家花 120~180 金币建造 + 升级的钱全部白花。
+       * 现在按关卡倍率 rwMul 缩放，与武器/怪物成长同步。 */
+      const dmgT = t.def.dmg * (1 + t.lv * 0.35) * (1 + r.mods.dmgMul) * (r.def.rwMul || 1);
       this.spawnBullet(t.x, t.y, tz, dmgT, { pierce: 0, from: 'turret', el: t.def.el });
     }
 
@@ -388,7 +393,9 @@ const BT = {
        * → 冷却永远走不完 → 雇佣兵静默失效（不报错，但再也不开火）。
        * 这里兜底为至少 0.05 秒一发。 */
       m.cd = 1 / Math.max(0.05, m.def.rate || 0);
-      this.spawnBullet(m.x, m.y, mz, m.def.dmg * (1 + r.mods.dmgMul),
+      /* 佣兵伤害同样不随章节缩放（狙击手 90 伤害 vs 第10章 3953 血 = 44 发），
+       * 花 800~1600 金币招募的佣兵后期完全打不动，一并按关卡倍率缩放。 */
+      this.spawnBullet(m.x, m.y, mz, m.def.dmg * (1 + r.mods.dmgMul) * (r.def.rwMul || 1),
         { pierce: m.def.id === 'M_SJ' ? 3 : 0, from: 'merc', el: '物' });
     }
 
