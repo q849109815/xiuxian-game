@@ -102,6 +102,19 @@ const UA = {
       return true;
     } catch (e) { return false; }
   },
+  /* 补丁：给索引行补字段（等级/战力/活跃时间），失败静默 */
+  async idxPatch(id, patch) {
+    try {
+      const r = await Net.read(this.IDX);
+      const idx = (r && r.data && Array.isArray(r.data.list)) ? r.data : null;
+      if (!idx) return false;
+      const row = idx.list.find((x) => x.uid === id);
+      if (!row) return false;
+      Object.assign(row, patch || {});
+      await Net.write(this.IDX, idx, '索引补丁 ' + id);
+      return true;
+    } catch (e) { return false; }
+  },
   async idxDel(id) {
     try {
       const r = await Net.read(this.IDX);
