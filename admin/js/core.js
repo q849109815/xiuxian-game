@@ -341,32 +341,72 @@ const APP = {
     if (typeof Net !== 'undefined' && Net.online === false && snapFresh && !opt.force) {
       return;
     }
-    /* ③ 并发拉取最新 */
-    let names = [];
-    let srcNote = '';
-    try { names = await window.TMO(Net.list(PDIR), 12000, []); } catch (e) {}
-    if (names && names.length) {
-      srcNote = '玩家存档目录';
-    } else {
-      /* 目录拉取失败（离线/代理被限）→ 退回排行榜名单兜底，
-       * 但这份名单只含上榜玩家，会严重漏人，必须显式告知数据来源。 */
-      try {
-        const r = await window.TMO(Net.read(DBP.rank), 10000, null);
-        if (r && r.data && r.data.list) {
-          names = r.data.list.map((x) => x.uid + '.json');
-          srcNote = '排行榜名单兜底（不完整）';
-        }
-      } catch (e) {}
-    }
-    /* 若强制刷新后仍取不到目录，说明确实连不上 —— 保留快照但标明来源 */
-    if ((!names || !names.length) && snap) {
+    /* ③ 多来源合并拉取
+     * =========================================================
+     * 严重 BUG 修复：此前只认「目录 list」一条路，list 一失败就退回战力榜，
+     * 而战力榜通常只有极少数上榜玩家 —— 于是后台永远只显示那一个 UID，
+     * 运营明明有多个玩家却看不到（用户实测：始终只有 uoy3fq9）。
+     *
+     * 现在四个来源全部收集后【合并去重】，任一路通都能看见玩家：
+     *   ① 玩家索引 data/zb/index.json（最可靠，注册/登录即写入）
+     *   ② 账号目录 data/zb/users/（每个注册账号都有，比存档更全）
+     *   ③ 玩家存档目录 data/zb/players/
+     *   ④ 战力榜 + 无尽榜（兜底）
+     * ========================================================= */
+    const uids = [];
+    const srcs = [];
+    const add = (u) => { if (u && !uids.includes(u)) uids.push(u); };
+
+    /* ① 索引 */
+    try {
+      const r = await window.TMO(Net.read('data/zb/index.json'), 10000, null);
+      if (r && r.data && Array.isArray(r.data.list) && r.data.list.length) {
+        r.data.list.forEach((x) => add(x.uid));
+        srcs.push('索引' + r.data.list.length);
+      }
+    } catch (e) {}
+    /* ② 账号目录 */
+    try {
+      const ns = await window.TMO(Net.list('data/zb/users/'), 12000, []);
+      const hit = (ns || []).filter((x) => x.endsWith('.json'));
+      if (hit.length) { hit.forEach((f) => add(f.replace(/\.json$/, ''))); srcs.push('账号目录' + hit.length); }
+    } catch (e) {}
+    /* ③ 存档目录 */
+    try {
+      const ns = await window.TMO(Net.list(PDIR), 12000, []);
+      const hit = (ns || []).filter((x) => x.endsWith('.json'));
+      if (hit.length) { hit.forEach((f) => add(f.replace(/\.json$/, ''))); srcs.push('存档目录' + hit.length); }
+    } catch (e) {}
+    /* ④ 榜单兜底 */
+    ['rank', 'endless'].forEach((k) => { this.PLIST_RANK_UIDS = this.PLIST_RANK_UIDS || []; });
+    try {
+      const r = await window.TMO(Net.read(DBP.rank), 10000, null);
+      if (r && r.data && r.data.list && r.data.list.length) {
+        r.data.list.forEach((x) => add(x.uid)); srcs.push('战力榜' + r.data.list.length);
+      }
+    } catch (e) {}
+    try {
+      const r = await window.TMO(Net.read(DBP.endless), 10000, null);
+      if (r && r.data && r.data.list && r.data.list.length) {
+        r.data.list.forEach((x) => add(x.uid)); srcs.push('无尽榜' + r.data.list.length);
+      }
+    } catch (e) {}
+
+    if (uids.length) {
+      this.SRC_NOTE = srcs.join(' + ');
+    } else if (snap) {
+      /* 四路全失败 —— 保留快照但标明来源，不再假装是最新 */
       this.PLIST = snap.list; this.PLIST_AT = snap.at;
-      this.SRC_NOTE = '本地快照（云端不可达）';
+      this.SRC_NOTE = '本地快照（云端四路均不可达）';
+      if (!opt.silent) this.render();
+      return;
+    } else {
+      if (!this.PLIST) this.PLIST = [];
+      this.SRC_NOTE = '无数据（云端不可达）';
       if (!opt.silent) this.render();
       return;
     }
-    this.SRC_NOTE = srcNote || '云端';
-    const files = (names || []).filter((x) => x.endsWith('.json')).slice(0, 150);
+    const files = uids.slice(0, 200).map((u) => u + '.json');
     if (!files.length) { if (!this.PLIST) this.PLIST = []; return; }
     const out = [];
     const WIN = 8;   /* 并发窗口 */
@@ -391,7 +431,16 @@ const APP = {
     }
     if (!opt.silent) this.render();
   },
-  sortPlayers() { this.PLIST.sort((a, b) => U.pw(b) - U.pw(a)); },
+  /* 已注销/已封禁玩家沉到列表末尾，避免混在正常玩家中间造成"销户了还在"的错觉 */
+  sortPlayers() {
+    this.PLIST.sort((a, b) => {
+      const da = (a.destroyed ? 1 : 0) - (b.destroyed ? 1 : 0);
+      if (da) return da;
+      const ba = (a.ban ? 1 : 0) - (b.ban ? 1 : 0);
+      if (ba) return ba;
+      return U.pw(b) - U.pw(a);
+    });
+  },
 
   /* =========================================================
    * 封禁 / 解封（统一入口）
