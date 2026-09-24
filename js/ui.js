@@ -1157,7 +1157,14 @@ r_tavern(p, tab) {
 
   /* ---------- 活动 ---------- */
   r_act(p, tab) {
-    const acts = EX.acts || EX.activities || [];
+    /* 后台「强制下架」/已结束的活动必须隐藏：
+     * 此前游戏端原样列出全部活动，运营紧急下架了，玩家照样看得见、照样能参与。 */
+    const acts = (EX.acts || EX.activities || []).filter((a) => {
+      if (a.status === '强制下架') return false;
+      if (a.endAt && Date.now() > a.endAt) return false;
+      if (a.startAt && Date.now() < a.startAt - 864e5 * 30) return false;  /* 一个月后才开始的先不显示 */
+      return true;
+    });
     return `<div class="card"><div class="card-t">活动
       <span class="sub">${acts.length} 个进行中</span></div>
       ${acts.length ? acts.map((a) => `<div class="zrow">
