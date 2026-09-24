@@ -523,8 +523,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const moveSpd = c.spd * this.SPD_MUL * (1 + spdUp);
     return {
       /* 表25 #1：角色等级成长（每级 +攻击6 / +生命80） */
-      atk: ((atk + (p.lvBonusAtk || 0)) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct)) * (1 + EX.starBonus(p.charStar)),
-      hp: ((Math.round(hp) + (p.lvBonusHp || 0)) * (1 + this.gemBonus(p).hpPct)) * (1 + EX.starBonus(p.charStar)),
+      atk: ((atk + (p.lvBonusAtk || 0)) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct + this.equipBonus(p).atkPct)) * (1 + EX.starBonus(p.charStar)),
+      hp: ((Math.round(hp) + (p.lvBonusHp || 0)) * (1 + this.gemBonus(p).hpPct + this.equipBonus(p).hpPct)) * (1 + EX.starBonus(p.charStar)),
       gunBase, armor: Math.round(armor),
       mag: g.mag + af.mag + Math.round(this.gunStatVal(p, 'mag')),
       pierce: g.pierce + af.pierce + Math.floor(this.gunStatVal(p, 'pierce')),
@@ -553,6 +553,30 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       charName: c.n, gunName: g.n,
     };
   },
+  /* 装备强化加成
+   * BUG：forgeEquip 只写 p.equip[slot].lv，但 attrs() 从不读它
+   * → 玩家花几万金币强化 8 个部位，战力数字涨了，
+   *   实际攻击/生命/打怪伤害纹丝不动。装备系统等于只涨数字不涨实力。
+   * 现在按槽位类型提供真实百分比加成（与宝石同思路，纯百分比不随等级膨胀）。 */
+  equipBonus(p) {
+    const eq = p.equip || {};
+    /* 攻击类槽位 / 生命类槽位 */
+    const ATK_SLOTS = ['weapon', 'ring', 'fabao'];
+    const HP_SLOTS = ['head', 'cloth', 'neck', 'boot', 'brace'];
+    let atkPct = 0, hpPct = 0;
+    Object.keys(eq).forEach((k) => {
+      const e = eq[k] || {};
+      const lv = e.lv || 0, adv = e.adv || 0;
+      if (lv <= 0) return;
+      /* 每级 +0.8%，每进阶（每 5 级）+1% */
+      const v = lv * 0.008 + adv * 0.01;
+      if (ATK_SLOTS.indexOf(k) >= 0) atkPct += v;
+      else if (HP_SLOTS.indexOf(k) >= 0) hpPct += v;
+      else { atkPct += v * 0.5; hpPct += v * 0.5; }
+    });
+    return { atkPct: atkPct, hpPct: hpPct };
+  },
+
   power(p) {
     const a = this.attrs(p);
     const gb = this.gemBonus(p);
