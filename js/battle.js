@@ -106,8 +106,12 @@ const BT = {
     try { OPS.track('level_start', { lv: levelNo, pw: E.power(p) }); } catch (e) {}
     const def = this.levelDef(levelNo);
     const a = E.attrs(p);
-    /* 表16：战斗外使用的消耗品，在开局统一生效 */
-    try { if (E.applyPendingItems) E.applyPendingItems(p); } catch (e) {}
+    /* 表16：战斗外使用的消耗品，在开局统一生效
+     * 【注意】不能在这里调：此时 this.run 还是【上一局的残骸或未定义】，
+     *         applyItem() 会把 护盾/回血/攻击buff 写到旧 run 上，
+     *         紧接着下面 `this.run = {...}` 整体覆盖 → 效果全部蒸发。
+     *         实测：战斗外用急救包 → 提示「下一场自动生效」→ 开局血量纹丝不动。
+     *        必须挪到 run 创建之后（见下方 start 末尾）。 */
     this.charImg = (E.char(p) || {}).img || null;
     this.P = p; this._heroImg = undefined;
     this.scene = this.sceneFor(def.ch); this.img(this.scene);
@@ -167,6 +171,9 @@ const BT = {
       const md = EX.mercs.find((x) => x.id === mid); if (!md) continue;
       _r.mercs.push({ def: md, x: this.W * (0.28 + _r.mercs.length * 0.18), y: this.H - 74, cd: 0 });
     }
+    /* 战斗外预置的消耗品：必须在 run 创建【之后】才生效
+     * （此前放在 start() 开头，被 this.run = {...} 覆盖，等于白用） */
+    try { if (E.applyPendingItems) E.applyPendingItems(p); } catch (e) {}
     this.on = true; this.paused = false;
     this.startWave(1);
     this.startLoop();
