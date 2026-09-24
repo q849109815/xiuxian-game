@@ -90,6 +90,8 @@ const BT = {
     try { OPS.track('level_start', { lv: levelNo, pw: E.power(p) }); } catch (e) {}
     const def = this.levelDef(levelNo);
     const a = E.attrs(p);
+    /* 表16：战斗外使用的消耗品，在开局统一生效 */
+    try { if (E.applyPendingItems) E.applyPendingItems(p); } catch (e) {}
     this.charImg = (E.char(p) || {}).img || null;
     this.P = p; this._heroImg = undefined;
     this.scene = this.sceneFor(def.ch); this.img(this.scene);
@@ -279,6 +281,7 @@ const BT = {
     const r = this.run; if (!r || r.over) return;
     r.time += dt;
     if (r.hitFlash > 0) r.hitFlash -= dt;
+    this.tickBuffs(dt);            /* 消耗品增益计时（I03 攻击 +30%） */
 
     /* --- 玩家移动（摇杆） --- */
     const joy = BT.joy || { x: 0, y: 0 };
@@ -743,6 +746,8 @@ const BT = {
       dmg = r.dmgMin + Math.random() * (r.dmgMax - r.dmgMin);
       dmg *= (1 + Number(r.mods.dmgMul) || 0);
     }
+    /* 消耗品 I03 攻击增幅药剂：攻击 +30% 持续 30 秒 */
+    if (r.buffAtk > 0 && r.buffAtkT > 0) dmg *= (1 + r.buffAtk);
     /* 双倍伤害词条 AF11 */
     if (A.doubleChance && Math.random() < A.doubleChance) { dmg *= 2; r._dbl = true; }
     else r._dbl = false;
@@ -1007,6 +1012,15 @@ const BT = {
    * 绘制
    * ================================================ */
   /* ===== 2.5D 透视：近大远小 ===== */
+  /* 消耗品增益计时（I03 攻击 +30% 持续 30 秒） */
+  tickBuffs(dt) {
+    const r = this.run; if (!r) return;
+    if (r.buffAtkT > 0) {
+      r.buffAtkT -= dt;
+      if (r.buffAtkT <= 0) { r.buffAtkT = 0; r.buffAtk = 0; }
+    }
+  },
+
   depthScale(y) {
     const t = Math.max(0, Math.min(1, y / (this.wallY || this.H)));
     return 0.80 + Math.pow(t, 1.2) * 0.42;      /* 远处 0.80 倍 → 近处 1.22 倍（弱透视，贴近平视俯瞰） */
