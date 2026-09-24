@@ -364,6 +364,16 @@ const MAIN = {
          * 而此前只认 db.data —— 后台热更的数值改了，游戏端完全读不到。
          * 现在两种结构都兼容：有 data 用 data，否则取顶层（跳过 _hotfix 元信息）。 */
         const src = (db.data && typeof db.data === 'object') ? db.data : db;
+        /* 定时生效
+         * BUG：后台「生效时间(小时，0=立即)」写入 _hotfix.at，
+         * 但游戏端从没读过它 —— 填「2 小时后生效」的配置是【立即生效】的。
+         * 运营想定时开活动、定时调数值，实际一上传就变了。
+         * 现在未到生效时间就整份跳过（沿用内置默认值），下次登录到点后自然生效。 */
+        const hf = src._hotfix || {};
+        if (hf.at && Date.now() < Number(hf.at)) {
+          console.log('[cfg] 热更未到生效时间，跳过：' + new Date(Number(hf.at)).toLocaleString());
+          return;
+        }
         Object.keys(src || {}).forEach((k) => {
           if (k === '_hotfix' || k === 'data') return;
           if (EX[k] !== undefined && src[k] !== null) EX[k] = src[k];
@@ -439,22 +449,26 @@ const MAIN = {
     if (f.regAfter != null && (p.created || 0) < f.regAfter) return false;
     return true;
   },
-  /* 通用发放（支持物品 id → 字段映射） */
+  /* 通用发放
+   * 严重BUG（此前）：这里只认 gold/diamond/ach/stamina/evToken，其余一律
+   * `P.mat[k] += Number(v)`。而 Number('sk_c01b') = NaN → 直接被 `if(!v) return` 丢掉。
+   * 于是邮件补偿和兑换码礼包里凡是【芯片 / 皮肤 / 宝石 / 称号 / 头像框】
+   * 全部发放失败，且界面照样提示「奖励已发放」：
+   *   giveRw({chipL:1}) → p.mat['chipL'] = 1，而芯片真实存放在 p.bag → 芯片页永远 0
+   *   giveRw({skin:'sk_c01b'}) → Number('sk_c01b') = NaN → 直接丢弃
+   *   giveRw({gem:'G_R'}) → p.mat['gem'] = NaN → 丢弃
+   * 实测：邮件 rw{chipE:2,gem:'G_B'} 只到账 M01，芯片和宝石全丢；
+   *       兑换码 items{chipL:1,skin,gem:'G_R'} 三样全丢。
+   * 现在统一走 E.grant()（它已正确处理芯片/皮肤/宝石/称号/头像框/消耗品别名），
+   * 并把邮件里的 dia 映射成 diamond，保持对外调用不变。 */
   giveRw(rw) {
-    if (!P || !rw) return;
+    if (!P || !rw || typeof rw !== 'object') return;
+    const g = {};
     Object.keys(rw).forEach((k) => {
-      const v = Number(rw[k]) || 0;
-      if (!v) return;
-      if (k === 'gold' || k === 'diamond' || k === 'ach' || k === 'stamina' || k === 'evToken') {
-        P[k] = (P[k] || 0) + v;
-      } else {
-        /* BUG修复：消耗品此前写入 p.use，但背包「消耗」页与 useItem() 都读 p.mat，
-         * 导致邮件/礼包发的急救包、护盾等在背包里恒显示 ×0 且无法使用。
-         * 统一到 p.mat 一个字段。 */
-        P.mat = P.mat || {};
-        P.mat[k] = (P.mat[k] || 0) + v;
-      }
+      if (k === 'dia') { g.diamond = (g.diamond || 0) + (Number(rw[k]) || 0); return; }
+      g[k] = rw[k];
     });
+    try { E.grant(P, g); } catch (e) {}
   },
   /* ============ 礼包码兑换 ============ */
   async redeemCode(code) {
