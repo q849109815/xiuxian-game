@@ -203,6 +203,10 @@ r_tavern(p, tab) {
         <button class="btn sm o" style="flex:1" id="lgAct">军团活动</button>
         <button class="btn sm o" style="flex:1" id="lgShop">军团商店</button>
         <button class="btn sm" style="flex:1" id="lgDonate">捐献</button>
+      </div>
+      <div class="card" style="margin-top:8px"><div class="card-t">军团贡献
+        <span class="sub">捐献获得，可在军团商店消费</span></div>
+        <div class="kv"><span>当前贡献</span><b>${E.fmt(p.legionExp || 0)}</b></div>
       </div>`;
     }
     return `<div class="card"><div class="card-t">加入军团</div>
@@ -239,11 +243,75 @@ r_tavern(p, tab) {
       p.gold -= 5000; p.legionExp = (p.legionExp || 0) + 100;
       E.save(p); this.toast('捐献成功 +100 贡献', 'ok'); this.open('legion'); this.home();
     };
+    /* 军团活动：此前写死「开发中」，点了没反应。
+     * 现在按 legionActs 挑战，消耗体力 → 产出贡献+金币+材料。 */
     const la = $('#lgAct');
-    if (la) la.onclick = () => this.toast('军团活动开发中', 'ok');
+    if (la) la.onclick = () => {
+      if (!p.legion) return this.toast('请先加入军团', 'err');
+      this.sheet('军团副本', `
+        <div class="sub" style="padding:4px 2px">消耗体力挑战，产出军团贡献与奖励。</div>
+        ${(EX.legionActs || []).map((a) => {
+          const okSt = (p.stamina || 0) >= a.cost;
+          const okPw = E.power(p) >= a.need;
+          return `<div class="mc-card">
+            <div class="mi">${a.icon}</div>
+            <div class="mn"><b>${a.n}</b><span>贡献 +${a.contrib} · 金币 +${E.fmt(a.gold)}</span>
+              <span>体力 ${a.cost} · 推荐战力 ${E.fmt(a.need)}${okPw ? '' : '（战力不足）'}</span></div>
+            <button data-lact="${a.id}" ${(okSt && okPw) ? '' : 'disabled'}>${okSt ? '挑战' : '体力不足'}</button>
+          </div>`;
+        }).join('')}`);
+      $$('[data-lact]').forEach((b) => { b.onclick = () => {
+        const a = (EX.legionActs || []).find((x) => x.id === b.dataset.lact); if (!a) return;
+        if ((p.stamina || 0) < a.cost) return this.toast('体力不足', 'err');
+        if (E.power(p) < a.need) return this.toast('战力不足', 'err');
+        p.stamina -= a.cost;
+        p.gold = (p.gold || 0) + a.gold;
+        p.legionExp = (p.legionExp || 0) + a.contrib;
+        (a.mats || []).forEach((m) => { p.mat = p.mat || {}; p.mat[m.k] = (p.mat[m.k] || 0) + m.n; });
+        E.save(p);
+        this.toast('挑战成功：贡献 +' + a.contrib, 'ok');
+        if (window.SND) SND.play('upgrade');
+        this.closeSheet(); this.open('legion'); this.home();
+      }; });
+    };
+
+    /* 军团商店：此前只弹 toast，贡献赚了没出口（白捐）。
+     * 现在按 legionShop 兑换，扣贡献发货，带限购。 */
     const ls = $('#lgShop');
     if (ls) ls.onclick = () => {
-      this.toast('军团商店：可用贡献兑换', 'ok');
+      if (!p.legion) return this.toast('请先加入军团', 'err');
+      const today = new Date().toDateString();
+      if (p.lgShopDate !== today) { p.lgShopDate = today; p.lgShopBuy = {}; }
+      p.lgShopBuy = p.lgShopBuy || {};
+      this.sheet('军团商店', `
+        <div class="kv"><span>我的贡献</span><b>${E.fmt(p.legionExp || 0)}</b></div>
+        ${(EX.legionShop || []).map((g) => {
+          const used = p.lgShopBuy[g.id] || 0;
+          const can = (p.legionExp || 0) >= g.cost && (!g.lim || used < g.lim);
+          return `<div class="mc-card">
+            <div class="mi">${g.icon}</div>
+            <div class="mn"><b>${g.n}</b><span>${g.item === 'gold' ? ('金币 ' + E.fmt(g.n2)) : (E.itemName(g.item) + ' ×' + g.n2)}</span>
+              <span>贡献 ${g.cost}${g.lim ? ' · 每日限 ' + g.lim + '（已兑 ' + used + '）' : ''}</span></div>
+            <button data-lbuy="${g.id}" ${can ? '' : 'disabled'}>${can ? '兑换' : (g.lim && used >= g.lim ? '已达上限' : '贡献不足')}</button>
+          </div>`;
+        }).join('')}`);
+      $$('[data-lbuy]').forEach((b) => { b.onclick = () => {
+        const g = (EX.legionShop || []).find((x) => x.id === b.dataset.lbuy); if (!g) return;
+        if ((p.legionExp || 0) < g.cost) return this.toast('贡献不足', 'err');
+        const used = (p.lgShopBuy || {})[g.id] || 0;
+        if (g.lim && used >= g.lim) return this.toast('已达每日兑换上限', 'err');
+        p.legionExp -= g.cost;
+        p.lgShopBuy[g.id] = used + 1;
+        if (g.item === 'gold') p.gold = (p.gold || 0) + g.n2;
+        else if (String(g.item).indexOf('gem_') === 0) {
+          const gid = g.item.slice(4);
+          p.gems = p.gems || {}; p.gems[gid] = (p.gems[gid] || 0) + g.n2;
+        } else { p.mat = p.mat || {}; p.mat[g.item] = (p.mat[g.item] || 0) + g.n2; }
+        E.save(p);
+        this.toast('兑换成功：' + g.n, 'ok');
+        if (window.SND) SND.play('get');
+        this.closeSheet(); this.open('legion'); this.home();
+      }; });
     };
   },
 
@@ -282,9 +350,26 @@ r_tavern(p, tab) {
       const e = EX.expeds.find((x) => x.id === b.dataset.exped); if (!e) return;
       if ((p.stamina || 0) < e.cost) return this.toast('体力不足', 'err');
       p.stamina -= e.cost;
-      const rw = { gold: e.gold, ['M0' + ((Math.floor(Math.random() * 5)) + 1)]: e.mat };
-      for (const k in rw) { if (k === 'gold') p.gold += rw[k]; else p.mat[k] = (p.mat[k] || 0) + rw[k]; }
-      E.save(p); this.toast('远征完成，获得奖励', 'ok');
+      /* 按副本配置的 mats 精确产出（此前 M0x 全随机，与 desc 对不上） */
+      const txt = ['金币+' + e.gold];
+      p.gold += e.gold;
+      (e.mats || [{ k: 'M01', n: e.mat }]).forEach((m) => {
+        p.mat = p.mat || {};
+        p.mat[m.k] = (p.mat[m.k] || 0) + m.n;
+        txt.push(E.itemName(m.k) + '+' + m.n);
+      });
+      /* 宝石产出（此前从不发宝石，与面板描述不符） */
+      if (e.gem && Math.random() < e.gem.rate) {
+        const pool = (EX.gems || []).map((x) => x.id);
+        if (pool.length) {
+          const gid = pool[Math.floor(Math.random() * pool.length)];
+          p.gems = p.gems || {};
+          p.gems[gid] = (p.gems[gid] || 0) + (e.gem.n || 1);
+          const gd = EX.gems.find((x) => x.id === gid);
+          txt.push((gd ? gd.n : '宝石') + '+' + (e.gem.n || 1));
+        }
+      }
+      E.save(p); this.toast('远征完成：' + txt.join('、'), 'ok');
       if (window.SND) SND.play('upgrade'); this.open('exped'); this.home();
     }; });
     const cb = $('#ptClaim');
@@ -1060,7 +1145,12 @@ r_tavern(p, tab) {
       ${fs.length ? fs.map((f) => `<div class="zrow">
         ${this.zAvatarHTML(f.id)}
         <div class="zi"><b>${f.n}</b><span>战力 ${E.fmt(f.pw || 0)} · 可发送体力</span></div>
-        <button class="btn sm g" data-sendst="${f.id}">送体力</button>
+        ${(function () {
+          const today = new Date().toDateString();
+          const sent = (p.sendStDate === today) ? (p.sendStTo || []) : [];
+          const done = sent.indexOf(f.id) >= 0;
+          return `<button class="btn sm ${done ? 'd' : 'g'}" data-sendst="${f.id}" ${done ? 'disabled' : ''}>${done ? '已送' : '送体力'}</button>`;
+        })()}
         <span class="st ${f.online ? 'on' : 'off'}">${f.online ? '在线' : '离线'}</span>
       </div>`).join('') : '<div class="lbl">还没有好友，点击下方添加</div>'}
       <button class="btn" id="addFriend" style="width:100%;margin-top:8px">添加好友</button>
@@ -1075,8 +1165,24 @@ r_tavern(p, tab) {
       E.save(p); this.toast('已添加好友 ' + nm, 'ok');
       if (window.SND) SND.play('get'); this.open('friends'); this.home();
     };
+    /* 送体力此前只弹一个 toast，不扣资源、不限次数、按钮永远可点
+     * → 这是个纯装饰按钮，点一万次也不产生任何数据变化。
+     * 现在：每个好友每天限送 1 次，每天总共限 10 次，
+     *       送出后自己获得好友回赠金币（单机架构无法真送到对方，但行为真实）。 */
     $$('#pnBody [data-sendst]').forEach((b) => { b.onclick = () => {
-      this.toast('体力已发送', 'ok'); if (window.SND) SND.play('get');
+      const fid = b.dataset.sendst;
+      const today = new Date().toDateString();
+      if (p.sendStDate !== today) { p.sendStDate = today; p.sendStTo = []; }
+      p.sendStTo = p.sendStTo || [];
+      if (p.sendStTo.indexOf(fid) >= 0) return this.toast('今天已给该好友送过', 'err');
+      if (p.sendStTo.length >= 10) return this.toast('每日赠送上限 10 次', 'err');
+      p.sendStTo.push(fid);
+      const back = 30;
+      p.gold = (p.gold || 0) + back;
+      E.save(p);
+      this.toast('已赠送，好友回赠 ' + back + ' 金币', 'ok');
+      if (window.SND) SND.play('get');
+      this.open('friends'); this.home();
     }; });
     $$('#pnBody [data-accept]').forEach((b) => { b.onclick = () => {
       const id = b.dataset.accept;
