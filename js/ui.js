@@ -1239,6 +1239,17 @@ r_tavern(p, tab) {
               : (inRank ? `<button class="btn sm g" data-rk="${b}|${rw.id}">领取</button>`
                         : '<span class="st off">未达名次</span>')}</div>`;
         }).join('')}`).join('')}
+    </div>
+    <div class="card"><div class="card-t">全服榜单 <span class="sub">通关后自动上传</span></div>
+      ${(function () {
+        const lb = window.LB || [];
+        if (!lb.length) return '<div class="lbl">暂无排行数据，通关后自动上传</div>';
+        return lb.map((x, i) => `<div class="item">
+          <div class="ic" style="font-size:15px;background:${i < 3 ? 'linear-gradient(135deg,#ffe9a8,#f0a020)' : 'rgba(10,16,28,.7)'};color:${i < 3 ? '#2a1a00' : '#fff'}">${i + 1}</div>
+          <div class="info"><div class="nm">${x.n || x.name || '匿名'}</div>
+            <div class="sub">${x.lv || '—'} · 无尽 ${x.eb || 0} 层</div></div>
+          <div class="act"><span class="tag y">${E.fmt(x.pw || 0)}</span></div></div>`).join('');
+      })()}
     </div>`;
   },
   b_rank(p) {
@@ -1292,15 +1303,6 @@ r_tavern(p, tab) {
       this.toast('领取成功：🪙' + E.fmt(g) + ' 💎' + E.fmt(d), 'ok');
       this.open('mail'); this.home();
     };
-  },
-
-  r_rank(p) {
-    const lb = window.LB || [];
-    if (!lb.length) return '<div class="empty"><span class="ic">🏆</span>暂无排行数据<br><span style="font-size:10px">通关后自动上传，每小时刷新</span></div>';
-    return lb.map((x, i) => `<div class="item">
-      <div class="ic" style="font-size:15px;background:${i < 3 ? 'linear-gradient(135deg,#ffe9a8,#f0a020)' : 'rgba(10,16,28,.7)'};color:${i < 3 ? '#2a1a00' : '#fff'}">${i + 1}</div>
-      <div class="info"><div class="nm">${x.n}</div><div class="sub">${x.lv || '—'} · 无尽 ${x.eb || 0} 层</div></div>
-      <div class="act"><span class="tag y">${E.fmt(x.pw)}</span></div></div>`).join('');
   },
 
   /* ---------- 活动 ---------- */
