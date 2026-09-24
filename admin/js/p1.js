@@ -28,7 +28,7 @@ APP.pages['acc-query'] = {
         ${list.slice(0, 80).map((p) => {
           const e = p.ext || {};
           return `<tr data-sel="${U.esc(p.uid)}" style="cursor:pointer">
-            <td>${U.esc(p.name)}${p._broken ? ' <span style="color:var(--yel);font-size:9px">读取失败</span>' : ''}</td><td style="font-size:10px">${U.esc(p.uid)}</td>
+            <td>${U.esc(p.name)}${p._broken ? ' <span style="color:var(--yel);font-size:9px">读取失败</span>' : ''}${p._noSave ? ' <span style="color:#6b7a95;font-size:9px">未建存档</span>' : ''}</td><td style="font-size:10px">${U.esc(p.uid)}</td>
             <td>${U.esc(e.server || 'S1')}</td><td>${p.lv || 1}</td><td>${U.fmt(U.pw(p))}</td>
             <td style="font-size:10px">${U.dt(p.created)}</td>
             <td style="font-size:10px">${U.ago(p.lastSeen)}</td>
