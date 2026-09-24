@@ -55,7 +55,7 @@ APP.pages['hot-upload'] = {
       const hf = await DB.get(DBP.hotfix, { list: [] });
       hf.list = hf.list || [];
       hf.list.unshift({ id: 'HF' + Date.now(), name: name, path: path, ver: this.val('#huVer'),
-        scope: this.val('#huScope'), at: Date.now(), old: JSON.parse(JSON.stringify(old)), new: obj });
+        scope: this.val('#huScope'), at: Date.now(), old: (() => { try { return JSON.parse(JSON.stringify(old)); } catch (e) { return {}; } })(), new: obj });
       if (hf.list.length > 20) hf.list.length = 20;
       const merged = Object.assign({}, old, obj);
       merged._hotfix = { ver: this.val('#huVer'), at: Date.now() + this.num('#huAt') * 36e5, scope: this.val('#huScope') };
@@ -89,7 +89,7 @@ APP.doRollback = async function (id) {
   const path = h.path || DBP.cfg;
   /* 必须整体还原：热更若新增字段，旧文件没有该键，
    * Object.assign(cur, old) 会保留新值 → 回滚等于没回滚。 */
-  const back = JSON.parse(JSON.stringify(h.old || {}));
+  let back = {}; try { back = JSON.parse(JSON.stringify(h.old || {})); } catch (e) { back = {}; }
   delete back._hotfix;
   if (await DB.set(path, back, '回滚 ' + h.ver)) {
     AUDIT.log('热更回滚', h.name, '回滚到 ' + h.ver + ' 之前');
