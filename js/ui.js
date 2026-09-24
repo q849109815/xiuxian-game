@@ -1094,7 +1094,9 @@ r_tavern(p, tab) {
           const qmap = { chipN: 'n', chipE: 'e', chipL: 'l' };
           const q = qmap[k] || 'n';
           try {
-            const c = E.rollChipById ? E.rollChipById(q) : null;
+            /* 此前传品质码给 rollChipById（它收的是 CH01~CH08 定义ID）
+             * → 恒回退 chips[0]，980 钻的「传说芯片包」到手是白色生命芯片 */
+            const c = E.rollChipByQuality ? E.rollChipByQuality(q) : null;
             if (c) { p.bag = p.bag || []; p.bag.push(c); }
             else p.mat[k] = (p.mat[k] || 0) + g.give[k];
           } catch (e) { p.mat[k] = (p.mat[k] || 0) + g.give[k]; }
