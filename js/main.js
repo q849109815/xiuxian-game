@@ -162,6 +162,18 @@ const MAIN = {
   /* 后台表 → 游戏端表的字段映射。
    * 两边字段完全不同，若直接整体覆盖，游戏端读到的 give/rw 全是 undefined，
    * 兑换后什么都拿不到 —— 等于后台配了但玩家领不到东西。 */
+  /* 后台「刷新周期(天)」→ 游戏端限购周期 per
+   *   0 / 空  → once（终身限购，不刷新）
+   *   1       → day      7 → week      30 → month
+   *   其他    → 就近取标准周期 */
+  perFromDays(d) {
+    const n = Number(d) || 0;
+    if (n <= 0) return 'once';
+    if (n <= 1) return 'day';
+    if (n <= 7) return 'week';
+    if (n <= 31) return 'month';
+    return 'once';
+  },
   applyCloudCfg(key, db) {
     try {
       const nm = (id) => { try { return (E.itemName ? E.itemName(id) : id) || id; } catch (e) { return id; } };
@@ -186,7 +198,11 @@ const MAIN = {
         EX.achShop = db.list.filter((x) => x && x.item).map((x, i) => ({
           id: x.id || ('AH' + i), n: nm(x.item) + '×' + (x.n || 1), t: '材料',
           cost: Number(x.cost) || 0, limit: Number(x.limit) || 0,
-          per: 'day', need: 0, refresh: Number(x.refresh) || 0,
+          /* 此前 per 硬编码 'day' —— 后台「刷新周期(天)」配了 7 天或 0（不刷新），
+           * 游戏端一律按每天刷新，运营配置的限购周期完全不生效。
+           * 现在按后台天数映射成限购周期。 */
+          per: this.perFromDays(Number(x.refresh)),
+          need: 0, refresh: Number(x.refresh) || 0,
           unlock: x.unlock || '', give: { [x.item]: Number(x.n) || 1 },
         }));
       } else if (key === 'actshop' && Array.isArray(db.list)) {
@@ -194,19 +210,38 @@ const MAIN = {
           id: x.id || ('AS' + i), n: nm(x.item) + '×' + (x.n || 1), t: '材料',
           act: x.act || '', cost: Number(x.cost) || 0, limit: Number(x.limit) || 0,
           daily: Number(x.daily) || 0, refresh: Number(x.refresh) || 0,
+          /* 注意单位差异：活动商店后台的「刷新间隔」单位是【小时】（默认 24），
+           * 成就商店的「刷新周期」单位是【天】（默认 7）。
+           * 此前统一按天解释，24 小时会被误判成 24 天。
+           * 活动商店另有独立的「每日限购」字段，按它决定周期更准确。 */
+          per: (Number(x.daily) || 0) > 0 ? 'day' : 'once',
           give: { [x.item]: Number(x.n) || 1 },
         }));
       } else if (key === 'rankrw' && Array.isArray(db.list)) {
-        /* 后台 { id, a:名次起, b:名次止, item, n:数量, settle, stack }
-         *  → 游戏端 { id, board, rank, lo, hi, rw:{item:数量}, cyc } */
-        EX.rankRewards = db.list.filter((x) => x && x.item).map((x, i) => ({
-          id: x.id || ('RW' + i), board: '无尽生存榜',
+        /* 后台 { id, board, a:名次起, b:名次止, item, n:数量, settle:天数, stack }
+         *  → 游戏端 { id, board, rank, lo, hi, rw:{item:数量}, cyc, stack }
+         *
+         * 严重 BUG 修复（两处）：
+         *  ① board 此前硬编码为 '无尽生存榜' —— 后台根本没有榜单类型选项，
+         *     于是战力榜 / 活动冲榜的奖励永远配不出来，全被塞进无尽榜。
+         *  ② 整体覆盖 EX.rankRewards —— 后台只配 1 条，游戏端原本 3 个榜单
+         *     共 10 条默认奖励会被全部抹掉，玩家反而少了一大半奖励。
+         *     现在改成「按榜单合并」：后台配的榜单替换，没配的保留默认。
+         *  ③ settle 后台单位是「天」，此前被当成「小时」显示，改为 天。 */
+        const BOARDS = ['无尽生存榜', '战力榜', '活动冲榜'];
+        const incoming = db.list.filter((x) => x && x.item).map((x, i) => ({
+          id: x.id || ('RW' + i),
+          board: BOARDS.indexOf(x.board) >= 0 ? x.board : '无尽生存榜',
           rank: '第' + (x.a || 1) + '-' + (x.b || 1) + '名',
           lo: Number(x.a) || 1, hi: Number(x.b) || 1,
           rw: { [x.item]: Number(x.n) || 1 },
-          cyc: x.settle ? (x.settle + '小时') : '每小时',
+          cyc: x.settle ? (x.settle + ' 天') : '每期',
           stack: !!x.stack,
         }));
+        /* 后台覆盖到的榜单 → 用后台数据；未覆盖的榜单 → 保留默认配置 */
+        const touched = Array.from(new Set(incoming.map((x) => x.board)));
+        const base = (EX.rankRewards || []).filter((x) => touched.indexOf(x.board) < 0);
+        EX.rankRewards = base.concat(incoming);
       } else if (key === 'cfg') {
         /* 后台「配置热更新」上传的是用户手填的裸 JSON（如 {"STAMINA_MAX":200}），
          * 经 Object.assign 合并后落在文件顶层，并没有 data 这一层；
