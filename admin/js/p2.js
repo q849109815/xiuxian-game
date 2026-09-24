@@ -388,7 +388,8 @@ APP.pages['rank-refresh'] = {
         <div class="st"><b>${U.ago(lb.updated)}</b><span>战力榜更新</span></div>
       </div>
       <div class="card"><div class="card-t">战力榜 <span class="sub">无尽生存 / 战力榜</span></div>
-        <div class="fld"><label>榜单缓存时间(分钟)</label><input id="rrCache" type="number" value="60"></div>
+        <div class="fld"><label>榜单缓存时间(分钟)</label><input id="rrCache" type="number" value="${(lb.cacheMin != null ? lb.cacheMin : 60)}"></div>
+        <button class="btn n sm" id="rrSaveCache">💾 保存缓存时间</button>
         <button class="btn blk" id="rrGo">🏆 重建战力榜</button>
         <button class="btn o blk" id="rrGo2">♾️ 重建无尽榜</button>
         <button class="btn g blk" id="rrGo3">🔄 全部重建</button>
@@ -420,6 +421,17 @@ APP.pages['rank-refresh'] = {
       }
       AUDIT.log('重建排行榜', kind, '');
       this.toast('已重建', 'ok'); this.render();
+    };
+    /* 此前 rrCache 只是个摆设输入框，填了不保存、游戏端也无从读取 ——
+     * 文档要求「设置榜单缓存时间」，现在落到云端并展示当前值。 */
+    const sc2 = D('#rrSaveCache');
+    if (sc2) sc2.onclick = async () => {
+      const lb = await DB.get(DBP.rank, { list: [] });
+      lb.cacheMin = Math.max(1, this.num('#rrCache'));
+      if (await DB.set(DBP.rank, lb, '设置榜单缓存时间')) {
+        AUDIT.log('榜单缓存时间', lb.cacheMin + '分钟', '');
+        this.toast('已保存：' + lb.cacheMin + ' 分钟', 'ok'); this.render();
+      }
     };
     const a = D('#rrGo'); if (a) a.onclick = () => build('pw');
     const b = D('#rrGo2'); if (b) b.onclick = () => build('endless');
