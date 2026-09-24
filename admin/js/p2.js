@@ -180,6 +180,13 @@ APP.pages['act-create'] = {
         </div>
         <div class="fld"><label>活动关卡</label><select id="acLevel">
           ${(EX.levels || []).slice(0, 30).map((l) => `<option value="${U.esc(l.id)}">${U.esc(l.id)} ${U.esc(l.n)}</option>`).join('')}</select></div>
+        <div class="fld"><label>活动描述</label><input id="acDesc" placeholder="如：限定BOSS战，每日3次"></div>
+        <div class="card-t" style="margin-top:10px">活动奖励
+          <span class="sub">此前无奖励配置 → 游戏端 rw 恒为空，活动有但没东西可领</span></div>
+        <div class="f2">
+          <div class="fld"><label>奖励物品</label>${U.picker('acItem', 'gold')}</div>
+          <div class="fld"><label>数量</label><input id="acN" type="number" value="100"></div>
+        </div>
         <button class="btn blk" id="acGo">🎉 创建活动</button>
       </div>`;
   },
@@ -191,7 +198,14 @@ APP.pages['act-create'] = {
       const db = await DB.get(DBP.activity, { list: [] });
       db.list = db.list || [];
       const s = Date.now() + this.num('#acS') * 36e5;
+      /* 奖励：表单此前完全没有奖励项，创建出的活动 rw 恒为空对象，
+       * 玩家参与后什么也领不到。现在按物品+数量写入 rw。 */
+      const rw = {};
+      const it = this.val('#acItem'), n2 = this.num('#acN');
+      if (it && n2 > 0) rw[it] = n2;
       db.list.unshift({ id: this.val('#acId'), name: name,
+        desc: this.val('#acDesc') || '',
+        rw: rw,
         startAt: s, endAt: s + this.num('#acD') * 864e5,
         cond: { lvMin: this.num('#acLv'), clearedMin: this.num('#acC') },
         levelId: this.val('#acLevel'), shop: [], status: '待开启', createdAt: Date.now() });
