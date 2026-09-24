@@ -694,8 +694,19 @@ const APP = {
       }
       p.mat = p.mat || {};
       p.mat[id] = (p.mat[id] || 0) + n;
-      /* 同步图鉴解锁（与游戏端一致） */
-      try { if (E.codexAdd) E.codexAdd(p, 'item', id); } catch (e) {}
+      /* 同步图鉴解锁
+       * BUG（双重）：① E 上根本没有 codexAdd 这个方法（正确名是 codexUnlock），
+       *              前面的 if (E.codexAdd) 守卫让它永远走不到 —— 静默失效；
+       *            ② 就算改对名字，传的类别是 'item'，而图鉴只有
+       *              zombie / gun / skin 三类（EX.codexKinds），
+       *              会在 p.codex 里多出一个谁也不读的 item 数组，属于脏数据。
+       * 现在按 ID 前缀判断：只有发的是武器(W…)或皮肤(sk_)才解锁对应图鉴。 */
+      try {
+        if (window.E && E.codexUnlock) {
+          if (/^W\d/.test(id)) E.codexUnlock(p, 'gun', id);
+          else if (/^sk_/.test(id)) E.codexUnlock(p, 'skin', id);
+        }
+      } catch (e) {}
     }
   },
 };
