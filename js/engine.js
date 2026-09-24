@@ -1089,6 +1089,17 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     this.grant(p, it.give);
     return { ok: true, msg: '兑换成功：' + it.n };
   },
+  /* 按品质随机产出一颗芯片并放入背包
+   * 白=普通(CH01~03) / 蓝=精英(CH04~05) / 红=传说(CH06~08) */
+  giveChipByQuality(p, q) {
+    const pool = (EX.chips || []).filter((c) => c.q === q);
+    if (!pool.length) return null;
+    const d = pool[Math.floor(Math.random() * pool.length)];
+    const c = this.rollChipById(d.id);
+    p.bag = p.bag || [];
+    p.bag.push(c);
+    return c;
+  },
   /* 通用发放 */
   grant(p, give) {
     if (!give) return;
@@ -1097,8 +1108,30 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       if (k === 'gold') p.gold = (p.gold || 0) + give[k];
       else if (k === 'diamond') p.diamond = (p.diamond || 0) + give[k];
       else if (k === 'stamina') p.stamina = Math.min(EX.STAMINA_MAX, (p.stamina || 0) + give[k]);
+      /* 成就点（表33）
+       * BUG：claimTask 里单独处理了 ach，但 grant() 没有该分支，
+       *      于是图鉴解锁奖励 codexRw { gold:100, ach:5 } 经 grant 发放时，
+       *      ach 掉进 else 写进 p.mat['ach'] —— 而成就商店读的是 p.ach。
+       * 结果：界面写着「解锁奖励 +5 成就点」，实际成就点一分没加。 */
+      else if (k === 'ach') p.ach = (p.ach || 0) + give[k];
       else if (k === 'title') { p.titles = p.titles || []; if (p.titles.indexOf(give[k]) < 0) p.titles.push(give[k]); }
-      else if (k === 'skin') { p.skin = p.skin || []; if (p.skin.indexOf(give[k]) < 0) p.skin.push(give[k]); }
+      /* 皮肤
+       * BUG（会崩溃）：此处原写 `p.skin = p.skin || []; p.skin.push(...)`。
+       * 但 p.skin 是【当前穿戴皮肤 ID】的字符串（newPlayer 里 'sk_c01a'），
+       * 拥有的列表才叫 p.skins（数组）。字符串没有 .push，
+       * → 一旦奖励里带 skin 就抛 "p.skin.push is not a function"，
+       *   不仅皮肤拿不到，Object.keys(give).forEach 整个中断，
+       *   同一份奖励里的其他物品也全部丢失。
+       * 例如商城 SH08「废土战甲皮肤」(68元) 购买即崩。
+       * 现在写入 p.skins 并自动穿戴。 */
+      else if (k === 'skin') {
+        const sid = give[k];
+        if (sid) {
+          p.skins = p.skins || [];
+          if (p.skins.indexOf(sid) < 0) p.skins.push(sid);
+          p.skin = sid;
+        }
+      }
       else if (k === 'frame') { p.frames = p.frames || []; if (p.frames.indexOf(give[k]) < 0) p.frames.push(give[k]); }
       /* 可镶嵌宝石：give: { gem: 'G_R' } → p.gems['G_R'] += 1
        * 修复：此前商城「红宝石/蓝宝石/绿宝石/紫宝石」发放的是 M05 材料，
@@ -1106,6 +1139,17 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       else if (k === 'gem') {
         const gid = give[k];
         if (gid) { p.gems = p.gems || {}; p.gems[gid] = (p.gems[gid] || 0) + 1; }
+      }
+      /* 芯片包（表32/表35）：chipN 普通 / chipE 精英 / chipL·chipRed 传说
+       * BUG：这四个 key 此前会掉进 else 分支写进 p.mat['chipE']，
+       *       而芯片真实存放在 p.bag（物品对象数组），芯片面板只读 p.bag。
+       * 结果：周礼包(300钻)、月度超值(680钻)、BOSS首杀、传说芯片包(98元)、
+       *       战令50级 给的芯片全部"到账"但芯片页永远显示 0，无法装备/合成。
+       * 现在按品质随机roll出真实芯片对象推进 p.bag。 */
+      else if (k === 'chipN' || k === 'chipE' || k === 'chipL' || k === 'chipRed') {
+        const q = (k === 'chipN') ? '白' : (k === 'chipE') ? '蓝' : '红';
+        const n = Math.max(1, Math.floor(Number(give[k]) || 1));
+        for (let i = 0; i < n; i++) this.giveChipByQuality(p, q);
       }
       else p.mat[k] = (p.mat[k] || 0) + give[k];
     });
