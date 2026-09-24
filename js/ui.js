@@ -1972,6 +1972,26 @@ r_tavern(p, tab) {
   hideChoice() { clearInterval(this._chIv); $('#choice').classList.remove('on'); },
 
   /* ---------- 结算 ---------- */
+  /* 章节 CG 过场（首次进入该章节播放一次） */
+  showCG(cg, ch, chapterName, onGo) {
+    const m = $('#cgModal');
+    if (!m || !cg) { if (onGo) onGo(); return; }
+    const im = $('#cgImg');
+    if (im) {
+      im.onerror = () => { im.style.display = 'none'; };
+      im.style.display = '';
+      im.src = cg.src;
+    }
+    const c1 = $('#cgCh'); if (c1) c1.textContent = '第 ' + ch + ' 章';
+    const c2 = $('#cgName'); if (c2) c2.textContent = chapterName || '';
+    const c3 = $('#cgDesc'); if (c3) c3.textContent = (EX.chapterDesc || {})[ch] || '';
+    const go = $('#cgGo');
+    if (go) go.onclick = () => { m.classList.remove('on'); if (onGo) onGo(); };
+    m.classList.add('on');
+    try { OPS.track('cg_show', { ch: ch }); } catch (e) {}
+    if (window.SND) SND.play('upgrade');
+  },
+
   /* 升级弹窗（截图52：发光圆形徽章数字 + 奖励 R币） */
   showLvUp(lv, rw) {
     const b = $('#lvup');
