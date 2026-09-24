@@ -514,6 +514,182 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
                     : { ok: false, left: 0, msg: (nameMap[L.t] || '') + '已售罄' };
   },
 
+  /* =========================================================
+   * 表22 活动 EV04 首充双倍：首次充值钻石翻倍（仅 1 次）
+   * ========================================================= */
+  firstRechargeUsed(p) { return !!p.firstRech; },
+  /* 购买钻石类商品时调用，返回实际发放数量 */
+  applyFirstRecharge(p, diamondAmt) {
+    if (p.firstRech) return { amt: diamondAmt, doubled: false };
+    if (diamondAmt <= 0) return { amt: diamondAmt, doubled: false };
+    p.firstRech = 1;
+    return { amt: diamondAmt * 2, doubled: true };
+  },
+
+  /* =========================================================
+   * 表22 活动 EV02 BOSS突袭：每日 3 次挑战
+   * ========================================================= */
+  bossRaidLeft(p) {
+    const d = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+    if ((p.bossRaidDate || '') !== d) return 3;
+    return Math.max(0, 3 - (p.bossRaidUsed || 0));
+  },
+  bossRaidStart(p) {
+    if (this.bossRaidLeft(p) <= 0) return { ok: false, msg: '今日挑战次数已用完（每日 3 次）' };
+    const d = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+    if ((p.bossRaidDate || '') !== d) { p.bossRaidDate = d; p.bossRaidUsed = 0; }
+    p.bossRaidUsed = (p.bossRaidUsed || 0) + 1;
+    return { ok: true, msg: 'BOSS突袭开始！剩余 ' + this.bossRaidLeft(p) + ' 次' };
+  },
+
+  /* =========================================================
+   * 表16 消耗品使用（I01 急救包 / I02 护盾发生器 / I03 攻击增幅药剂 / I04 宝箱）
+   * 此前数据在背包里但无任何使用入口（P0/P1 内容缺失）
+   * 战斗中立即生效；战斗外使用则记为「下一场生效」的预置增益
+   * ========================================================= */
+  ITEM_USE: {
+    I01: { n: '急救包', desc: '恢复防线生命 50%', battle: true },
+    I02: { n: '护盾发生器', desc: '获得护盾（吸收伤害）', battle: true },
+    I03: { n: '攻击增幅药剂', desc: '攻击 +30%，持续 30 秒', battle: true },
+    I04: { n: '宝箱', desc: '开启获得材料', battle: false },
+  },
+
+  /* 使用消耗品。返回 {ok,msg} */
+  useItem(p, id) {
+    const def = this.ITEM_USE[id];
+    if (!def) return { ok: false, msg: '该物品不可使用' };
+    if ((p.mat[id] || 0) <= 0) return { ok: false, msg: '数量不足' };
+
+    /* I04 宝箱：直接开（表31 DR11） */
+    if (id === 'I04') {
+      p.mat[id]--;
+      const rw = this.openBox(p, 1);
+      return { ok: true, msg: '开启宝箱：' + rw };
+    }
+
+    const inBattle = !!(window.BT && BT.run && !BT.over);
+    if (inBattle) {
+      const r = this.applyItem(p, id);
+      if (!r.ok) return r;
+      p.mat[id]--;
+      return { ok: true, msg: def.n + '：' + def.desc };
+    }
+    /* 战斗外：预置到下一场 */
+    p.mat[id]--;
+    p.pendingItem = p.pendingItem || {};
+    p.pendingItem[id] = (p.pendingItem[id] || 0) + 1;
+    return { ok: true, msg: def.n + ' 已准备，进入下一场战斗自动生效' };
+  },
+
+  /* 实际生效（战斗内调用） */
+  applyItem(p, id) {
+    const r = window.BT && BT.run;
+    if (!r) return { ok: false, msg: '未在战斗中' };
+    if (id === 'I01') {
+      const heal = Math.round((r.wallMax || r.maxHp || 1000) * 0.5);
+      r.wallHp = Math.min((r.wallMax || r.maxHp), (r.wallHp || 0) + heal);
+      r.hp = r.wallHp;
+      return { ok: true, heal };
+    }
+    if (id === 'I02') {
+      const sh = Math.round((r.wallMax || r.maxHp || 1000) * 0.3);
+      r.shield = (r.shield || 0) + sh;
+      r.maxShield = Math.max(r.maxShield || 0, r.shield);
+      return { ok: true, shield: sh };
+    }
+    if (id === 'I03') {
+      r.buffAtk = 0.30;
+      r.buffAtkT = 30;                 /* 30 秒 */
+      return { ok: true, atk: 0.3 };
+    }
+    return { ok: false, msg: '不可在战斗中使用' };
+  },
+
+  /* 战斗开始时应用预置消耗品 */
+  applyPendingItems(p) {
+    const pd = p.pendingItem || {};
+    let n = 0;
+    for (const id in pd) {
+      const c = pd[id] || 0;
+      for (let i = 0; i < c; i++) { if (this.applyItem(p, id).ok) n++; }
+    }
+    if (n) p.pendingItem = {};
+    return n;
+  },
+
+  /* I04 开箱（表31 DR11：合金 70% 3-5 个） */
+  openBox(p, n) {
+    n = Math.max(1, Math.min(10, n | 0));
+    if ((p.mat.I04 || 0) < n) return '宝箱数量不足';
+    p.mat.I04 -= n;
+    let total = 0;
+    for (let i = 0; i < n; i++) {
+      if (Math.random() < 0.70) {
+        const c = 3 + Math.floor(Math.random() * 3);      /* 3-5 */
+        p.mat.M02 = (p.mat.M02 || 0) + c; total += c;
+      }
+    }
+    return total > 0 ? ('合金 ×' + total) : '未获得材料（下次再试）';
+  },
+
+  /* =========================================================
+   * 表19 月卡（SH05）：购买后 30 天内每日领 钻石50 + 体力60
+   * ========================================================= */
+  monthCardLeft(p) {
+    const mc = p.monthCard;
+    if (!mc || !mc.until) return 0;
+    if (Date.now() > mc.until) return 0;
+    return Math.ceil((mc.until - Date.now()) / 86400000);
+  },
+  /* 每日领取，返回 {ok,msg} */
+  monthCardClaim(p) {
+    if (this.monthCardLeft(p) <= 0) return { ok: false, msg: '月卡未开通或已过期' };
+    const d = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+    if (p.monthCard.last === d) return { ok: false, msg: '今日已领取' };
+    p.monthCard.last = d;
+    p.diamond = (p.diamond || 0) + 50;
+    this.addStamina(p, 60);
+    return { ok: true, msg: '月卡奖励：钻石+50 体力+60（剩 ' + this.monthCardLeft(p) + ' 天）' };
+  },
+
+  /* =========================================================
+   * 表19 战令（SH06 普通 / SH07 进阶）：按通关关卡数解锁奖励档位
+   * ========================================================= */
+  PASS_TIERS: [
+    { lv: 1, n: '金币×1000', rw: { gold: 1000 } },
+    { lv: 3, n: '金属×30', rw: { M01: 30 } },
+    { lv: 5, n: '钻石×50', rw: { diamond: 50 } },
+    { lv: 10, n: '合金×20', rw: { M02: 20 } },
+    { lv: 15, n: '钻石×100', rw: { diamond: 100 } },
+    { lv: 20, n: '枪械碎片×20', rw: { P01: 20 } },
+    { lv: 30, n: '稀有金属×10', rw: { M03: 10 } },
+    { lv: 40, n: '钻石×200', rw: { diamond: 200 } },
+    { lv: 50, n: '传说芯片×1', rw: { chipL: 1 } },
+  ],
+  passLevel(p) { return Object.keys(p.cleared || {}).length; },
+  /* adv=true 才能领进阶档（含额外钻石） */
+  passClaim(p, lvIdx, adv) {
+    const t = this.PASS_TIERS[lvIdx];
+    if (!t) return { ok: false, msg: '档位不存在' };
+    if (this.passLevel(p) < t.lv) return { ok: false, msg: '通关 ' + t.lv + ' 关解锁' };
+    const key = 'p' + lvIdx + (adv ? 'a' : 'n');
+    const got = ((p.passClaimed || (p.passClaimed = {}))[key]);
+    if (got) return { ok: false, msg: '已领取' };
+    if (adv && !(p.passAdv)) return { ok: false, msg: '需先购买进阶战令' };
+    p.passClaimed[key] = 1;
+    for (const k in t.rw) {
+      if (k === 'gold') p.gold = (p.gold || 0) + t.rw[k];
+      else if (k === 'diamond') p.diamond = (p.diamond || 0) + t.rw[k];
+      else if (/^chip/.test(k)) {
+        p.bag = p.bag || [];
+        try { const c = this.rollChipById ? this.rollChipById('l') : null; if (c) p.bag.push(c); } catch (e) {}
+      }
+      else p.mat[k] = (p.mat[k] || 0) + t.rw[k];
+    }
+    if (adv) p.diamond = (p.diamond || 0) + 30;         /* 进阶额外奖励 */
+    return { ok: true, msg: '战令 Lv.' + t.lv + '：' + t.n };
+  },
+
   /* ===== 表24 广告位 AD04 免费抽奖 / AD05 开箱 ===== */
   /* 免费抽奖：随机产出，稀有度权重固定 */
   adDraw(p) {
