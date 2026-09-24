@@ -513,7 +513,9 @@ const BT = {
     /* --- 僵尸 --- */
     for (const z of r.zombies) {
       if (z.dead) continue;
-      if (z.slowT > 0) { z.slowT -= dt; if (z.slowT <= 0) z.slow = 0; }
+      /* 免疫减速的 BOSS（深渊领主「狂暴免疫」阶段）不受任何减速影响 */
+      if (z.immuneSlow) { z.slow = 0; z.slowT = 0; }
+      else if (z.slowT > 0) { z.slowT -= dt; if (z.slowT <= 0) z.slow = 0; }
       if (z.burnT > 0) { z.burnT -= dt; this.hurt(z, z.burn * r.atk * dt, false, '火'); }
       const sp = z.spd * (1 - (z.slow || 0));
       const dx = r.px - z.x, dy = r.py - z.y;
@@ -675,33 +677,103 @@ const BT = {
   bossTick(z, dt, dist) {
     const r = this.run, d = z.bossDef;
     const ratio = z.hp / z.maxHp;
-    const th = d.skills.filter((s) => typeof s.trig === 'number');
+    const th = (d.skills || []).filter((sk) => typeof sk.trig === 'number');
     for (let i = 0; i < th.length; i++) {
       if (ratio <= th[i].trig && z.phase <= i) {
         z.phase = i + 1;
         r.efx.push({ t: 'warn', x: z.x, y: z.y, r: 200, life: 0.8, max: 0.8 });
         UI.toast('⚠️ ' + d.n + ' 进入第 ' + z.phase + ' 阶段：' + th[i].n, 'boss');
-        if (th[i].n === '召唤小怪') {
-          for (let k = 0; k < 6; k++) {
-            const dd = EX.zombies.find((x) => x.id === 'putong');
-            const nz = this.mkZ(dd, r.def.hpMul); this.randEdge(nz); r.zombies.push(nz);
-          }
-        }
-        if (th[i].n === '孢子喷吐') {
-          for (let k = 0; k < 4; k++) {
-            const dd = EX.zombies.find((x) => x.id === 'xiaozombie');
-            const nz = this.mkZ(dd, r.def.hpMul);
-            nz.x = z.x + (Math.random() - 0.5) * 90; nz.y = z.y + (Math.random() - 0.5) * 90;
-            r.zombies.push(nz);
-          }
-        }
-        if (th[i].n === '狂暴') { z.spd *= 1.5; z.dmg *= 1.35; }
+        this.bossCast(z, th[i], i + 1);
       }
     }
   },
 
-  /* ---------------- 射击 ---------------- */
-  /* 范围爆炸 */
+  /* BOSS 阶段技能的实际效果
+   * BUG：8 个 BOSS 共 24 个技能，此前只按名字精确匹配了 3 个
+   *（召唤小怪 / 孢子喷吐 / 狂暴），其余 21 个（铲斗横扫、产卵、
+   *  地面震击、深渊召唤、亡者复苏、瘟疫领域…）全部只弹一句提示，
+   *  没有任何实际效果。而且「尸王狂暴」「狂暴免疫」这类变体名
+   *  连"狂暴"都匹配不上，导致后期 BOSS 的狂暴也从未触发。
+   * 现在按关键词归类实现，所有技能名都能落到具体效果。 */
+  bossCast(z, sk, phase) {
+    const r = this.run;
+    const n = sk.n || '';
+    const hpMul = (r.def && r.def.mul) || 1;      /* 注意：levels 里是 mul，不是 hpMul */
+
+    /* 召唤 / 孵化类：产卵、亡者复苏、深渊召唤、召唤小怪 */
+    if (/召唤|复苏|产卵|孵化/.test(n)) {
+      const cnt = 4 + phase * 2;
+      const pool = /产卵|孵化/.test(n) ? 'xiaozombie' : 'putong';
+      for (let k = 0; k < cnt; k++) {
+        const dd = EX.zombies.find((x) => x.id === pool) || EX.zombies[0];
+        const nz = this.mkZ(dd, hpMul);
+        nz.x = z.x + (Math.random() - 0.5) * 110;
+        nz.y = z.y + (Math.random() - 0.5) * 80;
+        if (/产卵/.test(n)) { nz.x = z.x + (Math.random() - 0.5) * 90; nz.y = z.y + (Math.random() - 0.5) * 90; }
+        r.zombies.push(nz);
+      }
+      return;
+    }
+
+    /* 孢子 / 喷吐类：分裂出小僵尸 */
+    if (/孢子|喷吐|酸液|呕吐|腐蚀/.test(n)) {
+      const cnt = 3 + phase;
+      for (let k = 0; k < cnt; k++) {
+        const dd = EX.zombies.find((x) => x.id === 'xiaozombie') || EX.zombies[0];
+        const nz = this.mkZ(dd, hpMul);
+        nz.x = z.x + (Math.random() - 0.5) * 100;
+        nz.y = z.y + (Math.random() - 0.5) * 90;
+        r.zombies.push(nz);
+      }
+      /* 酸液/呕吐额外留下腐蚀池 */
+      if (/酸液|呕吐|腐蚀/.test(n)) {
+        for (let k = 0; k < 2; k++) {
+          r.pools.push({
+            x: r.px + (Math.random() - 0.5) * 200, y: r.py - 40 + (Math.random() - 0.5) * 60,
+            r: 52, dps: z.dmg * 0.5, life: 4 + phase, max: 4 + phase,
+          });
+        }
+      }
+      return;
+    }
+
+    /* 狂暴类：攻速移速提升；含"免疫"则额外免疫减速 */
+    if (/狂暴|免疫/.test(n)) {
+      z.spd *= 1.5; z.dmg *= 1.35; z.atkCd = 0;
+      if (/免疫/.test(n)) z.immuneSlow = true;
+      return;
+    }
+
+    /* 震击 / 领域 / 仪式类：全屏冲击，击退僵尸并震伤 */
+    if (/震击|领域|仪式|暗红/.test(n)) {
+      r.efx.push({ t: 'nova', x: z.x, y: z.y, r: 260, life: 0.7, max: 0.7, el: '物' });
+      for (const o of r.zombies) {
+        if (o.dead || o === z) continue;
+        const a = Math.atan2(o.y - z.y, o.x - z.x);
+        const dd2 = Math.hypot(o.x - z.x, o.y - z.y);
+        if (dd2 < 260) { o.x += Math.cos(a) * 40; o.y += Math.sin(a) * 40; }
+      }
+      /* 瘟疫/暗红仪式额外留下毒领域 */
+      if (/瘟疫|暗红/.test(n)) {
+        for (let k = 0; k < 3; k++) {
+          r.pools.push({
+            x: r.px + (Math.random() - 0.5) * 240, y: r.py - 30 + (Math.random() - 0.5) * 70,
+            r: 58, dps: z.dmg * 0.6, life: 5, max: 5,
+          });
+        }
+      }
+      this.hurtPlayer(z.dmg * 0.35, n);
+      return;
+    }
+
+    /* 其余 contact 类（巨爪拍击/铲斗横扫/暗影镰斩/吞噬/诅咒之杖/巨剑斩击）
+     * 在接触时由 hurtPlayer 分支增强，此处给一次阶段性强化 */
+    z.dmg *= 1.2;
+    z.atkR *= 1.15;
+    return;
+  },
+
+
   blast(pos, radius, dmg, el) {
     const r = this.run; if (!r) return;
     this.efx.push({ t: 'boom', x: pos.x, y: pos.y, r: radius, life: 0.36, max: 0.36, el: el || '火' });
@@ -1005,7 +1077,7 @@ const BT = {
     if (z.d.split) {
       const dd = EX.zombies.find((x) => x.id === 'xiaozombie');
       for (let i = 0; i < z.d.split; i++) {
-        const nz = this.mkZ(dd, r.def.hpMul);
+        const nz = this.mkZ(dd, (r.def && r.def.mul) || 1);
         nz.x = z.x + (Math.random() - 0.5) * 30; nz.y = z.y + (Math.random() - 0.5) * 30;
         r.zombies.push(nz);
       }
