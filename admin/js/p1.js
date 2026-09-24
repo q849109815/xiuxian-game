@@ -22,6 +22,7 @@ APP.pages['acc-query'] = {
         </div>
         <div class="lbl" style="text-align:left;line-height:1.6">
           数据来源：<b style="color:var(--yel)">${U.esc(this.SRC_NOTE || '未知')}</b>
+          ${(this.PLIST_FAIL || []).length ? '<br><span style="color:var(--yel)">⚠ ' + this.PLIST_FAIL.length + ' 名玩家存档读取失败（已显示为占位条目）：' + U.esc(this.PLIST_FAIL.join(', ')) + '</span>' : ''}
           ${(this.SRC_NOTE || '').indexOf('快照') >= 0 || (this.SRC_NOTE || '').indexOf('无数据') >= 0
             ? '<br><span style="color:var(--red)">云端四路（索引/账号目录/存档目录/榜单）均未取到，当前显示的是本机缓存。请点「重建索引」或检查网络。</span>' : ''}
         </div>
@@ -31,7 +32,7 @@ APP.pages['acc-query'] = {
         ${list.slice(0, 80).map((p) => {
           const e = p.ext || {};
           return `<tr data-sel="${U.esc(p.uid)}" style="cursor:pointer">
-            <td>${U.esc(p.name)}</td><td style="font-size:10px">${U.esc(p.uid)}</td>
+            <td>${U.esc(p.name)}${p._broken ? ' <span style="color:var(--yel);font-size:9px">读取失败</span>' : ''}</td><td style="font-size:10px">${U.esc(p.uid)}</td>
             <td>${U.esc(e.server || 'S1')}</td><td>${p.lv || 1}</td><td>${U.fmt(U.pw(p))}</td>
             <td style="font-size:10px">${U.dt(p.created)}</td>
             <td style="font-size:10px">${U.ago(p.lastSeen)}</td>
@@ -123,6 +124,10 @@ APP.scanDiag = async function () {
   await t('战力榜', async () => { const r = await Net.read(DBP.rank); return r && r.data && r.data.list; });
   await t('无尽榜', async () => { const r = await Net.read(DBP.endless); return r && r.data && r.data.list; });
   out['当前列表'] = (this.PLIST || []).length + ' 人';
+  out['── 收集UID'] = (this.PLIST_UIDS || []).length + ' 个';
+  out['── 读取成功'] = ((this.PLIST || []).length - (this.PLIST_FAIL || []).length) + ' 个';
+  out['── 读取失败'] = (this.PLIST_FAIL || []).length + ' 个'
+    + ((this.PLIST_FAIL || []).length ? '（' + this.PLIST_FAIL.join(',') + '）' : '');
   return out;
 };
 
