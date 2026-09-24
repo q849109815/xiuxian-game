@@ -1177,6 +1177,19 @@ const BT = {
       this.P.mat = this.P.mat || {};
       const txt = [];
       d.items.forEach((it) => {
+        /* 严重 BUG 修复：掉落表里的芯片写的是品质码 C01/C02/C03
+         * （白/精英/传说，见 config drops 的 q 字段），
+         * 但这里无条件写进 p.mat['C01'] —— 而【芯片真实存放在 p.bag】，
+         * 芯片面板只读 p.bag。
+         * 结果：8 个 BOSS 共 20+ 条芯片掉落，玩家打完 BOSS 飘字显示
+         * 「芯片+1」，实际芯片页永远 0 颗，既不能装备也不能合成。
+         * 现在按品质码生成真实芯片推进 p.bag。 */
+        const qmap = { C01: '白', C02: '蓝', C03: '红' };
+        if (qmap[it.item] && window.E && E.giveChipByQuality) {
+          for (let i = 0; i < it.n; i++) E.giveChipByQuality(this.P, qmap[it.item]);
+          txt.push('芯片+' + it.n);
+          return;
+        }
         this.P.mat[it.item] = (this.P.mat[it.item] || 0) + it.n;
         txt.push((E.itemName ? E.itemName(it.item) : it.item) + '+' + it.n);
       });
