@@ -412,44 +412,50 @@ const APP = {
      *   ③ 玩家存档目录 data/zb/players/
      *   ④ 战力榜 + 无尽榜（兜底）
      * ========================================================= */
-    const uids = [];
+    /* 分两组收集：
+     *   core = 确定有存档（存档目录 / 索引 / 榜单）→ 逐个读取详情
+     *   acc  = 仅有账号、可能没建存档 → 不逐个读（否则上百次超时请求会拖死界面），
+     *          直接构造「未创建存档」占位条目，运营仍能看到该账号存在。 */
+    const core = [];
+    const acc = [];
     const srcs = [];
-    const add = (u) => { if (u && !uids.includes(u)) uids.push(u); };
+    const addCore = (u) => { if (u && core.indexOf(u) < 0) core.push(u); };
+    const addAcc = (u) => { if (u && acc.indexOf(u) < 0 && core.indexOf(u) < 0) acc.push(u); };
 
     /* ① 索引 */
     try {
       const r = await window.TMO(Net.read('data/zb/index.json'), 10000, null);
       if (r && r.data && Array.isArray(r.data.list) && r.data.list.length) {
-        r.data.list.forEach((x) => add(x.uid));
+        r.data.list.forEach((x) => addCore(x.uid));
         srcs.push('索引' + r.data.list.length);
       }
     } catch (e) {}
-    /* ② 账号目录 */
+    /* ② 存档目录（最权威：真的有存档文件） */
     try {
-      const ns = await window.TMO(Net.list('data/zb/users/'), 12000, []);
-      const hit = (ns || []).filter((x) => x.endsWith('.json'));
-      if (hit.length) { hit.forEach((f) => add(f.replace(/\.json$/, ''))); srcs.push('账号目录' + hit.length); }
+      const ns = await window.TMO(Net.list(PDIR), 15000, []);
+      const hit = (ns || []).filter((x) => x.endsWith('.json') && x !== '.gitkeep');
+      if (hit.length) { hit.forEach((f) => addCore(f.replace(/\.json$/, ''))); srcs.push('存档目录' + hit.length); }
     } catch (e) {}
-    /* ③ 存档目录 */
-    try {
-      const ns = await window.TMO(Net.list(PDIR), 12000, []);
-      const hit = (ns || []).filter((x) => x.endsWith('.json'));
-      if (hit.length) { hit.forEach((f) => add(f.replace(/\.json$/, ''))); srcs.push('存档目录' + hit.length); }
-    } catch (e) {}
-    /* ④ 榜单兜底 */
-    ['rank', 'endless'].forEach((k) => { this.PLIST_RANK_UIDS = this.PLIST_RANK_UIDS || []; });
+    /* ③ 榜单兜底 */
     try {
       const r = await window.TMO(Net.read(DBP.rank), 10000, null);
       if (r && r.data && r.data.list && r.data.list.length) {
-        r.data.list.forEach((x) => add(x.uid)); srcs.push('战力榜' + r.data.list.length);
+        r.data.list.forEach((x) => addCore(x.uid)); srcs.push('战力榜' + r.data.list.length);
       }
     } catch (e) {}
     try {
       const r = await window.TMO(Net.read(DBP.endless), 10000, null);
       if (r && r.data && r.data.list && r.data.list.length) {
-        r.data.list.forEach((x) => add(x.uid)); srcs.push('无尽榜' + r.data.list.length);
+        r.data.list.forEach((x) => addCore(x.uid)); srcs.push('无尽榜' + r.data.list.length);
       }
     } catch (e) {}
+    /* ④ 账号目录（只作补充，不逐个读存档） */
+    try {
+      const ns = await window.TMO(Net.list('data/zb/users/'), 15000, []);
+      const hit = (ns || []).filter((x) => x.endsWith('.json'));
+      if (hit.length) { hit.forEach((f) => addAcc(f.replace(/\.json$/, ''))); srcs.push('账号目录' + hit.length); }
+    } catch (e) {}
+    const uids = core.concat(acc);
 
     if (uids.length) {
       this.SRC_NOTE = srcs.join(' + ');
@@ -492,11 +498,11 @@ const APP = {
      * 现在：读到的尽量修好 uid；读不到的用索引信息构造占位条目，
      * 标记 _broken 并显示「读取失败」，绝不静默消失。
      * ========================================================= */
-    const files = uids.slice(0, 200).map((u) => u + '.json');
-    if (!files.length) { if (!this.PLIST) this.PLIST = []; return; }
+    const files = core.slice(0, 200).map((u) => u + '.json');
+    if (!files.length && !acc.length) { if (!this.PLIST) this.PLIST = []; return; }
     const out = [];
     const fail = [];
-    const WIN = 8;   /* 并发窗口 */
+    const WIN = 12;   /* 并发窗口（原 8，玩家多了会明显变慢） */
     for (let i = 0; i < files.length; i += WIN) {
       const batch = files.slice(i, i + WIN);
       const rs = await Promise.all(batch.map(async (f) => {
@@ -524,6 +530,16 @@ const APP = {
         fail.push(uid);
       });
     }
+    /* 仅有账号、无存档的：构造占位条目（不发请求，避免上百次超时拖死界面） */
+    acc.slice(0, 200).forEach((u) => {
+      const m = metaMap[u] || {};
+      out.push({
+        uid: u, name: m.name || m.nick || ('账号 ' + String(u).slice(0, 10)),
+        lv: m.lv || 0, created: m.at || 0, lastSeen: m.lastSeen || 0,
+        _noSave: true, gold: 0, diamond: 0, stamina: 0, ach: 0,
+        mat: {}, cleared: {}, gun: {}, skin: [], chips: [], mail: [],
+      });
+    });
     this.PLIST_FAIL = fail;
     this.PLIST_UIDS = uids.slice(0, 200);
     this.PLIST = out;
