@@ -30,7 +30,7 @@ const E = {
       chars: ['C01'],              // 已解锁角色
       skin: 'sk_c01a', skins: ['sk_c01a'],
       avatar: '🧑‍🚀', avatarImg: gender === 'f' ? 'assets/char/hero_f.jpg' : 'assets/char/hero_m.jpg',
-      lv: 1, xp: 0,
+      lv: 1, xp: 0, tp: 3,
       gold: 2000, diamond: 100, ach: 0,
       /* 材料（资料物品表） */
       mat: { M01: 0, M02: 0, M03: 0, M04: 0, M05: 0, P01: 0, P02: 0 },
@@ -303,15 +303,22 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const t = EX.talents.find((x) => x.id === id); if (!t) return 0;
     return Math.round(t.cost0 * Math.pow(t.costGrow, p.talents[id] || 0));
   },
+  /* 天赋点：每 10 级 +1（表25 #1「每10级解锁新技能槽」），初始赠送 3 点 */
+  TP_INIT: 3,
+  tpOf(p) { return p.tp == null ? this.TP_INIT : (p.tp || 0); },
   upTalent(p, id) {
     const t = EX.talents.find((x) => x.id === id); if (!t) return { ok: false, msg: '天赋不存在' };
     if (!this.talentUnlocked(p, id)) return { ok: false, msg: '需通关 ' + t.unlock + ' 解锁' };
     const cur = p.talents[id] || 0;
     if (cur >= t.max) return { ok: false, msg: '已达最高等级' };
+    /* BUG修复：此前天赋点只发不扣、且不足时不拦截，导致可无限刷属性。
+     * 表25 #7「金币点选」→ 金币为主消耗；天赋点为额外门槛（每10级+1） */
+    const tp = this.tpOf(p);
+    if (tp <= 0) return { ok: false, msg: '天赋点不足（每升 10 级 +1 点）' };
     const c = this.talentCost(p, id);
     if (p.gold < c) return { ok: false, msg: '金币不足（需 ' + this.fmt(c) + '）' };
-    p.gold -= c; p.talents[id] = cur + 1;
-    return { ok: true, msg: '⭐ ' + t.n + ' Lv.' + p.talents[id] };
+    p.gold -= c; p.tp = tp - 1; p.talents[id] = cur + 1;
+    return { ok: true, msg: '⭐ ' + t.n + ' Lv.' + p.talents[id] + '（剩 ' + p.tp + ' 天赋点）' };
   },
 
   /* =================================================
@@ -864,7 +871,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 扫荡系统（表29：已通关关卡快速扫荡，消耗体力）
    * ======================================================== */
   canSweep(p, lvId) {
-    const st = (p.stars || {})[lvId] || 0;
+    /* BUG修复：通关记录写在 p.cleared[id]，此前读的是从未赋值的 p.stars，
+     * 导致已通关关卡也判定"需先通关该关卡"，扫荡功能完全不可用 */
+    const st = (p.cleared || {})[lvId] || 0;
     if (!st) return { ok: false, msg: '需先通关该关卡' };
     if ((p.stamina || 0) < EX.SWEEP_STAMINA) return { ok: false, msg: '体力不足（需 ' + EX.SWEEP_STAMINA + '）' };
     return { ok: true };
@@ -1270,6 +1279,22 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   /* =================================================
    * 广告（资料广告位：每日上限）
    * ================================================ */
+  /* =========================================================
+   * 每日关卡挑战次数（截图51：「今日剩余次数：3/3」）
+   * 此前结算页把「广告剩余次数(AD02=10次)」当成挑战次数显示，
+   * 出现「10/3」这种分子大于分母的错误数据
+   * ========================================================= */
+  RUN_DAILY: 3,
+  runLeft(p) {
+    if (p.runDate !== this.dailyKey()) { p.runDate = this.dailyKey(); p.runUsed = 0; }
+    return Math.max(0, this.RUN_DAILY - (p.runUsed || 0));
+  },
+  useRun(p) {
+    if (this.runLeft(p) <= 0) return { ok: false, msg: '今日挑战次数已用完（每日 ' + this.RUN_DAILY + ' 次）' };
+    p.runUsed = (p.runUsed || 0) + 1;
+    return { ok: true, msg: 'ok' };
+  },
+
   adLeft(p, adId) {
     this.resetTasks(p);
     const d = EX.ads.find((x) => x.id === adId); if (!d) return 0;
