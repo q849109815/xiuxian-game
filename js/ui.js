@@ -847,6 +847,12 @@ r_tavern(p, tab) {
     };
     const g1 = $('#goGem'); if (g1) g1.onclick = () => this.open('gem');
     const g2 = $('#goChip'); if (g2) g2.onclick = () => this.open('chip');
+    /* 宝石格子点击：渲染用的是 data-gem，此前全项目没有任何地方绑定它
+     * （只有宝石镶嵌面板的 data-gsel 有绑定），点了完全没反应。
+     * 格子带选中态和红点，视觉上是可交互的，现在补上跳转。 */
+    $$('#pnBody [data-gem]').forEach((el) => { el.onclick = () => {
+      this.gemSel = el.dataset.gem; this.open('gem');
+    }; });
   },
 
   /* ---------- 商店（截图：每日/武器/宝石/材料 三列网格） ---------- */
