@@ -138,6 +138,7 @@ const E = {
     if (!this.charUnlocked(p, s.char)) return { ok: false, msg: '角色未解锁' };
     if ((p.diamond || 0) < s.price) return { ok: false, msg: '钻石不足（需 ' + s.price + '）' };
     p.diamond -= s.price; p.skins.push(skinId); p.skin = skinId;
+    try { this.codexUnlock(p, 'skin', skinId); } catch (e) {}
     return { ok: true, msg: '已解锁 ' + s.n };
   },
 
@@ -157,6 +158,7 @@ const E = {
     }
     if ((p.gunOwn || []).indexOf(id) < 0) p.gunOwn.push(id);
     p.gun = id;
+    try { this.codexUnlock(p, 'gun', id); } catch (e) {}
     return { ok: true, msg: '已装备 ' + this.gun(p).n };
   },
   /* 进阶等级：每 5 级一次 */
@@ -470,16 +472,17 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       atk: ((atk + (p.lvBonusAtk || 0)) * (1 + af.dmg) + this.gemBonus(p).atk) * (1 + EX.starBonus(p.charStar)),
       hp: (Math.round(hp) + (p.lvBonusHp || 0) + this.gemBonus(p).hp) * (1 + EX.starBonus(p.charStar)),
       gunBase, armor: Math.round(armor),
-      rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gunStatVal(p, 'rate')),
       mag: g.mag + af.mag + Math.round(this.gunStatVal(p, 'mag')),
       pierce: g.pierce + af.pierce + Math.floor(this.gunStatVal(p, 'pierce')),
       pellets: (g.pellets || 1) + af.extra, range: 300, spread: 0,
-      crit: Math.min(0.85, crit + this.gemBonus(p).crit), critDmg,
+      crit: Math.min(0.85, crit + this.gemBonus(p).crit),
+      critDmg: critDmg + this.gemBonus(p).critDmg,
+      rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gunStatVal(p, 'rate') + this.gemBonus(p).rate),
       moveSpd: Math.round(moveSpd),
       /* 词条额外项：吸血 / 换弹 / 爆炸范围 / 双倍概率 */
       reloadCut: af.reload, erMul: 1 + af.er, doubleChance: af.double,
       dmgMin: g.dmgMin || null, dmgMax: g.dmgMax || null,
-      ls: this.talentVal(p, 'ls') + this.chipVal(p, 'ls') + af.lifesteal,
+      ls: this.talentVal(p, 'ls') + this.chipVal(p, 'ls') + af.lifesteal + this.gemBonus(p).ls,
       revive: Math.floor(p.talents.t_revive || 0),
       goldMul: 1 + this.talentVal(p, 'gold'),
       xpMul: 1 + this.talentVal(p, 'xp') + this.buildVal(p, 'xp'),
@@ -955,6 +958,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       else if (k === 'title') { p.titles = p.titles || []; if (p.titles.indexOf(give[k]) < 0) p.titles.push(give[k]); }
       else if (k === 'skin') { p.skin = p.skin || []; if (p.skin.indexOf(give[k]) < 0) p.skin.push(give[k]); }
       else if (k === 'frame') { p.frames = p.frames || []; if (p.frames.indexOf(give[k]) < 0) p.frames.push(give[k]); }
+      /* 可镶嵌宝石：give: { gem: 'G_R' } → p.gems['G_R'] += 1
+       * 修复：此前商城「红宝石/蓝宝石/绿宝石/紫宝石」发放的是 M05 材料，
+       *       买了之后在宝石页永远显示数量 0，镶嵌/合成功能完全用不了 */
+      else if (k === 'gem') {
+        const gid = give[k];
+        if (gid) { p.gems = p.gems || {}; p.gems[gid] = (p.gems[gid] || 0) + 1; }
+      }
       else p.mat[k] = (p.mat[k] || 0) + give[k];
     });
   },
@@ -999,6 +1009,20 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   /* =========================================================
    * 图鉴收集（表29：首次解锁领奖）
    * ======================================================== */
+  /* 图鉴回填：玩家已拥有但历史未记账的武器/皮肤，一次性补录
+   * 修复：此前只有怪物击杀会解锁图鉴，武器(10条)/皮肤(11条)永远为 0 */
+  codexBackfill(p) {
+    if (!p.codex) p.codex = {};
+    let n = 0;
+    const add = (kind, id) => {
+      if (!id) return;
+      p.codex[kind] = p.codex[kind] || [];
+      if (p.codex[kind].indexOf(id) < 0) { p.codex[kind].push(id); n++; }
+    };
+    (p.gunOwn || []).forEach((g) => add('gun', g));
+    (p.skins || []).forEach((sk) => add('skin', sk));
+    return n;
+  },
   codexUnlock(p, kind, id) {
     p.codex = p.codex || {};
     p.codex[kind] = p.codex[kind] || [];
@@ -1023,11 +1047,16 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 武器词条（表30 武器词条池 AF01~AF12）
    * 进阶解锁词条槽，可消耗钻石洗练
    * ======================================================== */
+  /* 词条槽位 = 武器自带槽位(表44 slots) + 进阶加成
+   * BUG修复：此前只读 gunAdvance[白阶].slot = 0，与生成词条所用的
+   *          gunSlots(武器表 slots=2) 不一致，导致明明有 2 条词条却
+   *          提示"需先进阶武器才解锁词条槽"，洗练功能完全不可用 */
   gunAffixSlots(p, gunId) {
-    /* p.gunAdv 是进阶档位数字 0~4（白/绿/蓝/紫/橙），对应 gunAdvance[].slot */
+    const base = this.gunSlots(p);                    /* 武器自带槽位 */
     const adv = Math.max(0, Math.min(4, p.gunAdv || 0));
     const row = (EX.gunAdvance || [])[adv];
-    return row ? (row.slot || 0) : 0;
+    const byAdv = row ? (row.slot || 0) : 0;
+    return Math.max(base, byAdv);
   },
   rollGunAffix(p, gunId) {
     const pool = EX.gunStats || [];
@@ -1048,7 +1077,17 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     return out;
   },
   /* 洗练：消耗钻石重随机全部词条 */
+  /* 旧入口：此前写入 p.gunStats，而属性计算 gunAffixBonus 读的是
+   *          p.gunAffix[gid] —— 两套存储导致洗练后属性完全不变。
+   * 统一转发到 rerollAffix（写 p.gunAffix，属性即时生效） */
   rerollGun(p, gunId) {
+    const slots = this.gunAffixSlots(p, gunId);
+    if (slots <= 0) return { ok: false, msg: '需先进阶武器才解锁词条槽' };
+    const r = this.rerollAffix(p, false);
+    if (r.ok) r.msg = '洗练完成！';
+    return r;
+  },
+  rerollGunOld(p, gunId) {
     const gid = gunId || p.gun || 'W01';
     const slots = this.gunAffixSlots(p, gid);
     if (slots <= 0) return { ok: false, msg: '需先进阶武器才解锁词条槽' };
@@ -1218,11 +1257,29 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const lv = p.gemLv;
     return { ok: true, msg: '合成成功！宝石等级提升至 Lv.' + lv };
   },
-  /* 宝石属性加成（按等级放大） */
+  /* 宝石属性加成
+   * BUG修复（两处）：
+   *  1) 此前只读 p.gemLv（合成等级），镶嵌写入的 p.gemOn 完全不参与计算
+   *     → 玩家镶嵌红宝石后攻击 +0，镶嵌功能形同虚设
+   *  2) 加成不分种类，红/蓝/绿/紫一律给 攻击+1200 生命+2000 暴击+15%
+   *     → 与宝石表 desc 完全不符
+   * 现按表：镶嵌种类决定加成类型，合成等级决定倍率 */
+  GEM_BASE: {
+    G_R: { atk: 1200, hp: 0, crit: 0, critDmg: 0, ls: 0, rate: 0 },
+    G_B: { atk: 0, hp: 2000, crit: 0.15, critDmg: 0, ls: 0, rate: 0 },
+    G_G: { atk: 0, hp: 1500, crit: 0, critDmg: 0, ls: 0.03, rate: 0 },
+    G_P: { atk: 0, hp: 0, crit: 0, critDmg: 0.30, ls: 0, rate: 0.05 },
+  },
   gemBonus(p) {
-    const lv = p.gemLv || 0;
-    if (!lv) return { atk: 0, hp: 0, crit: 0 };
-    return { atk: 1200 * lv, hp: 2000 * lv, crit: 0.15 * lv };
+    const zero = { atk: 0, hp: 0, crit: 0, critDmg: 0, ls: 0, rate: 0 };
+    const id = p.gemOn;
+    if (!id) return zero;
+    const base = this.GEM_BASE[id];
+    if (!base) return zero;
+    const lv = Math.max(1, p.gemLv || 0);        /* 未合成时按 Lv.1 计 */
+    const out = {};
+    for (const k in zero) out[k] = (base[k] || 0) * lv;
+    return out;
   },
   /* 装备锻造：强化 + 进阶（截图「装备设造 / 装备锻造」） */
   forgeEquip(p, slot) {
