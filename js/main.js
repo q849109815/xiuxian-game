@@ -281,6 +281,13 @@ const MAIN = {
     if (n <= 31) return 'month';
     return 'once';
   },
+  /* 后台「解锁条件」自由文本 → 需通关关数
+   *   文档示例：'通关10关' / '通关 30 关' / '需通关5关解锁'
+   *   留空或不含数字 → 0（无条件） */
+  needFromText(t) {
+    const m = String(t || '').match(/(\d+)/);
+    return m ? Math.max(0, parseInt(m[1], 10)) : 0;
+  },
   applyCloudCfg(key, db) {
     try {
       const nm = (id) => { try { return (E.itemName ? E.itemName(id) : id) || id; } catch (e) { return id; } };
@@ -318,7 +325,11 @@ const MAIN = {
            * 游戏端一律按每天刷新，运营配置的限购周期完全不生效。
            * 现在按后台天数映射成限购周期。 */
           per: this.perFromDays(Number(x.refresh)),
-          need: 0, refresh: Number(x.refresh) || 0,
+          /* 解锁条件：后台是自由文本（文档示例「通关10关」），
+           * 此前映射成 need:0 且从不被读取 —— 运营配了「需通关 30 关」，
+           * 新玩家照样能直接兑换，解锁条件形同虚设。
+           * 现在从文本里提取数字作为需通关关数，engine 侧真正校验。 */
+          need: this.needFromText(x.unlock), refresh: Number(x.refresh) || 0,
           unlock: x.unlock || '', give: { [x.item]: Number(x.n) || 1 },
         }));
       } else if (key === 'actshop' && Array.isArray(db.list)) {
