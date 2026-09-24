@@ -414,6 +414,12 @@ const MAIN = {
         for (const m of db.list) {
           if (m.startAt && m.startAt > now) continue;
           if (m.expireAt && m.expireAt < now) continue;
+          /* 重复领取漏洞：
+           * 原顺序是「先 giveRw 发奖 → 最后统一 Net.write 写回 claimed」。
+           * 若写回失败（网络抖动，这在弱网下很常见），奖励已经进了背包，
+           * 但 claimed 里没有这个 uid —— 下次登录会再发一遍，可无限重复领取。
+           * 现在先在本地登记已领，再发奖；即使云端写回失败也不会重发。 */
+          if ((P.mailGot || []).indexOf(m.id) >= 0) continue;
           if ((m.claimed || []).indexOf(P.uid) >= 0) continue;
           /* 字段不一致修复：后台全服/定向邮件写入的是 title/body，
            * 而玩家存档里的邮件用 t/b。此前统一读 m.t，
@@ -429,6 +435,8 @@ const MAIN = {
           }
           m.claimed = m.claimed || [];
           m.claimed.push(P.uid);
+          P.mailGot = P.mailGot || [];
+          if (m.id && P.mailGot.indexOf(m.id) < 0) P.mailGot.push(m.id);
           touched = true; ch = true;
           this.giveRw(m.rw || {});
           UI.toast('📢 ' + (m.title || '全服邮件') + ' 奖励已发放', 'ok');
