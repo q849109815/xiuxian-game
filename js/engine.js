@@ -577,6 +577,15 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   /* =================================================
    * 任务（资料任务表：主线3/每日3/每周2/成就4）
    * ================================================ */
+  /* 把 YYYYMMDD 整数转成时间戳，算出真实相隔天数（跨月/跨年也正确） */
+  ymdToTs(n) {
+    const y = Math.floor(n / 10000), m = Math.floor(n / 100) % 100, d = n % 100;
+    return Date.UTC(y, m - 1, d);
+  },
+  dayDiff(a, b) {
+    if (!a || !b) return 999;
+    return Math.round((this.ymdToTs(b) - this.ymdToTs(a)) / 864e5);
+  },
   dailyKey() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); },
   weekKey() {
     const d = new Date();
@@ -909,8 +918,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const d = new Date(now + 8 * 3600000);
     const today = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
     if (p.signDay === today) return { ok: false, msg: '今日已签到' };
-    const cnt = (p.signDay && (today - p.signDay === 1 || (today - p.signDay > 1 && p.signDays < 7)))
-      ? p.signDays : 0;
+    /* 严重 BUG 修复：此前用 YYYYMMDD 两个整数相减是否为 1 判断「连续」。
+     * 9月30日(20260930) → 10月1日(20261001) 差值是 71，不是 1；
+     * 12月31日 → 1月1日 差值是 8870。
+     * 结果：只要签到跨月或跨年，连续天数一律归零 —— 玩家攒的进度凭空消失。
+     * 现在改成按「真实日期差」判断，跨月跨年都能正确延续。 */
+    const cont = (p.signDay && this.dayDiff(p.signDay, today) === 1);
+    const cnt = cont ? p.signDays : 0;
     p.signDays = Math.min(7, (cnt || 0) + 1);
     p.signDay = today; p.signLast = now;
     const rw = { gold: 100 * p.signDays, diamond: p.signDays >= 7 ? 50 : 0 };
@@ -973,12 +987,27 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (!this._perReset(rec, it.per)) return rec.n;
     return rec.n;
   },
+  /* 限购周期重置
+   * 严重 BUG 修复：此前用「距上次购买超过 24 小时」判断，是滚动计时。
+   * 玩家今晚 23:00 买满，明早 00:30 再来买，只过了 1.5 小时 → 仍判定为同一天，
+   * 限购不刷新，玩家白白少一天额度。运营意义上的「每日限购」应按自然日跨天算。
+   * 周 / 月同理，改为按自然周、自然月（周一为周起点）。 */
   _perReset(rec, per) {
     const now = Date.now();
-    if (per === 'day') { if (now - rec.t > 864e5) { rec.n = 0; rec.t = now; } }
-    else if (per === 'week') { if (now - rec.t > 6048e5) { rec.n = 0; rec.t = now; } }
-    else if (per === 'month') { if (now - rec.t > 2592e6) { rec.n = 0; rec.t = now; } }
-    else if (per === 'once') { /* 终身 */ }
+    const d = new Date(now + 8 * 36e5);          /* UTC+8 业务日 */
+    if (per === 'day') {
+      const key = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+      if (rec.dk !== key) { rec.n = 0; rec.dk = key; rec.t = now; }
+    } else if (per === 'week') {
+      /* 自然周：以周一为起点 */
+      const day = (d.getDay() + 6) % 7;           /* 周一=0 */
+      const mon = new Date(d.getTime() - day * 864e5);
+      const key = mon.getFullYear() * 10000 + (mon.getMonth() + 1) * 100 + mon.getDate();
+      if (rec.wk !== key) { rec.n = 0; rec.wk = key; rec.t = now; }
+    } else if (per === 'month') {
+      const key = d.getFullYear() * 100 + (d.getMonth() + 1);
+      if (rec.mk !== key) { rec.n = 0; rec.mk = key; rec.t = now; }
+    } else if (per === 'once') { /* 终身 */ }
     return true;
   },
   achShopBuyItem(p, id) {
