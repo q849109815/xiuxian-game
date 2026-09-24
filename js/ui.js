@@ -1913,7 +1913,8 @@ r_tavern(p, tab) {
     /* 今日剩余次数（截图51） */
     const tn = $('#rsTimes');
     if (tn) {
-      const left = E.adLeft ? E.adLeft(this.P, 'AD02') : 3;
+      /* BUG修复：此前用广告剩余次数(10)当挑战次数，显示成「10/3」 */
+      const left = E.runLeft ? E.runLeft(this.P) : 3;
       tn.textContent = '今日剩余次数：' + Math.max(0, left) + '/3';
     }
     $('#rsNext').style.display = win && !BT.run.endless ? '' : 'none';
