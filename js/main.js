@@ -448,6 +448,26 @@ function startBattle(mode, levelId) {
   if (!sp.ok) { UI.toast(sp.msg, 'err'); return; }
   battleLevel = id;
 
+  /* 章节 CG 过场：首次进入该章节时播放一次
+   * EX.cgImg / EX.chapterCg 此前是死配置，CG 图已生成却从不展示。
+   * 无尽模式不播（没有章节归属）。 */
+  if (mode !== 'endless') {
+    const ch = E.chapterOf(id);
+    const cg = E.cgTake(P, ch);
+    if (cg) {
+      const cd = (EX.chapters || []).find((x) => x.id === ch);
+      E.save(P);
+      UI.showCG(cg, ch, cd ? cd.n : '', () => battleGo(id, mode));
+      return;
+    }
+  }
+
+  battleGo(id, mode);
+}
+
+/* 实际进入战斗（CG 播放完 / 无需 CG 时调用） */
+function battleGo(id, mode) {
+  if (!P) return;
   UI.show('battle');
   /* 音频：战斗 BGM */
   if (window.SND) {
@@ -469,6 +489,8 @@ function startBattle(mode, levelId) {
   if (!P.guide[1]) { P.guide[1] = 1; UI.toast('① 拖动左下摇杆移动角色', 'ok'); }
   else if (!P.guide[2]) { P.guide[2] = 1; UI.toast('② 自动瞄准射击，怪物来袭', 'ok'); }
 }
+
+window.battleGo = battleGo;
 
 function onBattleEnd(res, d) {
   if (hudT) { clearInterval(hudT); hudT = null; }
