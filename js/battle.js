@@ -559,6 +559,14 @@ const BT = {
       d.y += 40 * dt;
       const dx = r.px - d.x, dy = r.py - d.y, dd = Math.hypot(dx, dy);
       if (dd < 90) { d.x += dx / dd * 420 * dt; d.y += dy / dd * 420 * dt; }
+      /* 掉落穿透兜底：掉落物只会向下飘（40px/s），若横向离玩家较远，
+       * 它会一路落到玩家下方并飞出屏幕 —— 磁吸半径 90 失效后永远捡不到，
+       * 一局几百次击杀的素材就这么白白蒸发，且战斗结束也不补发。
+       * 这里改成：只要落过玩家所在高度就强力回收，不再让它飞走。 */
+      if (d.y > r.py + 20) {
+        const n = Math.max(1, dd);
+        d.x += dx / n * 900 * dt; d.y += dy / n * 900 * dt;
+      }
       if (dd < 26) { this.pick(d); d.get = 1; }
     }
     r.drops = r.drops.filter((d) => !d.get);
@@ -968,11 +976,28 @@ const BT = {
   },
 
   /* ---------------- 结束 ---------------- */
+  /* 结算地面残留掉落：一局几百次击杀，总有掉落物来不及被捡走，
+   * 此前战斗一结束就直接丢弃，玩家打完了却拿不到素材。
+   * 现在结束时统一补发（胜利全给，失败/退出给一半）。 */
+  sweepDrops(ratio) {
+    const r = this.run; if (!r || !r.drops) return 0;
+    let n = 0;
+    r.drops.forEach((d) => {
+      if (d.get) return;
+      d.get = 1;
+      if (ratio >= 1) { this.pick(d); n++; return; }
+      if (Math.random() < ratio) { this.pick(d); n++; }
+    });
+    r.drops = r.drops.filter((d) => !d.get);
+    return n;
+  },
+
   win() {
     const r = this.run; if (r.over) return;
     r.over = true; r.win = true;   /* r.win 此前从未赋值，外部无法判定胜负 */
     /* 表37 埋点：endless_time / level_finish */
     try { if (r.endless) OPS.track('endless_time', { t: Math.floor(r.time) }); } catch (e) {}
+    this.sweepDrops(1);
     this.on = false; this.stopLoop();
     if (this.cb) this.cb('win', { kills: r.kills, time: r.time, rw: { gold: r.gold, diamond: 0 }, lv: r.lv });
   },
@@ -990,6 +1015,7 @@ const BT = {
       return;
     }
     r.over = true; r.win = false; this.on = false; this.stopLoop();
+    this.sweepDrops(0.5);
     if (this.cb) this.cb('lose', { kills: r.kills, time: r.time, rw: { gold: Math.floor(r.gold * 0.3), diamond: 0 }, lv: r.lv });
   },
   /* =========================================================
@@ -1023,6 +1049,7 @@ const BT = {
   quit() {
     const r = this.run; if (!r || r.over) return;
     r.over = true; this.on = false; this.stopLoop();
+    this.sweepDrops(0.5);
     if (this.cb) this.cb('quit', { kills: r.kills, time: r.time, rw: { gold: Math.floor(r.gold * 0.5), diamond: 0 }, lv: r.lv });
   },
   resume() { this.paused = false; },
