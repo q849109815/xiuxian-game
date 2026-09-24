@@ -960,6 +960,23 @@ const EX = {
     { id: 'G_P', n: '紫宝石', c: 'p', icon: '🟣', img: 'assets/icon/gem_p.jpg', desc: '暴击伤害 +8% · 攻速 +1.5%' },
   ],
   /* 【商店商品】截图：每日/武器/宝石/材料 三列网格 */
+  /* =====================================================
+   * 【称号表】表33 排名奖励 + 成就商店 AS12 发放
+   * 此前 grant() 把 title 写进 p.titles，但全项目【零处读取】：
+   * 花 500 成就点兑换「限定称号-百人斩」、拿排行榜第1名的
+   * 「endless_king」，结果界面上什么都没有出现，等于买了个空气。
+   * =================================================== */
+  titles: [
+    { id: 'ach_100', n: '百人斩', color: '#ffd166', desc: '累计击杀 1000 只僵尸' },
+    { id: 'endless_king', n: '无尽之王', color: '#ff9f43', desc: '无尽生存榜第 1 名' },
+    { id: 'first_clear', n: '初出茅庐', color: '#7ee38a', desc: '首次通关' },
+    { id: 'boss_slayer', n: '屠龙者', color: '#ff6b6b', desc: '首次击杀 BOSS' },
+  ],
+  /* 【头像框表】活动商店 ES12 发放（800 活动代币） */
+  frames: [
+    { id: 'ev_frame', n: '活动限定框', color: '#ffd166' },
+    { id: 'rank_frame', n: '榜首金框', color: '#ff9f43' },
+  ],
   shopGoods: {
     '每日': [
       { id: 'D1', n: '金币袋', icon: '🪙', img: 'assets/icon/d1_gold.jpg', price: 1000, cur: 'gold', give: { gold: 5000 } },
