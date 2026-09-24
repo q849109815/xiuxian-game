@@ -137,14 +137,14 @@ const AUDIT = {
   pushCloud(item) {
     /* 云端 GM 日志：合并写入，避免高频 */
     try {
-      const buf = JSON.parse(localStorage.getItem('zb_gm_buf') || '[]');
+      let buf = []; try { buf = JSON.parse(localStorage.getItem('zb_gm_buf') || '[]'); } catch (e) { buf = []; }
       buf.unshift(item);
       if (buf.length > 300) buf.length = 300;
       localStorage.setItem('zb_gm_buf', JSON.stringify(buf));
     } catch (e) {}
   },
   async syncCloud() {
-    const buf = JSON.parse(localStorage.getItem('zb_gm_buf') || '[]');
+    let buf = []; try { buf = JSON.parse(localStorage.getItem('zb_gm_buf') || '[]'); } catch (e) { buf = []; }
     if (!buf.length) { APP.toast('没有待上传的日志', 'err'); return; }
     const cur = await DB.get(DBP.gmlog, { list: [] });
     cur.list = buf.concat(cur.list || []).slice(0, 2000);
