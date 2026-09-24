@@ -523,7 +523,10 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const moveSpd = c.spd * this.SPD_MUL * (1 + spdUp);
     return {
       /* 表25 #1：角色等级成长（每级 +攻击6 / +生命80） */
-      atk: ((atk + (p.lvBonusAtk || 0)) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct + this.equipBonus(p).atkPct)) * (1 + EX.starBonus(p.charStar)),
+      /* 好友加成：面板写「每个 +0.5% 攻击」，但 attrs 从不读 p.friends
+       * → 实测加 10 个好友攻击纹丝不动（26.25 → 26.25）。
+       * 现在接入，并设 20 人上限（否则无限加好友可无限堆攻击）。 */
+      atk: ((atk + (p.lvBonusAtk || 0)) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct + this.equipBonus(p).atkPct + this.friendBonus(p))) * (1 + EX.starBonus(p.charStar)),
       hp: ((Math.round(hp) + (p.lvBonusHp || 0)) * (1 + this.gemBonus(p).hpPct + this.equipBonus(p).hpPct)) * (1 + EX.starBonus(p.charStar)),
       gunBase, armor: Math.round(armor),
       mag: g.mag + af.mag + Math.round(this.gunStatVal(p, 'mag')),
@@ -575,6 +578,12 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       else { atkPct += v * 0.5; hpPct += v * 0.5; }
     });
     return { atkPct: atkPct, hpPct: hpPct };
+  },
+
+  /* 好友加成：每个 +0.5% 攻击，上限 20 人（+10%） */
+  friendBonus(p) {
+    const n = Math.min(20, (p.friends || []).length);
+    return n * 0.005;
   },
 
   power(p) {
