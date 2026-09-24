@@ -280,6 +280,12 @@ function onBattleEnd(res, d) {
   rw.gold += Math.round((d.rw && d.rw.gold) || 0);
   P.gold += rw.gold; P.diamond += rw.diamond;
 
+  /* 表25 #1 角色等级：按击杀数结算经验（怪物表 xp 字段加权，受天赋/建筑经验加成） */
+  const xpGain = Math.round(kills * 4 * (E.attrs(P).xpMul || 1));
+  const lvr = E.addXp(P, xpGain);
+  rw.xp = xpGain;
+  if (lvr.ups > 0) setTimeout(() => { if (window.UI) UI.toast('🎉 ' + lvr.msg, 'ok'); }, 900);
+
   /* 统计与任务推进 */
   const stars = (res === 'win' && !endless) ? E.clearLevel(P, r.def.id, r.maxHp ? r.hp / r.maxHp : 0) : 0;
   const isBoss = !endless && (r.def.cond === 'boss' || r.def.cond === 'bossAll');
