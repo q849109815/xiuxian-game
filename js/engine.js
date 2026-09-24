@@ -8,6 +8,12 @@
 const E = {
   /* 武器：线性成长，每级 +20%；每 5 级进阶一次 */
   GUN_GROW: 0.20,
+  /* =========================================================
+   * 数值平衡常数（卡关 → 攒金币 → 升级武器 → 突破 循环）
+   * ========================================================= */
+  GUN_GROW_RATE: 1.078,      /* 武器攻击复利率：每级 ×1.078 */
+  GUN_COST_RATE: 1.16,       /* 武器升级费复利率（原 1.28 过快，Lv84 即卡死）*/
+  GUN_COST_BASE: 300,
   SPD_MUL: 22,          // 资料移速 6.0 → 像素 132
 
   fmt(n) {
@@ -169,7 +175,11 @@ const E = {
   },
   advInfo(lv) { return EX.gunAdvance[this.advOf(lv)]; },
   /* 升级：金币，线性 +20% */
-  gunUpgradeCost(p) { return Math.round(300 * Math.pow(1.28, p.gunLv - 1)); },
+  /* 武器升级费用：300 × 1.16^(lv-1)
+   * 原 1.28 增长过快：Lv80 需 1170亿、Lv84 金币不足永久卡死 */
+  gunUpgradeCost(p) {
+    return Math.round(this.GUN_COST_BASE * Math.pow(this.GUN_COST_RATE, p.gunLv - 1));
+  },
   upgradeGun(p) {
     const c = this.gunUpgradeCost(p);
     if (p.gold < c) return { ok: false, msg: '金币不足（需 ' + this.fmt(c) + '）' };
@@ -457,8 +467,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   attrs(p) {
     const c = this.char(p), g = this.gun(p);
     const sk = this.skin(p);
-    /* 武器面板伤害：线性成长 */
-    const gunBase = g.dmg * (1 + (p.gunLv - 1) * this.GUN_GROW);
+    /* 武器面板伤害：复利（指数）成长
+     * 原为线性 `1 + (gunLv-1) * GUN_GROW`，导致：
+     *   攻击 Lv1=26 → Lv80=441（仅 17 倍）
+     *   费用 Lv1=300 → Lv80=1170亿（39 亿倍）
+     * 收益线性 vs 成本指数 → Lv84 永久卡死，且后期越打越轻松。
+     * 改复利后收益与成本同为指数，卡关→攒金币→升级→突破 的循环才成立。 */
+    const gunBase = g.dmg * Math.pow(this.GUN_GROW_RATE || 1.078, p.gunLv - 1);
     /* 攻击强化%（天赋 + 军械库 + 芯片 + 武器词条） */
     const atkUp = this.talentVal(p, 'atk') + this.buildVal(p, 'atk')
       + this.chipVal(p, 'atk') + this.gunStatVal(p, 'dmg');
@@ -489,14 +504,24 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       gunBase, armor: Math.round(armor),
       mag: g.mag + af.mag + Math.round(this.gunStatVal(p, 'mag')),
       pierce: g.pierce + af.pierce + Math.floor(this.gunStatVal(p, 'pierce')),
-      pellets: (g.pellets || 1) + af.extra, range: 300, spread: 0,
+            /* 射程 300→380：僵尸从上方走到射程边缘约需 8 秒（spd 58），
+       * 射程太短导致每波实际射击窗口仅 6 秒，玩家清不完一波就超时推进，
+       * 僵尸逐波累积 → 防线必破（实测 1-1 也过不去，防线 160/636） */
+      pellets: (g.pellets || 1) + af.extra, range: 380, spread: 0,
       crit: Math.min(0.85, crit + this.gemBonus(p).crit),
       critDmg: critDmg + this.gemBonus(p).critDmg,
       rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gunStatVal(p, 'rate') + this.gemBonus(p).ratePct),
       moveSpd: Math.round(moveSpd),
       /* 词条额外项：吸血 / 换弹 / 爆炸范围 / 双倍概率 */
       reloadCut: af.reload, erMul: 1 + af.er, doubleChance: af.double,
-      dmgMin: g.dmgMin || null, dmgMax: g.dmgMax || null,
+      /* 表44 伤害浮动区间：必须随武器等级等比缩放
+       * 严重BUG：此前直接返回表里写死的 g.dmgMin/g.dmgMax（突击步枪 22-28），
+       * 而 battle.shoot() 命中区间后 `dmg = dmgMin + rand*(dmgMax-dmgMin)`，
+       * 会完全覆盖按武器等级算出的伤害 —— 结果武器从 Lv1 升到 Lv80，
+       * 每发子弹始终是 22~28 点，升级对伤害毫无影响。
+       * 正确做法：把区间按 gunBase 等比放大（22/25=0.88 ~ 28/25=1.12） */
+      dmgMin: (g.dmgMin != null && g.dmg) ? gunBase * (g.dmgMin / g.dmg) : null,
+      dmgMax: (g.dmgMax != null && g.dmg) ? gunBase * (g.dmgMax / g.dmg) : null,
       ls: this.talentVal(p, 'ls') + this.chipVal(p, 'ls') + af.lifesteal + this.gemBonus(p).ls,
       revive: Math.floor(p.talents.t_revive || 0),
       goldMul: 1 + this.talentVal(p, 'gold'),
