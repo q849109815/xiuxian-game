@@ -287,20 +287,27 @@ APP.pages['acc-ban'] = {
       const risk = await DB.get(DBP.risk, { banLog: [], blackIp: [], blackDev: [] });
       risk.banLog = risk.banLog || [];
       if (p.ban) {
-        p.ban = false; p.banUntil = 0;
         risk.banLog.unshift({ uid: p.uid, act: 'unban', at: Date.now(), op: this.val('#bnOp') });
         AUDIT.log('解封账号', p.uid, '');
+        await DB.set(DBP.risk, risk, '封禁日志');
+        const r = await this.setBan(p, false, { op: this.val('#bnOp') });
+        this.toast('已解封' + (r.acctOk ? '' : '（账号记录未同步：' + (r.acctMsg || '未知') + '）'), r.acctOk ? 'ok' : 'err');
+        this.render();
       } else {
         const type = this.val('#bnType'), h = this.num('#bnH');
-        p.ban = true;
-        p.banUntil = type === '永久' ? 0 : Date.now() + h * 36e5;
-        p.banReason = this.val('#bnReason');
+        const until = type === '永久' ? 0 : Date.now() + h * 36e5;
         risk.banLog.unshift({ uid: p.uid, act: 'ban', type: type, reason: this.val('#bnReason'),
           note: this.val('#bnNote'), at: Date.now(), op: this.val('#bnOp') });
         AUDIT.log('封禁账号', p.uid, type + ' ' + this.val('#bnReason'));
+        await DB.set(DBP.risk, risk, '封禁日志');
+        const r = await this.setBan(p, true, {
+          until: until, type: type, reason: this.val('#bnReason'), op: this.val('#bnOp'),
+        });
+        /* 关键：账号文件写成功才是真的封住（游戏端登录读它） */
+        this.toast(r.acctOk ? '已封禁（账号已锁定，无法登录）'
+          : '已标记存档，但账号记录未同步：' + (r.acctMsg || '未知'), r.acctOk ? 'ok' : 'err');
+        this.render();
       }
-      await DB.set(DBP.risk, risk, '封禁日志');
-      if (await this.save(p)) { this.toast(p.ban ? '已封禁' : '已解封', 'ok'); this.render(); }
     };
   },
 };
