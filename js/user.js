@@ -77,6 +77,42 @@ const UA = {
   cache() {
     try { return JSON.parse(localStorage.getItem(this.K_CACHE) || '{}'); } catch (e) { return {}; }
   },
+  /* =========================================================
+   * 玩家索引 data/zb/index.json
+   * ---------------------------------------------------------
+   * 为什么要索引：后台原先用 GitHub 目录 list 枚举玩家，
+   * 而 list 依赖 Contents API 返回数组 —— 官方端点不稳、多数反代端点
+   * 干脆不支持目录枚举。一旦 list 返回空，后台就退回读战力榜，
+   * 于是列表里只剩榜上那一个 UID（实际有多个玩家却只显示一个）。
+   * 索引文件只需一次普通 read，成功率远高于目录枚举。
+   * 写入失败绝不能影响注册/登录本身，故全程吞异常。
+   * ========================================================= */
+  IDX: 'data/zb/index.json',
+  async idxAdd(id, name, nick) {
+    try {
+      const r = await Net.read(this.IDX);
+      const idx = (r && r.data && Array.isArray(r.data.list)) ? r.data : { list: [] };
+      const row = { uid: id, name: String(name || '').trim(), nick: String(nick || name || '').trim(), at: Date.now() };
+      const i = idx.list.findIndex((x) => x.uid === id);
+      if (i >= 0) idx.list[i] = Object.assign({}, idx.list[i], row);
+      else idx.list.push(row);
+      if (idx.list.length > 2000) idx.list = idx.list.slice(-2000);
+      idx.updAt = Date.now();
+      await Net.write(this.IDX, idx, '索引更新 ' + row.name);
+      return true;
+    } catch (e) { return false; }
+  },
+  async idxDel(id) {
+    try {
+      const r = await Net.read(this.IDX);
+      const idx = (r && r.data && Array.isArray(r.data.list)) ? r.data : { list: [] };
+      idx.list = idx.list.filter((x) => x.uid !== id);
+      idx.updAt = Date.now();
+      await Net.write(this.IDX, idx, '索引移除 ' + id);
+      return true;
+    } catch (e) { return false; }
+  },
+
   saveCache(id, name, hash) {
     const c = this.cache(); c[id] = { name, hash, at: Date.now() };
     try { localStorage.setItem(this.K_CACHE, JSON.stringify(c)); } catch (e) {}
@@ -102,6 +138,8 @@ const UA = {
       banned: false,
     };
     await this.writeUser(u, '注册账号 ' + u.name);
+    /* 登记到玩家索引（后台据此枚举全部玩家） */
+    this.idxAdd(id, u.name, u.nick);
     /* 云端写失败也要能玩：存本机缓存 */
     this.saveCache(id, u.name, h);
     localStorage.setItem(this.K_NAME, u.name);
@@ -139,6 +177,8 @@ const UA = {
     localStorage.setItem(this.K_GENDER, (u && u.gender) || localStorage.getItem(this.K_GENDER) || 'm');
     localStorage.setItem(this.K_UID, id);
     localStorage.setItem(this.K_AUTO, '1');
+    /* 老账号补登记索引（此前从未写过） */
+    this.idxAdd(id, String(name).trim(), (u && u.nick) || localStorage.getItem(this.K_NICK));
     return { ok: true, id, nick: localStorage.getItem(this.K_NICK), gender: localStorage.getItem(this.K_GENDER) };
   },
 
@@ -182,6 +222,7 @@ const UA = {
     const u = await this.readUser(id);
     if (u) { u.banned = true; u.destroyed = true; u.destroyAt = Date.now(); await this.writeUser(u, '账号注销'); }
     try { await Net.del('data/zb/players/' + id + '.json'); } catch (e) {}
+    this.idxDel(id);
     this.dropCache(id);
     ['zb_name', 'zb_gender', 'zb_uid', 'zb_auto'].forEach((k) => localStorage.removeItem(k));
     return { ok: true, msg: '账号已注销，存档已删除' };
