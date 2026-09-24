@@ -740,14 +740,14 @@ r_tavern(p, tab) {
     }
     if (tab === '成就') {
       return `<div class="card"><div class="card-t">成就
-        <span class="sub">${Object.keys(p.achGot || {}).length}/${EX.tasks.achieve.length}</span></div>
+        <span class="sub">${EX.tasks.achieve.filter((a) => E.taskDone(p, a)).length}/${EX.tasks.achieve.length}</span></div>
         <div class="kv"><span>成就点</span><b style="color:var(--yel)">${p.ach || 0}</b></div>
         <button class="btn o blk" id="toAchShop">🔄 前往成就商店</button>
       </div>
       <div class="card"><div class="card-t">成就列表</div>
         ${EX.tasks.achieve.map((a) => {
-          const got = (p.achGot || {})[a.id];
           const done = E.taskDone(p, a);
+          const got = (p.achGot || {})[a.id] || done;
           const claimed = (p.tasks.achieveClaimed || []).indexOf(a.id) >= 0;
           return `<div class="zrow">
             <div class="zav">${this.taskIcon(a)}</div>
