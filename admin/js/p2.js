@@ -143,8 +143,10 @@ APP.pages['hot-rollback'] = {
       if (!h) return;
       if (!confirm('确定回滚 ' + h.name + ' ' + h.ver + '？')) return;
       const path = h.path || DBP.cfg;
-      const cur = await DB.get(path, {});
-      const back = Object.assign({}, cur, h.old || {});
+      /* 回滚必须整体还原，不能用合并：
+       * 热更若是「新增字段」，旧文件里没有该键，Object.assign(cur, old)
+       * 会保留新值 → 回滚后新配置依然存在，等于没回滚。 */
+      const back = JSON.parse(JSON.stringify(h.old || {}));
       delete back._hotfix;
       if (await DB.set(path, back, '回滚 ' + h.ver)) {
         AUDIT.log('热更回滚', h.name, '回滚到 ' + h.ver + ' 之前');
