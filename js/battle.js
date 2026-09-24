@@ -286,6 +286,10 @@ const BT = {
   /* 僵尸被掩体阻挡（绕行减速） */
   obsSlow(z) {
     const r = this.run; if (!r) return 1;
+    /* 飞行僵尸越过地面障碍（表27：skill '飞行'），不受掩体减速
+     * 此前 z.fly 字段在 mkZ 里赋值后从未被使用，飞行僵尸和地面僵尸
+     * 一样被掩体减速 45%，"越过地面障碍"的设计等于没实现。 */
+    if (z.fly) return 1;
     for (const o of (r.obstacles || [])) {
       if (o.dead) continue;
       if (Math.abs(z.x - o.x) < o.w / 2 + 8 && Math.abs(z.y - o.y) < o.h / 2 + 8) return 0.55;
