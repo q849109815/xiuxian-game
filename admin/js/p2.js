@@ -630,32 +630,42 @@ APP.pages['stat-retain'] = {
 APP.pages['stat-ad'] = {
   g: '数据统计', n: '广告统计', i: '📺', perm: 'stat.view',
   render() {
-    let revive = 0, dbl = 0, stam = 0, total = 0;
-    this.PLIST.forEach((p) => {
-      const a = p.adUsed || {};
-      Object.keys(a).forEach((k) => {
-        const v = a[k] || 0; total += v;
-        if (k === 'AD01' || k === 'AD04') revive += v;
-        else if (k === 'AD02') dbl += v;
-        else stam += v;
+    /* 口径修复：p.adUsed 每天清零（游戏端 adLeft 里按 dailyKey 重置），
+     * 而本页标签写的是「总观看次数 / 人均观看」——此前直接读 adUsed，
+     * 于是后台看到的永远是【今日】数据，累计值一条都没有。
+     * 现在：累计读 p.adTotal（不清零，游戏端 useAd 已同步累加），
+     *      另起一栏展示今日 adUsed，两者不再混为一谈。 */
+    const tally = (field) => {
+      let revive = 0, dbl = 0, stam = 0, total = 0;
+      this.PLIST.forEach((p) => {
+        const a = p[field] || {};
+        Object.keys(a).forEach((k) => {
+          const v = a[k] || 0; total += v;
+          if (k === 'AD01' || k === 'AD04') revive += v;
+          else if (k === 'AD02') dbl += v;
+          else stam += v;
+        });
       });
-    });
+      return { revive, dbl, stam, total };
+    };
+    const T = tally('adTotal'), D = tally('adUsed');
     const n = Math.max(1, this.PLIST.length);
+    const bars = (t) => [['复活广告', t.revive], ['双倍奖励广告', t.dbl], ['体力/其他', t.stam]].map(([nm, v]) => {
+      const max = Math.max(1, t.revive, t.dbl, t.stam);
+      return `<div class="bar"><div class="bn"><span>${nm}</span><b>${v}</b></div>
+        <div class="bg"><div class="bf" style="width:${Math.round(v / max * 100)}%"></div></div></div>`;
+    }).join('');
     return `<div class="ph"><h2>📺 广告数据统计</h2><span class="tagx">场景分布</span></div>
       <div class="stats">
-        <div class="st"><b>${total}</b><span>总观看次数</span></div>
-        <div class="st"><b>${(total / n).toFixed(1)}</b><span>人均观看</span></div>
-        <div class="st"><b>${revive}</b><span>复活广告</span></div>
-        <div class="st"><b>${dbl}</b><span>双倍奖励</span></div>
-        <div class="st"><b>${stam}</b><span>体力广告</span></div>
+        <div class="st"><b>${T.total}</b><span>总观看次数(累计)</span></div>
+        <div class="st"><b>${(T.total / n).toFixed(1)}</b><span>人均观看(累计)</span></div>
+        <div class="st"><b>${D.total}</b><span>今日观看</span></div>
+        <div class="st"><b>${T.revive}</b><span>复活广告</span></div>
+        <div class="st"><b>${T.dbl}</b><span>双倍奖励</span></div>
+        <div class="st"><b>${T.stam}</b><span>体力/其他</span></div>
       </div>
-      <div class="card"><div class="card-t">场景分布</div>
-        ${[['复活广告', revive], ['双倍奖励广告', dbl], ['体力/其他', stam]].map(([nm, v]) => {
-          const max = Math.max(1, revive, dbl, stam);
-          return `<div class="bar"><div class="bn"><span>${nm}</span><b>${v}</b></div>
-            <div class="bg"><div class="bf" style="width:${Math.round(v / max * 100)}%"></div></div></div>`;
-        }).join('')}
-      </div>
+      <div class="card"><div class="card-t">累计场景分布</div>${bars(T)}</div>
+      <div class="card"><div class="card-t">今日场景分布 <span class="sub">adUsed 每日重置</span></div>${bars(D)}</div>
       <div class="card"><div class="lbl">⚠ 单机架构未接入广告 SDK，曝光/点击/收益数据无法采集。
         此处统计的是游戏内「已观看次数」（存档 adUsed 字段）。</div></div>`;
   },
