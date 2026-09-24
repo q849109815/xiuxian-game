@@ -80,7 +80,7 @@ APP.pages['log-gm'] = {
     const kw = this.gmKw || '';
     const list = kw ? l.filter((x) => (x.act + x.target + x.detail).indexOf(kw) >= 0) : l;
     const cloud = DB.cache[DBP.gmlog] || { list: [] };
-    const pending = JSON.parse(localStorage.getItem('zb_gm_buf') || '[]');
+    let pending = []; try { pending = JSON.parse(localStorage.getItem('zb_gm_buf') || '[]'); } catch (e) { pending = []; }
     return `<div class="ph"><h2>🛠️ GM 操作日志</h2><span class="tagx">${l.length} 条本地 / ${(cloud.list || []).length} 条云端</span></div>
       <div class="card"><div class="card-t">操作记录 <span class="sub">不可删除，审计用</span></div>
         <div class="sb"><input id="lgKey" placeholder="搜索操作/目标" value="${U.esc(kw)}"></div>
