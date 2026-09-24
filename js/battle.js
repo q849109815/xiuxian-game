@@ -372,7 +372,10 @@ const BT = {
       if (m.cd > 0) continue;
       const mz = this.nearest(m.x, m.y, null, m.def.rng);
       if (!mz) continue;
-      m.cd = 1 / m.def.rate;
+      /* 除零防护：后台热更若把 rate 改成 0，1/0 = Infinity
+       * → 冷却永远走不完 → 雇佣兵静默失效（不报错，但再也不开火）。
+       * 这里兜底为至少 0.05 秒一发。 */
+      m.cd = 1 / Math.max(0.05, m.def.rate || 0);
       this.spawnBullet(m.x, m.y, mz, m.def.dmg * (1 + r.mods.dmgMul),
         { pierce: m.def.id === 'M_SJ' ? 3 : 0, from: 'merc', el: '物' });
     }
@@ -658,11 +661,11 @@ const BT = {
     const exist = r.turrets.find((t) => t.k === slotKey);
     if (exist) {
       const cost = Math.round(def.upCost * (1 + exist.lv * 0.6));
-      if (r.coin < cost) return { ok: false, msg: '金币不足（需 ' + cost + '）' };
+      if (r.coin < cost) return { ok: false, msg: EX.tip('popup.noCoin', { v: cost }) };
       r.coin -= cost; exist.lv++;
       return { ok: true, msg: '⬆ ' + def.n + ' 升至 Lv.' + exist.lv };
     }
-    if (r.coin < def.cost) return { ok: false, msg: '金币不足（需 ' + def.cost + '）' };
+    if (r.coin < def.cost) return { ok: false, msg: EX.tip('popup.noCoin', { v: def.cost }) };
     r.coin -= def.cost;
     r.turrets.push({ k: slotKey, def, lv: 1, cd: 0,
       x: this.W * slot.x, y: this.H * slot.y });
