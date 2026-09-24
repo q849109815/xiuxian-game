@@ -494,10 +494,17 @@ const APP = {
       return true;
     } catch (e) { this.toast('保存失败：' + e.message, 'err'); return false; }
   },
+  /* 默认隐藏已注销玩家：销户后文件因网络原因常删不掉（覆盖成空档），
+   * 混在正常玩家列表里会让运营以为"销户了还在"。
+   * SHOW_DEAD = true 时才显示（查询页可切换）。 */
+  SHOW_DEAD: false,
+  deadCount() { return (this.PLIST || []).filter((p) => p.destroyed).length; },
   view() {
     const f = (this.FILTER || '').trim().toLowerCase();
-    if (!f) return this.PLIST;
-    return this.PLIST.filter((p) =>
+    let base = this.PLIST;
+    if (!this.SHOW_DEAD) base = base.filter((p) => !p.destroyed);
+    if (!f) return base;
+    return base.filter((p) =>
       (p.name || '').toLowerCase().indexOf(f) >= 0 || (p.uid || '').toLowerCase().indexOf(f) >= 0);
   },
   /* 玩家卡片（可点选） */
