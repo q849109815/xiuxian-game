@@ -26,6 +26,14 @@ const UI = {
     const p = this.P; if (!p) return;
     E.resetTasks(p); E.tickStamina(p);
     $('#hmName').textContent = p.name;
+    /* 已装备称号显示在代号旁（此前称号发放后玩家完全看不到） */
+    const hmT = $('#hmTitle');
+    if (hmT) {
+      const td = p.title ? E.titleDef(p.title) : null;
+      hmT.textContent = td ? ('『' + td.n + '』') : '';
+      hmT.style.color = td ? td.color : '';
+      hmT.style.display = td ? '' : 'none';
+    }
     $('#hmLv').textContent = 'Lv.' + (p.lv || 1);
     $('#hmPower').textContent = E.fmt(E.power(p));
     $('#cuGold').textContent = E.fmt(p.gold);
@@ -1793,6 +1801,28 @@ r_tavern(p, tab) {
       <div class="kv"><span>体力</span><b>${Math.floor(p.stamina || 0)}/${EX.STAMINA_MAX} <button class="btn sm" id="setAdStam">看广告+10</button></b></div>
       <div class="kv"><span>成就点</span><b>${E.fmt(p.ach || 0)}</b></div>
       <div class="kv"><span>累计击杀</span><b>${E.fmt((p.stats && p.stats.kills) || 0)}</b></div></div>
+      <div class="card"><div class="card-t">🏅 我的称号 <span class="sub">${(p.titles || []).length} 个</span></div>
+      ${(p.titles || []).length ? (p.titles || []).map((id) => {
+        const t = E.titleDef(id);
+        const on = (p.title || '') === id;
+        return `<div class="zrow"><div class="zav">🏅</div>
+          <div class="zi"><b style="color:${t ? t.color : 'var(--txt)'}">${t ? t.n : id}</b>
+          <span>${t ? t.desc : '称号'}</span></div>
+          ${on ? '<span class="st on">已装备</span>'
+               : `<button class="btn sm" data-eqt="${id}">装备</button>`}</div>`;
+      }).join('') + ((p.title) ? '<button class="btn d sm blk" data-eqt="">卸下当前称号</button>' : '')
+        : '<div class="lbl">暂无称号（成就商店 / 排行榜奖励可获得）</div>'}</div>
+      <div class="card"><div class="card-t">🖼️ 我的头像框 <span class="sub">${(p.frames || []).length} 个</span></div>
+      ${(p.frames || []).length ? (p.frames || []).map((id) => {
+        const t = E.frameDef(id);
+        const on = (p.frame || '') === id;
+        return `<div class="zrow"><div class="zav">🖼️</div>
+          <div class="zi"><b style="color:${t ? t.color : 'var(--txt)'}">${t ? t.n : id}</b>
+          <span>头像框</span></div>
+          ${on ? '<span class="st on">已装备</span>'
+               : `<button class="btn sm" data-eqf="${id}">装备</button>`}</div>`;
+      }).join('') + ((p.frame) ? '<button class="btn d sm blk" data-eqf="">卸下当前头像框</button>' : '')
+        : '<div class="lbl">暂无头像框（活动商店可获得）</div>'}</div>
       <div class="card"><div class="card-t">引导进度 <span class="sub">${Object.keys(p.guide || {}).length}/${EX.guides.length}</span></div>
       ${EX.guides.filter((g) => g.must).map((g) => `<div class="kv"><span style="font-size:10px">${g.n}</span>
         <b style="font-size:10px;color:${(p.guide || {})[g.id] ? 'var(--green)' : '#6b7899'}">${(p.guide || {})[g.id] ? '✔ 已完成' : '待引导'}</b></div>`).join('')}</div>
@@ -1838,6 +1868,18 @@ r_tavern(p, tab) {
       if (vs2) vs2.onchange = applyVol;
       return;
     }
+    /* 称号装备 / 卸下（此前 p.titles 写入后全项目零读取，玩家看不到也用不了） */
+    $$('#pnBody [data-eqt]').forEach((b) => { b.onclick = () => {
+      const r = E.equipTitle(p, b.dataset.eqt || '');
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { E.save(p); this.open('set'); this.home(); }
+    }; });
+    /* 头像框装备 / 卸下 */
+    $$('#pnBody [data-eqf]').forEach((b) => { b.onclick = () => {
+      const r = E.equipFrame(p, b.dataset.eqf || '');
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { E.save(p); this.open('set'); this.home(); }
+    }; });
     /* 修改密码 */
     const sp = $('#spGo');
     if (sp) sp.onclick = async () => {
