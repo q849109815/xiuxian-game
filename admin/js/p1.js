@@ -39,7 +39,7 @@ APP.pages['acc-query'] = {
   bind() {
     const s = D('#qKey'); if (s) s.oninput = () => { this.FILTER = s.value; this.render(); };
     const r = D('#qReload');
-    if (r) r.onclick = async () => { await this.loadPlayers(); this.render(); this.toast('已刷新', 'ok'); };
+    if (r) r.onclick = async () => { this.toast('正在拉取…', 'ok'); await this.loadPlayers({ force: true }); this.toast('已刷新 '+this.PLIST.length+' 名玩家', 'ok'); };
     DA('#body tr[data-sel]').forEach((t) => { t.onclick = () => {
       this.SEL = this.PLIST.find((p) => p.uid === t.dataset.sel) || null; this.render();
     }; });
@@ -135,10 +135,10 @@ APP.pages['acc-asset'] = {
       <div class="card"><div class="card-t">材料 / 碎片</div>${matRows}</div>
       <div class="card"><div class="card-t">芯片背包 <span class="sub">${Object.keys(p.chips || {}).length}</span></div>${chipRows}</div>
       <div class="card"><div class="card-t">已解锁天赋</div>${talentRows}</div>
-      <div class="card"><div class="card-t">皮肤 <span class="sub">${(p.skins || []).length}</span></div>
-        <div>${(p.skins || []).map((s) => {
+      <div class="card"><div class="card-t">皮肤 <span class="sub">${APP.skinArr(p).length}</span></div>
+        <div>${APP.skinArr(p).map((s) => {
           const sk = (EX.skins || []).find((x) => x.id === s);
-          return `<span class="chipx">${sk ? U.esc(sk.n) : s}</span>`;
+          return `<span class="chipx">${sk ? U.esc(sk.n) : U.esc(String(s))}</span>`;
         }).join(' ') || '<div class="lbl">无</div>'}</div></div>
       <div class="card"><div class="card-t">角色 <span class="sub">${(p.chars || []).length} 个 · 当前 ${U.esc(p.char)}</span></div>
         <div>${(p.chars || []).map((c) => {
