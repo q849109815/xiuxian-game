@@ -88,6 +88,24 @@ const E = {
     return d.id + ' ' + d.n;
   },
   chapterOf(id) { return this.levelDef(id).ch; },
+  /* ---------- 章节 CG 过场 ----------
+   * EX.cgImg / EX.chapterCg 此前是死配置：CG 图已生成但全项目零引用，
+   * 玩家从头到尾看不到任何过场演出。现在进入新章节时播放一次。 */
+  cgOf(ch) {
+    const map = (EX.chapterCg || {});
+    const id = map[ch]; if (!id) return null;
+    const src = (EX.cgImg || {})[id]; if (!src) return null;
+    return { id: id, src: src };
+  },
+  /* 是否已播放过；首次进入该章节时返回 CG 数据并登记 */
+  cgTake(p, ch) {
+    const cg = this.cgOf(ch);
+    if (!cg) return null;
+    p.cgSeen = p.cgSeen || {};
+    if (p.cgSeen[cg.id]) return null;
+    p.cgSeen[cg.id] = 1;
+    return cg;
+  },
   /* 体力消耗：普通 1 / BOSS 3 / 无尽 2 */
   staminaCost(id) {
     if (id === 'endless') return 2;
