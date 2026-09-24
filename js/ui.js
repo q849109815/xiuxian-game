@@ -414,12 +414,29 @@ r_tavern(p, tab) {
     const c = E.char(p);
     const a = E.attrs(p);
     if (tab === '皮肤') {
-      return `<div class="card"><div class="card-t">外观</div>
+      /* BUG1：own 判定写的是 (p.skin||[]).indexOf(...) —— 但 p.skin 是【字符串】
+       *      （当前穿戴皮肤ID），已拥有列表才叫 p.skins（数组）。
+       *      结果：除当前这件外，玩家已拥有的皮肤全被标成「未拥有」。
+       * BUG2：格子没有任何 data-* 属性，b_role 也没有绑定
+       *      → 皮肤页签是个死图库，点了完全没反应，无法切换穿戴。
+       *      玩家买/领了多套皮肤后永远换不回去，皮肤加成
+       *      （攻击+5%、生命+8% 等）永远卡在最后一次自动穿戴的那套。 */
+      const owned = p.skins || [];
+      return `<div class="card"><div class="card-t">外观
+        <span class="sub">已拥有 ${owned.length} / ${(EX.skins || []).length}</span></div>
+        <div class="lbl" style="text-align:left;margin-bottom:6px">点击已拥有的皮肤即可穿戴</div>
         <div class="grid3">${(EX.skins || []).map((sk) => {
-          const own = sk.price === 0 || (p.skin || []).indexOf(sk.id) >= 0;
-          return `<div class="gcell ${own ? '' : 'sel'}">${sk.img
+          const own = sk.price === 0 || owned.indexOf(sk.id) >= 0;
+          const on = (p.skin || '') === sk.id;
+          const bo = sk.bonus || {};
+          const bt = Object.keys(bo).map((k) => ({
+            atk: '攻击', hp: '生命', crit: '暴击', spd: '移速', xp: '经验', armor: '护甲'
+          }[k] || k) + '+' + Math.round(bo[k] * 100) + '%').join(' ');
+          return `<div class="gcell ${on ? '' : 'sel'}" data-skb="${sk.id}"
+            style="${own ? '' : 'opacity:.45'}">${sk.img
             ? `<img src="${sk.img}">` : `<div class="gi">${sk.icon}</div>`}
-            <div class="gn">${sk.n}</div></div>`;
+            <div class="gn">${sk.n}${on ? '<span class="tag y" style="font-size:8px">穿戴中</span>' : ''}</div>
+            <div class="lbl" style="font-size:8px;line-height:1.3">${bt || '无加成'}${own ? '' : ' · 未拥有'}</div></div>`;
         }).join('') || '<div class="lbl">暂无外观</div>'}</div>
       </div>`;
     }
@@ -494,6 +511,18 @@ r_tavern(p, tab) {
       const r = E.forgeEquip(p, b.dataset.forge);
       this.toast(r.msg, r.ok ? 'ok' : 'err');
       if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('role', '宝石'); this.home(); }
+    }; });
+    /* 皮肤穿戴：点击已拥有的皮肤切换（此前死图库，点了没反应） */
+    $$('#pnBody [data-skb]').forEach((el) => { el.onclick = () => {
+      const id = el.dataset.skb;
+      if ((p.skins || []).indexOf(id) < 0) {
+        const sk = (EX.skins || []).find((x) => x.id === id);
+        return this.toast('尚未拥有「' + (sk ? sk.n : id) + '」', 'err');
+      }
+      p.skin = id; E.save(p);
+      if (window.SND) SND.play('pickup');
+      this.toast('已穿戴 ' + (((EX.skins || []).find((x) => x.id === id)) || {}).n, 'ok');
+      this.open('role', '皮肤'); this.home();
     }; });
     /* 升星按钮：渲染了（r_role 里 id="roleStar"）但从未绑定 onclick
      * → 玩家点「⭐ 升星」完全没反应，花碎片升星的入口等于不存在。 */
