@@ -1102,6 +1102,21 @@ const EX = {
   /* =====================================================
    * 【提示文本表】资料 02 表第 14 项（飘字/弹窗/系统/报错）
    * =================================================== */
+  /* 取文案：EX.tip('popup.noCoin', {v: 300})
+   * 支持 {v} 占位符；查不到就原样返回 key，绝不因为文案缺失而崩。 */
+  tip(path, vars) {
+    const seg = String(path || '').split('.');
+    let v = (EX.tips || {});
+    for (const k of seg) { v = (v && typeof v === 'object') ? v[k] : null; }
+    if (typeof v !== 'string') return seg[seg.length - 1] || path;
+    if (vars) for (const k in vars) v = v.split('{' + k + '}').join(vars[k]);
+    /* 未传 vars 时清理残留占位符，避免界面上直接显示「需 {v}」这种半成品文案。
+     * 中英文括号都要处理：否则会留成「金币不足（需 ）」这种带空括号的怪文案。 */
+    return v.replace(/\{[^}]+\}/g, '')
+      .replace(/[（(]\s*(?:需|共|剩余)?\s*[）)]/g, '')
+      .replace(/\s{2,}/g, ' ').trim();
+  },
+
   tips: {
     /* 飘字 */
     float: {
@@ -1112,9 +1127,11 @@ const EX = {
     },
     /* 弹窗 */
     popup: {
-      noStamina: '体力不足，每 5 分钟恢复 1 点',
-      noCoin: '金币不足',
-      noDiamond: '钻石不足',
+      noStamina: '体力不足（需 {v}）',
+      noStaminaMax: '体力不足，最多可扫荡 {v} 次',
+      noStaminaCur: '体力不足（需 {v}，当前 {n}）',
+      noCoin: '金币不足（需 {v}）',
+      noDiamond: '钻石不足（需 {v}）',
       lvLocked: '通关 {v} 后解锁',
       buyOk: '购买成功',
       adLimit: '今日广告次数已用完',
