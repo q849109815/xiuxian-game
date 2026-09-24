@@ -135,6 +135,10 @@ const BT = {
       wave: 0, waveTotal: def.waves, spawnLeft: 0, spawnT: 0, waveGap: 0,
       def: def, cond: def.cond, mul: def.mul,
       zombies: [], bullets: [], pools: [], efx: [], floats: [], drops: [],
+      /* 主动技能产生的持续区域（燃烧/旋风/激光/冰暴）
+       * 此前 11 个主动技能（温压弹/干冰弹/制导激光/燃油弹…）的 mods
+       * 在 battle.js 里零引用，选了只涨等级数字，战斗效果为零。 */
+      zones: [],
       skills: {}, mods: this.emptyMods(),
       lv: 1, xp: 0, xpNeed: 18,
       gold: 0, kills: 0, time: 0, over: false,
@@ -448,6 +452,49 @@ const BT = {
       }
     }
 
+    /* --- 主动技能持续区域（燃烧/旋风/激光/冰暴/轰炸） ---
+     * 技能释放后留下的 zone，每帧对范围内僵尸结算伤害/减速 */
+    if (r.zones && r.zones.length) {
+      for (let i = r.zones.length - 1; i >= 0; i--) {
+        const zn = r.zones[i];
+        zn.life -= dt;
+        if (zn.life <= 0) { r.zones.splice(i, 1); continue; }
+        if (zn.delay != null && zn.delay > 0) { zn.delay -= dt; continue; }
+        /* 轰炸：延时结束后一次性爆发 */
+        if (zn.t === 'bomb' && zn.burst != null && !zn.done) {
+          zn.done = true;
+          r.efx.push({ t: 'nova', x: zn.x, y: zn.y, r: zn.r, life: 0.4, max: 0.4, el: zn.el });
+          for (const z of r.zombies) {
+            if (z.dead) continue;
+            if (Math.hypot(z.x - zn.x, z.y - zn.y) <= zn.r) this.hurt(z, zn.burst, true, zn.el);
+          }
+          continue;
+        }
+        if (zn.t === 'laser') {
+          const tg = zn.target;
+          if (!tg || tg.dead) { r.zones.splice(i, 1); continue; }
+          this.hurt(tg, zn.dps * dt, false, zn.el);
+          r.efx.push({ t: 'beam', x: r.px, y: r.py,
+            a: Math.atan2(tg.y - r.py, tg.x - r.px),
+            len: Math.hypot(tg.x - r.px, tg.y - r.py), life: 0.08, max: 0.08, el: zn.el });
+          continue;
+        }
+        /* 区域型：旋风 / 燃烧 / 冰暴 */
+        for (const z of r.zombies) {
+          if (z.dead) continue;
+          const d = Math.hypot(z.x - zn.x, z.y - zn.y);
+          if (d > zn.r) continue;
+          if (zn.dps) this.hurt(z, zn.dps * dt, false, zn.el);
+          if (zn.slow) { z.slow = Math.max(z.slow || 0, zn.slow); z.slowT = Math.max(z.slowT || 0, 0.4); }
+          /* 旋风吸附：把僵尸往中心拽 */
+          if (zn.t === 'vortex' && d > 6) {
+            const a = Math.atan2(zn.y - z.y, zn.x - z.x);
+            z.x += Math.cos(a) * 46 * dt; z.y += Math.sin(a) * 46 * dt;
+          }
+        }
+      }
+    }
+
     /* --- 中毒 --- */
     if (r.poisonT > 0) {
       r.poisonT -= dt;
@@ -704,22 +751,151 @@ const BT = {
     const r = this.run; if (!r) return { ok: false, msg: '未进入战斗' };
     const lv = r.skills[id] || 0; if (!lv) return { ok: false, msg: '尚未学习该技能' };
     const def = EX.skills.find((x) => x.id === id); if (!def) return { ok: false, msg: '技能不存在' };
-    if (def.kind !== 'periodic') return { ok: false, msg: def.n + ' 为被动技能，自动生效' };
+    /* BUG：此处原写 def.kind !== 'periodic'，而配置里根本没有 periodic 这个 kind
+     * （实际只有 active / summon / passive）→ 全部 18 个技能一律被判为"被动"，
+     * 包括 9 个 active 和 2 个 summon。玩家点技能按钮只看到"为被动技能，自动生效"，
+     * 实际什么都没发生。现在按真实 kind 判断。 */
+    if (def.kind === 'passive') return { ok: false, msg: def.n + ' 为被动技能，自动生效' };
     if ((r.cd[id] || 0) > 0) return { ok: false, msg: def.n + ' 冷却中 ' + r.cd[id].toFixed(1) + 's' };
-    r.cd[id] = def.cd || 5;
+    r.cd[id] = (def.cd || 5) * (1 - Math.min(0.4, (lv - 1) * 0.06));   /* 每级 -6% 冷却 */
     const m = def.mods || {};
     if (window.SND) SND.play(def.el === '火' ? 'explode' : def.el === '冰' ? 'pick' : 'crit');
-    /* 真实技能：冰霜新星为可主动释放的周期技能 */
-    if (id === 'bingshuang') {
-      this.efx.push({ t: 'nova', x: r.px, y: r.py, r: m.novaR * (1 + lv * 0.1),
-        life: 0.5, max: 0.5, el: '冰' });
+
+    const dmgBase = (r.atk || 1) * (r.def.rwMul || 1);
+    let hit = 0;
+
+    if (id === 'wenyadan') {
+      /* 温压弹：以玩家为中心大范围爆炸 */
+      const rad = m.blastR * (1 + (lv - 1) * 0.08);
+      const dmg = dmgBase * m.blastMul * (1 + (lv - 1) * 0.15);
+      r.efx.push({ t: 'nova', x: r.px, y: r.py, r: rad, life: 0.5, max: 0.5, el: '火' });
       for (const z of r.zombies) {
         if (z.dead) continue;
-        if (Math.hypot(z.x - r.px, z.y - r.py) <= m.novaR * (1 + lv * 0.1)) {
-          z.slow = Math.min(0.8, m.novaSlow + lv * 0.04); z.slowT = 1.8 + lv * 0.15;
+        if (Math.hypot(z.x - r.px, z.y - r.py) <= rad) { this.hurt(z, dmg, true, '火'); hit++; }
+      }
+      return { ok: true, msg: '温压弹：命中 ' + hit + ' 只' };
+    }
+
+    if (id === 'ganbingdan') {
+      /* 干冰弹：范围内僵尸冻结 */
+      const rad = m.freezeR * (1 + (lv - 1) * 0.07);
+      const dur = m.freeze * (1 + (lv - 1) * 0.12);
+      r.efx.push({ t: 'nova', x: r.px, y: r.py, r: rad, life: 0.5, max: 0.5, el: '冰' });
+      for (const z of r.zombies) {
+        if (z.dead) continue;
+        if (Math.hypot(z.x - r.px, z.y - r.py) <= rad) { z.slow = 1; z.slowT = dur; hit++; }
+      }
+      return { ok: true, msg: '干冰弹：冻结 ' + hit + ' 只（' + dur.toFixed(1) + 's）' };
+    }
+
+    if (id === 'diancichuan') {
+      /* 电磁穿刺：向最近目标方向穿透一条直线 */
+      const tg = this.nearest(r.px, r.py, null, 9999);
+      const ang = tg ? Math.atan2(tg.y - r.py, tg.x - r.px) : -Math.PI / 2;
+      const n = Math.round(m.pierceN * (1 + (lv - 1) * 0.1));
+      const dmg = dmgBase * m.chainMul * (1 + (lv - 1) * 0.12);
+      r.efx.push({ t: 'beam', x: r.px, y: r.py, a: ang, len: 620, life: 0.35, max: 0.35, el: '电' });
+      for (const z of r.zombies) {
+        if (z.dead || hit >= n) continue;
+        const da = Math.abs(Math.atan2(z.y - r.py, z.x - r.px) - ang);
+        if (Math.min(da, Math.PI * 2 - da) < 0.13) { this.hurt(z, dmg, true, '电'); hit++; }
+      }
+      return { ok: true, msg: '电磁穿刺：贯穿 ' + hit + ' 只' };
+    }
+
+    if (id === 'xuanfengjianong') {
+      /* 旋风加农：生成吸附旋风，持续切割 */
+      const rad = m.vortexR * (1 + (lv - 1) * 0.08);
+      r.zones.push({ t: 'vortex', x: r.px + 140, y: r.py - 40, r: rad,
+        dps: dmgBase * m.vortexDps * (1 + (lv - 1) * 0.14), life: 5 + lv * 0.4,
+        max: 5 + lv * 0.4, el: '风' });
+      return { ok: true, msg: '旋风加农：生成旋风' };
+    }
+
+    if (id === 'zhidaojiguang') {
+      /* 制导激光：锁定最近僵尸持续灼烧 */
+      const tg = this.nearest(r.px, r.py, null, 9999);
+      if (!tg) return { ok: false, msg: '附近没有目标' };
+      r.zones.push({ t: 'laser', target: tg,
+        dps: dmgBase * m.laserDps * (1 + (lv - 1) * 0.15), life: m.laserDur,
+        max: m.laserDur, el: '电' });
+      return { ok: true, msg: '制导激光：锁定目标' };
+    }
+
+    if (id === 'ranyoudan') {
+      /* 燃油弹：地面持续燃烧区域 */
+      const rad = m.burnR * (1 + (lv - 1) * 0.08);
+      r.zones.push({ t: 'burn', x: r.px + 130, y: r.py + 10, r: rad,
+        dps: dmgBase * m.burnDps * (1 + (lv - 1) * 0.13), life: 6 + lv * 0.5,
+        max: 6 + lv * 0.5, el: '火' });
+      return { ok: true, msg: '燃油弹：地面燃烧' };
+    }
+
+    if (id === 'gaonengshexian') {
+      /* 高能射线：贯穿射线，对高血量目标额外增伤 */
+      const n = Math.round(m.rayPierce * (1 + (lv - 1) * 0.08));
+      const dmg = dmgBase * m.rayMul * (1 + (lv - 1) * 0.14);
+      const tg = this.nearest(r.px, r.py, null, 9999);
+      const ang = tg ? Math.atan2(tg.y - r.py, tg.x - r.px) : -Math.PI / 2;
+      r.efx.push({ t: 'beam', x: r.px, y: r.py, a: ang, len: 700, life: 0.45, max: 0.45, el: '电' });
+      for (const z of r.zombies) {
+        if (z.dead || hit >= n) continue;
+        const da = Math.abs(Math.atan2(z.y - r.py, z.x - r.px) - ang);
+        if (Math.min(da, Math.PI * 2 - da) < 0.16) {
+          const bonus = z.maxHp > dmgBase * 8 ? 1.5 : 1;   /* 高血量目标额外增伤 */
+          this.hurt(z, dmg * bonus, true, '电'); hit++;
         }
       }
+      return { ok: true, msg: '高能射线：贯穿 ' + hit + ' 只' };
     }
+
+    if (id === 'hongzhaji') {
+      /* 轰炸机：全场多次轰炸 */
+      const n = Math.round(m.bombN * (1 + (lv - 1) * 0.1));
+      for (let i = 0; i < n; i++) {
+        const bx = 60 + Math.random() * (this.W - 120);
+        const by = 150 + Math.random() * (this.H - 340);
+        const dmg = dmgBase * m.bombMul * (1 + (lv - 1) * 0.12);
+        r.zones.push({ t: 'bomb', x: bx, y: by, r: 95, dps: 0, burst: dmg,
+          delay: i * 0.22, life: 0.6 + i * 0.22, max: 0.6 + i * 0.22, el: '火' });
+      }
+      return { ok: true, msg: '轰炸机：' + n + ' 次轰炸' };
+    }
+
+    if (id === 'bingbao') {
+      /* 冰暴发生器：全场大幅减速并持续伤害
+       * 注：原代码里写的是 id === 'bingshuang'，而配置里根本没有这个 id，
+       *     所以这段实现从来没被触发过。 */
+      const rad = m.stormR * (1 + (lv - 1) * 0.08);
+      r.zones.push({ t: 'storm', x: r.px + 100, y: r.py - 30, r: rad,
+        dps: dmgBase * m.stormDps * (1 + (lv - 1) * 0.14), slow: 0.65,
+        life: 4.5 + lv * 0.4, max: 4.5 + lv * 0.4, el: '冰' });
+      return { ok: true, msg: '冰暴发生器：冰暴降临' };
+    }
+
+    /* ---- 召唤类 ---- */
+    if (def.kind === 'summon') {
+      const type = m.summon;
+      const durT = (m.dur || 8) * (1 + (lv - 1) * 0.1);
+      const cnt = type === 'drone' ? Math.min(4, 1 + Math.floor((lv - 1) / 2)) : 1;
+      for (let i = 0; i < cnt; i++) {
+        const sdef = {
+          rng: type === 'drone' ? 190 : 150,
+          rate: type === 'drone' ? 2.2 : 1.4,
+          dmg: (type === 'drone' ? 0.55 : 1.35) * dmgBase,
+          id: type === 'drone' ? 'SUM_DRONE' : 'SUM_CAR',
+          n: type === 'drone' ? '无人机' : '装甲车',
+        };
+        r.mercs.push({
+          def: sdef, isSummon: true, life: durT,
+          x: r.px + (type === 'drone' ? -60 + i * 45 : 120),
+          y: r.py - (type === 'drone' ? 46 + i * 10 : 0),
+          cd: 0,
+        });
+      }
+      return { ok: true, msg: def.n + '：召唤 ' + cnt + ' 个（' + durT.toFixed(0) + 's）' };
+    }
+
     return { ok: true, msg: def.n + ' 释放' };
   },
 
@@ -975,8 +1151,19 @@ const BT = {
     r.mods = this.emptyMods();
     for (const id in r.skills) {
       const s = EX.skills.find((x) => x.id === id); if (!s) continue;
+      /* 只把「被动」技能的 mods 累加为常驻加成。
+       * 主动/召唤技能的 mods 是释放时用的专属字段（blastR、summon:'drone'…），
+       * 此前被一并累加进来，导致：
+       *   ① r.mods.summon = 'armored' * lv = NaN（字符串参与乘法）
+       *   ② 主动效果被错误地当成永久被动叠加
+       * 现在主动效果只在 castSkill 释放时读取 def.mods，不再混入 r.mods。 */
+      if (s.kind !== 'passive') continue;
       const lv = r.skills[id];
-      for (const k in s.mods) r.mods[k] += s.mods[k] * lv;
+      for (const k in s.mods) {
+        const v = s.mods[k];
+        if (typeof v !== 'number' || !isFinite(v)) continue;
+        r.mods[k] = (Number(r.mods[k]) || 0) + v * lv;
+      }
     }
     r.shield = Math.max(r.shield, r.mods.shield);
     r.maxShield = Math.max(r.maxShield, r.mods.shield);
@@ -1125,6 +1312,27 @@ const BT = {
     c.beginPath();
     c.ellipse(x, y + r * 0.42 * sc, r * 0.62 * sc, r * 0.20 * sc, 0, 0, 7);
     c.fill();
+  },
+
+  /* 主动技能区域：燃烧/旋风/冰暴/轰炸范围 */
+  drawZones(c) {
+    const r = this.run; if (!r.zones) return;
+    for (const zn of r.zones) {
+      if (zn.t === 'laser') continue;
+      if (zn.delay != null && zn.delay > 0) continue;
+      const a = Math.max(0, Math.min(1, zn.life / (zn.max || 1)));
+      const col = zn.el === '火' ? '255,122,60' : zn.el === '冰' ? '92,216,255'
+                : zn.el === '电' ? '192,140,255' : '123,232,160';
+      const g = c.createRadialGradient(zn.x, zn.y, 0, zn.x, zn.y, Math.max(1, zn.r));
+      if (g) {
+        g.addColorStop(0, 'rgba(' + col + ',' + (0.34 * a).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(' + col + ',0)');
+        c.fillStyle = g;
+      } else c.fillStyle = 'rgba(' + col + ',' + (0.2 * a).toFixed(3) + ')';
+      c.beginPath(); c.arc(zn.x, zn.y, zn.r, 0, 7); c.fill();
+      c.strokeStyle = 'rgba(' + col + ',' + (0.6 * a).toFixed(3) + ')';
+      c.lineWidth = 2; c.beginPath(); c.arc(zn.x, zn.y, zn.r, 0, 7); c.stroke();
+    }
   },
 
   /* 炮台：底座 + 炮管指向目标 */
@@ -1454,6 +1662,7 @@ const BT = {
     }
 
     /* 炮台（部署在防线前方） */
+    this.drawZones(c);
     this.drawTurrets(c);
 
     /* 佣兵 / 召唤物 */
