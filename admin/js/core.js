@@ -286,23 +286,87 @@ const APP = {
   again() { this.render(); },
 
   /* ---- 玩家数据 ---- */
-  async loadPlayers() {
+  /* ---------- 玩家列表 ----------
+   * 性能修复（后台卡顿主因）：
+   *   原实现是「串行 for 循环」逐个 Net.read，N 个玩家 = N 次 GitHub API 请求。
+   *   而每次 Net.read 内部还会轮播多个代理端点重试，实测 100 个玩家 3.1 秒
+   *   （真实网络下每个请求 1~14 秒 → 100 玩家要等一分多钟，界面完全卡死）。
+   * 改法：
+   *   ① 并发窗口读取（一次 8 个并发，而非 1 个）
+   *   ② localStorage 快照缓存：进后台先秒开显示旧数据，后台再异步刷新
+   *   ③ 单次读取套 TMO 超时（8 秒），避免个别请求拖垮整批
+   */
+  PLIST_CACHE_KEY: 'zb_plist_snap',
+  loadSnapshot() {
+    try {
+      const raw = localStorage.getItem(this.PLIST_CACHE_KEY);
+      if (!raw) return null;
+      const o = JSON.parse(raw);
+      if (!o || !Array.isArray(o.list)) return null;
+      return o;
+    } catch (e) { return null; }
+  },
+  saveSnapshot(list) {
+    try {
+      localStorage.setItem(this.PLIST_CACHE_KEY, JSON.stringify({ at: Date.now(), list: list.slice(0, 150) }));
+    } catch (e) {}
+  },
+  async loadPlayers(opt = {}) {
+    /* ① 先用快照秒开（除非强制刷新） */
+    const snap = this.loadSnapshot();
+    if (snap && !opt.force) {
+      this.PLIST = snap.list;
+      this.PLIST_AT = snap.at;
+      this.sortPlayers();
+      if (!opt.silent) this.render();
+    }
+    /* ② 已判定离线 → 直接用快照，不再狂试十几个代理端点
+     * （真实网络下每次失败要轮播十多个代理，各等 8~14 秒，这是卡顿主因） */
+    if (typeof Net !== 'undefined' && Net.online === false && snap) {
+      return;
+    }
+    /* ③ 后台并发拉取最新 */
     let names = [];
-    try { names = await Net.list(PDIR); } catch (e) {}
+    try { names = await window.TMO(Net.list(PDIR), 12000, []); } catch (e) {}
     if (!names || !names.length) {
       try {
-        const r = await Net.read(DBP.rank);
+        const r = await window.TMO(Net.read(DBP.rank), 10000, null);
         if (r && r.data && r.data.list) names = r.data.list.map((x) => x.uid + '.json');
       } catch (e) {}
     }
-    this.PLIST = [];
-    for (const f of (names || []).filter((x) => x.endsWith('.json')).slice(0, 150)) {
-      try {
-        const r = await Net.read(PDIR + f);
-        if (r && r.data && r.data.uid) this.PLIST.push(r.data);
-      } catch (e) {}
+    const files = (names || []).filter((x) => x.endsWith('.json')).slice(0, 150);
+    if (!files.length) { if (!this.PLIST) this.PLIST = []; return; }
+    const out = [];
+    const WIN = 8;   /* 并发窗口 */
+    for (let i = 0; i < files.length; i += WIN) {
+      const batch = files.slice(i, i + WIN);
+      const rs = await Promise.all(batch.map(async (f) => {
+        try {
+          const r = await window.TMO(Net.read(PDIR + f), 8000, null);
+          if (r && r.data && r.data.uid) return r.data;
+        } catch (e) {}
+        return null;
+      }));
+      rs.forEach((x) => { if (x) out.push(x); });
     }
-    this.PLIST.sort((a, b) => U.pw(b) - U.pw(a));
+    this.PLIST = out;
+    this.PLIST_AT = Date.now();
+    this.sortPlayers();
+    this.saveSnapshot(out);
+    /* 选中项失效则清空，避免操作到已删除的玩家 */
+    if (this.SEL && !out.find((p) => p.uid === this.SEL.uid)) {
+      this.SEL = out.find((p) => p.uid === this.SEL.uid) || this.SEL;
+    }
+    if (!opt.silent) this.render();
+  },
+  sortPlayers() { this.PLIST.sort((a, b) => U.pw(b) - U.pw(a)); },
+  /* p.skins 正常是 ['sk_c01a'] 数组；历史存档可能被写成 {id:1} 对象，
+   * 直接 .map 会抛 "(p.skins||[]).map is not a function" 让整页白屏。 */
+  skinArr(p) {
+    const v = p && p.skins;
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') return Object.keys(v).filter((k) => v[k]);
+    return [];
   },
   async save(p, msg) {
     try {
@@ -354,7 +418,11 @@ const APP = {
   num(id) { const e = D(id); return e ? (parseFloat(e.value) || 0) : 0; },
   val(id) { const e = D(id); return e ? (e.value || '') : ''; },
 
-  /* 给玩家加物品（通用） */
+  /* 给玩家加物品（通用）
+   * 严重BUG修复：此前消耗品写进 p.use，但游戏端背包「消耗」页与
+   * 使用函数都读 p.mat —— 后台补发的急救包/护盾/药剂，玩家背包显示 ×0、
+   * 点「使用」提示数量不足，等于全部作废。
+   * 现在统一到 p.mat，并把历史 p.use 中的数据迁移过去（兼容旧存档）。 */
   grant(p, id, n) {
     n = Math.max(0, Math.floor(n || 0));
     if (id === 'gold') p.gold = (p.gold || 0) + n;
@@ -363,9 +431,16 @@ const APP = {
     else if (id === 'stamina') p.stamina = (p.stamina || 0) + n;
     else if (id === 'evToken') p.evToken = (p.evToken || 0) + n;
     else {
-      const it = (EX.items || []).find((x) => x.id === id);
-      if (it && it.type === '消耗') { p.use = p.use || {}; p.use[id] = (p.use[id] || 0) + n; }
-      else { p.mat = p.mat || {}; p.mat[id] = (p.mat[id] || 0) + n; }
+      /* 旧存档迁移：p.use 里残留的消耗品并入 p.mat */
+      if (p.use && Object.keys(p.use).length) {
+        p.mat = p.mat || {};
+        for (const k in p.use) { p.mat[k] = (p.mat[k] || 0) + (p.use[k] || 0); }
+        delete p.use;
+      }
+      p.mat = p.mat || {};
+      p.mat[id] = (p.mat[id] || 0) + n;
+      /* 同步图鉴解锁（与游戏端一致） */
+      try { if (E.codexAdd) E.codexAdd(p, 'item', id); } catch (e) {}
     }
   },
 };
