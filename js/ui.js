@@ -1933,9 +1933,15 @@ r_tavern(p, tab) {
       const br = $('#rsAdRev');
       if (br) br.onclick = () => {
         const r = E.useAd(this.P, 'AD01'); if (!r.ok) return this.toast(r.msg, 'err');
-      try { OPS.track('ad_watch', {}); } catch (e) {}
+        try { OPS.track('ad_watch', {}); } catch (e) {}
         try { OPS.track('resurrect', {}); } catch (e) {}
-        this.hideResult(); startBattle(battleMode, BT.run.def.id);
+        /* 表26 用例5：原地复活（保留波次/击杀/技能，仅回满血量）
+         * 此前是 startBattle() 重开整关，进度全部丢失 */
+        const rv = BT.revive ? BT.revive() : { ok: false, msg: '复活失败' };
+        if (!rv.ok) return this.toast(rv.msg, 'err');
+        this.hideResult();
+        this.toast('💚 ' + rv.msg + '（今日剩 ' + E.adLeft(this.P, 'AD01') + ' 次）', 'ok');
+        if (window.SND) SND.play('upgrade');
       };
     }
     $('#result').classList.add('on');
