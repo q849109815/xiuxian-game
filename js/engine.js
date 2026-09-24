@@ -1018,10 +1018,24 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const cost = EX.SWEEP_STAMINA * t;
     if ((p.stamina || 0) < cost) return { ok: false, msg: EX.tip('popup.noStaminaMax', { v: Math.floor((p.stamina || 0) / EX.SWEEP_STAMINA) }) };
     p.stamina -= cost;
+    /* 严重 BUG 修复：此前的扫荡奖励走 EX.sweepRw 的独立公式
+     *   gold = (120 + ch*60) × times
+     * 第10章单次只有 720 金币，而同一关【手动通关】的关卡奖励是 50090 金币 ——
+     * 差了近 70 倍。而且只发 M01 一种金属，关卡奖励里的 M02/M03/芯片/宝石
+     * 一律没有。玩家花 5 体力扫荡，拿到的还不如手动通关的零头，
+     * 扫荡功能实际上是个「亏本按钮」，没人会点。
+     * 现在改为按【关卡真实奖励】发放，手动通关给什么，扫荡就给什么。 */
+    const ld = (EX.levels || []).find((x) => x.id === lvId) || null;
     const rw = EX.sweepRw(lvNum, t);
-    p.gold = (p.gold || 0) + rw.gold;
+    const goldGet = Math.floor(((ld && ld.rw && ld.rw.gold) || rw.gold) * t);
+    p.gold = (p.gold || 0) + goldGet;
     p.mat = p.mat || {};
-    p.mat.M01 = (p.mat.M01 || 0) + rw.M01;
+    const matGet = (ld && ld.rw) ? ld.rw : { M01: rw.M01 };
+    Object.keys(matGet).forEach((k) => {
+      if (k === 'gold' || k === 'diamond') return;
+      p.mat[k] = (p.mat[k] || 0) + (Number(matGet[k]) || 0) * t;
+    });
+    if (ld && ld.rw && ld.rw.diamond) p.diamond = (p.diamond || 0) + ld.rw.diamond * t;
     /* 表25 #1：经验走角色等级系统（自动升级） */
     const lr = this.addXp(p, rw.xp);
     return { ok: true, msg: '扫荡 ' + t + ' 次完成！' + (lr.msg ? ' ' + lr.msg : ''), rw: rw, cost: cost, ups: lr.ups };
@@ -1182,6 +1196,16 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
        * 结果：周礼包(300钻)、月度超值(680钻)、BOSS首杀、传说芯片包(98元)、
        *       战令50级 给的芯片全部"到账"但芯片页永远显示 0，无法装备/合成。
        * 现在按品质随机roll出真实芯片对象推进 p.bag。 */
+      /* 品质码芯片（表33 排名奖励 / BOSS 掉落）：C01 白 / C02 蓝 / C03 红
+       * BUG：这三个 key 此前掉进 else 写进 p.mat['C03']，
+       *      而芯片真实存放在 p.bag → 领了排名奖励，芯片页永远 0 颗。
+       * 注意 C01~C04 同时也是【角色 ID】，但角色不会通过 grant 发放
+       * （角色靠通关解锁），此处按芯片品质码处理是安全的。 */
+      else if (k === 'C01' || k === 'C02' || k === 'C03') {
+        const q = k === 'C01' ? '白' : k === 'C02' ? '蓝' : '红';
+        const n = Math.max(1, Math.floor(Number(give[k]) || 1));
+        for (let i = 0; i < n; i++) this.giveChipByQuality(p, q);
+      }
       else if (k === 'chipN' || k === 'chipE' || k === 'chipL' || k === 'chipRed') {
         const q = (k === 'chipN') ? '白' : (k === 'chipE') ? '蓝' : '红';
         const n = Math.max(1, Math.floor(Number(give[k]) || 1));
