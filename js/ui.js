@@ -1253,12 +1253,40 @@ r_tavern(p, tab) {
   },
 
   b_mail(p, tab) {
+    /* 单封邮件「领取」按钮
+     * BUG：r_mail 里渲染了 <button data-ml="...">领取</button>，
+     * 但 b_mail 此前只绑定了「一键领取」#mailAll，单封按钮没有任何 onclick。
+     * 结果：玩家点单封邮件的领取完全没反应（只有一键领取能用），
+     * 想只领某一封、或一键领取已用过的场景下，邮件奖励永远拿不到。
+     * 现在补上：按邮件 id 领取，发奖励并标记 got。 */
+    $$('#pnBody [data-ml]').forEach((btn) => {
+      btn.onclick = () => {
+        const mid = btn.dataset.ml || '';
+        const m = (p.mail || []).find((x) => String(x.id || '') === mid) || null;
+        if (!m) { this.toast('邮件不存在', 'err'); return; }
+        if (m.got) { this.toast('已领取过', 'err'); return; }
+        m.got = true;
+        const g = m.gold || 0, d = m.dia || 0;
+        p.gold = (p.gold || 0) + g;
+        p.diamond = (p.diamond || 0) + d;
+        if (m.rw && Object.keys(m.rw).length) E.grant(p, m.rw);
+        E.save(p);
+        if (window.SND) SND.play('get');
+        this.toast('领取成功：🪙' + E.fmt(g) + ' 💎' + d, 'ok');
+        this.open('mail'); this.home();
+      };
+    });
     const ab = $('#mailAll');
     if (ab) ab.onclick = () => {
       const ms = (p.mail || []).filter((m) => !m.got);
       if (!ms.length) return this.toast('没有可领取的邮件', 'err');
       let g = 0, d = 0;
-      ms.forEach((m) => { m.got = true; g += m.gold || 0; d += m.dia || 0; });
+      ms.forEach((m) => {
+        m.got = true; g += m.gold || 0; d += m.dia || 0;
+        /* 后端/后台邮件常把奖励放在 rw（物品）而非 gold/dia，
+         * 此前一键领取只算 gold/dia，rw 里的材料、芯片、皮肤全部漏发。 */
+        if (m.rw && Object.keys(m.rw).length) E.grant(p, m.rw);
+      });
       p.gold += g; p.diamond += d; E.save(p);
       if (window.SND) SND.play('get');
       this.toast('领取成功：🪙' + E.fmt(g) + ' 💎' + E.fmt(d), 'ok');
