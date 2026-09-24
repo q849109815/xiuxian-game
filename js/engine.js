@@ -411,6 +411,17 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   syncPatrol(p) {
     const r = this.patrolRateOf(p);
     if (p.patrolRate !== r) p.patrolRate = r;
+    /* 【当前章节】p.ch 全项目【只读不写】：
+     *      UI 里两处 `第 ${p.ch || 1} 章`（巡逻面板、主线任务面板）
+     *      永远显示「第 1 章」，即使玩家已经打到第 10 章。
+     *      这里顺便把 p.ch 同步成真实当前章节（取 已通关最大章 与 curLevel 的较大者）。 */
+    const curCh = this.chapterOf(p.curLevel || '1-1') || 1;
+    let maxCh = 1;
+    for (const id in (p.cleared || {})) {
+      const c = Number(String(id).split('-')[0]) || 1;
+      if (c > maxCh) maxCh = c;
+    }
+    p.ch = Math.max(curCh, maxCh);
     return p.patrolRate;
   },
   offlineTier(p) {
@@ -654,6 +665,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     return Math.round((this.ymdToTs(b) - this.ymdToTs(a)) / 864e5);
   },
   dailyKey() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); },
+  /* 快速巡逻每日次数上限 */
+  PATROL_FAST_MAX: 3,
   weekKey() {
     const d = new Date();
     const day = (d.getDay() + 6) % 7;              // 周一为 0
@@ -664,6 +677,19 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const dk = this.dailyKey(), wk = this.weekKey();
     if (p.tasks.dailyDate !== dk) { p.tasks.dailyDate = dk; p.tasks.dailyClaimed = []; p.tasks.dailyProg = {}; }
     if (p.tasks.weeklyKey !== wk) { p.tasks.weeklyKey = wk; p.tasks.weeklyClaimed = []; p.tasks.weeklyProg = {}; }
+    /* 【快速巡逻次数】每日重置
+     * BUG：p.patrolFast 全项目【只有读取、没有任何赋值】——
+     *      UI 显示 `${p.patrolFast||0}/3`，新号恒为 0；
+     *      点按钮必走 `if ((p.patrolFast||0) <= 0) return toast('次数已用完')`。
+     *      →「⚡ 快速巡逻」这个按钮从上线起就 100% 不可用，
+     *        面板却一直标着「/3」，玩家只会以为是次数被自己用完了。
+     * 【巡逻起始时间】p.patrolT 也从没初始化过：
+     *      newPlayer 里没有该字段 → UI 用 `p.patrolT || 0`
+     *      → now - 0 是天文数字 → hrs 被 min(8,…) 截到 8
+     *      → 刚建号就能白领 8 小时巡逻收益。 */
+    if (p.patrolDay !== dk) { p.patrolDay = dk; p.patrolFast = this.PATROL_FAST_MAX; }
+    if (p.patrolFast == null) p.patrolFast = this.PATROL_FAST_MAX;
+    if (!p.patrolT) p.patrolT = Date.now();
   },
   /* 各类进度值 */
   taskVal(p, t) {
