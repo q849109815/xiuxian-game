@@ -624,7 +624,10 @@ r_tavern(p, tab) {
         return `<button class="lvc ${this.selChipSlot === s.k ? 'cur' : ''}" data-slot="${s.k}">
           <i style="font-size:18px;font-style:normal;display:block">${c ? '🔲' : '➕'}</i>
           <b style="font-size:9px;color:${c ? EX.qColor[c.q] : '#6b7899'}">${c ? c.q + '品' : '空'}</b></button>`;
-      }).join('')}</div></div>
+      }).join('')}</div>
+      ${(() => { const c = (p.chips || {})[this.selChipSlot || EX.chipSlots[0].k];
+        return c ? `<button class="btn n sm" data-chipoff="1" style="width:100%;margin-top:8px">卸下当前槽位芯片</button>`
+                 : '<div class="lbl" style="margin-top:8px">选中槽位为空，无需卸下</div>'; })()}</div></div>
       <div class="card"><div class="card-t">可装备芯片</div>
       ${(p.bag || []).length ? (p.bag || []).map((c) => `<div class="item">
         <div class="ic" style="border:1.5px solid ${EX.qColor[c.q]}">
@@ -651,6 +654,16 @@ r_tavern(p, tab) {
       if (window.SND) SND.play('upgrade'); this.open('chip'); this.home();
     };
     $$('#pnBody [data-slot]').forEach((b) => { b.onclick = () => { this.selChipSlot = b.dataset.slot; this.open('chip', tab); }; });
+    /* 卸下芯片
+     * BUG：E.unequipChip() 定义了却零调用，面板上也只有「装上」没有「卸下」。
+     * 玩家把 6 个槽位装满后，只能靠拿另一颗芯片顶替（equipChip 会把旧的退回背包），
+     * 但【无法主动清空某个槽位】——想卸下来拿去合成/拆解/洗练都做不到。
+     * 这里补上按钮并接上已有的引擎方法。 */
+    $$('#pnBody [data-chipoff]').forEach((b) => { b.onclick = () => {
+      const r = E.unequipChip(p, this.selChipSlot || EX.chipSlots[0].k);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { E.save(p); this.open('chip', tab); this.home(); }
+    }; });
     $$('#pnBody [data-wear]').forEach((b) => {
       b.onclick = () => {
         const r = E.equipChip(p, b.dataset.wear, this.selChipSlot);
