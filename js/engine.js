@@ -1103,6 +1103,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   /* 通用发放 */
   grant(p, give) {
     if (!give) return;
+    /* 类型守卫
+     * BUG（会写脏数据）：表22 活动表里 rw 是【描述字符串】如 '活动代币 + 芯片'。
+     * Object.keys('活动代币 + 芯片') 返回 ['0','1','2'...]，
+     * 于是 grant 会走进 else 分支执行 p.mat['0'] = '活'、p.mat['1'] = '动'……
+     * 结果：点领奖什么也拿不到，还往材料背包里塞进一堆汉字垃圾键。
+     * 活动表已把描述改到 rwDesc、真正奖励改为 rw 对象；这里再加一层防御。 */
+    if (typeof give !== 'object' || Array.isArray(give)) return;
     p.mat = p.mat || {};
     Object.keys(give).forEach((k) => {
       if (k === 'gold') p.gold = (p.gold || 0) + give[k];
@@ -1114,6 +1121,18 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
        *      ach 掉进 else 写进 p.mat['ach'] —— 而成就商店读的是 p.ach。
        * 结果：界面写着「解锁奖励 +5 成就点」，实际成就点一分没加。 */
       else if (k === 'ach') p.ach = (p.ach || 0) + give[k];
+      /* 活动代币（表43 活动商店的唯一货币）
+       * BUG：evToken 全项目只有扣减（活动商店消费 engine.js:1180），
+       *      从来没有任何一个地方发放 → 玩家代币恒为 0，
+       *      表43 十二项商品（含传说芯片、限定皮肤、钻石、体力）一件都买不了。
+       * 同时累计到 p.evScore 作为「活动冲榜」积分：
+       *      p.evScore 此前从未赋值 → 活动冲榜排名恒 0
+       *      → 表33 的 RK08/RK09/RK10 三个奖励（第1名皮肤、传说芯片、钻石）
+       *        判定 inRank 恒为 false，玩家一次都领不到。 */
+      else if (k === 'evToken' || k === 'ev') {
+        const n = Number(give[k]) || 0;
+        if (n > 0) { p.evToken = (p.evToken || 0) + n; p.evScore = (p.evScore || 0) + n; }
+      }
       /* 消耗品别名兼容（防御）
        * 表16 文档里用 U01/U02 编号，而物品表真实 ID 是 I01/I02（急救包/护盾发生器）。
        * 成就商店 AS05/AS06 曾配成 give:{U01:1}/{U02:1}，兑换提示"成功"，
