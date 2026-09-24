@@ -106,6 +106,25 @@ const MAIN = {
     try { if (E.codexBackfill) E.codexBackfill(p); } catch (e) {}
     /* 巡逻收益按章节同步（此前恒为 16 金币/小时） */
     try { if (E.syncPatrol) E.syncPatrol(p); } catch (e) {}
+    /* GM「加属性」若填了持续时间，到期需扣回 ——
+     * 否则临时增益变成永久增益，与后台配置意图不符。 */
+    this.tickTempBuff(p);
+  },
+  /* 临时增益到期回收 */
+  tickTempBuff(p) {
+    if (!p || !Array.isArray(p.tempBuff) || !p.tempBuff.length) return;
+    const now = Date.now();
+    const keep = [];
+    let n = 0;
+    p.tempBuff.forEach((b) => {
+      if (!b || !b.attr) return;
+      if ((b.exp || 0) > now) { keep.push(b); return; }
+      /* 已过期：扣回当年加的值 */
+      p[b.attr] = Math.max(0, (Number(p[b.attr]) || 0) - (Number(b.v) || 0));
+      n++;
+    });
+    p.tempBuff = keep;
+    if (n) { try { E.save(p); } catch (e) {} }
   },
 
   async save() {
