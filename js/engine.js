@@ -237,6 +237,22 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 芯片（资料芯片表 8 个固定）
    * ================================================ */
   chipDef(id) { return EX.chips.find((c) => c.id === id); },
+  /* 按【品质】随机生成一块芯片
+   * 严重BUG：此前所有发放点都写 `rollChipById('n'/'e'/'l')`，
+   *          但 rollChipById 收的是【芯片定义ID】（CH01~CH08），不是品质码。
+   *          chipDef('l') → undefined → `|| EX.chips[0]` 回退
+   *          → 无论配的是 chipL(传说) 还是 chipE(精英)，
+   *            一律发出 chips[0] = CH01「生命芯片·白」（最垃圾的一档）。
+   * 实测：商店 SH09「传说芯片包」980 钻买 chipL:2 → 到手 2 块白色生命芯片；
+   *       战令 Lv50「传说芯片×1」→ 白色；免费抽奖「芯片×1」→ 白色。 */
+  rollChipByQuality(q) {
+    const Q = { n: '白', e: '蓝', l: '红', white: '白', blue: '蓝', red: '红' };
+    const want = Q[q] || '白';
+    const pool = (EX.chips || []).filter((c) => c.q === want);
+    const use = pool.length ? pool : (EX.chips || []);
+    if (!use.length) return null;
+    return this.rollChipById(use[Math.floor(Math.random() * use.length)].id);
+  },
   rollChipById(defId) {
     const d = this.chipDef(defId) || EX.chips[0];
     const subs = [];
@@ -925,8 +941,23 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       if (k === 'gold') p.gold = (p.gold || 0) + t.rw[k];
       else if (k === 'diamond') p.diamond = (p.diamond || 0) + t.rw[k];
       else if (/^chip/.test(k)) {
+        /* 此前硬编码：无论档位配的是 chipN(普通)/chipE(精英)/chipL(传说)，
+         * 一律 rollChipById('l') 且只 push 1 个 —— 品质和数量都被忽略。
+         * 当前 PASS_TIERS 只有 Lv50 的 chipL:1 恰好对上，所以没暴露；
+         * 一旦后台/热更加一档 chipN:3，会发成「1 个传说芯片」。
+         * 而且 catch 是空的：rollChipById 抛错时芯片静默丢失，
+         * 玩家点「领取」提示成功、背包里什么都没有。 */
         p.bag = p.bag || [];
-        try { const c = this.rollChipById ? this.rollChipById('l') : null; if (c) p.bag.push(c); } catch (e) {}
+        const qmap = { chipN: 'n', chipE: 'e', chipL: 'l', chipRed: 'l', chip: 'n' };
+        const q = qmap[k] || 'n';
+        const cnt = Math.max(1, Math.min(20, Number(t.rw[k]) || 1));
+        let ok = 0;
+        for (let i = 0; i < cnt; i++) {
+          try { const c = this.rollChipByQuality(q); if (c) { p.bag.push(c); ok++; } }
+          catch (e) {}
+        }
+        /* 全部失败时兜底：折算成稀有金属，避免「领了等于没领」 */
+        if (!ok) p.mat.M03 = (p.mat.M03 || 0) + cnt * 2;
       }
       else p.mat[k] = (p.mat[k] || 0) + t.rw[k];
     }
@@ -952,7 +983,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     else if (hit.t === 'diamond') p.diamond = (p.diamond || 0) + hit.v;
     else if (hit.t === 'chip') {
       p.bag = p.bag || [];
-      try { const c = this.rollChipById ? this.rollChipById('e') : null; if (c) p.bag.push(c); }
+      /* 抽奖产出精英芯片：同样要走品质入口（此前恒回退白色） */
+      try { const c = this.rollChipByQuality('e'); if (c) p.bag.push(c); }
       catch (e) { p.mat.M03 = (p.mat.M03 || 0) + 2; }
     }
     else p.mat[hit.k] = (p.mat[hit.k] || 0) + hit.v;
