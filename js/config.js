@@ -177,10 +177,25 @@ const EX = {
     { src: 'BOSS尸王', item: 'P02', rate: 0.60, min: 6, max: 10, ch: 5.0, q: '紫' },
     { src: 'BOSS尸王', item: 'M05', rate: 0.80, min: 4, max: 8, ch: 5.0, q: '红' },
     /* 补齐缺失来源（原表未覆盖精英/小僵尸，打精英不掉东西） */
-    { src: '精英僵尸', item: 'M02', rate: 0.90, min: 2, max: 4, ch: 1.2, q: '蓝' },
-    { src: '精英僵尸', item: 'M03', rate: 0.25, min: 1, max: 2, ch: 1.3, q: '紫' },
-    { src: '精英僵尸', item: 'P01', rate: 0.10, min: 1, max: 1, ch: 1.3, q: '紫' },
+    /* ===== 精英僵尸：掉落随章节阶梯递增 =====
+     * 同一 item 分多档，ch = 解锁章节，dropFor() 取已解锁的最高档。
+     * 修复前 ch 字段零引用 → 第 1 章就能掉后期稀有金属/碎片，梯度全废。 */
+    { src: '精英僵尸', item: 'M02', rate: 0.90, min: 2, max: 4, ch: 1.0, q: '蓝' },
+    { src: '精英僵尸', item: 'M02', rate: 0.90, min: 4, max: 7, ch: 4.0, q: '蓝' },
+    { src: '精英僵尸', item: 'M02', rate: 0.90, min: 7, max: 12, ch: 7.0, q: '蓝' },
+    { src: '精英僵尸', item: 'M03', rate: 0.25, min: 1, max: 2, ch: 3.0, q: '紫' },
+    { src: '精英僵尸', item: 'M03', rate: 0.40, min: 2, max: 3, ch: 6.0, q: '紫' },
+    { src: '精英僵尸', item: 'M03', rate: 0.55, min: 3, max: 5, ch: 9.0, q: '紫' },
+    { src: '精英僵尸', item: 'P01', rate: 0.10, min: 1, max: 1, ch: 5.0, q: '紫' },
+    { src: '精英僵尸', item: 'P01', rate: 0.20, min: 2, max: 3, ch: 8.0, q: '紫' },
+    { src: '精英僵尸', item: 'P02', rate: 0.08, min: 1, max: 1, ch: 10.0, q: '紫' },
+    /* ===== 小僵尸：分裂产物，数量多但单体弱 → 单独配低价值掉落 =====
+     * 只给金属，后期（第 3 章起）极小概率掉火药/合金，
+     * 避免「分裂出一片小僵尸 = 刷材料」的失衡。 */
     { src: '小僵尸', item: 'M01', rate: 0.35, min: 1, max: 1, ch: 1.0, q: '白' },
+    { src: '小僵尸', item: 'M01', rate: 0.45, min: 1, max: 2, ch: 4.0, q: '白' },
+    { src: '小僵尸', item: 'M04', rate: 0.05, min: 1, max: 1, ch: 3.0, q: '白' },
+    { src: '小僵尸', item: 'M02', rate: 0.03, min: 1, max: 1, ch: 6.0, q: '蓝' },
   ],
 
   /* =====================================================
@@ -1094,6 +1109,19 @@ const EX = {
     { id: 'DR11', src: '宝箱开箱', item: 'M02', n: '合金', rate: 0.70, min: 3, max: 5, w: 70 },
     { id: 'DR12', src: '活动掉落', item: 'C02', n: '精英芯片', rate: 0.30, min: 1, max: 1, w: 30 },
   ],
+  /* 按来源 + 当前章节取掉落（章节阶梯）
+   * ch = 第几章起才开始掉；同一 item 取已解锁的最高档。
+   * 这样精英/小僵尸的掉落会随章节推进变好，而不是一开局就掉满配。 */
+  dropFor(srcName, ch) {
+    const all = (this.globalDrops || []).filter((d) => d.src === srcName && (d.ch || 1) <= (ch || 1));
+    const best = {};
+    all.forEach((d) => {
+      const prev = best[d.item];
+      if (!prev || (d.ch || 1) > (prev.ch || 1)) best[d.item] = d;
+    });
+    return Object.keys(best).map((k) => best[k]);
+  },
+
   /* 按僵尸名取掉落（表31） */
   dropOf(zName) {
     return (this.dropTable || []).filter((d) => d.src === zName);
