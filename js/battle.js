@@ -147,6 +147,8 @@ const BT = {
        *   ③ 局内经验 NaN → 战斗中永远升不了级
        * 现在把 def.rwMul 同步到 run 上。 */
       rwMul: def.rwMul,
+      /* 连升多级的待选技能次数，开局清零 */
+      _pendingOffers: 0,
       zombies: [], bullets: [], pools: [], efx: [], floats: [], drops: [],
       /* 主动技能产生的持续区域（燃烧/旋风/激光/冰暴）
        * 此前 11 个主动技能（温压弹/干冰弹/制导激光/燃油弹…）的 mods
@@ -1193,7 +1195,30 @@ const BT = {
       if (window.UI && UI.showLvUp) UI.showLvUp(r.lv, 200);
       if (window.UI && UI.guideTrigger) UI.guideTrigger('firstUpgrade');
       if (this.P) { this.P.gold = (this.P.gold || 0) + 200; }
-      this.offerSkills();
+      /* 严重BUG：此前每升一级立刻 offerSkills()，
+       * 一次吃掉大量经验连升 5 级就会连调 5 次：
+       *  ① this._picks 被后一次覆盖 → 玩家只能看到最后 1 组候选，
+       *     另外 4 次升级的技能选择被静默吞掉（实测连升5级只给1次选择）；
+       *  ② UI.showSkillChoice 连调 5 次，倒计时 interval 被反复 clear 重设，
+       *     只剩最后一个计时器在跑。
+       * 改为累计待选次数，循环结束后只弹一次；选完若还有待选次数再弹下一次。 */
+      this._pendingOffers = (this._pendingOffers || 0) + 1;
+    }
+    if (this._pendingOffers > 0 && !this.paused) this.flushOffers();
+  },
+  /* 弹出一次技能三选一；若无候选则消耗掉这次机会，避免卡住 */
+  flushOffers() {
+    if (!this._pendingOffers || this._pendingOffers <= 0) return;
+    this._pendingOffers--;
+    const before = Object.keys(this.run ? this.run.skills : {}).length;
+    this.offerSkills();
+    /* 候选池为空（技能已满/全互斥）时 offerSkills 直接 return 且不暂停，
+     * 此时要把剩余待选次数继续消化掉，否则玩家一直等一个不会出现的弹窗 */
+    if (!this.paused && this._pendingOffers > 0) {
+      const after = Object.keys(this.run ? this.run.skills : {}).length;
+      if (after === before) { this.flushOffers(); return; }
+      /* 极端情况兜底：避免无限递归 */
+      if (this._pendingOffers > 0) this._pendingOffers = 0;
     }
   },
 
@@ -1239,6 +1264,10 @@ const BT = {
     if (id === 'hudun') { r.maxShield += 120; r.shield = r.maxShield; }
     UI.toast('✨ ' + EX.skills.find((s) => s.id === id).n + ' Lv.' + r.skills[id], 'ok');
     this.paused = false;
+    /* 连升多级时，选完这一组后若还有未使用的升级次数，继续弹下一组 */
+    if (this._pendingOffers > 0) {
+      setTimeout(() => { if (this.run && !this.run.over) this.flushOffers(); }, 60);
+    }
   },
   applyMods() {
     const r = this.run;
