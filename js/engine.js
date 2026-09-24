@@ -1533,6 +1533,18 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (clear) { dp.clear = (dp.clear || 0) + 1; wp.clear = (wp.clear || 0) + 1; }
     dp.kill = (dp.kill || 0) + (kills || 0);
     wp.kill = (wp.kill || 0) + (kills || 0);
+    this.syncAch(p);
+  },
+  /* 成就达成标记
+   * BUG：UI 用 p.achGot 显示「已完成 x/4」，但 achGot 全项目从未被赋值
+   * → 玩家成就全部做完领完，顶部仍显示 0/4，永远看不到进度。
+   * 现在在每次战斗结算推进统计后同步一次。 */
+  syncAch(p) {
+    p.achGot = p.achGot || {};
+    for (const a of (EX.tasks.achieve || [])) {
+      if (this.taskDone(p, a)) p.achGot[a.id] = Date.now();
+    }
+    return p.achGot;
   },
 
   /* =================================================
