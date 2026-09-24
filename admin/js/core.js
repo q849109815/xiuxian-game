@@ -235,7 +235,9 @@ const APP = {
     try { await CFG.load(); } catch (e) {}
     try { await Net.init(); } catch (e) {}
     this.net(); this.buildNav();
-    await this.loadPlayers();
+    /* 进入即全自动拉取：确保网络 → 四路合并 → 失败自动重试 → 自动补索引
+     * 运营不需要点任何按钮 */
+    await this.loadPlayers({ force: true, auto: true });
     const first = Object.keys(this.pages)[0];
     this.go(first);
     AUDIT.log('登录后台', '', '角色 ' + PERM.curRole());
@@ -334,6 +336,39 @@ const APP = {
    * ========================================================= */
   sleep(ms) { return new Promise((r) => setTimeout(r, ms)); },
 
+  /* 自动维护玩家索引（静默、失败不影响主流程） */
+  async autoIndex(uids, metaMap) {
+    if (!uids || !uids.length) return;
+    try {
+      const ri = await window.TMO(Net.read('data/zb/index.json'), 8000, null);
+      const cur = (ri && ri.data && Array.isArray(ri.data.list)) ? ri.data.list : [];
+      const have = {};
+      cur.forEach((x) => { if (x && x.uid) have[x.uid] = x; });
+      /* 缺哪些 */
+      const miss = uids.filter((u) => !have[u]);
+      /* 已注销的从索引剔除 */
+      const deadSet = {};
+      (this.PLIST || []).forEach((p) => { if (p.destroyed) deadSet[p.uid] = 1; });
+      const keep = cur.filter((x) => !deadSet[x.uid]);
+      if (!miss.length && keep.length === cur.length) return;
+      const list = keep.slice();
+      miss.forEach((u) => {
+        const m = (metaMap || {})[u] || {};
+        const p = (this.PLIST || []).find((x) => x.uid === u);
+        list.push({
+          uid: u,
+          name: m.name || (p && p.name) || '',
+          nick: m.nick || (p && p.name) || '',
+          lv: (p && p.lv) || m.lv || 0,
+          at: Date.now(),
+        });
+      });
+      if (list.length > 2000) list.splice(0, list.length - 2000);
+      await Net.write('data/zb/index.json', { list: list, updAt: Date.now() },
+        '自动维护玩家索引 ' + list.length + ' 人');
+    } catch (e) {}
+  },
+
   async ensureNet() {
     if (typeof Net === 'undefined') return false;
     if (Net.online === true && Net.endpoint) return true;
@@ -418,11 +453,13 @@ const APP = {
 
     if (uids.length) {
       this.SRC_NOTE = srcs.join(' + ');
-    } else if (!opt._retry) {
-      /* 四路全失败 → 重新探测一次网络后再试一轮（首次常因探测未完成而全败） */
-      try { if (Net && Net.reset) { Net.reset(); await this.ensureNet(); } } catch (e) {}
-      await this.sleep(1200);
-      return this.loadPlayers(Object.assign({}, opt, { _retry: 1, silent: false }));
+    } else if ((opt._retry || 0) < 2) {
+      /* 四路全空 → 自动重探网络并重试（最多额外 2 轮，逐轮拉长等待）。
+       * 自动化：运营无需手动点任何按钮。 */
+      try { if (Net && Net.reset) Net.reset(); } catch (e) {}
+      await this.ensureNet();
+      await this.sleep(1200 + (opt._retry || 0) * 1800);
+      return this.loadPlayers(Object.assign({}, opt, { _retry: (opt._retry || 0) + 1, silent: false }));
     } else if (snap) {
       /* 重试仍失败 —— 保留快照但标明来源，不再假装是最新 */
       this.PLIST = snap.list; this.PLIST_AT = snap.at;
@@ -490,6 +527,9 @@ const APP = {
     this.PLIST_FAIL = fail;
     this.PLIST_UIDS = uids.slice(0, 200);
     this.PLIST = out;
+    /* 自动静默维护索引：若索引缺失/不完整，用本次收集到的 UID 回写。
+     * 无需运营手动点「重建索引」——下次列表即可脱离不稳的目录枚举。 */
+    this.autoIndex(uids, metaMap);
     this.PLIST_AT = Date.now();
     this.sortPlayers();
     this.saveSnapshot(out);
