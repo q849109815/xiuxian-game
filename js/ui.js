@@ -945,13 +945,20 @@ r_tavern(p, tab) {
         <button class="btn blk" id="bagChest1">开启 1 个</button>
         <button class="btn o blk" id="bagChest10">开启 10 个</button>
       </div>
-      <div class="card"><div class="card-t">消耗品</div>
+      <div class="card"><div class="card-t">消耗品
+        <span class="sub">点击使用</span></div>
       <div class="grid4">${EX.items.filter((x) => x.type === '消耗').map((it) => {
-        const n = (p.use || {})[it.id] || 0;
-        return `<div class="gcell ${n ? '' : 'sel'}">${it.img
+        /* 此前读 (p.use||{})[it.id] —— 但消耗品统一存放在 p.mat，
+         * p.use 只有 newPlayer 里建了个全 0 的空壳，main.js 还会把它清空。
+         * 结果：这里永远显示 ×0（连数量都不显示），玩家以为自己没有消耗品，
+         * 实际 p.mat.I01/I02/I03 里躺着一堆。
+         * 同时格子没有任何 data-* / onclick，点了完全没反应。 */
+        const n = (p.mat || {})[it.id] || 0;
+        return `<div class="gcell ${n ? '' : 'sel'}" data-bu="${it.id}" style="${n ? '' : 'opacity:.45'}">${it.img
           ? `<img src="${it.img}">` : `<div class="gi">${it.icon}</div>`}
           <div class="gn">${it.n}</div>${n ? `<span class="gq">×${n}</span>` : ''}</div>`;
-      }).join('')}</div></div>`;
+      }).join('')}</div>
+      <div class="lbl" style="text-align:left;margin-top:4px">战斗中点击立即生效；战斗外使用将在下一场自动生效</div></div>`;
   },
   b_bag(p, tab) {
     /* 表16 消耗品使用 */
@@ -982,6 +989,12 @@ r_tavern(p, tab) {
       const r = E.dismantleMat(p, b.dataset.dec2, 1);
       this.toast(r.msg, r.ok ? 'ok' : 'err');
       if (r.ok) { if (window.SND) SND.play('coin'); this.open('bag', '材料'); this.home(); }
+    }; });
+    /* 材料页「消耗品」格子：此前无绑定，点了没反应 */
+    $$('#pnBody [data-bu]').forEach((el) => { el.onclick = () => {
+      const r = E.useItem(p, el.dataset.bu);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pickup'); this.open('bag', '材料'); this.home(); }
     }; });
     const da = $('#bagDecAll');
     if (da) da.onclick = () => {
