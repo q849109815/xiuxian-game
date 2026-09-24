@@ -787,7 +787,7 @@ const EX = {
       desc: '限定皮肤上架', rwDesc: '皮肤', rule: '限时购买', rw: {} },
     { id: 'EV06', n: '无尽冲榜', type: '排行榜', time: '每月15-25日', icon: '🏆',
       desc: '无尽模式存活时长排名', rwDesc: '传说芯片 + 限定称号', rule: '按排名发奖',
-      rw: { evToken: 120, chipL: 1, title: '无尽之王' } },
+      rw: { evToken: 120, chipL: 1, title: 'endless_king' } },
   ],
 
   /* =====================================================
