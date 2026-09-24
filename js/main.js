@@ -680,6 +680,8 @@ function onBattleEnd(res, d) {
   /* 引导标记 */
   if (res === 'win') { P.guide[5] = 1; P.guide[6] = 1; }
   if (!P.guide[3]) P.guide[3] = 1;
+  /* home 引导（返回基地）——此前同样是零调用事件 */
+  if (window.UI && UI.guideTrigger) UI.guideTrigger('home');
 
   UI.home();
   UI.showResult(res, { kills, time: r.time, rw, stars });
@@ -689,6 +691,20 @@ function onBattleEnd(res, d) {
     else if (res === 'lose') UI.guideTrigger('fail');
   }
   if (stars) UI.toast('⭐ 获得 ' + stars + ' 星评价', 'ok');
+  /* 解锁类引导（表21 触发时机）
+   * BUG：guideTrigger 的 12 个事件里只有 enter/firstUpgrade/firstKill/win/fail
+   * 5 个被真正调用 —— moved、home、gunUnlock、taskUnlock、chipUnlock、
+   * talentUnlock、endless 共 7 个【零调用】。
+   * 结果：引导 7~11（武器库 / 任务 / 天赋 / 芯片 / 无尽）玩家永远看不到提示，
+   * 且设置页「引导进度」永远卡在 7/12，不可能走满。
+   * 现在通关后按已通关关卡触发对应解锁引导。 */
+  if (res === 'win' && !endless && UI.guideTrigger) {
+    const has = (id) => !!(P.cleared || {})[id];
+    if (has('1-2')) { UI.guideTrigger('gunUnlock'); UI.guideTrigger('taskUnlock'); }
+    if (has('1-3')) UI.guideTrigger('talentUnlock');
+    if (has('1-4')) UI.guideTrigger('chipUnlock');
+    if (has('3-3')) UI.guideTrigger('endless');
+  }
   MAIN.save();
 }
 
@@ -699,12 +715,17 @@ function bindJoystick() {
   const joy = document.getElementById('joy'), knob = document.getElementById('joyKnob');
   if (!joy) return;
   const R = 34;
-  let id = null, cx = 0, cy = 0;
+  let id = null, cx = 0, cy = 0, movedOnce = false;
   const setFrom = (tx, ty) => {
     let dx = tx - cx, dy = ty - cy;
     const len = Math.hypot(dx, dy);
     if (len > R) { dx = dx / len * R; dy = dy / len * R; }
     BT.joy.x = dx / R; BT.joy.y = dy / R;
+    /* moved 引导（射击引导）——此前 guideTrigger('moved') 零调用 */
+    if ((Math.abs(dx) > 4 || Math.abs(dy) > 4) && !movedOnce) {
+      movedOnce = true;
+      if (window.UI && UI.guideTrigger) UI.guideTrigger('moved');
+    }
     if (knob) knob.style.transform = `translate(${dx}px,${dy}px)`;
   };
   const down = (e) => {
