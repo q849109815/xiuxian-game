@@ -125,7 +125,7 @@ const E = {
   spendStamina(p, id) {
     this.tickStamina(p);
     const c = this.staminaCost(id);
-    if ((p.stamina || 0) < c) return { ok: false, msg: '体力不足（需 ' + c + '，当前 ' + Math.floor(p.stamina) + '）' };
+    if ((p.stamina || 0) < c) return { ok: false, msg: EX.tip('popup.noStaminaCur', { v: c, n: Math.floor(p.stamina) }) };
     p.stamina -= c; p.staminaAt = Date.now();
     return { ok: true, cost: c };
   },
@@ -166,7 +166,7 @@ const E = {
     const s = EX.skins.find((x) => x.id === skinId); if (!s) return { ok: false, msg: '皮肤不存在' };
     if ((p.skins || []).indexOf(skinId) >= 0) return { ok: false, msg: '已拥有' };
     if (!this.charUnlocked(p, s.char)) return { ok: false, msg: '角色未解锁' };
-    if ((p.diamond || 0) < s.price) return { ok: false, msg: '钻石不足（需 ' + s.price + '）' };
+    if ((p.diamond || 0) < s.price) return { ok: false, msg: EX.tip('popup.noDiamond', { v: s.price }) };
     p.diamond -= s.price; p.skins.push(skinId); p.skin = skinId;
     try { this.codexUnlock(p, 'skin', skinId); } catch (e) {}
     return { ok: true, msg: '已解锁 ' + s.n };
@@ -206,7 +206,7 @@ const E = {
   },
   upgradeGun(p) {
     const c = this.gunUpgradeCost(p);
-    if (p.gold < c) return { ok: false, msg: '金币不足（需 ' + this.fmt(c) + '）' };
+    if (p.gold < c) return { ok: false, msg: EX.tip('popup.noCoin', { v: this.fmt(c) }) };
     p.gold -= c; p.gunLv++;
     const oldA = this.advOf(p.gunLv - 1), newA = this.advOf(p.gunLv);
     let extra = '';
@@ -302,7 +302,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       Object.values(p.chips || {}).find((x) => x && x.id === chipId);
     if (!c) return { ok: false, msg: '未找到该芯片' };
     const cost = EX.REROLL_COST[c.q] || 50;
-    if ((p.diamond || 0) < cost) return { ok: false, msg: '钻石不足（需 ' + cost + '）' };
+    if ((p.diamond || 0) < cost) return { ok: false, msg: EX.tip('popup.noDiamond', { v: cost }) };
     const d = this.chipDef(c.def);
     if (!d || !(d.subPool || []).length) return { ok: false, msg: '该芯片无副词条可洗' };
     p.diamond -= cost;
@@ -352,7 +352,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const tp = this.tpOf(p);
     if (tp <= 0) return { ok: false, msg: '天赋点不足（每升 10 级 +1 点）' };
     const c = this.talentCost(p, id);
-    if (p.gold < c) return { ok: false, msg: '金币不足（需 ' + this.fmt(c) + '）' };
+    if (p.gold < c) return { ok: false, msg: EX.tip('popup.noCoin', { v: this.fmt(c) }) };
     p.gold -= c; p.tp = tp - 1; p.talents[id] = cur + 1;
     return { ok: true, msg: '⭐ ' + t.n + ' Lv.' + p.talents[id] + '（剩 ' + p.tp + ' 天赋点）' };
   },
@@ -374,7 +374,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const cur = p.build[id] || 1;
     if (cur >= b.max) return { ok: false, msg: '已达最高等级' };
     const c = this.buildCost(p, id);
-    if (p.gold < c) return { ok: false, msg: '金币不足（需 ' + this.fmt(c) + '）' };
+    if (p.gold < c) return { ok: false, msg: EX.tip('popup.noCoin', { v: this.fmt(c) }) };
     p.gold -= c; p.build[id] = cur + 1;
     return { ok: true, msg: '🏗️ ' + b.n + ' 升至 Lv.' + p.build[id] };
   },
@@ -964,7 +964,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 导致已通关关卡也判定"需先通关该关卡"，扫荡功能完全不可用 */
     const st = (p.cleared || {})[lvId] || 0;
     if (!st) return { ok: false, msg: '需先通关该关卡' };
-    if ((p.stamina || 0) < EX.SWEEP_STAMINA) return { ok: false, msg: '体力不足（需 ' + EX.SWEEP_STAMINA + '）' };
+    if ((p.stamina || 0) < EX.SWEEP_STAMINA) return { ok: false, msg: EX.tip('popup.noStamina', { v: EX.SWEEP_STAMINA }) };
     return { ok: true };
   },
   sweep(p, lvId, times) {
@@ -973,7 +973,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (!ck.ok) return ck;
     const t = Math.max(1, Math.min(EX.SWEEP_MAX, times || 1));
     const cost = EX.SWEEP_STAMINA * t;
-    if ((p.stamina || 0) < cost) return { ok: false, msg: '体力不足，最多可扫荡 ' + Math.floor((p.stamina || 0) / EX.SWEEP_STAMINA) + ' 次' };
+    if ((p.stamina || 0) < cost) return { ok: false, msg: EX.tip('popup.noStaminaMax', { v: Math.floor((p.stamina || 0) / EX.SWEEP_STAMINA) }) };
     p.stamina -= cost;
     const rw = EX.sweepRw(lvNum, t);
     p.gold = (p.gold || 0) + rw.gold;
@@ -1193,7 +1193,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const slots = this.gunAffixSlots(p, gid);
     if (slots <= 0) return { ok: false, msg: '需先进阶武器才解锁词条槽' };
     const cost = EX.REROLL_GUN_COST || 20;
-    if ((p.diamond || 0) < cost) return { ok: false, msg: '钻石不足（需 ' + cost + '）' };
+    if ((p.diamond || 0) < cost) return { ok: false, msg: EX.tip('popup.noDiamond', { v: cost }) };
     p.diamond -= cost;
     p.gunStats = p.gunStats || {};
     /* 与进阶解锁保持同一套 key：s1 ~ s{slot} */
@@ -1335,12 +1335,12 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     p.gunAffix[gid] = p.gunAffix[gid] || [];
     if (legend) {
       const c = EX.AFFIX_REROLL_LEGEND_DIA;
-      if ((p.diamond || 0) < c) return { ok: false, msg: '钻石不足（需 ' + c + '）' };
+      if ((p.diamond || 0) < c) return { ok: false, msg: EX.tip('popup.noDiamond', { v: c }) };
       p.diamond -= c;
       p.gunAffix[gid] = [EX.rollAffixOne(true), EX.rollAffixOne(true)].slice(0, this.gunSlots(p));
     } else {
       const c = EX.AFFIX_REROLL_GOLD;
-      if ((p.gold || 0) < c) return { ok: false, msg: '金币不足（需 ' + this.fmt(c) + '）' };
+      if ((p.gold || 0) < c) return { ok: false, msg: EX.tip('popup.noCoin', { v: this.fmt(c) }) };
       p.gold -= c;
       p.gunAffix[gid] = [];
       for (let i = 0; i < this.gunSlots(p); i++) p.gunAffix[gid].push(EX.rollAffixOne(false));
