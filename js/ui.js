@@ -67,7 +67,7 @@ const UI = {
     mail: ['邮件', ['邮件'], 'top'],
     act: ['活动', ['活动'], 'top'],
     rank: ['排行榜', ['全服'], 'top'],
-    set: ['设置', ['账号', '兑换码', '网络', '数值', '语言', '运营'], 'side'],
+    set: ['设置', ['账号', '音频', '兑换码', '网络', '数值', '语言', '运营'], 'side'],
     level: ['关卡选择', ['章节'], 'top'],
     base: ['基地建筑', ['建筑'], 'top'],
     tavern: ['酒馆招募', ['佣兵'], 'top'],
@@ -1594,6 +1594,32 @@ r_tavern(p, tab) {
   },
 
   r_set(p, tab) {
+    /* ---------- 音频（音乐/音效开关 + 音量） ----------
+     * 补齐：SND 一直有 musicOn/sfxOn/volMusic/volSfx 四个状态，
+     * 但设置面板里从未提供入口，玩家无法关音乐音效、无法调音量，
+     * 且状态从不保存（刷新即回默认）。这里补上控制与持久化。 */
+    if (tab === '音频') {
+      const S = window.SND || null;
+      const mo = S ? S.musicOn : true, so = S ? S.sfxOn : true;
+      const vm = S ? S.volMusic : 0.28, vs = S ? S.volSfx : 0.5;
+      return `<div class="card"><div class="card-t">声音开关</div>
+        <div class="zrow"><div class="zav">🎵</div>
+          <div class="zi"><b>背景音乐</b><span>末日低频氛围 BGM</span></div>
+          <button class="btn sm ${mo ? 'g' : ''}" data-snd="music">${mo ? '开' : '关'}</button></div>
+        <div class="zrow"><div class="zav">🔊</div>
+          <div class="zi"><b>音效</b><span>枪声 / 爆炸 / 命中</span></div>
+          <button class="btn sm ${so ? 'g' : ''}" data-snd="sfx">${so ? '开' : '关'}</button></div>
+      </div>
+      <div class="card"><div class="card-t">音量</div>
+        <div class="kv"><span>音乐音量</span><b style="color:var(--yel)">${Math.round(vm * 100)}%</b></div>
+        <input type="range" id="volM" min="0" max="100" value="${Math.round(vm * 100)}"
+          style="width:100%;margin:6px 0">
+        <div class="kv"><span>音效音量</span><b style="color:var(--yel)">${Math.round(vs * 100)}%</b></div>
+        <input type="range" id="volS" min="0" max="100" value="${Math.round(vs * 100)}"
+          style="width:100%;margin:6px 0">
+        <div class="sub">拖动调节，设置会自动保存。</div>
+      </div>`;
+    }
     /* ---------- 多语言（表39） ---------- */
     if (tab === '语言') {
       const cur = (window.OPS ? OPS.getLang() : 'zh');
@@ -1728,6 +1754,32 @@ r_tavern(p, tab) {
       <button class="btn blk" id="setAdmin">进入管理后台</button></div>`;
   },
   b_set(p, tab) {
+    /* ---------- 音频开关 / 音量 ---------- */
+    if (tab === '音频') {
+      const S = window.SND;
+      $$('[data-snd]').forEach((btn) => {
+        btn.onclick = () => {
+          if (!S) { this.toast('音频未初始化', 'err'); return; }
+          const k = btn.dataset.snd;
+          if (k === 'music') { S.setMusic(!S.musicOn); if (S.musicOn) S.bgm('base'); }
+          else { S.setSfx(!S.sfxOn); }
+          S.saveCfg();
+          if (k === 'sfx' && S.sfxOn) S.play('click');
+          this.open('set', '音频'); this.home();
+        };
+      });
+      const vm = $('#volM'), vs2 = $('#volS');
+      const applyVol = () => {
+        if (!S) return;
+        const m = Math.max(0, Math.min(1, (Number(vm && vm.value) || 0) / 100));
+        const sv = Math.max(0, Math.min(1, (Number(vs2 && vs2.value) || 0) / 100));
+        S.setVol(m, sv); S.saveCfg();
+        this.open('set', '音频'); this.home();
+      };
+      if (vm) vm.onchange = applyVol;
+      if (vs2) vs2.onchange = applyVol;
+      return;
+    }
     /* 修改密码 */
     const sp = $('#spGo');
     if (sp) sp.onclick = async () => {
