@@ -134,6 +134,19 @@ const BT = {
       shootT: 0,
       wave: 0, waveTotal: def.waves, spawnLeft: 0, spawnT: 0, waveGap: 0,
       def: def, cond: def.cond, mul: def.mul,
+      /* 章节收益系数
+       * 严重BUG：mkZ() 里用 this.run.rwMul 算僵尸的金币/经验，
+       * 但 run 对象里从来没有 rwMul 这个字段（只有 mul，而 levelDef 把
+       * 倍率放在 def.rwMul 上）→ undefined 参与乘法：
+       *   z.gold = Math.round((d.gold||3) * undefined) = NaN
+       *   z.xp   = NaN
+       * 于是 r.gold / r.coin / r.xp 全部变 NaN：
+       *   ① 击杀金币恒为 0（结算处 `|| 0` 兜底才没暴露）
+       *   ② 局内金币 NaN → 炮台判断 `r.coin < cost` 恒为 false
+       *      → 建造/升级不扣钱、可无限白嫖
+       *   ③ 局内经验 NaN → 战斗中永远升不了级
+       * 现在把 def.rwMul 同步到 run 上。 */
+      rwMul: def.rwMul,
       zombies: [], bullets: [], pools: [], efx: [], floats: [], drops: [],
       /* 主动技能产生的持续区域（燃烧/旋风/激光/冰暴）
        * 此前 11 个主动技能（温压弹/干冰弹/制导激光/燃油弹…）的 mods
@@ -806,6 +819,11 @@ const BT = {
   /* 建造/升级炮台（局内金币） */
   buildTurret(slotKey, turretId) {
     const r = this.run; if (!r) return { ok: false, msg: '未进入战斗' };
+    /* 局内金币异常（NaN/负数）时按 0 处理
+     * 此前 r.coin 因 rwMul 缺失变成 NaN，而 `NaN < cost` 恒为 false，
+     * 导致建造/升级既不扣钱也不报错 —— 炮台可以无限白嫖。
+     * 这里加一道防护，避免同类问题再次静默放行。 */
+    if (r.coin == null || !isFinite(r.coin) || r.coin < 0) r.coin = 0;
     const def = EX.turrets.find((t) => t.id === turretId); if (!def) return { ok: false, msg: '炮台不存在' };
     const slot = EX.turretSlots.find((s) => s.k === slotKey); if (!slot) return { ok: false, msg: '槽位不存在' };
     const exist = r.turrets.find((t) => t.k === slotKey);
