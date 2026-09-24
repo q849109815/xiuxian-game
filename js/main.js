@@ -263,6 +263,10 @@ const MAIN = {
       if (r && r.data && r.data.mode === '维护') {
         UI.toast('🖥️ ' + (r.data.msg || '服务器维护中'), 'err');
         MAINT = r.data;
+        /* 此前 MAINT 只被赋值、从未被读取 —— 后台开了维护模式，
+         * 玩家只看到一行提示，照样进战斗、照样玩，维护形同虚设。
+         * 现在真正拦截：挡住战斗入口并显示全屏维护页。 */
+        if (window.UI && UI.showMaint) UI.showMaint(r.data);
       }
     } catch (e) {}
     if (ch) { UI.home(); await this.save(); }
@@ -333,6 +337,8 @@ const MAIN = {
  * ========================================================= */
 function startBattle(mode, levelId) {
   if (!P) return;
+  /* 维护模式守卫：后台开启后一律不放行（此前完全没拦截） */
+  if (window.UI && UI.guardBattle && !UI.guardBattle()) return;
   battleMode = mode;
   let id = levelId;
   if (mode === 'endless') {
