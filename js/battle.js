@@ -78,7 +78,10 @@ const BT = {
     }
     const d = EX.levels.find((x) => x.id === levelId) || EX.levels[0];
     return {
-      id: d.id, ch: d.ch, n: d.id + ' ' + d.n, waves: d.waves,
+      id: d.id, ch: d.ch,
+      /* 截图格式「1.城市大街」= 章节号.关卡名。
+       * 此前拼成 "1-1 废弃街道"，UI 再补章节前缀 → 显示成 "1.1-1 废弃街道"（编号重复） */
+      n: d.n, waves: d.waves,
       pool: d.pool, per: d.per, mul: d.mul, cond: d.cond,
       boss: d.boss || null, scene: d.scene, endless: false, rw: d.rw,
     };
@@ -607,88 +610,6 @@ const BT = {
   },
 
   /* 通用子弹生成（玩家/炮台/佣兵共用） */
-  spawnBullet(x, y, tg, dmg, opt = {}) {
-    const r = this.run;
-    const a = Math.atan2(tg.y - y, tg.x - x);
-    const spd = 520;
-    r.bullets.push({
-      x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
-      dmg, pierce: opt.pierce || 0, life: 1.3, hit: [],
-      from: opt.from || 'player', el: opt.el || '物',
-      explode: 0, er: 0,
-    });
-  },
-
-  /* 建造/升级炮台（局内金币） */
-  buildTurret(slotKey, turretId) {
-    const r = this.run; if (!r) return { ok: false, msg: '未进入战斗' };
-    const def = EX.turrets.find((t) => t.id === turretId); if (!def) return { ok: false, msg: '炮台不存在' };
-    const slot = EX.turretSlots.find((s) => s.k === slotKey); if (!slot) return { ok: false, msg: '槽位不存在' };
-    const exist = r.turrets.find((t) => t.k === slotKey);
-    if (exist) {
-      const cost = Math.round(def.upCost * (1 + exist.lv * 0.6));
-      if (r.coin < cost) return { ok: false, msg: '金币不足（需 ' + cost + '）' };
-      r.coin -= cost; exist.lv++;
-      return { ok: true, msg: '⬆ ' + def.n + ' 升至 Lv.' + exist.lv };
-    }
-    if (r.coin < def.cost) return { ok: false, msg: '金币不足（需 ' + def.cost + '）' };
-    r.coin -= def.cost;
-    r.turrets.push({ k: slotKey, def, lv: 1, cd: 0,
-      x: this.W * slot.x, y: this.H * slot.y });
-    return { ok: true, msg: '🔧 已建造 ' + def.n };
-  },
-
-  /* 释放主动技能（资料 10 表：闪电链 / 火环 / 冰霜新星 / 护盾） */
-  castSkill(id) {
-    const r = this.run; if (!r) return { ok: false, msg: '未进入战斗' };
-    const lv = r.skills[id] || 0; if (!lv) return { ok: false, msg: '尚未学习该技能' };
-    const def = EX.skills.find((x) => x.id === id); if (!def) return { ok: false, msg: '技能不存在' };
-    if (def.kind === 'passive') return { ok: false, msg: def.n + ' 为被动技能，自动生效' };
-    if ((r.cd[id] || 0) > 0) return { ok: false, msg: def.n + ' 冷却中 ' + r.cd[id].toFixed(1) + 's' };
-    r.cd[id] = def.cd || 5;
-    const m = def.mods || {};
-    if (window.SND) SND.play(def.el === '火' ? 'explode' : def.el === '冰' ? 'pick' : 'crit');
-    switch (id) {
-      case 'shandian': {   /* 闪电链：命中后连锁电击多个目标 */
-        const tg = this.nearest(r.px, r.py, null, 420) || { x: this.W / 2, y: this.H * 0.35 };
-        let cur = tg, hit = [];
-        for (let i = 0; i < m.chainN + lv && cur; i++) {
-          hit.push(cur);
-          this.hurt(cur, r.atk * 0.7 * lv, false, '电');
-          this.efx.push({ t: 'chain', x1: cur.x, y1: cur.y, x2: cur.x, y2: cur.y, life: .25, max: .25, el: '电' });
-          cur = this.nearest(cur.x, cur.y, cur, 150);
-          if (cur) this.efx.push({ t: 'chain',
-            x1: hit[hit.length - 1].x, y1: hit[hit.length - 1].y,
-            x2: cur.x, y2: cur.y, life: .25, max: .25, el: '电' });
-        }
-        break;
-      }
-      case 'huohuan':      /* 火环：角色周围持续灼烧 + 击退 */
-        r.efx.push({ t: 'aura', x: r.px, y: r.py, r: m.auraR * (1 + lv * 0.09),
-          dps: m.auraDps * lv * r.atk * 0.12, life: 4.0, max: 4.0, el: '火', knock: m.knock });
-        break;
-      case 'bingshuang': { /* 冰霜新星：冰环减速 + 冰冻 */
-        const R = m.novaR * (1 + lv * 0.08);
-        for (const z of r.zombies) {
-          if (z.dead) continue;
-          if (Math.hypot(z.x - r.px, z.y - r.py) <= R) {
-            z.slow = Math.min(0.85, m.novaSlow + lv * 0.04);
-            z.slowT = 2.2 + lv * 0.25;
-            this.hurt(z, r.atk * 0.4 * lv, false, '冰');
-          }
-        }
-        this.efx.push({ t: 'nova', x: r.px, y: r.py, r: R, life: .55, max: .55, el: '冰' });
-        break;
-      }
-      case 'hudun':        /* 护盾：吸收伤害 */
-        r.shield = Math.min(r.maxShield * 3, (r.shield || 0) + m.shield * lv);
-        this.efx.push({ t: 'nova', x: r.px, y: r.py, r: 44, life: .5, max: .5, el: '物' });
-        break;
-      default: break;
-    }
-    return { ok: true, msg: def.n + ' 释放' };
-  },
-
   /* 通用子弹生成（玩家/炮台/佣兵共用） */
   spawnBullet(x, y, tg, dmg, opt = {}) {
     const r = this.run;
