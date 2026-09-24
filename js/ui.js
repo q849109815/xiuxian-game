@@ -487,6 +487,14 @@ r_tavern(p, tab) {
       this.toast(r.msg, r.ok ? 'ok' : 'err');
       if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('role', '宝石'); this.home(); }
     }; });
+    /* 升星按钮：渲染了（r_role 里 id="roleStar"）但从未绑定 onclick
+     * → 玩家点「⭐ 升星」完全没反应，花碎片升星的入口等于不存在。 */
+    const sb = $('#roleStar');
+    if (sb) sb.onclick = () => {
+      const r = E.starUp(p);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('role', '角色'); this.home(); }
+    };
     const fb = $('#roleForge');
     if (fb) fb.onclick = () => this.open('role', '宝石');
   },
@@ -1452,18 +1460,22 @@ r_tavern(p, tab) {
       <button class="btn c blk" id="buUp" ${p.gold < cost ? 'disabled' : ''}>升级 · ${E.fmt(cost)} 金币</button></div>
       <div class="card"><div class="card-t">离线产出</div>
       <div class="kv"><span>仓库离线收益</span><b style="color:var(--gold)">${E.fmt(E.offlineIncome(p))} 金币</b></div>
+      <div class="kv"><span>同时产出</span><b>金属 + 经验</b></div>
       <button class="btn blk" id="buClaim">领取离线收益</button>
-      <div class="lbl">离线最多累计 12 小时。</div></div>`;
+      <div class="lbl">离线最多累计 8 小时（表34）。</div></div>`;
   },
   b_base(p, tab) {
     const u = $('#buUp'); if (u) u.onclick = () => {
       const r = E.upBuild(p, tab); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('base', tab); this.home(); }
     };
     const c = $('#buClaim'); if (c) c.onclick = () => {
-      const v = E.offlineIncome(p);
-      if (v <= 0) return this.toast('暂无离线收益', 'err');
-      p.gold += v; p.offlineAt = Date.now();
-      this.toast('领取离线收益 ' + E.fmt(v) + ' 金币', 'ok'); this.open('base', tab); this.home();
+      /* 此前只取 E.offlineIncome（仅金币）然后手动 +=，
+       * 而 E.offlineClaim（金币 + 金属 + 经验）定义了却从未被调用
+       * → 玩家离线 8 小时只拿到金币，金属和经验一直没发。
+       * 现在改走完整领取。 */
+      const r = E.offlineClaim(p);
+      if (!r.ok) return this.toast(r.msg, 'err');
+      this.toast(r.msg, 'ok'); this.open('base', tab); this.home();
     };
   },
 
