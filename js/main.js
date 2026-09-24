@@ -53,10 +53,24 @@ const MAIN = {
       p = E.newPlayer(UID, name, gender);
       UI.toast('欢迎加入，先锋官！', 'ok');
     } else { p.name = p.name || name; p.lastSeen = Date.now(); }
+    /* 封禁兜底：优先看账号文件（user.js 已拦），
+     * 但离线或账号文件缺失时，玩家存档里的 p.ban 也要能拦住 */
+    if (p.ban) {
+      const until = p.banUntil || 0;
+      if (!until || until > Date.now()) {
+        UI.toast('🚫 该账号已被封禁：' + (p.banReason || '违规处理'), 'err');
+        P = null; window.P = null;
+        return;
+      }
+    }
     P = p; window.P = p; UI.P = p;
     this.savePath = path;
     this.migrate(p);
     UI.home(); UI.show('home');
+    /* 拉取后台配置（活动 / 成就商店 / 活动商店 / 排行奖励 / 数值配置）。
+     * 与邮件领取并行：claimMail 内部有 TMO 超时（邮件 5s + 维护 4s），
+     * 若排在它后面，配置要等近 10 秒才到位，界面会先渲染成旧数据。 */
+    this.syncCloudCfg().then(() => { try { UI.home(); } catch (e) {} }).catch(() => {});
     await this.claimMail();
     this.startSave(); this.loadLeaderboard();
   },
@@ -117,6 +131,96 @@ const MAIN = {
     try { const r = await Net.read('data/zb/leaderboard.json'); window.LB = (r && r.data && r.data.list) ? r.data.list.slice(0, 30) : []; }
     catch (e) { window.LB = []; }
   },
+  /* =========================================================
+   * 云端配置同步（后台「活动/成就商店/活动商店/排行榜奖励/数值配置」
+   * 五大模块写入的 JSON，此前游戏端一个都不读 —— 后台配了等于白配。
+   * 登录时拉取，覆盖内存中的 EX 对应表；离线时用上次缓存。
+   * ========================================================= */
+  CFG_FILES: {
+    activity: 'data/zb/activity.json',
+    achshop: 'data/zb/achshop.json',
+    actshop: 'data/zb/actshop.json',
+    rankrw: 'data/zb/rankrw.json',
+    cfg: 'data/zb/cfg.json',
+  },
+  async syncCloudCfg() {
+    if (typeof Net === 'undefined' || typeof EX === 'undefined') return;
+    for (const key in this.CFG_FILES) {
+      const path = this.CFG_FILES[key];
+      let db = null;
+      try { const r = await window.TMO(Net.read(path), 6000, null); db = r && r.data; } catch (e) {}
+      if (!db) {
+        /* 离线：用上次缓存 */
+        try { db = JSON.parse(localStorage.getItem('zb_cfg_' + key) || 'null'); } catch (e) {}
+        if (!db) continue;
+      } else {
+        try { localStorage.setItem('zb_cfg_' + key, JSON.stringify(db)); } catch (e) {}
+      }
+      this.applyCloudCfg(key, db);
+    }
+  },
+  /* 后台表 → 游戏端表的字段映射。
+   * 两边字段完全不同，若直接整体覆盖，游戏端读到的 give/rw 全是 undefined，
+   * 兑换后什么都拿不到 —— 等于后台配了但玩家领不到东西。 */
+  applyCloudCfg(key, db) {
+    try {
+      const nm = (id) => { try { return (E.itemName ? E.itemName(id) : id) || id; } catch (e) { return id; } };
+      if (key === 'activity' && Array.isArray(db.list)) {
+        const base = (EX.activities || []).slice();
+        db.list.forEach((a) => {
+          if (!a || !a.id) return;
+          const it = {
+            id: a.id, n: a.name || a.n || '活动',
+            startAt: a.startAt || 0, endAt: a.endAt || 0,
+            cond: a.cond || {}, levelId: a.levelId || '',
+            live: a.status === '运行中', status: a.status || '待开启',
+            rw: a.rw || {}, desc: a.desc || '',
+          };
+          const i = base.findIndex((x) => x.id === a.id);
+          if (i >= 0) base[i] = it; else base.push(it);
+        });
+        EX.activities = base;
+      } else if (key === 'achshop' && Array.isArray(db.list)) {
+        /* 后台 { id, item, n:数量, cost, limit, refresh, unlock }
+         *  → 游戏端 { id, n:名称, t, cost, limit, per, need, give:{item:数量} } */
+        EX.achShop = db.list.filter((x) => x && x.item).map((x, i) => ({
+          id: x.id || ('AH' + i), n: nm(x.item) + '×' + (x.n || 1), t: '材料',
+          cost: Number(x.cost) || 0, limit: Number(x.limit) || 0,
+          per: 'day', need: 0, refresh: Number(x.refresh) || 0,
+          unlock: x.unlock || '', give: { [x.item]: Number(x.n) || 1 },
+        }));
+      } else if (key === 'actshop' && Array.isArray(db.list)) {
+        EX.eventShop = db.list.filter((x) => x && x.item).map((x, i) => ({
+          id: x.id || ('AS' + i), n: nm(x.item) + '×' + (x.n || 1), t: '材料',
+          act: x.act || '', cost: Number(x.cost) || 0, limit: Number(x.limit) || 0,
+          daily: Number(x.daily) || 0, refresh: Number(x.refresh) || 0,
+          give: { [x.item]: Number(x.n) || 1 },
+        }));
+      } else if (key === 'rankrw' && Array.isArray(db.list)) {
+        /* 后台 { id, a:名次起, b:名次止, item, n:数量, settle, stack }
+         *  → 游戏端 { id, board, rank, lo, hi, rw:{item:数量}, cyc } */
+        EX.rankRewards = db.list.filter((x) => x && x.item).map((x, i) => ({
+          id: x.id || ('RW' + i), board: '无尽生存榜',
+          rank: '第' + (x.a || 1) + '-' + (x.b || 1) + '名',
+          lo: Number(x.a) || 1, hi: Number(x.b) || 1,
+          rw: { [x.item]: Number(x.n) || 1 },
+          cyc: x.settle ? (x.settle + '小时') : '每小时',
+          stack: !!x.stack,
+        }));
+      } else if (key === 'cfg') {
+        /* 后台「配置热更新」上传的是用户手填的裸 JSON（如 {"STAMINA_MAX":200}），
+         * 经 Object.assign 合并后落在文件顶层，并没有 data 这一层；
+         * 而此前只认 db.data —— 后台热更的数值改了，游戏端完全读不到。
+         * 现在两种结构都兼容：有 data 用 data，否则取顶层（跳过 _hotfix 元信息）。 */
+        const src = (db.data && typeof db.data === 'object') ? db.data : db;
+        Object.keys(src || {}).forEach((k) => {
+          if (k === '_hotfix' || k === 'data') return;
+          if (EX[k] !== undefined && src[k] !== null) EX[k] = src[k];
+        });
+      }
+    } catch (e) { console.error('applyCloudCfg ' + key, e); }
+  },
+
   async claimMail() {
     if (!P) return;
     let ch = false;
