@@ -599,10 +599,13 @@ APP.pages['cdk-tpl'] = {
           <div class="fld"><label>数量</label><input id="ctN1" type="number" value="1000"></div>
           <div class="fld"><label>描述</label><input id="ctDesc" placeholder="模板说明"></div>
         </div>
-        <div class="f3">
+        <div class="f2">
           <div class="fld"><label>物品 2</label>${U.picker('ctI2', '')}</div>
-          <div class="fld"><label>数量</label><input id="ctN2" type="number" value="0"></div>
+          <div class="fld"><label>数量 2</label><input id="ctN2" type="number" value="0"></div>
+        </div>
+        <div class="f2">
           <div class="fld"><label>物品 3</label>${U.picker('ctI3', '')}</div>
+          <div class="fld"><label>数量 3</label><input id="ctN3" type="number" value="0"></div>
         </div>
         <button class="btn blk" id="ctGo">➕ 创建模板</button>
       </div>
@@ -622,10 +625,14 @@ APP.pages['cdk-tpl'] = {
       const items = {};
       const i1 = this.val('#ctI1'), n1 = this.num('#ctN1');
       const i2 = this.val('#ctI2'), n2 = this.num('#ctN2');
-      const i3 = this.val('#ctI3');
+      /* 严重 BUG 修复：此前物品 3 直接沿用物品 2 的数量（this.num('#ctN2')），
+       * 且界面上根本没有「数量 3」输入框 ——
+       * 选了物品 3 就会按物品 2 的数量发放，物品 2 填 0 时物品 3 直接被丢弃。
+       * 现在物品 3 使用独立的 ctN3。 */
+      const i3 = this.val('#ctI3'), n3 = this.num('#ctN3');
       if (i1 && n1 > 0) items[i1] = n1;
       if (i2 && n2 > 0) items[i2] = n2;
-      if (i3 && n2 > 0) items[i3] = this.num('#ctN2');
+      if (i3 && n3 > 0) items[i3] = n3;
       if (!Object.keys(items).length) return this.toast('至少配置一个物品', 'err');
       const db = await DB.get(DBP.cdkey, { templates: [], codes: [] });
       db.templates = db.templates || [];
