@@ -60,8 +60,8 @@ const UI = {
     chip: ['芯片系统', ['芯片'], 'right'],
     talent: ['天赋', ['天赋'], 'top'],
     task: ['任务', ['主线', '日常', '周常', '成就'], 'side'],
-    bag: ['我的背包', ['宝石', '装备', '材料', '芯片'], 'bottom'],
-    shop: ['商店', ['每日', '武器', '宝石', '材料'], 'side'],
+    bag: ['我的背包', ['宝石', '装备', '材料', '芯片', '消耗'], 'bottom'],
+    shop: ['商店', ['每日', '武器', '宝石', '材料', '礼包', '直购'], 'side'],
     gem: ['宝石镶嵌', ['镶嵌'], 'top'],
     friends: ['好友', ['好友列表', '申请', '聊天'], 'side'],
     mail: ['邮件', ['邮件'], 'top'],
@@ -720,6 +720,28 @@ r_tavern(p, tab) {
   },
 
   r_bag(p, tab) {
+    /* 表16 消耗品（I01~I04）：此前有数据但无使用入口 */
+    if (tab === '消耗') {
+      const items = (EX.items || []).filter((x) => x.type === '消耗');
+      const pend = p.pendingItem || {};
+      return `<div class="card"><div class="card-t">消耗品 <span class="sub">战斗中生效</span></div>
+        ${items.length ? items.map((it) => {
+          const n = p.mat[it.id] || 0;
+          const def = E.ITEM_USE[it.id] || {};
+          return `<div class="zrow">
+            ${it.img ? `<img class="zav" src="${it.img}" style="object-fit:cover">`
+                     : `<div class="zav">${it.icon}</div>`}
+            <div class="zi"><b>${it.n} ×${n}</b><span>${def.desc || it.use || ''}</span>
+              ${pend[it.id] ? `<span style="color:#7ee38a;font-size:9px">下一场生效 ×${pend[it.id]}</span>` : ''}</div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <button class="btn sm" data-use="${it.id}" ${n > 0 ? '' : 'disabled'}>使用</button>
+              ${it.id === 'I04' ? `<button class="btn sm" data-use10="${it.id}" ${n >= 10 ? '' : 'disabled'} style="font-size:9px">开10个</button>` : ''}
+            </div></div>`;
+        }).join('') : '<div class="lbl">暂无消耗品</div>'}
+        <div class="lbl" style="text-align:left;margin-top:6px">战斗中点击立即生效；战斗外使用将在下一场自动生效</div>
+      </div>`;
+    }
+
     const GEMC = { r: 'gem r', b: 'gem b', g: 'gem g', p: 'gem p' };
     if (tab === '宝石') {
       const gs = EX.gems || [];
@@ -789,6 +811,20 @@ r_tavern(p, tab) {
       }).join('')}</div></div>`;
   },
   b_bag(p, tab) {
+    /* 表16 消耗品使用 */
+    $$('#pnBody [data-use]').forEach((b) => { b.onclick = () => {
+      const r = E.useItem(p, b.dataset.use);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.save(p); this.open('bag', tab); this.home(); }
+    }; });
+    $$('#pnBody [data-use10]').forEach((b) => { b.onclick = () => {
+      if ((p.mat[b.dataset.use10] || 0) < 10) return this.toast('宝箱不足 10 个', 'err');
+      const rw = E.openBox(p, 10);
+      this.toast('开启 10 个宝箱：' + rw, 'ok');
+      if (window.SND) SND.play('get');
+      E.save(p); this.open('bag', tab); this.home();
+    }; });
+
     const c1 = $('#bagChest1'), c10 = $('#bagChest10');
     if (c1) c1.onclick = () => {
       const r = E.openChest(p, 1); this.toast(r.msg, r.ok ? 'ok' : 'err');
@@ -818,7 +854,30 @@ r_tavern(p, tab) {
     const goods = (EX.shopGoods || {})[tab] || [];
     return `<div class="card"><div class="card-t">${tab}
       <span class="sub">🪙 ${E.fmt(p.gold)} · 💎 ${E.fmt(p.diamond)}</span></div>
-      <div class="grid3">${goods.length ? goods.map((g) => {
+      <div class="grid3">${(tab === '直购') ? `
+        <div class="card" style="grid-column:1/-1"><div class="card-t">月卡 <span class="sub">SH05 每日领</span></div>
+          ${E.monthCardLeft(p) > 0 ? `
+            <div class="kv"><span>剩余天数</span><b>${E.monthCardLeft(p)} 天</b></div>
+            <div class="kv"><span>今日状态</span><b>${(p.monthCard && p.monthCard.last === new Date(Date.now()+8*3600000).toISOString().slice(0,10)) ? '已领取' : '待领取'}</b></div>
+            <button class="btn blk" id="shMcClaim" style="margin-top:6px">📅 领取今日（钻石50+体力60）</button>`
+            : `<div class="lbl">未开通 · 在上方购买「月卡」后 30 天内每日可领</div>`}
+        </div>
+        <div class="card" style="grid-column:1/-1"><div class="card-t">战令 <span class="sub">${p.passAdv ? '进阶版' : '普通版'} · 当前 ${E.passLevel(p)} 关</span></div>
+          <div class="lbl" style="text-align:left;margin-bottom:5px">按通关关卡数解锁，${p.passAdv ? '可领进阶档（额外钻石30）' : '购买「战令(进阶)」解锁高级奖励'}</div>
+          ${E.PASS_TIERS.map((t, i) => {
+            const un = E.passLevel(p) >= t.lv;
+            const gn = (p.passClaimed || {})['p' + i + 'n'];
+            const ga = (p.passClaimed || {})['p' + i + 'a'];
+            return `<div class="zrow" style="${un ? '' : 'opacity:.5'}">
+              <div class="zav">${un ? '🎖️' : '🔒'}</div>
+              <div class="zi"><b>Lv.${t.lv} ${t.n}</b><span>${un ? '可领取' : '通关 ' + t.lv + ' 关解锁'}</span></div>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <button class="btn sm" data-psn="${i}" ${(un && !gn) ? '' : 'disabled'}>${gn ? '已领' : '普通'}</button>
+                <button class="btn sm" data-psa="${i}" ${(un && !ga && p.passAdv) ? '' : 'disabled'} style="font-size:9px">${ga ? '已领' : '进阶'}</button>
+              </div></div>`;
+          }).join('')}
+        </div>
+      ` : ''}${goods.length ? goods.map((g) => {
         const can = (p[g.cur || 'gold'] || 0) >= g.price;
         /* 表35：礼包限购状态 */
         let lm = null;
@@ -850,7 +909,16 @@ r_tavern(p, tab) {
       p[cur] -= g.price;
       if (g.give) for (const k in g.give) {
         if (k === 'gold') p.gold += g.give[k];
-        else if (k === 'diamond') p.diamond += g.give[k];
+        else if (k === 'diamond') {
+          /* 表22 EV04 首充双倍：首次购买钻石类商品翻倍 */
+          let amt = g.give[k];
+          if (amt > 0) {
+            const fr = E.applyFirstRecharge(p, amt);
+            if (fr.doubled) this.toast('🎉 首充双倍！钻石 ' + g.give[k] + ' → ' + fr.amt, 'ok');
+            amt = fr.amt;
+          }
+          p.diamond = (p.diamond || 0) + amt;
+        }
         else if (k === 'stamina') p.stamina = (p.stamina || 0) + g.give[k];
         else if (/^chip/.test(k)) {
           /* 芯片类：直接生成对应品质芯片进背包 */
@@ -864,9 +932,40 @@ r_tavern(p, tab) {
         }
         else p.mat[k] = (p.mat[k] || 0) + g.give[k];
       }
+      /* 直购特殊类型：月卡 / 战令进阶 / 皮肤 */
+      if (g.monthly) {
+        p.monthCard = { until: Date.now() + 30 * 86400000, last: '' };
+        this.toast('月卡开通成功！30 天内每日可领 钻石50+体力60', 'ok');
+      } else if (g.pass === 'adv') {
+        p.passAdv = 1; this.toast('进阶战令已解锁！可领取高级档位', 'ok');
+      } else if (g.pass === 'normal') {
+        this.toast('普通战令已激活（免费档位可领取）', 'ok');
+      }
+      if (g.give && g.give.skin) {
+        p.skins = p.skins || [];
+        if (p.skins.indexOf(g.give.skin) < 0) p.skins.push(g.give.skin);
+        this.toast('已获得皮肤：' + g.n, 'ok');
+      }
       if (g.limit) { try { E.giftMark(p, g); } catch (e) {} }
-      E.save(p); this.toast('购买成功', 'ok');
+      E.save(p); if (!g.monthly && !g.pass) this.toast('购买成功', 'ok');
       if (window.SND) SND.play('get'); this.open('shop', tab); this.home();
+    }; });
+    /* 月卡每日领取 */
+    const mc = $('#shMcClaim'); if (mc) mc.onclick = () => {
+      const r = E.monthCardClaim(p);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.save(p); this.open('shop', tab); this.home(); }
+    };
+    /* 战令档位领取 */
+    $$('#pnBody [data-psn]').forEach((b) => { b.onclick = () => {
+      const r = E.passClaim(p, +b.dataset.psn, false);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.save(p); this.open('shop', tab); this.home(); }
+    }; });
+    $$('#pnBody [data-psa]').forEach((b) => { b.onclick = () => {
+      const r = E.passClaim(p, +b.dataset.psa, true);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.save(p); this.open('shop', tab); this.home(); }
     }; });
   },
 
@@ -1055,8 +1154,14 @@ r_tavern(p, tab) {
       <span class="sub">${acts.length} 个进行中</span></div>
       ${acts.length ? acts.map((a) => `<div class="zrow">
         <div class="zav">${a.icon || '🎪'}</div>
-        <div class="zi"><b>${a.n}</b><span>${a.desc || ''}</span></div>
-        <span class="st ${a.hot ? 'on' : 'off'}">${a.hot ? '进行中' : '即将开始'}</span>
+        <div class="zi"><b>${a.n}</b><span>${a.desc || ''}</span>
+          <span style="font-size:9px;color:#8fa0c0">${a.time || ''} · ${a.rule || ''}</span>
+          ${a.id === 'EV02' ? `<span style="font-size:9px;color:#ffd76a">今日剩余 ${E.bossRaidLeft(p)} / 3 次</span>` : ''}
+          ${a.id === 'EV04' ? `<span style="font-size:9px;color:${p.firstRech ? '#7ee38a' : '#ffd76a'}">${p.firstRech ? '已使用' : '未使用 · 首次购买钻石翻倍'}</span>` : ''}
+        </div>
+        ${a.id === 'EV02' ? `<button class="btn sm" data-raid="1" ${E.bossRaidLeft(p) > 0 ? '' : 'disabled'}>挑战</button>` : ''}
+        ${a.id === 'EV01' ? `<button class="btn sm" data-evendless="1">参与</button>` : ''}
+        ${a.id === 'EV06' ? `<button class="btn sm" data-evrank="1">查看</button>` : ''}
       </div>`).join('') : '<div class="lbl">暂无活动</div>'}
     </div>
     <div class="card"><div class="card-t">签到 <span class="sub">每日登录领取</span></div>
@@ -1074,6 +1179,22 @@ r_tavern(p, tab) {
       const r = E.sign(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
       if (r.ok) { if (window.SND) SND.play('get'); this.open('act'); this.home(); }
     };
+    /* 表22 EV02 BOSS突袭：每日 3 次 */
+    $$('#pnBody [data-raid]').forEach((b) => { b.onclick = () => {
+      const r = E.bossRaidStart(p);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { E.save(p); this.close(); startBattle('boss', null); }
+      else this.open('act');
+    }; });
+    /* 表22 EV01 丧尸围城 → 无尽模式 */
+    $$('#pnBody [data-evendless]').forEach((b) => { b.onclick = () => {
+      this.toast('进入丧尸围城（无尽生存）', 'ok');
+      this.close(); startBattle('endless');
+    }; });
+    /* 表22 EV06 无尽冲榜 → 排行榜 */
+    $$('#pnBody [data-evrank]').forEach((b) => { b.onclick = () => {
+      this.close(); this.open('rank');
+    }; });
   },
 
   /* ---------- 关卡选择 ---------- */
