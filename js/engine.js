@@ -1121,6 +1121,24 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     p.bag.push(c);
     return c;
   },
+  /* =========================================================
+   * 称号 / 头像框（此前 grant 写入 p.titles / p.frames 但全项目零读取）
+   * ======================================================== */
+  titleDef(id) { return (EX.titles || []).find((t) => t.id === id) || null; },
+  frameDef(id) { return (EX.frames || []).find((t) => t.id === id) || null; },
+  titleName(id) { const t = this.titleDef(id); return t ? t.n : (id || ''); },
+  frameName(id) { const t = this.frameDef(id); return t ? t.n : (id || ''); },
+  equipTitle(p, id) {
+    if (id && (p.titles || []).indexOf(id) < 0) return { ok: false, msg: '未拥有该称号' };
+    p.title = id || '';
+    return { ok: true, msg: id ? ('已装备称号：' + this.titleName(id)) : '已卸下称号' };
+  },
+  equipFrame(p, id) {
+    if (id && (p.frames || []).indexOf(id) < 0) return { ok: false, msg: '未拥有该头像框' };
+    p.frame = id || '';
+    return { ok: true, msg: id ? ('已装备头像框：' + this.frameName(id)) : '已卸下头像框' };
+  },
+
   /* 通用发放 */
   grant(p, give) {
     if (!give) return;
