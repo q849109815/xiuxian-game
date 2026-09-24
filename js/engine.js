@@ -445,7 +445,10 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     p.gold = (p.gold || 0) + c.gold;
     p.mat.M01 = (p.mat.M01 || 0) + c.metal;
     p.offlineAt = Date.now();
-    if (c.xp > 0) { try { this.addExp(p, c.xp); } catch (e) {} }
+    /* BUG：方法名写错（addExp vs 实际的 addXp），且被 try/catch 静默吞掉
+     * → 提示写着「经验 +544」，实际 p.xp 纹丝不动，离线经验从来没发过。
+     * 现在用正确方法名，并去掉会掩盖问题的空 catch。 */
+    if (c.xp > 0 && this.addXp) this.addXp(p, c.xp);
     const h = Math.floor(c.hrs), m = Math.round((c.hrs - h) * 60);
     return { ok: true, msg: `离线 ${h}小时${m}分（${c.tier.n}）：金币 +${c.gold} 金属 +${c.metal} 经验 +${c.xp}` };
   },
