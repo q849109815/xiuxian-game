@@ -76,16 +76,39 @@ APP.pages['acc-destroy'] = {
        * 现在以返回值为准，失败明确提示。 */
       let delOk = false;
       try { delOk = (await Net.del(PDIR + uid + '.json')) === true; } catch (e) { delOk = false; }
+      /* 二级兜底：DELETE 在弱网/代理下极易失败（要先 GET 取 sha 再 DELETE，
+       * 两步任一失败就返回 false）—— 用户实测点了 5 次文件依然存在。
+       * 现在若 DELETE 失败，改用 PUT 把存档【覆盖写成已注销空档】：
+       * PUT 只需一步，成功率远高于 DELETE，且效果等价（数据清空 + 打标记）。 */
       if (!delOk) {
-        /* 删除失败 → 落标记兜底（存档还在，但状态已生效） */
+        try {
+          const empty = {
+            uid: uid, name: name, destroyed: true, destroyAt: Date.now(), destroyWhy: why,
+            lv: 0, gold: 0, diamond: 0, stamina: 0, ach: 0, xp: 0,
+            mat: {}, cleared: {}, wave: {}, gun: {}, skin: [], chips: [], mail: [],
+            ban: true, banWhy: '销户',
+          };
+          delOk = await Net.write(PDIR + uid + '.json', empty, '销户：覆盖清空 ' + name);
+        } catch (e) { delOk = false; }
+      }
+      /* 三级兜底：写也失败 → 至少在原存档上打标记 */
+      if (!delOk) {
         try {
           const sp = await DB.get(PDIR + uid + '.json', null);
           if (sp && sp.uid) {
-            sp.destroyed = true; sp.destroyAt = Date.now(); sp.destroyWhy = why;
+            sp.destroyed = true; sp.destroyAt = Date.now(); sp.destroyWhy = why; sp.ban = true;
             await DB.set(PDIR + uid + '.json', sp, '销户标记（存档删除失败）');
           }
         } catch (e) {}
       }
+      /* 无论成败都从索引移除，避免下次刷新又出现在列表里 */
+      try {
+        const r = await Net.read('data/zb/index.json');
+        const idx = (r && r.data && Array.isArray(r.data.list)) ? r.data : { list: [] };
+        const n0 = idx.list.length;
+        idx.list = idx.list.filter((x) => x.uid !== uid);
+        if (idx.list.length !== n0) await Net.write('data/zb/index.json', idx, '销户移除索引 ' + uid);
+      } catch (e) {}
       /* 3) 从榜单移除 */
       let rankClean = 0;
       try {
@@ -296,8 +319,17 @@ APP.pages['acc-batchdestroy'] = {
             await DB.set('data/zb/users/' + p.uid + '.json', u, '批量销户');
           }
         } catch (e) {}
-        /* 同样以返回值为准，避免"假成功"计数 */
-        try { if ((await Net.del(PDIR + p.uid + '.json')) === true) ok++; } catch (e) {}
+        /* 同样以返回值为准；DELETE 失败则覆盖清空 */
+        try {
+          let d = (await Net.del(PDIR + p.uid + '.json')) === true;
+          if (!d) {
+            d = await Net.write(PDIR + p.uid + '.json', {
+              uid: p.uid, name: p.name, destroyed: true, destroyAt: Date.now(),
+              lv: 0, gold: 0, diamond: 0, mat: {}, cleared: {}, ban: true,
+            }, '批量销户：覆盖清空');
+          }
+          if (d) ok++;
+        } catch (e) {}
         risk.destroyLog.unshift({ uid: p.uid, name: p.name, why, op: 'batch', at: Date.now() });
       }
       await DB.set(DBP.risk, risk, '批量销户日志');
