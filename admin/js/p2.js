@@ -438,7 +438,7 @@ APP.pages['rank-refresh'] = {
         ${(en.list || []).slice(0, 10).map((x, i) => `<div class="row">
           <div class="zav sm">${i + 1}</div>
           <div class="rl"><b>${U.esc(x.name)}</b><span>${U.esc(x.uid)}</span></div>
-          <b style="color:var(--gold)">${Math.floor((x.t || 0) / 60)}分${(x.t || 0) % 60}秒</b></div>`).join('') || '<div class="lbl">暂无</div>'}
+          <b style="color:var(--gold)">无尽 ${Math.floor(x.t || 0)} 层</b></div>`).join('') || '<div class="lbl">暂无</div>'}
       </div>`;
   },
   bind() {
