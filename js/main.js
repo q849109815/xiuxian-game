@@ -505,11 +505,21 @@ const MAIN = {
     if (c.exp && c.exp < Date.now()) return { ok: false, msg: '该兑换码已过期' };
     if (c.bindUid && c.bindUid !== P.uid) return { ok: false, msg: '该兑换码已绑定其他账号' };
     if ((c.usedBy || []).indexOf(P.uid) >= 0) return { ok: false, msg: '您已兑换过该码' };
+    /* 本地防重复（与全服邮件同理）：
+     * 原逻辑先 giveRw 发奖、最后才 Net.write 写回 used/usedBy。
+     * 写回失败（弱网很常见）时奖励已入背包但云端未记账，
+     * 下次兑换同一个码还能再领一次 —— 可无限刷。
+     * 现在先在本地登记，再发奖。 */
+    P.cdkGot = P.cdkGot || [];
+    if (P.cdkGot.indexOf(code) >= 0) return { ok: false, msg: '您已兑换过该码' };
     const tpl = (db.templates || []).find((t) => t.id === c.tpl);
     if (!tpl) return { ok: false, msg: '礼包模板缺失' };
     if (tpl.once && (c.usedBy || []).indexOf(P.uid) >= 0) return { ok: false, msg: '每人限领 1 次' };
     this.giveRw(tpl.items || {});
-    try { E.logAct(P, 'pick', '兑换码 ' + code + '（' + (tpl.n || '礼包') + '）'); } catch (e) {}
+    /* 日志模板名：后台模板存的是 name 字段，此前取 tpl.n 恒为 undefined，
+     * 日志里一律显示「兑换码 XXX（礼包）」，看不出兑的是哪个礼包。 */
+    try { E.logAct(P, 'pick', '兑换码 ' + code + '（' + (tpl.name || tpl.n || '礼包') + '）'); } catch (e) {}
+    if (P.cdkGot.indexOf(code) < 0) P.cdkGot.push(code);
     c.used = (c.used || 0) + 1;
     c.usedBy = c.usedBy || [];
     c.usedBy.push(P.uid);
