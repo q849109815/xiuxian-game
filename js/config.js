@@ -693,7 +693,7 @@ const EX = {
     { id: 'ES06', n: '普通芯片x2', t: '芯片', cost: 180, limit: 2, per: 'day', ev: 'BOSS突袭', give: { C01: 2 } },
     { id: 'ES07', n: '精英芯片x1', t: '芯片', cost: 350, limit: 2, per: 'ev', ev: 'BOSS突袭', give: { C02: 1 } },
     { id: 'ES08', n: '传说芯片x1', t: '芯片', cost: 800, limit: 1, per: 'ev', ev: 'BOSS突袭', give: { C03: 1 } },
-    { id: 'ES09', n: '限定皮肤-末日战甲', t: '皮肤', cost: 1500, limit: 1, per: 'ev', ev: '节日活动', give: { skin: 'mo_ri' } },
+    { id: 'ES09', n: '限定皮肤-重装装甲', t: '皮肤', cost: 1500, limit: 1, per: 'ev', ev: '节日活动', give: { skin: 'sk_c03c' } },
     { id: 'ES10', n: '钻石x100', t: '货币', cost: 300, limit: 5, per: 'ev', ev: '丧尸围城', give: { diamond: 100 } },
     { id: 'ES11', n: '体力x30', t: '体力', cost: 60, limit: 3, per: 'day', ev: '节日活动', give: { stamina: 30 } },
     { id: 'ES12', n: '活动限定头像框', t: '外观', cost: 800, limit: 1, per: 'ev', ev: '节日活动', give: { frame: 'ev_frame' } },
@@ -710,7 +710,7 @@ const EX = {
     { id: 'RK05', board: '战力榜', rank: '第1名', lo: 1, hi: 1, rw: { C03: 1, M03: 5 }, cyc: '每日' },
     { id: 'RK06', board: '战力榜', rank: '第2-10名', lo: 2, hi: 10, rw: { C02: 1, M03: 3 }, cyc: '每日' },
     { id: 'RK07', board: '战力榜', rank: '第11-50名', lo: 11, hi: 50, rw: { C01: 1, M02: 10 }, cyc: '每日' },
-    { id: 'RK08', board: '活动冲榜', rank: '第1名', lo: 1, hi: 1, rw: { skin: 'ev_top', C03: 2 }, cyc: '活动结束' },
+    { id: 'RK08', board: '活动冲榜', rank: '第1名', lo: 1, hi: 1, rw: { skin: 'sk_c04b', C03: 2 }, cyc: '活动结束' },
     { id: 'RK09', board: '活动冲榜', rank: '第2-5名', lo: 2, hi: 5, rw: { C03: 1, diamond: 300 }, cyc: '活动结束' },
     { id: 'RK10', board: '活动冲榜', rank: '第6-20名', lo: 6, hi: 20, rw: { C02: 2, diamond: 150 }, cyc: '活动结束' },
   ],
@@ -768,18 +768,26 @@ const EX = {
    * 【活动表】资料：6 个
    * =================================================== */
   activities: [
+    /* rw 必须是【奖励对象】；描述文字放 rwDesc。
+     * 此前 rw 直接写成字符串（如 '活动代币 + 芯片'），
+     * 而 grant() 用 Object.keys(give) 遍历 —— 字符串的 keys 是下标 '0','1'…
+     * 一旦有代码把 rw 当奖励发放，就会执行 p.mat['0']='活' 之类的脏写入。 */
     { id: 'EV01', n: '丧尸围城', type: '限时挑战', time: '每周五~周日', icon: '🏰',
-      desc: '生存限时挑战，波次积分', rw: '活动代币 + 芯片', rule: '按积分领奖' },
+      desc: '生存限时挑战，波次积分', rwDesc: '活动代币 + 芯片', rule: '按积分领奖',
+      rw: { evToken: 60, chipN: 1 } },
     { id: 'EV02', n: 'BOSS突袭', type: '限时', time: '每月1-3日', icon: '👹',
-      desc: '限定 BOSS 战，挑战次数限制', rw: '稀有金属 + 钻石', rule: '每日 3 次' },
+      desc: '限定 BOSS 战，挑战次数限制', rwDesc: '稀有金属 + 钻石', rule: '每日 3 次',
+      rw: { evToken: 80, M03: 3, diamond: 20 } },
     { id: 'EV03', n: '签到活动', type: '常驻', time: '每自然月', icon: '📅',
-      desc: '累计登录领奖', rw: '钻石 + 材料', rule: '连续签到奖励递增' },
+      desc: '累计登录领奖', rwDesc: '钻石 + 材料', rule: '连续签到奖励递增',
+      rw: { diamond: 30, M01: 20 } },
     { id: 'EV04', n: '首充双倍', type: '付费活动', time: '开服永久', icon: '💰',
-      desc: '首次充值钻石翻倍', rw: '钻石', rule: '仅 1 次' },
+      desc: '首次充值钻石翻倍', rwDesc: '钻石', rule: '仅 1 次', rw: {} },
     { id: 'EV05', n: '限时皮肤', type: '皮肤活动', time: '节日期间', icon: '👗',
-      desc: '限定皮肤上架', rw: '皮肤', rule: '限时购买' },
+      desc: '限定皮肤上架', rwDesc: '皮肤', rule: '限时购买', rw: {} },
     { id: 'EV06', n: '无尽冲榜', type: '排行榜', time: '每月15-25日', icon: '🏆',
-      desc: '无尽模式存活时长排名', rw: '传说芯片 + 限定称号', rule: '按排名发奖' },
+      desc: '无尽模式存活时长排名', rwDesc: '传说芯片 + 限定称号', rule: '按排名发奖',
+      rw: { evToken: 120, chipL: 1, title: '无尽之王' } },
   ],
 
   /* =====================================================
