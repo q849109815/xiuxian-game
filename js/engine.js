@@ -299,6 +299,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     else return { ok: false, msg: '红品已是最高品质' };
     ids.forEach((id) => { const i = p.bag.findIndex((c) => c.id === id); if (i >= 0) p.bag.splice(i, 1); });
     const nc = this.rollChipById(target); p.bag.push(nc);
+    /* 操作日志：合成（后台「玩家操作日志」页标称覆盖「合成」，此前从未记录） */
+    try { this.logAct(p, 'chip', '芯片合成 → ' + this.chipName(nc)); } catch (e) {}
     return { ok: true, msg: '合成成功：' + this.chipName(nc) };
   },
   /* 洗练：钻石重 roll 副词条 */
@@ -1470,6 +1472,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     p.gems[id] -= need;
     p.gemLv = (p.gemLv || 0) + 1;
     const lv = p.gemLv;
+    try { this.logAct(p, 'chip', '宝石合成 ' + id + ' → Lv.' + lv); } catch (e) {}
     return { ok: true, msg: '合成成功！宝石等级提升至 Lv.' + lv };
   },
   /* 宝石属性加成
