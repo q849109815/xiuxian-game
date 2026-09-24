@@ -138,8 +138,13 @@ async function diagnose() {
 
 /* ---------------- 统一请求 ---------------- */
 /* 并发探测：同时请求多个端点，谁先成功用谁（避免串行遍历导致离线时卡 5 秒） */
-async function ghReq(path, { method = 'GET', body = null, timeout = 14000, quick = false } = {}) {
-  let eps = allEps();
+async function ghReq(path, { method = 'GET', body = null, timeout = 14000, quick = false, onlyOfficial = false } = {}, forceBr) {
+  /* onlyOfficial：只走官方端点（+自定义加速）。
+   * 用途：公共反代端点常丢失 ?ref=xxx 查询参数，
+   * 导致读 players 分支时悄悄返回 main 的内容。只有官方端点能可靠带 ref。 */
+  let eps = onlyOfficial
+    ? [...GH.extra, 'https://api.github.com'].filter((e, i, a) => e && a.indexOf(e) === i)
+    : allEps();
   if (!eps.length) { DEAD = {}; eps = allEps(); }
   const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
   const opt = { method, headers: { ...H, 'Content-Type': 'application/json' } };
@@ -147,8 +152,9 @@ async function ghReq(path, { method = 'GET', body = null, timeout = 14000, quick
   // 并发窗口：离线快速模式只试 4 个，正常模式试 6 个
   const WIN = quick ? 4 : 6;
 
-  // 存档路径读 players 分支，其余读 main
-  const rdBr = /^data\/zb\//.test(path) ? (GH.dataBranch || GH.branch) : GH.branch;
+  /* 存档路径默认读 players 分支，其余读 main。
+   * forceBr：调用方显式指定分支（用于双分支兜底）。 */
+  const rdBr = forceBr || (/^data\/zb\//.test(path) ? (GH.dataBranch || GH.branch) : GH.branch);
   const tryOne = async (ep) => {
     const url = `${ep}/repos/${GH.owner}/${GH.repo}/contents/${path}?ref=${rdBr}`;
     try {
@@ -221,7 +227,23 @@ const Net = {
         if (r.ok) return { data: await r.json(), sha: null, from: 'static' };
       } catch (e) {}
     }
-    const d = await ghReq(path, { method: 'GET', quick });
+    let d = await ghReq(path, { method: 'GET', quick });
+    /* 存档在 players 分支；若某些端点丢了 ref 导致读不到，
+     * 再显式用 main 分支试一次（反之亦然）。 */
+    if ((!d || !d.content) && /^data\/zb\//.test(path)) {
+      /* ① 官方端点 + 显式 players 分支（反代丢 ref 的可靠解药） */
+      try {
+        const d2 = await ghReq(path, { method: 'GET', quick, onlyOfficial: true }, GH.dataBranch || GH.branch);
+        if (d2 && d2.content) d = d2;
+      } catch (e) {}
+      /* ② 仍读不到 → 官方端点 + main 分支（历史存档可能写在 main） */
+      if ((!d || !d.content) && GH.branch !== (GH.dataBranch || GH.branch)) {
+        try {
+          const d3 = await ghReq(path, { method: 'GET', quick, onlyOfficial: true }, GH.branch);
+          if (d3 && d3.content) d = d3;
+        } catch (e) {}
+      }
+    }
     if (d && d.content) {
       const txt = unb64(d.content);
       if (txt) {
@@ -298,7 +320,39 @@ const Net = {
     return false;
   },
 
+  /* 列出目录
+   * ---------------------------------------------------------------
+   * 致命 BUG 修复（玩家只显示 1 个的真凶）：
+   * 玩家存档在 **players** 分支（30+ 个文件），而 **main** 分支的
+   * data/zb/players/ 只有 1 个历史遗留文件（uoy3fq9.json）。
+   * 请求靠 ?ref=players 指定分支，但多数公共反代端点会丢掉 query string
+   * 或缓存时忽略它 —— 于是悄悄返回了默认分支 main 的内容，
+   * 后台就只看到那 1 个玩家（且恰好是已注销的）。
+   * 现在：对 data/zb/ 路径，两个分支都列一遍并合并去重。
+   * --------------------------------------------------------------- */
   async list(path) {
+    if (/^data\/zb\//.test(path)) {
+      const brs = [];
+      [GH.dataBranch, GH.branch].forEach((b) => { if (b && brs.indexOf(b) < 0) brs.push(b); });
+      const out = [];
+      for (const b of brs) {
+        let got = null;
+        try { got = await ghReq(path, { method: 'GET' }, b); } catch (e) {}
+        /* 反代端点可能丢 ref 而返回默认分支内容 ——
+         * 若结果偏少（≤2 项，通常只有 .gitkeep）再用官方端点重试一次 */
+        const thin = !Array.isArray(got) || got.length <= 2;
+        if (thin && b !== GH.branch) {
+          try {
+            const g2 = await ghReq(path, { method: 'GET', onlyOfficial: true }, b);
+            if (Array.isArray(g2) && g2.length > (Array.isArray(got) ? got.length : 0)) got = g2;
+          } catch (e) {}
+        }
+        if (Array.isArray(got)) {
+          got.forEach((x) => { if (x && x.name && out.indexOf(x.name) < 0) out.push(x.name); });
+        }
+      }
+      return out;
+    }
     const d = await ghReq(path, { method: 'GET' });
     if (Array.isArray(d)) return d.map((x) => x.name);
     return [];
