@@ -1701,6 +1701,36 @@ r_tavern(p, tab) {
   },
 
   /* 开局台词（截图45/46） */
+  /* =========================================================
+   * 维护模式拦截（后台「服务器运维 → 启停维护」）
+   * 真正挡住战斗入口，而不是只弹一行提示就放行。
+   * ========================================================= */
+  MAINT: null,
+  showMaint(d) {
+    this.MAINT = d || {};
+    const box = document.getElementById('maintMask');
+    if (box) {
+      box.innerHTML = '<div class="mt-box">' +
+        '<div class="mt-ico">🖥️</div>' +
+        '<div class="mt-t">服务器维护中</div>' +
+        '<div class="mt-s">' + ((d && d.msg) || '服务器正在维护，请稍后再来') + '</div>' +
+        ((d && d.until) ? '<div class="mt-u">预计维护时长：' + d.until + ' 分钟</div>' : '') +
+        '<button class="mt-btn" onclick="location.reload()">重新检测</button>' +
+        '</div>';
+      box.style.display = 'flex';
+    }
+  },
+  /* 统一的战斗入口守卫：维护中一律不放行 */
+  guardBattle() {
+    if (this.MAINT && this.MAINT.mode === '维护') {
+      this.toast('🖥️ ' + (this.MAINT.msg || '服务器维护中，暂无法进入战斗'), 'err');
+      this.showMaint(this.MAINT);
+      return false;
+    }
+    return true;
+  },
+
+
   btIntroTalk(r) {
     const lines = [
       '丧尸越来越多了，守住防线！',
