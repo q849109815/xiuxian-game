@@ -292,7 +292,7 @@ const APP = {
     if (!p) { b.innerHTML = '<div class="lbl">页面不存在</div>'; return; }
     if (!PERM.has(p.perm || 'all')) {
       b.innerHTML = `<div class="ph"><h2>${U.esc(p.n)}</h2></div>
-        <div class="card"><div class="lbl">🔒 当前角色（${PERM.ROLES[PERM.curRole()].n}）无此权限</div></div>`;
+        <div class="card"><div class="lbl">🔒 当前角色（${(PERM.ROLES[PERM.curRole()] || PERM.ROLES.admin).n}）无此权限</div></div>`;
       return;
     }
     b.innerHTML = p.render.call(this);
