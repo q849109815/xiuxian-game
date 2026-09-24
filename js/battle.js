@@ -145,6 +145,8 @@ const BT = {
   startWave(w) {
     const r = this.run, d = r.def;
     r.wave = w;
+    r.waveT = 0;              /* 重置波次计时（配合超时推进） */
+    r.waveMaxT = (d.cond === 'boss' || d.cond === 'bossAll') && w === d.waves ? 999 : 14;
     /* BOSS 关：最后一波出 BOSS（资料通关条件：击杀BOSS） */
     const isBossWave = (d.cond === 'boss' || d.cond === 'bossAll') && w === d.waves;
     if (isBossWave) {
@@ -539,12 +541,23 @@ const BT = {
     }
     r.drops = r.drops.filter((d) => !d.get);
 
-    /* --- 波次推进 --- */
-    if (r.spawnLeft === 0 && r.zombies.length === 0) {
-      if (r.wave >= r.waveTotal) { this.win(); return; }
-      if (r.endless) { this.startWave(r.wave + 1); return; }
-      r.waveGap -= dt;
-      if (r.waveGap <= 0) { this.startWave(r.wave + 1); r.waveGap = 1.4; }
+    /* --- 波次推进 ---
+     * 原逻辑：必须当前波「全部清空」才推进下一波。
+     * 问题：20 波 × 15 只，一关要打 20 分钟以上，且只要有 1 只
+     *       僵尸卡在射程外（远程/飞行）整关就永不推进。
+     * 改为：清空 或 波次超时 任一满足即推进（真实尸潮是持续压上的） */
+    r.waveT = (r.waveT || 0) + dt;
+    const waveTimeout = r.waveT >= (r.waveMaxT || 14);
+    if ((r.spawnLeft === 0 && r.zombies.length === 0) || waveTimeout) {
+      if (r.wave >= r.waveTotal) {
+        /* 最后一波：仍需清完场上僵尸才算通关 */
+        if (r.zombies.length === 0) { this.win(); return; }
+      } else {
+        r.waveT = 0;
+        if (r.endless) { this.startWave(r.wave + 1); return; }
+        r.waveGap -= dt;
+        if (r.waveGap <= 0 || waveTimeout) { this.startWave(r.wave + 1); r.waveGap = 1.4; }
+      }
     } else r.waveGap = 1.4;
 
     /* --- 无尽模式持续加压 --- */
