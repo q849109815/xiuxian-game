@@ -406,21 +406,60 @@ const APP = {
       if (!opt.silent) this.render();
       return;
     }
+    /* 索引里的昵称/等级，用于兜底显示读不到存档的玩家 */
+    const metaMap = {};
+    try {
+      const ri = await window.TMO(Net.read('data/zb/index.json'), 10000, null);
+      if (ri && ri.data && Array.isArray(ri.data.list)) {
+        ri.data.list.forEach((x) => { if (x && x.uid) metaMap[x.uid] = x; });
+      }
+    } catch (e) {}
+
+    /* =========================================================
+     * 致命 BUG 修复：读取失败静默丢弃
+     * 原写法 if (r && r.data && r.data.uid) return r.data; → null，
+     * 然后 if (x) out.push(x) 直接跳过 —— 没有 uid 字段、或读取超时的
+     * 玩家就这样凭空消失，界面连个提示都没有。
+     * 运营侧现象：诊断明明显示索引 2 项 / 存档目录 2 项，
+     * 「当前列表」却只有 1 人（用户实测截图正是如此）。
+     *
+     * 现在：读到的尽量修好 uid；读不到的用索引信息构造占位条目，
+     * 标记 _broken 并显示「读取失败」，绝不静默消失。
+     * ========================================================= */
     const files = uids.slice(0, 200).map((u) => u + '.json');
     if (!files.length) { if (!this.PLIST) this.PLIST = []; return; }
     const out = [];
+    const fail = [];
     const WIN = 8;   /* 并发窗口 */
     for (let i = 0; i < files.length; i += WIN) {
       const batch = files.slice(i, i + WIN);
       const rs = await Promise.all(batch.map(async (f) => {
+        const uid = f.replace(/\.json$/, '');
         try {
-          const r = await window.TMO(Net.read(PDIR + f), 8000, null);
-          if (r && r.data && r.data.uid) return r.data;
+          const r = await window.TMO(Net.read(PDIR + f), 12000, null);
+          if (r && r.data && typeof r.data === 'object') {
+            /* 存档可能缺 uid（老格式/被覆盖过），用文件名补齐 */
+            if (!r.data.uid) r.data.uid = uid;
+            return r.data;
+          }
         } catch (e) {}
         return null;
       }));
-      rs.forEach((x) => { if (x) out.push(x); });
+      rs.forEach((x, j) => {
+        if (x) { out.push(x); return; }
+        const uid = batch[j].replace(/\.json$/, '');
+        const m = metaMap[uid] || {};
+        out.push({
+          uid: uid, name: m.name || m.nick || ('未知玩家 ' + uid.slice(0, 8)),
+          lv: m.lv || 0, created: m.at || 0, lastSeen: m.lastSeen || 0,
+          _broken: true, gold: 0, diamond: 0, stamina: 0, ach: 0,
+          mat: {}, cleared: {}, gun: {}, skin: [], chips: [], mail: [],
+        });
+        fail.push(uid);
+      });
     }
+    this.PLIST_FAIL = fail;
+    this.PLIST_UIDS = uids.slice(0, 200);
     this.PLIST = out;
     this.PLIST_AT = Date.now();
     this.sortPlayers();
