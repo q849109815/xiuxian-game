@@ -120,7 +120,13 @@ const E = {
   /* =================================================
    * 角色 / 皮肤
    * ================================================ */
-  char(p) { return EX.chars.find((c) => c.id === p.char) || EX.chars[0]; },
+  /* 判空防御：p 为空时会抛 "Cannot read properties of null (reading 'char')"，
+   * 例如军团面板在未加入分支里用 this.P（尚未赋值）调用 E.power(this.P)，
+   * 首次渲染即整页崩溃。 */
+  char(p) {
+    if (!p) return EX.chars[0];
+    return EX.chars.find((c) => c.id === p.char) || EX.chars[0];
+  },
   charUnlocked(p, id) {
     const c = EX.chars.find((x) => x.id === id); if (!c) return false;
     if (!c.unlockLv) return true;
