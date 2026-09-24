@@ -360,6 +360,45 @@ const APP = {
     if (!opt.silent) this.render();
   },
   sortPlayers() { this.PLIST.sort((a, b) => U.pw(b) - U.pw(a)); },
+
+  /* =========================================================
+   * 封禁 / 解封（统一入口）
+   * 严重 BUG 修复：此前封禁只写「玩家存档」的 p.ban = true，
+   * 但游戏端登录校验的是「账号文件」data/zb/users/{uid}.json 的 u.banned。
+   * 两个文件互不相干 —— 后台点了封禁，玩家照样正常登录，封禁形同虚设。
+   * 现在两处都写：账号文件（登录拦截）+ 玩家存档（列表展示/离线兜底）。
+   * ========================================================= */
+  acctPath(uid) { return 'data/zb/users/' + uid + '.json'; },
+  async setBan(p, ban, opt) {
+    opt = opt || {};
+    const uid = p.uid;
+    /* 先写玩家存档（列表状态展示） */
+    if (ban) {
+      p.ban = true;
+      p.banUntil = opt.until || 0;
+      p.banReason = opt.reason || '';
+      p.banType = opt.type || '永久';
+      p.banAt = Date.now();
+    } else {
+      p.ban = false; p.banUntil = 0; p.banReason = '';
+    }
+    const savedP = await this.save(p, ban ? '封禁 ' + (opt.reason || '') : '解封');
+    /* 再写账号文件（这才是登录拦截真正读的地方） */
+    let acctOk = false, acctMsg = '';
+    try {
+      const u = await DB.get(this.acctPath(uid), null);
+      if (u && u.id) {
+        if (ban) {
+          u.banned = true; u.banUntil = opt.until || 0;
+          u.banReason = opt.reason || ''; u.banAt = Date.now(); u.banOp = opt.op || 'admin';
+        } else {
+          u.banned = false; u.unbanAt = Date.now(); u.unbanOp = opt.op || 'admin';
+        }
+        acctOk = await DB.set(this.acctPath(uid), u, ban ? '封禁账号' : '解封账号');
+      } else { acctMsg = '云端无账号记录（可能离线），仅写入存档'; }
+    } catch (e) { acctMsg = e.message; }
+    return { savedP: savedP, acctOk: acctOk, acctMsg: acctMsg };
+  },
   /* p.skins 正常是 ['sk_c01a'] 数组；历史存档可能被写成 {id:1} 对象，
    * 直接 .map 会抛 "(p.skins||[]).map is not a function" 让整页白屏。 */
   skinArr(p) {
