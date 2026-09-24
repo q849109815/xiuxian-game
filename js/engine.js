@@ -1084,6 +1084,11 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const k = this.achShopKey(id);
     if (!b[k]) b[k] = { n: 0, t: Date.now() };
     this._perReset(b[k], it.per);
+    /* 解锁条件（后台「解锁条件」配的「通关10关」）
+     * 此前 need 恒为 0 且从不校验 —— 运营设了门槛，新玩家照样能直接兑换。 */
+    if (it.need > 0 && Object.keys(p.cleared || {}).length < it.need) {
+      return { ok: false, msg: '需先通关 ' + it.need + ' 关' };
+    }
     if (b[k].n >= it.limit) return { ok: false, msg: '已达限购次数（' + it.limit + '）' };
     if ((p.ach || 0) < it.cost) return { ok: false, msg: '成就点不足（需 ' + it.cost + '）' };
     p.ach -= it.cost;
