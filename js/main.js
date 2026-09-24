@@ -102,6 +102,11 @@ const MAIN = {
           delete p.mat[k];
         }
       }
+      /* 消耗品别名：历史 p.mat.U01/U02 补回 I01/I02（背包与使用只读 I0x） */
+      ['U01', 'U02'].forEach((uk) => {
+        const n = Math.floor(Number(p.mat[uk]) || 0);
+        if (n > 0) { const rk = 'I' + uk.slice(1); p.mat[rk] = (p.mat[rk] || 0) + n; delete p.mat[uk]; }
+      });
       /* 成就点也曾被误写进 p.mat.ach（grant 缺分支），这里补回 p.ach */
       const achN = Math.floor(Number(p.mat.ach) || 0);
       if (achN > 0) { p.ach = (p.ach || 0) + achN; delete p.mat.ach; }
