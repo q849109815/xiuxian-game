@@ -1046,3 +1046,19 @@ input{font-family:inherit}
   background: linear-gradient(180deg, #ffd76a, #f0a92e);
   color: #3a2500; border: 0; border-radius: 10px;
 }
+
+/* ========== 章节 CG 过场 ==========
+ * EX.cgImg / EX.chapterCg 此前是死配置：3 张 CG 图已生成但从不展示，
+ * 玩家全程看不到任何过场演出。现在进入新章节时播放一次。 */
+#cgModal .cg-box { position:relative; width:min(88vw,420px); border-radius:14px;
+  overflow:hidden; background:#0d1420; border:2px solid rgba(255,201,60,.5);
+  box-shadow:0 12px 40px rgba(0,0,0,.8); animation:cgIn .35s ease-out; }
+@keyframes cgIn { from{opacity:0;transform:scale(.92)} to{opacity:1;transform:scale(1)} }
+#cgModal .cg-img { display:block; width:100%; height:min(52vh,320px); object-fit:cover; }
+#cgModal .cg-cap { padding:14px 16px 16px; text-align:center;
+  background:linear-gradient(180deg,rgba(13,20,32,.9),rgba(13,20,32,1)); }
+#cgModal .cg-ch { font-size:11px; color:var(--yel); font-weight:800; letter-spacing:2px; }
+#cgModal .cg-n { font-size:19px; font-weight:900; color:#fff; margin:5px 0 4px;
+  text-shadow:0 2px 8px rgba(255,201,60,.4); }
+#cgModal .cg-d { font-size:11px; color:#8fa0c0; line-height:1.6; margin-bottom:12px; }
+#cgModal #cgGo { width:100%; }
