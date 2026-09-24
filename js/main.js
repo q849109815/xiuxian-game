@@ -94,7 +94,10 @@ const MAIN = {
      * 让老玩家已购买的礼包芯片能真正出现在芯片页、可装备/合成。
      * 需要在 giveChipByQuality 可用后执行，故放在 E 就绪之后。 */
     if (window.E && E.giveChipByQuality) {
-      const qmap = { chipN: '白', chipE: '蓝', chipL: '红', chipRed: '红' };
+      /* C01/C02/C03 是掉落表与排名奖励里的芯片品质码，历史上同样被写进 p.mat。
+       * 一并补发成真实芯片，让老玩家打 BOSS / 领排名奖励攒的芯片回到芯片页。 */
+      const qmap = { chipN: '白', chipE: '蓝', chipL: '红', chipRed: '红',
+        C01: '白', C02: '蓝', C03: '红' };
       for (const k in qmap) {
         const n = Math.floor(Number(p.mat[k]) || 0);
         if (n > 0) {
