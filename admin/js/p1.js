@@ -15,16 +15,12 @@ APP.pages['acc-query'] = {
       <div class="card">
         <div class="sb">
           <input id="qKey" placeholder="UID / 昵称 / 手机号" value="${U.esc(this.FILTER)}">
-          <button class="btn n sm" id="qReload">刷新</button>
-          <button class="btn o sm" id="qRebuild">🔨 重建索引</button>
-          <button class="btn n sm" id="qDead">${APP.SHOW_DEAD ? '隐藏' : '显示'}已注销 (${APP.deadCount()})</button>
-          <button class="btn n sm" id="qDiag">🩺 扫描诊断</button>
+          <button class="btn n sm" id="qReload">🔄 刷新</button>
+          <button class="btn ${APP.SHOW_DEAD ? 'o' : 'n'} sm" id="qDead">${APP.SHOW_DEAD ? '隐藏已注销' : '显示已注销'} (${APP.deadCount()})</button>
         </div>
         <div class="lbl" style="text-align:left;line-height:1.6">
-          数据来源：<b style="color:var(--yel)">${U.esc(this.SRC_NOTE || '未知')}</b>
-          ${(this.PLIST_FAIL || []).length ? '<br><span style="color:var(--yel)">⚠ ' + this.PLIST_FAIL.length + ' 名玩家存档读取失败（已显示为占位条目）：' + U.esc(this.PLIST_FAIL.join(', ')) + '</span>' : ''}
-          ${(this.SRC_NOTE || '').indexOf('快照') >= 0 || (this.SRC_NOTE || '').indexOf('无数据') >= 0
-            ? '<br><span style="color:var(--red)">云端四路（索引/账号目录/存档目录/榜单）均未取到，当前显示的是本机缓存。请点「重建索引」或检查网络。</span>' : ''}
+          ${(this.PLIST_FAIL || []).length ? '<span style="color:var(--yel)">⚠ ' + this.PLIST_FAIL.length + ' 名玩家存档读取失败（已显示为占位条目）：' + U.esc(this.PLIST_FAIL.join(', ')) + '</span><br>' : ''}
+          <span style="color:#6b7a95;font-size:9px">来源：${U.esc(this.SRC_NOTE || '未知')}</span>
         </div>
         <div style="overflow-x:auto"><table class="tb"><thead><tr>
           <th>昵称</th><th>UID</th><th>区服</th><th>等级</th><th>战力</th><th>注册</th><th>最后登录</th><th>渠道</th><th>版本</th><th>状态</th>
@@ -47,27 +43,20 @@ APP.pages['acc-query'] = {
   },
   bind() {
     const s = D('#qKey'); if (s) s.oninput = () => { this.FILTER = s.value; this.render(); };
+    /* 一键全自动：确保网络 → 四路合并 → 失败自动重试 → 自动补索引 → 自动渲染 */
     const r = D('#qReload');
-    if (r) r.onclick = async () => { this.toast('正在拉取…', 'ok'); await this.loadPlayers({ force: true }); this.toast('已刷新 '+this.PLIST.length+' 名玩家', 'ok'); };
+    if (r) r.onclick = async () => {
+      r.disabled = true; r.textContent = '🔄 拉取中…';
+      this.toast('正在自动拉取（会自动重试并修复索引）…', 'ok');
+      try { await this.loadPlayers({ force: true, auto: true }); } catch (e) {}
+      this.render();
+      this.toast('已刷新：' + this.view().length + ' 名玩家'
+        + (this.deadCount() ? '（已注销 ' + this.deadCount() + ' 名已隐藏）' : ''), 'ok');
+    };
     const qd = D('#qDead');
     if (qd) qd.onclick = () => { APP.SHOW_DEAD = !APP.SHOW_DEAD; this.render(); };
-    /* 扫描诊断：把四路来源各自扫到几个直接弹出来，方便定位"为什么只有一个人" */
-    const dg = D('#qDiag');
-    if (dg) dg.onclick = async () => {
-      this.toast('扫描中…', 'ok');
-      await this.ensureNet();
-      const r = await this.scanDiag();
-      const txt = Object.keys(r).map((k) => k + '：' + r[k]).join('\n');
-      alert('各来源扫描结果：\n\n' + txt + '\n\n若「存档目录」和「账号目录」都是 0/失败，说明云端目录枚举在当前网络不可用，只能靠索引。');
-    };
-    /* 重建索引：把当前能扫到的所有 UID 回写到 data/zb/index.json，
-     * 之后后台就不必依赖不稳的目录 list 了（解决"只显示一个玩家"） */
-    const rb = D('#qRebuild');
-    if (rb) rb.onclick = async () => {
-      const ok = await this.rebuildIndex();
-      this.toast(ok ? '索引已重建：' + ok + ' 名玩家' : '重建失败（网络不可达）', ok ? 'ok' : 'err');
-      if (ok) { await this.loadPlayers({ force: true }); this.render(); }
-    };
+
+
     DA('#body tr[data-sel]').forEach((t) => { t.onclick = () => {
       this.SEL = this.PLIST.find((p) => p.uid === t.dataset.sel) || null; this.render();
     }; });
