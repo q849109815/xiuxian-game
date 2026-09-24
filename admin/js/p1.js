@@ -801,8 +801,16 @@ APP.pages['gm-attr'] = {
     if (go) go.onclick = async () => {
       const p = this.SEL; if (!p) return;
       const a = this.val('#gaAttr'), v = this.num('#gaV');
+      /* 此前 gaDur（持续时间）从未被读取 —— 表单上填了「24 小时后失效」，
+       * 实际是永久生效，且没有任何到期回收机制。
+       * 现在：dur > 0 时登记临时增益，游戏端登录时到期自动扣回。 */
+      const dur = this.num('#gaDur');
       p[a] = (p[a] || 0) + v;
       if (a === 'charStar') p.charStar = Math.min(5, p.charStar);
+      if (dur > 0) {
+        p.tempBuff = p.tempBuff || [];
+        p.tempBuff.push({ attr: a, v: v, exp: Date.now() + dur * 36e5, at: Date.now() });
+      }
       if (await this.save(p)) {
         AUDIT.log('GM加属性', p.uid, a + ' +' + v + ' 备注:' + this.val('#gaNote'));
         this.toast(a + ' +' + v + ' 已生效', 'ok'); this.render();
@@ -866,7 +874,7 @@ APP.pages['gm-level'] = {
     const lvs = EX.levels || [];
     return `<div class="ph"><h2>🚩 跳关卡 / 通关记录</h2><span class="tagx">策划测试</span></div>
       ${!p ? `${this.searchBar('glKey')}<div class="plist">${this.view().slice(0, 16).map((x) => this.pcard(x)).join('') || '<div class="lbl">无</div>'}</div>`
-        : `<div class="card"><div class="card-t">目标 <span class="sub">${U.esc(p.name)} · 已通关 ${Object.keys(p.cleared || {}).length} 关</span></div>
+        : `<div class="card"><div class="card-t">目标 <span class="sub">${U.esc(p.name)} · 已通关 ${Object.keys(p.cleared || {}).length} 关 · 已记波次 ${Object.keys(p.wave || {}).length} 关</span></div>
         <div class="f3">
           <div class="fld"><label>关卡</label><select id="glLv">
             ${lvs.map((l) => `<option value="${U.esc(l.id)}">${U.esc(l.id)} ${U.esc(l.n)}</option>`).join('')}</select></div>
@@ -887,21 +895,32 @@ APP.pages['gm-level'] = {
       const p = this.SEL; if (!p) return;
       p.cleared = p.cleared || {};
       const id = this.val('#glLv');
-      if (D('#glReset').checked) delete p.cleared[id];
-      else p.cleared[id] = Math.max(1, Math.min(3, this.num('#glStar')));
+      /* 严重 BUG 修复：文档要求「设置通关记录」需记录【通关波次 + 星级】，
+       * 但 glWave（通关波次）此前从未被读取保存，只有星级生效 ——
+       * 策划填了波次 15，实际什么都不记，跳关测试无法验证中途波次表现。
+       * 现在波次与星级一并落到 p.wave = { 关卡ID: 波次数 }。 */
+      const wave = Math.max(1, this.num('#glWave'));
+      p.wave = p.wave || {};
+      if (D('#glReset').checked) {
+        delete p.cleared[id]; delete p.wave[id];
+      } else {
+        p.cleared[id] = Math.max(1, Math.min(3, this.num('#glStar')));
+        p.wave[id] = wave;
+      }
       if (await this.save(p)) { AUDIT.log('GM设置通关', p.uid, id); this.toast('已设置', 'ok'); this.render(); }
     };
     const all = D('#glAll');
     if (all) all.onclick = async () => {
       const p = this.SEL; if (!p) return;
-      p.cleared = {}; (EX.levels || []).forEach((l) => { p.cleared[l.id] = 3; });
-      if (await this.save(p)) { AUDIT.log('GM全通关', p.uid, ''); this.toast('已全部设为3星', 'ok'); this.render(); }
+      p.cleared = {}; p.wave = {};
+      (EX.levels || []).forEach((l) => { p.cleared[l.id] = 3; p.wave[l.id] = 20; });
+      if (await this.save(p)) { AUDIT.log('GM全通关', p.uid, '全 3 星 + 20 波'); this.toast('已全部设为3星', 'ok'); this.render(); }
     };
     const cl = D('#glClear');
     if (cl) cl.onclick = async () => {
       const p = this.SEL; if (!p) return;
       if (!confirm('清空 ' + p.name + ' 的通关记录？')) return;
-      p.cleared = {};
+      p.cleared = {}; p.wave = {};
       if (await this.save(p)) { AUDIT.log('GM清空通关', p.uid, ''); this.toast('已清空', 'ok'); this.render(); }
     };
   },
