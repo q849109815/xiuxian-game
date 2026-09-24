@@ -879,10 +879,10 @@ const EX = {
       { id: 'W3', n: '狙击枪', icon: '🎯', img: 'assets/icon/w3_sniper.jpg', price: 8000, cur: 'gold', give: { M03: 10 } },
     ],
     '宝石': [
-      { id: 'GB1', n: '红宝石', icon: '🔴', price: 200, cur: 'diamond', give: { M05: 5 } },
-      { id: 'GB2', n: '蓝宝石', icon: '🔵', price: 200, cur: 'diamond', give: { M05: 5 } },
-      { id: 'GB3', n: '绿宝石', icon: '🟢', price: 200, cur: 'diamond', give: { M05: 5 } },
-      { id: 'GB4', n: '紫宝石', icon: '🟣', price: 300, cur: 'diamond', give: { M05: 8 } },
+      { id: 'GB1', n: '红宝石', icon: '🔴', price: 200, cur: 'diamond', give: { gem: 'G_R' } },
+      { id: 'GB2', n: '蓝宝石', icon: '🔵', price: 200, cur: 'diamond', give: { gem: 'G_B' } },
+      { id: 'GB3', n: '绿宝石', icon: '🟢', price: 200, cur: 'diamond', give: { gem: 'G_G' } },
+      { id: 'GB4', n: '紫宝石', icon: '🟣', price: 300, cur: 'diamond', give: { gem: 'G_P' } },
     ],
     /* ===== 表35 礼包内容明细表 GP01~GP06 =====
      * limit: {t:'once'|'daily'|'weekly'|'monthly'|'level'|'bossFirst', v}
