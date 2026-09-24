@@ -22,6 +22,9 @@ const SND = {
     this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = this.volSfx;
     this.sfxGain.connect(this.master);
     this.started = true;
+    /* 恢复玩家上次的音频设置（此前从不保存，每次刷新都回到默认全开） */
+    this.loadCfg();
+    this.applyCfg();
   },
 
   /* ---------- 基础发声器 ---------- */
@@ -202,12 +205,46 @@ const SND = {
     if (this.musicGain && this.musicOn) this.musicGain.gain.value = m;
     if (this.sfxGain && this.sfxOn) this.sfxGain.gain.value = s;
   },
+
+  /* =========================================================
+   * 音频设置持久化
+   * BUG：SND 有完整的 musicOn / sfxOn / volMusic / volSfx 状态，
+   * 但设置面板里根本没有音频入口，这些字段全项目零调用（除定义处）。
+   * 结果：玩家无法关闭音乐/音效，也无法调音量，且状态从不保存。
+   * 现在补上本地持久化，启动时恢复。
+   * ========================================================= */
+  SKEY: 'zb_snd_cfg',
+  loadCfg() {
+    try {
+      const raw = localStorage.getItem(this.SKEY);
+      if (!raw) return;
+      const c = JSON.parse(raw);
+      if (typeof c.musicOn === 'boolean') this.musicOn = c.musicOn;
+      if (typeof c.sfxOn === 'boolean') this.sfxOn = c.sfxOn;
+      if (typeof c.volMusic === 'number') this.volMusic = Math.max(0, Math.min(1, c.volMusic));
+      if (typeof c.volSfx === 'number') this.volSfx = Math.max(0, Math.min(1, c.volSfx));
+    } catch (e) {}
+  },
+  saveCfg() {
+    try {
+      localStorage.setItem(this.SKEY, JSON.stringify({
+        musicOn: this.musicOn, sfxOn: this.sfxOn,
+        volMusic: this.volMusic, volSfx: this.volSfx,
+      }));
+    } catch (e) {}
+  },
+  /* 应用已加载的配置到增益节点（init 之后调用） */
+  applyCfg() {
+    if (this.musicGain) this.musicGain.gain.value = this.musicOn ? this.volMusic : 0;
+    if (this.sfxGain) this.sfxGain.gain.value = this.sfxOn ? this.volSfx : 0;
+  },
 };
 
 /* 首次交互解锁音频 */
 (function () {
   const unlock = () => {
     SND.init();
+    SND.applyCfg();
     if (SND.ctx && SND.musicOn) SND.bgm('base');
     document.removeEventListener('pointerdown', unlock);
     document.removeEventListener('keydown', unlock);
