@@ -322,7 +322,31 @@ const APP = {
       localStorage.setItem(this.PLIST_CACHE_KEY, JSON.stringify({ at: Date.now(), list: list }));
     } catch (e) {}
   },
+  /* =========================================================
+   * 网络就绪等待
+   * ---------------------------------------------------------
+   * 致命时序 BUG：后台一进页面就立刻 loadPlayers，而此时 Net 的端点探测
+   * 往往还没跑完，Net.online 仍是 false。ghReq 在离线状态下会「快速放弃」
+   * （只试一批端点就 break），于是四路全部返回空 → 列表停在旧快照。
+   * 等用户手动点「刷新」时网络早已恢复，同一份 scanDiag 却能扫到 2 项 ——
+   * 这正是用户截图里「存档目录 2 项 / 当前列表 1 人 / 收集UID 0 个」的原因。
+   * 现在：拉取前先确保探测完成。
+   * ========================================================= */
+  sleep(ms) { return new Promise((r) => setTimeout(r, ms)); },
+
+  async ensureNet() {
+    if (typeof Net === 'undefined') return false;
+    if (Net.online === true && Net.endpoint) return true;
+    try {
+      if (Net.init) await window.TMO(Net.init(), 20000, null);
+      else if (Net.probe) await window.TMO(Net.probe(), 20000, null);
+    } catch (e) {}
+    return Net.online === true;
+  },
+
   async loadPlayers(opt = {}) {
+    /* ⓪ 拉取前先确保网络探测完成（关键：否则离线态下 ghReq 会快速放弃） */
+    await this.ensureNet();
     /* ① 先用快照秒开（除非强制刷新） */
     const snap = this.loadSnapshot();
     if (snap && !opt.force) {
@@ -394,15 +418,20 @@ const APP = {
 
     if (uids.length) {
       this.SRC_NOTE = srcs.join(' + ');
+    } else if (!opt._retry) {
+      /* 四路全失败 → 重新探测一次网络后再试一轮（首次常因探测未完成而全败） */
+      try { if (Net && Net.reset) { Net.reset(); await this.ensureNet(); } } catch (e) {}
+      await this.sleep(1200);
+      return this.loadPlayers(Object.assign({}, opt, { _retry: 1, silent: false }));
     } else if (snap) {
-      /* 四路全失败 —— 保留快照但标明来源，不再假装是最新 */
+      /* 重试仍失败 —— 保留快照但标明来源，不再假装是最新 */
       this.PLIST = snap.list; this.PLIST_AT = snap.at;
-      this.SRC_NOTE = '本地快照（云端四路均不可达）';
+      this.SRC_NOTE = '本地快照（云端四路均不可达，已重试）';
       if (!opt.silent) this.render();
       return;
     } else {
       if (!this.PLIST) this.PLIST = [];
-      this.SRC_NOTE = '无数据（云端不可达）';
+      this.SRC_NOTE = '无数据（云端不可达，已重试）';
       if (!opt.silent) this.render();
       return;
     }
