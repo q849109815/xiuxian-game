@@ -920,6 +920,13 @@ r_tavern(p, tab) {
           p.diamond = (p.diamond || 0) + amt;
         }
         else if (k === 'stamina') p.stamina = (p.stamina || 0) + g.give[k];
+        else if (k === 'gem') {
+          /* 可镶嵌宝石：give: { gem: 'G_R' }
+           * 修复：此前没有该分支，宝石类商品会落到 p.mat['gem']，
+           *       买了红宝石但宝石页数量永远为 0，无法镶嵌 */
+          const gid = g.give[k];
+          if (gid) { p.gems = p.gems || {}; p.gems[gid] = (p.gems[gid] || 0) + 1; }
+        }
         else if (/^chip/.test(k)) {
           /* 芯片类：直接生成对应品质芯片进背包 */
           const qmap = { chipN: 'n', chipE: 'e', chipL: 'l' };
@@ -1808,6 +1815,16 @@ r_tavern(p, tab) {
 
   /* ---------- 技能三选一 ---------- */
   showSkillChoice(picks) {
+    /* 健壮性修复：picks 为空/未传时（战斗外调用、或抽取失败）会一路崩到
+     * `picks.map(...)`，且 15 秒倒计时回调里 `picks[0]` 会二次崩溃。
+     * 这里统一兜底：无候选则直接收起面板，避免白屏与报错刷屏 */
+    if (!picks || !picks.length) {
+      picks = (BT._picks && BT._picks.length) ? BT._picks : [];
+    }
+    if (!picks.length) {
+      try { this.hideChoice(); } catch (e) {}
+      return;
+    }
     /* 截图特征：顶部「选择技能」+ 15 秒倒计时 */
     const chT = $('#chTitle'); if (chT) chT.textContent = '选择技能';
     this.chTime = 15;
@@ -1848,7 +1865,8 @@ r_tavern(p, tab) {
           ? `<img src="${s.img}" style="width:38px;height:38px;border-radius:8px;object-fit:cover">`
           : s.icon}</i>
         <div class="ci"><div class="cn"><span style="color:${el.c}">${s.n}</span>
-          ${L ? `<span class="tag y">Lv.${L}→${L + 1}</span>` : '<span class="tag g">NEW</span>'}</div>
+          ${L ? `<span class="tag y">Lv.${L}→${L + 1}</span>`
+              : (isNew ? '' : '<span class="tag g">未学习</span>')}</div>
           <div class="cd2">${s.desc}</div>
           <div class="cl">${isNew ? '<b style="color:#ff5c7a">学习' + s.n + '</b>' : kindTxt} · ${s.up}</div>
         </div>
