@@ -108,6 +108,35 @@ const UI = {
     this.bind(key, this.curTab[key]);
   },
   close() { $('#panel').classList.remove('on'); this.curPanel = null; },
+  /* 通用弹层（军团商店 / 军团副本用）
+   * 严重 BUG：b_legion 里两处调用 this.sheet(...)，但 UI 上【根本没有 sheet 方法】
+   *   （全项目 0 处定义）——点「军团商店」「军团活动」直接抛
+   *   "this.sheet is not a function"，两个面板永远打不开。
+   * 结果：军团捐献攒下的贡献【没有任何出口】——
+   *   LS01~LS06（金币/合金/稀有金属/碎片/芯片/红宝石）一件都买不了；
+   *   LA01~LA03 三个军团副本也进不去，贡献只能靠捐、花不掉。
+   *   （此前测试是直接调兑换逻辑验的，所以没暴露点击链路断了。）
+   * 这里补上：复用 #sweepBox 这个 modal 容器。
+   */
+  sheet(title, html) {
+    const box = document.getElementById('sweepBox');
+    if (!box) { try { this.toast(String(title || ''), 'err'); } catch (e) {} return; }
+    box.innerHTML = `<div class="pn-box"><div class="pn-hd"><b>${this.esc(title)}</b>
+      <button id="shX">✕</button></div><div class="pn-main"><div class="pn-body">${html || ''}</div></div></div>`;
+    box.classList.add('on');
+    const x = document.getElementById('shX');
+    if (x) x.onclick = () => { box.classList.remove('on'); box.innerHTML = ''; };
+    box.onclick = (e) => { if (e.target === box) { box.classList.remove('on'); box.innerHTML = ''; } };
+    return box;
+  },
+  /* 关闭通用弹层（军团商店/副本兑换后调用）
+   * BUG：b_legion 两处调用 this.closeSheet()，但 UI 上【没有这个方法】
+   *   → 兑换成功后抛 "this.closeSheet is not a function"，
+   *     后面的 open('legion') / home() 全都不执行，界面不刷新。 */
+  closeSheet() {
+    const box = document.getElementById('sweepBox');
+    if (box) { box.classList.remove('on'); box.innerHTML = ''; }
+  },
   render(key, tab) {
     const p = this.P; if (!p) return '<div class="empty">无数据</div>';
     const f = this['r_' + key]; return f ? f.call(this, p, tab) : '<div class="empty">待开发</div>';
@@ -314,7 +343,30 @@ r_tavern(p, tab) {
         else if (String(g.item).indexOf('gem_') === 0) {
           const gid = g.item.slice(4);
           p.gems = p.gems || {}; p.gems[gid] = (p.gems[gid] || 0) + g.n2;
-        } else { p.mat = p.mat || {}; p.mat[g.item] = (p.mat[g.item] || 0) + g.n2; }
+        }
+        /* 芯片（LS05「普通芯片」200 贡献）
+         * BUG：军团商店这段是【内联发放】，只认 gold / gem_，
+         *      其余一律 p.mat[g.item] —— 于是 C01 被写进 p.mat['C01']。
+         *      而芯片真实存放在 p.bag，芯片面板只读 p.bag。
+         * 结果：花 200 贡献兑换「普通芯片」，提示兑换成功，
+         *       芯片页永远 0 颗，既不能装备也不能合成，贡献白捐。
+         * （成就商店 AS09~AS11、活动商店 ES06~ES08 走 E.grant()，
+         *   grant 里有 C0x 分支，所以那两处是对的；只有这条内联漏了。）
+         * 顺带兼容 chipN/chipE/chipL/chipRed 与 title/frame，
+         * 防止后台热更给军团商店加这些奖励时重演。 */
+        else if (/^C0[1-3]$/.test(g.item) || /^chip/.test(g.item)) {
+          const q = (g.item === 'C02' || g.item === 'chipE') ? '蓝'
+            : (g.item === 'C01' || g.item === 'chipN' || g.item === 'chip') ? '白' : '红';
+          const cnt = Math.max(1, Math.min(20, Math.floor(Number(g.n2) || 1)));
+          let ok = 0;
+          for (let i = 0; i < cnt; i++) {
+            try { const c = E.giveChipByQuality ? E.giveChipByQuality(p, q) : null; if (c) ok++; } catch (e) {}
+          }
+          if (!ok) { p.mat = p.mat || {}; p.mat.M03 = (p.mat.M03 || 0) + cnt * 2; }
+        }
+        else if (g.item === 'title') { p.titles = p.titles || []; if (p.titles.indexOf(g.n2) < 0) p.titles.push(g.n2); }
+        else if (g.item === 'frame') { p.frames = p.frames || []; if (p.frames.indexOf(g.n2) < 0) p.frames.push(g.n2); }
+        else { p.mat = p.mat || {}; p.mat[g.item] = (p.mat[g.item] || 0) + g.n2; }
         E.save(p);
         this.toast('兑换成功：' + g.n, 'ok');
         if (window.SND) SND.play('get');
