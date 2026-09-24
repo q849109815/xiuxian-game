@@ -1089,17 +1089,57 @@ r_tavern(p, tab) {
           const gid = g.give[k];
           if (gid) { p.gems = p.gems || {}; p.gems[gid] = (p.gems[gid] || 0) + 1; }
         }
+        /* 皮肤（SH08「废土战甲皮肤」680 钻）
+         * BUG：b_shop 这段是【内联发放】，不走 E.grant()，
+         *      而内联分支里根本没有 skin → 掉进最后的 else：
+         *        p.mat['skin'] = 'sk_c01b'
+         *      皮肤真实存放在 p.skins（数组），当前穿戴叫 p.skin（字符串）。
+         *      结果：花 680 钻买皮肤，扣了钻石、提示成功，
+         *            但皮肤页里根本没有、也穿不上，钻石白花。
+         *      （E.grant() 里 skin 分支是对的，这条内联路径漏了。）
+         * 顺带把 title / frame / ach / evToken 也接上，避免后台热更
+         * 给商品加上这些奖励时重演同类问题。 */
+        else if (k === 'skin') {
+          const sid = g.give[k];
+          if (sid) {
+            p.skins = p.skins || [];
+            if (p.skins.indexOf(sid) < 0) p.skins.push(sid);
+            p.skin = sid;
+          }
+        }
+        else if (k === 'title') { p.titles = p.titles || []; if (p.titles.indexOf(g.give[k]) < 0) p.titles.push(g.give[k]); }
+        else if (k === 'frame') { p.frames = p.frames || []; if (p.frames.indexOf(g.give[k]) < 0) p.frames.push(g.give[k]); }
+        else if (k === 'ach') { p.ach = (p.ach || 0) + (Number(g.give[k]) || 0); }
+        else if (k === 'evToken' || k === 'ev') {
+          const n = Number(g.give[k]) || 0;
+          if (n > 0) { p.evToken = (p.evToken || 0) + n; p.evScore = (p.evScore || 0) + n; }
+        }
         else if (/^chip/.test(k)) {
           /* 芯片类：直接生成对应品质芯片进背包 */
-          const qmap = { chipN: 'n', chipE: 'e', chipL: 'l' };
+          /* chipRed 此前【不在映射表里】：
+           *   qmap['chipRed'] = undefined → q = 'n'（普通/白色）
+           *   商店 SH09「传说芯片包」rw 配的正是 { chipRed: 2 }
+           *   → 98 元买到手的是 2 块【白色】生命芯片，不是传说红芯片。
+           *   （engine.js 战令那处 qmap 已含 chipRed，本处漏了。）
+           * 现在与 main.js 旧存档迁移表保持一致。 */
+          const qmap = { chipN: 'n', chipE: 'e', chipL: 'l', chipRed: 'l', chip: 'n' };
           const q = qmap[k] || 'n';
           try {
             /* 此前传品质码给 rollChipById（它收的是 CH01~CH08 定义ID）
              * → 恒回退 chips[0]，980 钻的「传说芯片包」到手是白色生命芯片 */
-            const c = E.rollChipByQuality ? E.rollChipByQuality(q) : null;
-            if (c) { p.bag = p.bag || []; p.bag.push(c); }
-            else p.mat[k] = (p.mat[k] || 0) + g.give[k];
-          } catch (e) { p.mat[k] = (p.mat[k] || 0) + g.give[k]; }
+            /* 数量：此前无论配置写几个，一律只 push 1 块。
+             *   SH09「传说芯片包」980 钻，give 是 { chipL: 2 }
+             *   → 实际只发 1 块传说芯片，宣传的「×2」少给一半。
+             *   （E.grant() 里有按数量循环，这条内联路径漏了。）
+             * 现在按配置数量发放。 */
+            const cnt = Math.max(1, Math.min(20, Math.floor(Number(g.give[k]) || 1)));
+            let ok = 0;
+            for (let i = 0; i < cnt; i++) {
+              const c = E.rollChipByQuality ? E.rollChipByQuality(q) : null;
+              if (c) { p.bag = p.bag || []; p.bag.push(c); ok++; }
+            }
+            if (!ok) p.mat[k] = (p.mat[k] || 0) + cnt;
+          } catch (e) { p.mat[k] = (p.mat[k] || 0) + (Number(g.give[k]) || 1); }
         }
         else p.mat[k] = (p.mat[k] || 0) + g.give[k];
       }
