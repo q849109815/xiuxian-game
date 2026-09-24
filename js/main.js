@@ -224,6 +224,12 @@ function startBattle(mode, levelId) {
     id = levelId || E.curLevel(P);
     if (!E.levelUnlocked(P, id)) { UI.toast('该关卡尚未解锁', 'err'); return; }
   }
+  /* 每日挑战次数（截图51：「今日剩余次数：3/3」）
+   * 无尽模式不占用该次数 */
+  if (mode !== 'endless') {
+    const rn = E.useRun ? E.useRun(P) : { ok: true };
+    if (!rn.ok) { UI.toast(rn.msg, 'err'); return; }
+  }
   /* 体力检查 */
   const sp = E.spendStamina(P, id);
   if (!sp.ok) { UI.toast(sp.msg, 'err'); return; }
