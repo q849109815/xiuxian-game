@@ -211,7 +211,7 @@ r_tavern(p, tab) {
         <div class="mi">${l.icon}</div>
         <div class="mn"><b>${l.n}</b><span>${l.desc}</span>
           <span>人数 ${l.mem} · 需要战力 ${E.fmt(l.need)}</span></div>
-        <button data-join="${l.id}" ${E.power(this.P) < l.need ? 'disabled' : ''}>加入</button>
+        <button data-join="${l.id}" ${E.power(p) < l.need ? 'disabled' : ''}>加入</button>
       </div>`).join('')}
       <div class="sub" style="padding:6px 2px">或花费 <b>20000 金币</b> 自建军团</div>
       <button class="btn" id="lgCreate" style="width:100%;margin-top:4px">🏰 自建军团（20000 金币）</button>
@@ -1156,6 +1156,22 @@ r_tavern(p, tab) {
   },
 
   /* ---------- 活动 ---------- */
+  /* 后台「活动创建」建出来的活动（id 形如 ACTxxx）此前没有任何按钮：
+   * 游戏端的参与入口是照 EV01/EV02/EV04/EV06 硬编码的，
+   * 于是运营新建的活动玩家只能看见、点不了，成了纯展示。
+   * 这里按活动自带的 levelId / rw 生成通用入口。 */
+  actExtraBtn(p, a) {
+    const isBuiltin = /^EV\d+$/.test(a.id || '');
+    if (isBuiltin) return '';
+    const got = ((p.actRwGot || {})[a.id]);
+    let h = '';
+    if (a.levelId) h += `<button class="btn sm" data-actlv="${a.id}">前往</button>`;
+    if (a.rw && Object.keys(a.rw).length) {
+      h += got ? '<span class="st off">已领</span>'
+        : `<button class="btn sm g" data-actrw="${a.id}" style="margin-left:4px">领奖</button>`;
+    }
+    return h;
+  },
   r_act(p, tab) {
     /* 后台「强制下架」/已结束的活动必须隐藏：
      * 此前游戏端原样列出全部活动，运营紧急下架了，玩家照样看得见、照样能参与。 */
@@ -1177,6 +1193,7 @@ r_tavern(p, tab) {
         ${a.id === 'EV02' ? `<button class="btn sm" data-raid="1" ${E.bossRaidLeft(p) > 0 ? '' : 'disabled'}>挑战</button>` : ''}
         ${a.id === 'EV01' ? `<button class="btn sm" data-evendless="1">参与</button>` : ''}
         ${a.id === 'EV06' ? `<button class="btn sm" data-evrank="1">查看</button>` : ''}
+        ${this.actExtraBtn(p, a)}
       </div>`).join('') : '<div class="lbl">暂无活动</div>'}
     </div>
     <div class="card"><div class="card-t">签到 <span class="sub">每日登录领取</span></div>
@@ -1209,6 +1226,32 @@ r_tavern(p, tab) {
     /* 表22 EV06 无尽冲榜 → 排行榜 */
     $$('#pnBody [data-evrank]').forEach((b) => { b.onclick = () => {
       this.close(); this.open('rank');
+    }; });
+    /* 后台新建活动：前往指定关卡 */
+    $$('#pnBody [data-actlv]').forEach((b) => { b.onclick = () => {
+      const a = (EX.acts || EX.activities || []).find((x) => x.id === b.dataset.actlv);
+      if (!a) return;
+      const lv = a.levelId;
+      if (!E.levelUnlocked(p, lv)) return this.toast('该活动关卡尚未解锁', 'err');
+      this.close(); startBattle('normal', lv);
+    }; });
+    /* 后台新建活动：领取奖励（每个活动限一次） */
+    $$('#pnBody [data-actrw]').forEach((b) => { b.onclick = () => {
+      const a = (EX.acts || EX.activities || []).find((x) => x.id === b.dataset.actrw);
+      if (!a || !a.rw) return;
+      /* 参与条件校验 */
+      const c = a.cond || {};
+      if (c.lvMin && (p.lv || 1) < c.lvMin) return this.toast('等级不足（需 Lv.' + c.lvMin + '）', 'err');
+      if (c.clearedMin && Object.keys(p.cleared || {}).length < c.clearedMin) {
+        return this.toast('需通关 ' + c.clearedMin + ' 关', 'err');
+      }
+      p.actRwGot = p.actRwGot || {};
+      p.actRwGot[a.id] = 1;
+      E.grant(p, a.rw);
+      E.save(p);
+      this.toast('已领取「' + (a.n || '活动') + '」奖励', 'ok');
+      if (window.SND) SND.play('get');
+      this.open('act'); this.home();
     }; });
   },
 
@@ -1770,6 +1813,9 @@ r_tavern(p, tab) {
     /* 顶部波次 */
     const bw = $('#btWave'); if (bw) bw.textContent = r.wave;
     const bwm = $('#btWaveMax'); if (bwm) bwm.textContent = r.waveTotal;
+    /* P 判空：战斗 HUD 每帧刷新，若玩家对象异常会连续抛错打断渲染。
+     * 此前 this.P 为 null 时 E.power(null) / this.P.diamond 直接崩溃。 */
+    if (!this.P) return;
     /* 左上英雄立绘 + 战力 */
     const hi = $('#btHeroImg');
     if (hi && !hi.src) { const av = (E.char(this.P) || {}).img; if (av) hi.src = av; }
