@@ -559,7 +559,11 @@ APP.pages['perm-audit'] = {
 APP.pages['risk-cheat'] = {
   g: '敏感风控', n: '外挂监控', i: '🕵️', perm: 'risk.cheat',
   render() {
-    const rule = this.riskRule || { kps: 12, dmg: 50000, mat: 999999 };
+    /* 阈值修正：原默认 战力 50000 / 日均击杀 1200，
+     * 而正常玩家中期战力就上百万、单局击杀 400~800（一天打十几局即上万），
+     * 实测满配账号战力 194 万 —— 默认阈值会把【所有正常玩家】全标成外挂，
+     * 预警列表满屏红，风控页完全不可用。现按实际数值量级上调。 */
+    const rule = this.riskRule || { kps: 300, dmg: 5000000, mat: 9999999 };
     const hits = [];
     this.PLIST.forEach((p) => {
       const st = p.stats || {};
