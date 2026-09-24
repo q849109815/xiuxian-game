@@ -6,7 +6,7 @@
 window.addEventListener('error', (e) => {
   try {
     const b = JSON.parse(localStorage.getItem('zb_errlog') || '[]');
-    b.unshift({ at: Date.now(), msg: String(e.message || ''), src: String(e.filename || ''),
+    b.unshift({ lv: 'ERROR', at: Date.now(), msg: String(e.message || ''), src: String(e.filename || ''),
       line: e.lineno || 0, stack: String((e.error && e.error.stack) || '').slice(0, 400) });
     if (b.length > 200) b.length = 200;
     localStorage.setItem('zb_errlog', JSON.stringify(b));
@@ -15,7 +15,7 @@ window.addEventListener('error', (e) => {
 window.addEventListener('unhandledrejection', (e) => {
   try {
     const b = JSON.parse(localStorage.getItem('zb_errlog') || '[]');
-    b.unshift({ at: Date.now(), msg: 'Promise: ' + String((e.reason && e.reason.message) || e.reason || ''),
+    b.unshift({ lv: 'REJECT', at: Date.now(), msg: 'Promise: ' + String((e.reason && e.reason.message) || e.reason || ''),
       src: 'promise', line: 0, stack: '' });
     if (b.length > 200) b.length = 200;
     localStorage.setItem('zb_errlog', JSON.stringify(b));
@@ -121,12 +121,17 @@ APP.pages['log-err'] = {
     let l = [];
     try { l = JSON.parse(localStorage.getItem('zb_errlog') || '[]'); } catch (e) {}
     const lv = this.errLv || 'ALL';
-    const list = lv === 'ALL' ? l : l.filter((x) => (lv === 'ERROR' ? true : false));
+    /* BUG：原实现 `l.filter((x) => (lv === 'ERROR' ? true : false))`
+     * 无论选哪个都返回 true —— 「全部」和「ERROR」两个选项显示的内容完全一样，
+     * 这个下拉框从一开始就是个摆设，选了跟没选一样。
+     * 现在按记录里真实的 lv 字段过滤（旧记录无 lv 时按 ERROR 归类，避免丢数据）。 */
+    const list = lv === 'ALL' ? l : l.filter((x) => (x && (x.lv || 'ERROR')) === lv);
     return `<div class="ph"><h2>🐛 服务器报错日志</h2><span class="tagx">${l.length} 条</span></div>
       <div class="card"><div class="card-t">日志级别</div>
         <select id="leLv" style="width:150px">
           <option value="ALL"${lv === 'ALL' ? ' selected' : ''}>全部</option>
-          <option value="ERROR"${lv === 'ERROR' ? ' selected' : ''}>ERROR</option>
+          <option value="ERROR"${lv === 'ERROR' ? ' selected' : ''}>运行时 ERROR</option>
+          <option value="REJECT"${lv === 'REJECT' ? ' selected' : ''}>未捕获 Promise</option>
         </select>
         <button class="btn n sm" id="leClr" style="margin-left:8px">清空</button>
       </div>
@@ -492,7 +497,7 @@ APP.pages['perm-role'] = {
     const groups = {};
     all.forEach((a) => { (groups[a.g] = groups[a.g] || []).push(a); });
     return `<div class="ph"><h2>🔑 角色权限分组</h2><span class="tagx">最小权限原则</span></div>
-      <div class="card"><div class="card-t">当前角色 <span class="sub">${PERM.ROLES[PERM.curRole()].n}</span></div>
+      <div class="card"><div class="card-t">当前角色 <span class="sub">${(PERM.ROLES[PERM.curRole()] || PERM.ROLES.admin).n}</span></div>
         <select id="prCur" style="width:200px">
           ${Object.keys(PERM.ROLES).map((r) => `<option value="${r}"${PERM.curRole() === r ? ' selected' : ''}>${PERM.ROLES[r].n}</option>`).join('')}
         </select>
