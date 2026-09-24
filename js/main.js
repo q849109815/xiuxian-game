@@ -90,6 +90,8 @@ const MAIN = {
     E.resetTasks(p); E.tickStamina(p);
     /* 图鉴回填：补录已拥有但历史未记账的武器/皮肤 */
     try { if (E.codexBackfill) E.codexBackfill(p); } catch (e) {}
+    /* 巡逻收益按章节同步（此前恒为 16 金币/小时） */
+    try { if (E.syncPatrol) E.syncPatrol(p); } catch (e) {}
   },
 
   async save() {
