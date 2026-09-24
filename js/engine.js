@@ -1649,6 +1649,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   useAd(p, adId) {
     if (this.adLeft(p, adId) <= 0) return { ok: false, msg: '今日次数已用完' };
     p.adUsed[adId] = (p.adUsed[adId] || 0) + 1;
+    /* 累计观看次数（不清零）
+     * BUG：后台「广告统计」标称「总观看次数 / 人均观看」，
+     * 读的却是 p.adUsed —— 而 adUsed 每天会被清空（见 adLeft 里的 dailyKey 判断）。
+     * 结果后台看到的永远是【今日】数据，标签却写着「总」，
+     * 运营据此做广告变现分析会严重低估。
+     * 这里新增不清零的 adTotal 供后台统计累计值。 */
+    p.adTotal = p.adTotal || {};
+    p.adTotal[adId] = (p.adTotal[adId] || 0) + 1;
     return { ok: true };
   },
 };
