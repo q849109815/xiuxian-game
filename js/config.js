@@ -152,6 +152,30 @@ const EX = {
     { src: 'BOSS感染母体', item: 'P02', rate: 0.30, min: 1, max: 2, ch: 1.8, q: '紫' },
     { src: 'BOSS巨型母体', item: 'M03', rate: 1.00, min: 5, max: 8, ch: 2.0, q: '紫', first: 1 },
     { src: 'BOSS巨型母体', item: 'C03', rate: 0.30, min: 1, max: 1, ch: 2.0, q: '红', first: 1 },
+    /* ===== 6 个真实 BOSS 的掉落（此前完全缺失）=====
+     * 上一轮补进了开垦者/巢穴之母/深渊领主/暴食者/修道士/尸王 6 个 BOSS，
+     * 但 globalDrops 里没有对应 src。而 kill() 是 'BOSS'+bossDef.n 精确匹配，
+     * 查不到就是空数组 → 这 6 个 BOSS 击杀后什么都不掉（后期材料来源断掉）。
+     * 数量与稀有度按章节递增。 */
+    { src: 'BOSS开垦者', item: 'M03', rate: 1.00, min: 5, max: 8, ch: 2.0, q: '紫', first: 1 },
+    { src: 'BOSS开垦者', item: 'C01', rate: 0.60, min: 1, max: 2, ch: 2.0, q: '白' },
+    { src: 'BOSS开垦者', item: 'P01', rate: 0.50, min: 3, max: 5, ch: 2.0, q: '蓝' },
+    { src: 'BOSS巢穴之母', item: 'M03', rate: 1.00, min: 7, max: 11, ch: 2.5, q: '紫', first: 1 },
+    { src: 'BOSS巢穴之母', item: 'C02', rate: 0.45, min: 1, max: 2, ch: 2.5, q: '蓝' },
+    { src: 'BOSS巢穴之母', item: 'P02', rate: 0.35, min: 2, max: 4, ch: 2.5, q: '紫' },
+    { src: 'BOSS深渊领主', item: 'M03', rate: 1.00, min: 10, max: 15, ch: 3.0, q: '紫', first: 1 },
+    { src: 'BOSS深渊领主', item: 'C03', rate: 0.35, min: 1, max: 1, ch: 3.0, q: '红', first: 1 },
+    { src: 'BOSS深渊领主', item: 'P01', rate: 0.55, min: 5, max: 8, ch: 3.0, q: '蓝' },
+    { src: 'BOSS暴食者', item: 'M03', rate: 1.00, min: 13, max: 19, ch: 3.5, q: '紫', first: 1 },
+    { src: 'BOSS暴食者', item: 'C03', rate: 0.40, min: 1, max: 2, ch: 3.5, q: '红', first: 1 },
+    { src: 'BOSS暴食者', item: 'P02', rate: 0.45, min: 3, max: 6, ch: 3.5, q: '紫' },
+    { src: 'BOSS修道士', item: 'M03', rate: 1.00, min: 17, max: 24, ch: 4.0, q: '紫', first: 1 },
+    { src: 'BOSS修道士', item: 'C03', rate: 0.50, min: 1, max: 2, ch: 4.0, q: '红', first: 1 },
+    { src: 'BOSS修道士', item: 'P02', rate: 0.50, min: 4, max: 7, ch: 4.0, q: '紫' },
+    { src: 'BOSS尸王', item: 'M03', rate: 1.00, min: 24, max: 34, ch: 5.0, q: '紫', first: 1 },
+    { src: 'BOSS尸王', item: 'C03', rate: 0.65, min: 2, max: 3, ch: 5.0, q: '红', first: 1 },
+    { src: 'BOSS尸王', item: 'P02', rate: 0.60, min: 6, max: 10, ch: 5.0, q: '紫' },
+    { src: 'BOSS尸王', item: 'M05', rate: 0.80, min: 4, max: 8, ch: 5.0, q: '红' },
     /* 补齐缺失来源（原表未覆盖精英/小僵尸，打精英不掉东西） */
     { src: '精英僵尸', item: 'M02', rate: 0.90, min: 2, max: 4, ch: 1.2, q: '蓝' },
     { src: '精英僵尸', item: 'M03', rate: 0.25, min: 1, max: 2, ch: 1.3, q: '紫' },
