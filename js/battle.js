@@ -808,9 +808,13 @@ const BT = {
       }
     }
     if (z.ai === 'boomer' && z.d.id !== 'zibao') this.boom(z);
-    /* 表45 全局掉落掉率明细：按怪物来源精确掉落 */
+    /* 表45 全局掉落掉率明细：按怪物来源精确掉落
+     * 新增章节阶梯：globalDrops 的 ch 字段是「第几章起才掉」，此前全项目零引用
+     * → 第 1 章打精英僵尸也会掉后期才该出现的稀有金属/角色碎片。
+     * 现在按当前章节过滤，同一 item 取「已解锁的最高档」，低档自动被覆盖。 */
     const srcName = z.isBoss ? ('BOSS' + (z.bossDef ? z.bossDef.n : (z.d.n || ''))) : (z.d.n || '');
-    const table = (EX.globalDrops || []).filter((d) => d.src === srcName);
+    const curCh = (r.def && r.def.ch) || (r.ch || 1);
+    const table = EX.dropFor(srcName, curCh);
     const got = [];
     for (const d of table) {
       /* 首杀必掉 */
