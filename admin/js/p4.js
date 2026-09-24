@@ -20,7 +20,7 @@ APP.pages['acc-destroy'] = {
         <div class="plist">${this.view().slice(0, 20).map((x) => this.pcard(x)).join('') || '<div class="lbl">无玩家</div>'}</div>
       </div>
       ${p ? `<div class="card"><div class="card-t">② 确认注销 <span class="sub">${U.esc(p.name)} · ${U.esc(p.uid)}</span></div>
-        <div class="kv"><span>账号名</span><b>${U.esc(this.acctNameOf(p) || '—')}</b></div>
+        <div class="kv"><span>账号名</span><b id="dkAcct">${U.esc(this.acctNameOf(p) || '读取中…')}</b></div>
         <div class="kv"><span>等级</span><b>Lv.${p.lv || 1}</b></div>
         <div class="kv"><span>战力</span><b class="y">${U.fmt(U.pw(p))}</b></div>
         <div class="kv"><span>存档路径</span><b style="font-size:10px">data/zb/players/${U.esc(p.uid)}.json</b></div>
@@ -38,6 +38,12 @@ APP.pages['acc-destroy'] = {
   },
   bind() {
     this.bindSearch('dkKey'); this.bindSel();
+    (async () => {
+      const p = this.SEL; if (!p) return;
+      const n = await this.acctNameOfAsync(p);
+      const el = D('#dkAcct');
+      if (el) el.textContent = n || '(云端无账号记录)';
+    })();
     const go = D('#dkGo');
     if (go) go.onclick = async () => {
       const p = this.SEL; if (!p) return;
@@ -57,9 +63,29 @@ APP.pages['acc-destroy'] = {
           acctMarked = await DB.set('data/zb/users/' + uid + '.json', u, '销户标记');
         }
       } catch (e) {}
-      /* 2) 删除云端存档 */
+      /* 2) 删除云端存档
+       * 补充：若删除失败（GitHub 权限/网络），至少在存档里打上注销标记，
+       * 这样玩家列表会显示「已注销」，游戏端也能拦截登录，
+       * 不会看起来"销户了还好好地在那儿"。
+       * 致命 BUG 修复：Net.del 在 GET 取不到 sha、或各代理端点 DELETE 均失败时
+       * 会「返回 false」而不抛异常。此前写成
+       *     try { await Net.del(...); delOk = true; } catch(e) {}
+       * 只要没抛异常就认为删除成功 —— 实际文件还在 GitHub 上，
+       * 界面却提示「存档已删」。玩家下次刷新列表又出现了，
+       * 于是反复销户、重复记账（用户实测点了 4 次仍存在）。
+       * 现在以返回值为准，失败明确提示。 */
       let delOk = false;
-      try { await Net.del(PDIR + uid + '.json'); delOk = true; } catch (e) {}
+      try { delOk = (await Net.del(PDIR + uid + '.json')) === true; } catch (e) { delOk = false; }
+      if (!delOk) {
+        /* 删除失败 → 落标记兜底（存档还在，但状态已生效） */
+        try {
+          const sp = await DB.get(PDIR + uid + '.json', null);
+          if (sp && sp.uid) {
+            sp.destroyed = true; sp.destroyAt = Date.now(); sp.destroyWhy = why;
+            await DB.set(PDIR + uid + '.json', sp, '销户标记（存档删除失败）');
+          }
+        } catch (e) {}
+      }
       /* 3) 从榜单移除 */
       let rankClean = 0;
       try {
@@ -82,20 +108,57 @@ APP.pages['acc-destroy'] = {
       AUDIT.log('销户', uid, name + ' 原因:' + why + ' 存档删除:' + (delOk ? '是' : '否')
         + ' 账号标记:' + (acctMarked ? '是' : '否') + ' 榜单清理:' + rankClean + ' 操作人:' + op);
       this.SEL = null;
-      this.toast('已销户：' + name + (delOk ? '（存档已删）' : '（存档删除失败）'), 'ok');
+      if (delOk) {
+        this.toast('已销户：' + name + '（存档已删除）', 'ok');
+      } else {
+        this.toast('账号已标记注销，但云端存档删除失败（网络/权限），请点「重新扫描」后重试', 'err');
+      }
       this.render();
     };
   },
 };
 
-/* 由玩家存档反查账号名 */
+/* 由玩家存档反查账号名
+ *
+ * 严重 BUG 修复：此前只读管理员【本机】localStorage 的 zb_ucache ——
+ * 那是玩家自己登录时留下的凭据缓存，运营人员的电脑上从来没有，
+ * 因此永远返回空字符串。重置密码一开始就
+ *   if (!name) return toast('未查到该玩家的账号名，无法重置')
+ * 直接退出 —— 重置密码功能 100% 不可用（实测 hash 从未被改写）。
+ *
+ * 现在改为三级回退：
+ *   ① 云端账号文件 data/zb/users/{uid}.json 的 name（权威来源）
+ *   ② 本机 zb_ucache 缓存
+ *   ③ 存档里记录的 ext.acctName
+ */
+APP.acctCache = {};
 APP.acctNameOf = function (p) {
+  if (!p) return '';
+  if (this.acctCache[p.uid]) return this.acctCache[p.uid];
   try {
     const c = JSON.parse(localStorage.getItem('zb_ucache') || '{}');
-    const hit = c[p.uid];
-    if (hit) return hit.name;
+    if (c[p.uid] && c[p.uid].name) return c[p.uid].name;
   } catch (e) {}
   return (p.ext && p.ext.acctName) || '';
+};
+/* 异步版本：从云端账号文件读取（真实来源） */
+APP.acctNameOfAsync = async function (p) {
+  if (!p || !p.uid) return '';
+  if (this.acctCache[p.uid]) return this.acctCache[p.uid];
+  let name = '';
+  try {
+    const u = await DB.get('data/zb/users/' + p.uid + '.json', null);
+    if (u && u.name) name = u.name;
+  } catch (e) {}
+  if (!name) {
+    try {
+      const c = JSON.parse(localStorage.getItem('zb_ucache') || '{}');
+      if (c[p.uid] && c[p.uid].name) name = c[p.uid].name;
+    } catch (e) {}
+  }
+  if (!name) name = (p.ext && p.ext.acctName) || '';
+  if (name) this.acctCache[p.uid] = name;
+  return name;
 };
 
 APP.destroyLogHtml = function () {
@@ -119,7 +182,7 @@ APP.pages['acc-resetpwd'] = {
         <div class="plist">${this.view().slice(0, 20).map((x) => this.pcard(x)).join('') || '<div class="lbl">无玩家</div>'}</div>
       </div>
       ${p ? `<div class="card"><div class="card-t">② 设置新密码 <span class="sub">${U.esc(p.name)}</span></div>
-        <div class="kv"><span>账号名</span><b>${U.esc(this.acctNameOf(p) || '(未知)')}</b></div>
+        <div class="kv"><span>账号名</span><b id="rpAcct">${U.esc(this.acctNameOf(p) || '读取中…')}</b></div>
         <div class="kv"><span>UID</span><b style="font-size:10px">${U.esc(p.uid)}</b></div>
         <div class="fld"><label>新密码</label><input id="rpNew" value="123456" placeholder="至少 6 位"></div>
         <div class="fld"><label>操作人</label><input id="rpOp" value="admin"></div>
@@ -130,13 +193,20 @@ APP.pages['acc-resetpwd'] = {
   },
   bind() {
     this.bindSearch('rpKey'); this.bindSel();
+    /* 异步从云端账号文件回填真实账号名（不能只靠本机缓存） */
+    (async () => {
+      const p = this.SEL; if (!p) return;
+      const n = await this.acctNameOfAsync(p);
+      const el = D('#rpAcct');
+      if (el) el.textContent = n || '(云端无账号记录)';
+    })();
     const go = D('#rpGo');
     if (go) go.onclick = async () => {
       const p = this.SEL; if (!p) return;
       const np = this.val('#rpNew');
       if (!np || np.length < 6) return this.toast('新密码至少 6 位', 'err');
-      const name = this.acctNameOf(p);
-      if (!name) return this.toast('未查到该玩家的账号名，无法重置', 'err');
+      const name = await this.acctNameOfAsync(p);
+      if (!name) return this.toast('未查到该玩家的账号名（云端无 users 记录），无法重置', 'err');
       /* 重新计算 hash（与前端 UA.hash 保持一致） */
       const h = await this.pwdHash(np, name);
       const u = await DB.get('data/zb/users/' + p.uid + '.json', null);
@@ -226,7 +296,8 @@ APP.pages['acc-batchdestroy'] = {
             await DB.set('data/zb/users/' + p.uid + '.json', u, '批量销户');
           }
         } catch (e) {}
-        try { await Net.del(PDIR + p.uid + '.json'); ok++; } catch (e) {}
+        /* 同样以返回值为准，避免"假成功"计数 */
+        try { if ((await Net.del(PDIR + p.uid + '.json')) === true) ok++; } catch (e) {}
         risk.destroyLog.unshift({ uid: p.uid, name: p.name, why, op: 'batch', at: Date.now() });
       }
       await DB.set(DBP.risk, risk, '批量销户日志');
