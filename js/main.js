@@ -199,7 +199,8 @@ const MAIN = {
        * 现在一条记录同时带两套键，并同步写 endless.json。 */
       const row = { uid: P.uid, u: P.uid, name: P.name, n: P.name,
         lv: E.curLevel(P), pw: E.power(P),
-        eb: P.endlessBest || 0, t: P.endlessBest || 0 };
+        eb: P.endlessBest || 0, t: P.endlessBest || 0,
+        ev: P.evScore || 0 };
       const i = lb.findIndex((x) => (x.uid || x.u) === P.uid);
       if (i >= 0) lb[i] = row; else lb.push(row);
       lb.sort((a, b) => (b.eb || 0) - (a.eb || 0) || b.pw - a.pw);
@@ -225,10 +226,11 @@ const MAIN = {
       };
       P.rankEndless = (P.endlessBest || 0) > 0 ? pos(byEndless) : 0;
       P.rankPower = pos(byPower);
-      if (P.evScore != null) {
-        const byEv = lb.slice().sort((a, b) => (b.ev || 0) - (a.ev || 0));
-        P.rankEv = (P.evScore || 0) > 0 ? pos(byEv) : 0;
-      }
+      /* 活动冲榜：此前 P.evScore 恒为 undefined（从未赋值），
+       * 守卫 `if (P.evScore != null)` 让这段永远不执行 → rankEv 恒 0
+       * → 表33 RK08/RK09/RK10 奖励永不可领。现在按活动积分正常计算。 */
+      const byEv = lb.slice().sort((a, b) => (b.ev || 0) - (a.ev || 0));
+      P.rankEv = (P.evScore || 0) > 0 ? pos(byEv) : 0;
       try { E.save(P); } catch (e) {}
     } catch (e) {}
   },
@@ -571,6 +573,11 @@ function onBattleEnd(res, d) {
     if (endless) {
       rw.gold = 100 + r.wave * 20;
       P.endlessBest = Math.max(P.endlessBest || 0, r.wave);
+      /* 表22 EV01 丧尸围城 = 无尽模式，按存活波次发活动代币
+       * （此前 evToken 全项目零产出，活动商店 12 项商品一件都买不了） */
+      const tk = Math.max(10, r.wave * 3);
+      P.evToken = (P.evToken || 0) + tk;
+      P.evScore = (P.evScore || 0) + tk;
     } else {
       const lr = def.rw || {};
       rw.gold = lr.gold || 0;
