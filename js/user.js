@@ -59,6 +59,30 @@ const UA = {
     if (p.length > 32) return '密码最多 32 位';
     return '';
   },
+  /* 昵称校验
+   * BUG修复：此前账号走 chkName、密码走 chkPwd，唯独【昵称完全没有校验】——
+   *   register() 里直接把 nick 原样写进存档，前端也只校验了账号/密码/确认密码。
+   * 后果：① 昵称可以填 60 个字 → 主界面代号、排行榜、军团列表排版被撑破；
+   *       ② 昵称可以任意重复 → 排行榜/军团/好友里出现多个同名，无法区分。
+   * 配置表 tips.err.nameErr 早就写了「昵称需 2-8 个字」，却从未被使用。 */
+  chkNick(n) {
+    n = String(n || '').trim();
+    if (!n) return '请输入昵称';
+    if (n.length < 2 || n.length > 8) return (window.EX && EX.tip && EX.tip('err.nameErr')) || '昵称需 2-8 个字';
+    return '';
+  },
+  /* 昵称是否已被占用（读玩家索引）
+   * 读不到索引时【必须放行】——索引写入本来就吞异常，
+   * 不能因为云端抖动就让注册彻底失败。 */
+  async nickTaken(nick, selfId) {
+    try {
+      const r = await Net.read(this.IDX);
+      const list = (r && r.data && Array.isArray(r.data.list)) ? r.data.list : [];
+      const n = String(nick || '').trim();
+      if (!n) return false;
+      return list.some((x) => x && String(x.nick || '').trim() === n && x.uid !== selfId);
+    } catch (e) { return false; }
+  },
 
   /* ---------- 云端用户记录 ---------- */
   path(id) { return 'data/zb/users/' + id + '.json'; },
@@ -141,9 +165,14 @@ const UA = {
   async register(name, pwd, nick, gender) {
     let e = this.chkName(name); if (e) return { ok: false, msg: e };
     e = this.chkPwd(pwd); if (e) return { ok: false, msg: e };
+    /* 昵称：长度校验 + 重名校验（此前两项都没有） */
+    e = this.chkNick(nick); if (e) return { ok: false, msg: e };
     const id = this.acctId(name);
     const exist = await this.readUser(id);
     if (exist) return { ok: false, msg: '该账号已被注册' };
+    if (await this.nickTaken(nick, id)) {
+      return { ok: false, msg: (window.EX && EX.tip && EX.tip('err.dupName')) || '该代号已被占用' };
+    }
     const h = await this.hash(pwd, name);
     const u = {
       id, name: String(name).trim(), nick: nick || String(name).trim(),
