@@ -32,6 +32,12 @@ const MAIN = {
     await Net.init().catch(() => {});
     const n = document.getElementById('lgNet');
     if (n) n.textContent = Net.online ? '● 已连接' : '○ 离线（可单机游玩）';
+    /* 需求：每次打开都必须输入账号密码。
+     * 清掉上一次留下的登录态（zb_uid），否则残留 UID 会让 MAIN.login 的
+     * 「无账号不得进入」守卫失效 —— 拿着旧 UID 一样能直接读存档。
+     * 账号名 zb_name 保留，仅用于回填输入框。 */
+    try { localStorage.removeItem('zb_uid'); localStorage.removeItem('zb_auto'); } catch (e) {}
+    UID = null;
     UI.show('login');
   },
 
@@ -44,7 +50,19 @@ const MAIN = {
 
   async login(name, gender) {
     UID = localStorage.getItem('zb_uid') || UID;
-    if (!UID) { UID = 'u' + Math.random().toString(36).slice(2, 8); localStorage.setItem('zb_uid', UID); }
+    /* 需求：必须输入账号登录 —— 未经账号密码校验不得凭空开户进入游戏。
+     * 旧行为：UID 为空时随机生成 'u'+随机串 并直接进主界面，
+     *   等于任何一次 MAIN.login 调用都能绕过登录页生成一个游客存档。
+     * 现行为：没有账号标识就直接退回登录界面。
+     * （正常路径：登录/注册按钮先跑 UA.login / UA.register 校验，
+     *   通过后才写入 zb_uid，所以正常玩家不受影响。） */
+    if (!UID) {
+      try {
+        if (window.UI && UI.show) UI.show('login');
+        if (window.UI && UI.toast) UI.toast('请先输入账号登录', 'err');
+      } catch (e) {}
+      return;
+    }
     const path = 'data/zb/players/' + UID + '.json';
     let p = null;
     const rr = await window.TMO(Net.read(path), 9000);
@@ -1189,17 +1207,13 @@ function bindAll() {
     sayTip(lgTip, '提示：账号数据保存在云端仓库。如需重置密码，请联系管理员在后台「账号管理 → 重置密码」操作。', true);
   };
 
-  /* ---- 自动登录 ---- */
-  if (UA.shouldAuto()) {
-    const rr = UA.remembered();
-    if (rr.uid) {
-      sayTip(lgTip, '正在自动登录…', true);
-      (async () => {
-        try { await MAIN.login(rr.nick || rr.name || '先锋官', rr.gender || 'm'); }
-        catch (e) { sayTip(lgTip, ''); }
-      })();
-    }
-  }
+  /* ---- 自动登录（已按需求关闭，保留说明） ----
+   * 需求：进入游戏必须输入账号 + 密码，不允许免密直接进。
+   * 旧行为：勾选「记住账号」后 shouldAuto() 为真 → 下次打开直接跳过登录进主界面，
+   *   密码形同虚设：任何人拿到这台设备（或把 localStorage 带到别的设备）
+   *   都能直接进到该账号的存档，还能花掉里面的钻石。
+   * 现行为：「记住账号」只保留「自动回填账号名」的便利，密码每次都要输。 */
+  if (lgUser && rem.name) sayTip(lgTip, '已填入上次账号，请输入密码', true);
 
   const rb = document.getElementById('rsBack');
   if (rb) rb.onclick = () => { UI.hideResult(); UI.home(); UI.show('home'); if (window.SND) SND.bgm('base'); };
