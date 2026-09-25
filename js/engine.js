@@ -636,7 +636,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const gunBase = g.dmg * Math.pow(this.GUN_GROW_RATE || 1.078, p.gunLv - 1);
     /* 攻击强化%（天赋 + 军械库 + 芯片 + 武器词条） */
     const atkUp = this.talentVal(p, 'atk') + this.buildVal(p, 'atk')
-      + this.chipVal(p, 'atk') + this.gunStatVal(p, 'dmg');
+      + this.chipVal(p, 'atk');   /* 进阶词条的 dmg 已并入 affixBonus().dmg，勿在此重复相加 */
     const atk = gunBase * (1 + atkUp);
     /* 生命：角色基础 + 天赋 + 医疗站 + 芯片 + 皮肤 */
     const hpUp = this.talentVal(p, 'hp') + this.buildVal(p, 'hp') + this.chipVal(p, 'hp')
@@ -657,7 +657,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* 武器自带暴击/暴伤（表44） */
     const gCrit = (g && g.crit) || 0, gCritDmg = (g && g.critDmg) || 1.5;
     const crit = Math.min(0.85, c.crit + gCrit + af.crit + this.talentVal(p, 'crit') + this.chipVal(p, 'crit')
-      + ((sk && sk.bonus && sk.bonus.crit) || 0) + this.gunStatVal(p, 'crit'));
+      + ((sk && sk.bonus && sk.bonus.crit) || 0));   /* 进阶 crit 已并入 af.crit */
     const critDmg = gCritDmg + af.critDmg + this.chipVal(p, 'critDmg');
     /* 移速 */
     const spdUp = this.chipVal(p, 'spd') + ((sk && sk.bonus && sk.bonus.spd) || 0);
@@ -682,15 +682,15 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
        * 现在返回数值（当前配置无护盾天赋/芯片 → 恒 0，但类型正确）。
        * 后台若新增 stat:'shield' 的天赋或芯片主属性，会自动生效。 */
       shield: Math.round(this.talentVal(p, 'shield') + this.chipVal(p, 'shield')),
-      mag: g.mag + af.mag + Math.round(this.gunStatVal(p, 'mag')),
-      pierce: g.pierce + af.pierce + Math.floor(this.gunStatVal(p, 'pierce')),
+      mag: g.mag + af.mag,   /* 进阶 mag 已并入 af.mag */
+      pierce: g.pierce + af.pierce,   /* 进阶 pierce/pierce2 已并入 af.pierce */
             /* 射程 300→380：僵尸从上方走到射程边缘约需 8 秒（spd 58），
        * 射程太短导致每波实际射击窗口仅 6 秒，玩家清不完一波就超时推进，
        * 僵尸逐波累积 → 防线必破（实测 1-1 也过不去，防线 160/636） */
       pellets: (g.pellets || 1) + af.extra, range: 380, spread: 0,
       crit: Math.min(0.85, crit + this.gemBonus(p).crit),
       critDmg: critDmg + this.gemBonus(p).critDmg,
-      rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gunStatVal(p, 'rate') + this.gemBonus(p).ratePct),
+      rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gemBonus(p).ratePct),
       moveSpd: Math.round(moveSpd),
       /* 词条额外项：吸血 / 换弹 / 爆炸范围 / 双倍概率 */
       reloadCut: af.reload, erMul: 1 + af.er, doubleChance: af.double,
@@ -1741,7 +1741,18 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (p.gunAffix[gid].length > sl) p.gunAffix[gid].length = sl;
     return p.gunAffix[gid];
   },
-  /* 词条加成汇总 */
+  /* 词条加成汇总
+   * 严重BUG：项目里有【两套并行的词条容器】，而属性计算只认了其中一套的一半。
+   *   ① p.gunAffix —— 普通词条（洗练/掉落），走 EX.affixes 表，affixBonus 已覆盖
+   *   ② p.gunStats —— 进阶词条（每 5 级进阶解锁），走 EX.gunStats 表
+   * 进阶词条此前只有 5 个 k 被 attrs 通过 gunStatVal() 读取
+   * （dmg/crit/mag/pierce/rate），其余 7 条【完全无效】：
+   *   AF04 暴伤 / AF06 吸血 / AF08 换弹 / AF09 爆炸范围 / AF10 穿透强化 /
+   *   AF11 双倍伤害 / AF12 额外子弹
+   * 红色品质（AF09~AF12，10% 概率）100% 是废词条 —— 玩家把武器升到 15/20 级
+   * 花掉大量材料，提示「解锁词条：双倍伤害」，实测属性纹丝不动。
+   * 现在把 gunStats 合并进同一份汇总表（k 名做映射），attrs 里已有的
+   * af.xxx 消费点即可全部生效。 */
   affixBonus(p) {
     const b = { dmg: 0, rate: 0, crit: 0, critDmg: 0, pierce: 0, lifesteal: 0,
       mag: 0, reload: 0, er: 0, double: 0, extra: 0 };
@@ -1749,6 +1760,20 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       const a = EX.affixOf(af.id); if (!a || !b.hasOwnProperty(a.k)) return;
       if (a.stack) b[a.k] += af.v; else b[a.k] = Math.max(b[a.k], af.v);
     });
+    /* 进阶词条：EX.gunStats 的 k 名与 EX.affixes 不一致，这里做映射后累加 */
+    const GK = { blastR: 'er', extraB: 'extra', pierce2: 'pierce' };
+    const gs = p.gunStats || {};
+    for (const s in gs) {
+      const st = gs[s]; if (!st) continue;
+      const k = GK[st.k] || st.k;
+      if (!Object.prototype.hasOwnProperty.call(b, k)) continue;
+      /* 换弹：EX.gunStats 用 -0.2 表示「换弹时间 -0.2 秒」，
+       * 而 attrs→battle 的 reloadCut 约定是正数表示减少的秒数
+       * （_rt = max(0.3, _rt - reloadCut)）。取绝对值统一符号，
+       * 否则进阶抽到 AF08 会让换弹【变慢】0.2 秒，与描述相反。 */
+      const v = k === 'reload' ? Math.abs(+st.v || 0) : (+st.v || 0);
+      b[k] += v;
+    }
     return b;
   },
   /* 洗练：普通消耗金币，传说消耗钻石 */
