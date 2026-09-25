@@ -1100,7 +1100,16 @@ function bindAll() {
   const pr = document.getElementById('psResume');
   if (pr) pr.onclick = () => { BT.paused = false; document.getElementById('pause').classList.remove('on'); };
   const pq = document.getElementById('psQuit');
-  if (pq) pq.onclick = () => { document.getElementById('pause').classList.remove('on'); BT.quit(); };
+  if (pq) pq.onclick = () => {
+    /* BUG修复：此前「放弃本关」是裸调 quit()，没有任何二次确认。
+     * 暂停面板里「继续战斗」与「放弃本关」是相邻按钮，误点一下本关奖励就只剩一半金币，
+     * 且不可撤销。配置表 tips.popup.quitConfirm 早就写了这条提示文案，却从未被使用。
+     * 现在按文案弹出确认，取消则保持暂停面板打开、战斗继续处于暂停态。 */
+    const msg = (window.EX && EX.tip && EX.tip('popup.quitConfirm')) || '退出将放弃本关奖励，确定退出？';
+    if (!window.confirm(msg)) return;
+    document.getElementById('pause').classList.remove('on');
+    BT.quit();
+  };
 
   const rl = document.getElementById('btReload');
   if (rl) rl.onclick = () => BT.reload();
@@ -1187,6 +1196,9 @@ function bindAll() {
     if (!u.trim()) { sayTip(rgTip, '请输入账号'); return; }
     if (!w) { sayTip(rgTip, '请输入密码'); return; }
     if (w !== w2) { sayTip(rgTip, '两次输入的密码不一致'); return; }
+    /* 昵称长度校验（前端即时反馈，避免白等一次云端往返） */
+    const ne = (window.UA && UA.chkNick) ? UA.chkNick(nk) : (nk.trim().length < 2 || nk.trim().length > 8 ? '昵称需 2-8 个字' : '');
+    if (ne) { sayTip(rgTip, ne); return; }
     rgBtn.disabled = true; rgBtn.textContent = '注册中…';
     sayTip(rgTip, '正在创建账号…', true);
     let r;
