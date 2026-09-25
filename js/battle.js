@@ -702,7 +702,22 @@ const BT = {
             });
           }
         }
-        if (r.mods.explode > 0) this.explode(b.x, b.y, r.mods.er, b.dmg * r.mods.explode);
+        /* 爆炸：武器自带（榴弹枪 explode:0.6 / er:62）+ 技能&芯片 mods 叠加。
+         * 严重BUG：此前只读 r.mods.explode（来自技能/芯片），而子弹创建时
+         *   写入的 b.explode = g.explode、b.er = g.er 从未被消费
+         * → 武器表 W03 榴弹枪「爆炸弹 explode:0.6 / er:62」完全是装饰，
+         *   实测打出去就是普通单发子弹（命中 1 只、爆炸特效 0）。
+         * 同时 r.erMul（词条 AF09「爆炸范围+10%」）全项目只有赋值、无消费
+         * → 花 50 钻洗出的红色传说词条完全无效。
+         * 现在两者合并，并让 erMul 真正作用于半径。 */
+        {
+          const exB = Number(b.explode || 0), exM = Number(r.mods.explode || 0);
+          const ex = exB + exM;
+          if (ex > 0) {
+            const rad = (Number(b.er) || Number(r.mods.er) || 46) * (Number(r.erMul) || 1);
+            this.explode(b.x, b.y, rad, b.dmg * ex);
+          }
+        }
         if (r.mods.chain > 0 && Math.random() < r.mods.chain) this.chain(z, r.mods.chainN, b.dmg * 0.55);
         if (b.pierce <= 0) { b.life = 0; break; }
         b.pierce--;
@@ -1149,8 +1164,13 @@ const BT = {
   /* ---------------- 伤害 ---------------- */
   hurt(z, dmg, crit, src) {
     const r = this.run;
-    /* 表20 公式2：暴击 = 基础 × (1 + 暴击伤害%) */
-    let d = dmg * (1 + (crit ? r.critDmg : 0));
+    /* 表20 公式2：暴击 = 基础 × 暴伤倍率。
+     * 严重BUG：此前写成 dmg * (1 + critDmg)，而武器表 critDmg 是**倍率**
+     *   （W01~W06 均 1.5，即暴击造成 150% 伤害），于是实际打出 1+1.5=2.5 倍。
+     *   实测：平A 4615 → 暴击 12308（2.67 倍，含浮动），比设计值高约 67%。
+     *   玩家看到面板「暴击伤害 150%」，实际却是 250%。
+     * 现在改为 dmg * critDmg（1.5 倍）。 */
+    let d = dmg * (crit ? (Number(r.critDmg) || 1.5) : 1);
     /* 单位减伤率（怪物表 def / BOSS def）：对所有伤害来源统一生效。
      * 此前只在"子弹命中"这一条路径上应用 z.def，技能/爆炸/闪电链/
      * 燃烧/毒池/油桶等 10 处伤害来源全部绕过 → BOSS 的 def(0.2~0.4)
