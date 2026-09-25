@@ -515,13 +515,32 @@ const BT = {
     const r = this.run; if (!r) return;
     r.obstacles = []; r.barrels = [];
     const lay = (EX.mapLayouts || {})[r.def.id];
-    if (!lay) return;
+    /* BUG修复：mapLayouts 只配了 1-1~3-3 共 10 关，关卡表却有 100 关。
+     * 原写法 `if (!lay) return` 会在无专属布局时把 obstacles/barrels 清空，
+     * 实测 1-5 起（含第 4~10 章全部 70 关）共 90 关战场掩体=0、油桶=0 ——
+     * 掩体阻挡、油桶击破爆炸与连锁引爆这两条玩法从第 1 章中段起整体消失，
+     * 玩家打到 1-5 就会发现掩体和油桶凭空不见了。
+     * 现在无专属布局时按章节生成默认布局，掩体名沿用地图表已有词库。
+     * （mapLayouts 里的 terrain 字段此前全项目零读取，这里一并用于命名。） */
+    const ch = Math.max(1, Number(r.def.ch) || parseInt(String(r.def.id).split('-')[0], 10) || 1);
+    let coverDefs, barrelN;
+    if (lay && (lay.covers || []).length) {
+      coverDefs = lay.covers || [];
+      barrelN = lay.barrels || 0;
+    } else {
+      const pool = [];
+      Object.keys(EX.mapLayouts || {}).forEach((k) => {
+        ((EX.mapLayouts[k] || {}).covers || []).forEach((c) => { if (c && c[0]) pool.push(c[0]); });
+      });
+      if (!pool.length) pool.push('掩体');
+      coverDefs = [[pool[(ch - 1) % pool.length], 4 + (ch % 3)]];
+      barrelN = 2 + Math.floor(ch / 2);
+    }
     /* 掩体：随机分布在中上部战场 */
-    const coverDefs = lay.covers || [];
-    let total = 0; coverDefs.forEach((c) => { total += c[1]; });
+    let total = 0; coverDefs.forEach((c) => { total += (c && c[1]) || 0; });
     total = Math.min(total, 8);
     for (let i = 0; i < total; i++) {
-      const cd = coverDefs[i % coverDefs.length];
+      const cd = coverDefs[i % coverDefs.length] || ['掩体', 1];
       r.obstacles.push({
         n: cd[0], x: 30 + Math.random() * (this.W - 60),
         y: this.H * 0.22 + Math.random() * (this.H * 0.36),
@@ -529,8 +548,9 @@ const BT = {
         hp: EX.COVER_HP, maxHp: EX.COVER_HP, dead: false,
       });
     }
-    /* 油桶：可破坏，爆炸伤僵尸 */
-    for (let i = 0; i < (lay.barrels || 0); i++) {
+    /* 油桶：可破坏，爆炸伤僵尸
+     * 注意用 barrelN（默认布局时为按章节推算值），lay 可能为 undefined。 */
+    for (let i = 0; i < (barrelN || 0); i++) {
       r.barrels.push({
         x: 28 + Math.random() * (this.W - 56),
         y: this.H * 0.24 + Math.random() * (this.H * 0.34),
@@ -690,7 +710,11 @@ const BT = {
       }
       m.cd -= dt;
       if (m.cd > 0) continue;
-      const mz = this.nearest(m.x, m.y, null, m.def.rng);
+      /* 「点杀精英」：M_JZ 的 desc 承诺优先精英，此前 nearest 纯按距离，
+       * 实测近处普通(166) 与远处精英(221) 并存时锁定的是普通僵尸。
+       * nearest 已支持 preferElite（狙击炮台在用），这里按配置接上。 */
+      const mz = this.nearest(m.x, m.y, null, m.def.rng,
+        m.def.elite ? { preferElite: true } : null);
       if (!mz) continue;
       /* 除零防护：后台热更若把 rate 改成 0，1/0 = Infinity
        * → 冷却永远走不完 → 雇佣兵静默失效（不报错，但再也不开火）。
@@ -698,8 +722,24 @@ const BT = {
       m.cd = 1 / Math.max(0.05, m.def.rate || 0);
       /* 佣兵伤害同样不随章节缩放（狙击手 90 伤害 vs 第10章 3953 血 = 44 发），
        * 花 800~1600 金币招募的佣兵后期完全打不动，一并按关卡倍率缩放。 */
-      this.spawnBullet(m.x, m.y, mz, m.def.dmg * (1 + r.mods.dmgMul) * (r.def.rwMul || 1),
-        { pierce: m.def.id === 'M_SJ' ? 3 : 0, from: 'merc', el: '物' });
+      const mdmg = m.def.dmg * (1 + r.mods.dmgMul) * (r.def.rwMul || 1);
+      /* 「扇形霰弹」：M_SD 的 desc 承诺扇形，此前一律单发（实测一次开火 1 颗）。
+       * 现在按 pellets/spread 打出扇形弹幕；pellets 缺省为 1 即保持单发。 */
+      const pellets = Math.max(1, Math.floor(Number(m.def.pellets) || 1));
+      const spread = Number(m.def.spread) || 0;
+      const mercOpt = { pierce: m.def.id === 'M_SJ' ? 3 : 0, from: 'merc', el: '物' };
+      if (pellets <= 1 || !spread) {
+        this.spawnBullet(m.x, m.y, mz, mdmg, mercOpt);
+      } else {
+        const a0 = Math.atan2(mz.y - m.y, mz.x - m.x);
+        const dist = Math.hypot(mz.x - m.x, mz.y - m.y) || 1;
+        for (let s = 0; s < pellets; s++) {
+          const a = a0 + (s - (pellets - 1) / 2) * spread;
+          this.spawnBullet(m.x, m.y,
+            { x: m.x + Math.cos(a) * dist, y: m.y + Math.sin(a) * dist },
+            mdmg, mercOpt);
+        }
+      }
     }
 
     /* --- 主动技能冷却 --- */
