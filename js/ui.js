@@ -1534,9 +1534,11 @@ r_tavern(p, tab) {
    * 于是运营新建的活动玩家只能看见、点不了，成了纯展示。
    * 这里按活动自带的 levelId / rw 生成通用入口。 */
   actExtraBtn(p, a) {
-    const isBuiltin = /^EV\d+$/.test(a.id || '');
-    if (isBuiltin) return '';
-    const got = ((p.actRwGot || {})[a.id]);
+    /* BUG：此前 `if (isBuiltin) return ''` 把 EV01~EV06 全部排除，
+     *   6 个内置活动配了 rw（代币/芯片/钻石/限定称号）却一个领奖按钮都没有，
+     *   奖励永远发不出去。现在内置活动同样生成入口（EV04/EV05 的 rw 为空，
+     *   不会生成按钮，它们本来就有首充/商店入口）。 */
+    const got = E.actRwGot(p, a.id);
     let h = '';
     if (a.levelId) h += `<button class="btn sm" data-actlv="${a.id}">前往</button>`;
     if (a.rw && Object.keys(a.rw).length) {
@@ -1609,23 +1611,16 @@ r_tavern(p, tab) {
       if (!E.levelUnlocked(p, lv)) return this.toast('该活动关卡尚未解锁', 'err');
       this.close(); startBattle('normal', lv);
     }; });
-    /* 后台新建活动：领取奖励（每个活动限一次） */
+    /* 活动领奖：内置 EV01~EV06 + 后台新建 ACTxxx 走同一条路径
+     * （内置活动此前被 isBuiltin 排除，一个按钮都没有） */
     $$('#pnBody [data-actrw]').forEach((b) => { b.onclick = () => {
-      const a = (EX.acts || EX.activities || []).find((x) => x.id === b.dataset.actrw);
-      if (!a || !a.rw) return;
-      /* 参与条件校验 */
-      const c = a.cond || {};
-      if (c.lvMin && (p.lv || 1) < c.lvMin) return this.toast('等级不足（需 Lv.' + c.lvMin + '）', 'err');
-      if (c.clearedMin && Object.keys(p.cleared || {}).length < c.clearedMin) {
-        return this.toast('需通关 ' + c.clearedMin + ' 关', 'err');
+      const r = E.actRwTake(p, b.dataset.actrw);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) {
+        E.save(p);
+        if (window.SND) SND.play('get');
+        this.open('act'); this.home();
       }
-      p.actRwGot = p.actRwGot || {};
-      p.actRwGot[a.id] = 1;
-      E.grant(p, a.rw);
-      E.save(p);
-      this.toast('已领取「' + (a.n || '活动') + '」奖励', 'ok');
-      if (window.SND) SND.play('get');
-      this.open('act'); this.home();
     }; });
   },
 
