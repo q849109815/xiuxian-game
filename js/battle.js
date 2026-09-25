@@ -300,7 +300,13 @@ const BT = {
      *        必须挪到 run 创建之后（见下方 start 末尾）。 */
     this.charImg = (E.char(p) || {}).img || null;
     this.P = p; this._heroImg = undefined;
-    this.scene = this.sceneFor(def.ch); this.img(this.scene);
+    /* 场景：优先用关卡表逐关配置的 scene
+     * BUG：此前恒用 sceneFor(def.ch)（按章节号一刀切），
+     * 关卡表里 100 关逐个配的 scene 字段从未被消费 —— 实测 86/100 关场景与配置不符
+     * （如 1-10 BOSS 关配了 snow，实际渲染 city；第 2 章 10 关全配 tunnel，实际全 factory）。
+     * 现在按关卡配置取，缺配/非法值回退按章节推算。 */
+    this.scene = (def.scene && this.SCENES[def.scene]) ? def.scene : this.sceneFor(def.ch);
+    this.img(this.scene);
     /* 无尽模式：按玩家进度章节取关（见 levelDef 注释） */
     if (def.endless && p) def.ch = Math.max(1, (E.chapterOf ? E.chapterOf(p.curLevel || '1-1') : 1));
 
