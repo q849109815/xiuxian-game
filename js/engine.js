@@ -118,6 +118,45 @@ const E = {
     return d.cond === 'boss' || d.cond === 'bossAll' ? 3 : 1;
   },
   /* 体力：每 5 分钟 +1，上限 100 */
+  /* =========================================================
+   * 存档类型规范化（sanitize）
+   * ---------------------------------------------------------
+   * 问题：UI 大量使用 `(p.X || 0)` 兜底，但这个写法【挡不住字符串】。
+   *   例：`Math.floor(p.stamina || 0)`，当 p.stamina === 'abc' 时
+   *       'abc' 是 truthy → `|| 0` 不生效 → Math.floor('abc') = NaN
+   *       → 设置页体力显示成「NaN/100」。
+   *   实测（隔离验证）：注入 stamina='abc' → 设置页出现 NaN/100 ✔
+   *       注入 stamina=null / gold='abc' / lv='abc' → 干净，无 NaN
+   *   触发途径：后台 GM 改字段、热更写入、存档损坏、跨版本残留。
+   * 做法：登录后统一把关键字段强制成正确类型，从源头杜绝脏值扩散，
+   *   而不是逐个渲染点加保护（UI 里有 18 处同类写法）。
+   * ========================================================= */
+  NUMS: ['gold','diamond','stamina','lv','xp','tp','ach','evToken','evScore',
+         'patrolAcc','patrolT','patrolFast','legionExp','legionContrib',
+         'charStar','gunLv','gunAdv','endlessBest','adTotal','staminaAt'],
+  ARRS: ['bag','skins','titles','frames','mercs','chars','gunOwn','friends',
+         'sendStTo','tempBuff','logs'],
+  OBJS: ['mat','chips','cleared','codex','equip','gems','build','talents',
+         'tasks','stats','giftBuy','evShopBuy','achShopBuy','lgShopBuy',
+         'mailGot','cdkGot','adUsed','gunStats'],
+  sanitize(p) {
+    if (!p || typeof p !== 'object') return p;
+    const N = (v, d) => { const n = Number(v); return isFinite(n) ? n : (d || 0); };
+    this.NUMS.forEach((k) => { if (p[k] != null) p[k] = Math.max(0, N(p[k], 0)); });
+    if (p.stamina != null) p.stamina = Math.min(EX.STAMINA_MAX || 100, p.stamina);
+    if (p.gunLv != null) p.gunLv = Math.max(1, p.gunLv);
+    if (p.charStar != null) p.charStar = Math.min(5, Math.max(0, p.charStar));
+    this.ARRS.forEach((k) => { if (p[k] != null && !Array.isArray(p[k])) p[k] = []; });
+    this.OBJS.forEach((k) => { if (p[k] != null && (typeof p[k] !== 'object' || Array.isArray(p[k]))) p[k] = {}; });
+    ['mat','gems','chips','cleared','codex','evShopBuy','achShopBuy','lgShopBuy','giftBuy'].forEach((k) => {
+      if (!p[k]) return;
+      Object.keys(p[k]).forEach((i) => { const n = Number(p[k][i]); p[k][i] = isFinite(n) ? n : 0; });
+    });
+    ['uid','name','char','skin','curLevel','gun'].forEach((k) => {
+      if (p[k] != null && typeof p[k] !== 'string') p[k] = String(p[k]);
+    });
+    return p;
+  },
   tickStamina(p) {
     const now = Date.now();
     const add = Math.floor((now - (p.staminaAt || now)) / EX.STAMINA_MS);
@@ -1059,8 +1098,21 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (p.signLast && now < p.signLast - 3600000) {
       return { ok: false, msg: '时间异常，无法签到' };
     }
+    /* 取「UTC+8 日历日」为 YYYYMMDD 整数
+     * 严重 BUG 修复：原代码先 +8h 再用 getFullYear()/getMonth()/getDate() 读取，
+     *   但这三个是【本地时区】方法，而 +8h 的目的是换算到 UTC+8。
+     *   对中国用户（本身就是 UTC+8）等于又加了一次偏移 → 领先 16 小时
+     *   → 【每天北京时间 16:00 之后签到，日期会被算成第二天】。
+     *   后果：下午4点后签到 → signDay 记为明天；
+     *        第二天早上再签 → 命中 `p.signDay === today` → 提示「今日已签到」，
+     *        玩家白白少签一天，连续签到（7天50钻）直接断掉。
+     *   实测：09-25 15:00 上海 → 20260925 ✔；09-25 16:30 上海 → 20260926 ✘
+     * 现在改用 getUTC* 读取（时间已 +8h，UTC 视图即 UTC+8 日历日），全时区正确。 */
     const d = new Date(now + 8 * 3600000);
-    const today = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    const today = d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+    /* 旧存档矫正：若历史 signDay 是超前写入的错误值（>今天），重置掉，
+     * 否则玩家当天会被「今日已签到」锁死。 */
+    if (p.signDay && p.signDay > today) { p.signDay = 0; p.signDays = Math.max(0, (p.signDays || 1) - 1); }
     if (p.signDay === today) return { ok: false, msg: '今日已签到' };
     /* 严重 BUG 修复：此前用 YYYYMMDD 两个整数相减是否为 1 判断「连续」。
      * 9月30日(20260930) → 10月1日(20261001) 差值是 71，不是 1；
