@@ -662,7 +662,8 @@ const BT = {
     for (const t of r.turrets) {
       t.cd -= dt;
       if (t.cd > 0) continue;
-      const tz = this.nearest(t.x, t.y, null, t.def.rng + t.lv * 12);
+      const tz = this.nearest(t.x, t.y, null, t.def.rng + t.lv * 12,
+        { preferElite: t.def.preferElite });
       if (!tz) continue;
       t.cd = 1 / (t.def.rate * (1 + t.lv * 0.12));
       /* 炮台伤害此前完全不随章节缩放：
@@ -671,7 +672,13 @@ const BT = {
        *   玩家花 120~180 金币建造 + 升级的钱全部白花。
        * 现在按关卡倍率 rwMul 缩放，与武器/怪物成长同步。 */
       const dmgT = t.def.dmg * (1 + t.lv * 0.35) * (1 + r.mods.dmgMul) * (r.def.rwMul || 1);
-      this.spawnBullet(t.x, t.y, tz, dmgT, { pierce: 0, from: 'turret', el: t.def.el });
+      /* 把炮台的元素效果带进子弹（此前只传 el，效果字段全部丢失） */
+      this.spawnBullet(t.x, t.y, tz, dmgT, {
+        pierce: 0, from: 'turret', el: t.def.el,
+        slow: t.def.slow, slowT: t.def.slowT,
+        burn: t.def.burn, burnT: t.def.burnT,
+        chain: t.def.chain, chainN: t.def.chainN,
+      });
     }
 
     /* --- 佣兵 / 召唤物自动开火 --- */
@@ -929,7 +936,21 @@ const BT = {
           let diff = Math.abs(a - z.facing); while (diff > Math.PI) diff = Math.abs(diff - 2 * Math.PI);
           if (diff < 1.1) dmg *= (1 - z.front);
         }
-        this.hurt(z, dmg, Math.random() < r.crit, '物');
+        this.hurt(z, dmg, Math.random() < r.crit, b.el === '物' ? '物' : (b.el || '物'));
+        /* 元素命中效果（冰=减速 / 火=灼烧 / 电=链式）
+         * 此前 b.el 除分裂子弹传递外全项目零消费，炮台四种元素
+         * 与燃烧瓶 burn:0.7 都是「写了 desc、没有任何实现」。 */
+        if (!z.dead) {
+          if (b.slow > 0) {
+            z.slow = Math.max(z.slow || 0, b.slow);
+            z.slowT = Math.max(z.slowT || 0, b.slowT || 1.5);
+          }
+          if (b.burn > 0) {
+            z.burn = Math.max(z.burn || 0, b.burn);
+            z.burnT = Math.max(z.burnT || 0, b.burnT || 3);
+          }
+          if (b.chain > 0 && Math.random() < b.chain) this.chain(z, b.chainN || 2, b.dmg * 0.55);
+        }
         /* 分裂子弹（被动 fenliezidan）：命中后向两侧散射 N 枚子弹。
          * isSplit 守卫避免分裂出的子弹再次分裂导致指数爆炸；
          * 上限 8 枚，防止 Lv10（split=20）时同屏子弹数失控。 */
@@ -1149,6 +1170,10 @@ const BT = {
       x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
       dmg, pierce: opt.pierce || 0, life: 1.3, hit: [],
       from: opt.from || 'player', el: opt.el || '物',
+      /* 元素命中效果（此前 el 只用于特效取色，效果字段全项目零消费） */
+      slow: Number(opt.slow) || 0, slowT: Number(opt.slowT) || 0,
+      burn: Number(opt.burn) || 0, burnT: Number(opt.burnT) || 0,
+      chain: Number(opt.chain) || 0, chainN: Number(opt.chainN) || 0,
       explode: 0, er: 0,
     });
   },
@@ -1318,9 +1343,10 @@ const BT = {
           dmg: (type === 'drone' ? 0.55 : 1.35) * dmgBase,
           id: type === 'drone' ? 'SUM_DRONE' : 'SUM_CAR',
           n: type === 'drone' ? '无人机' : '装甲车',
+          icon: type === 'drone' ? '🛸' : '🚙',
         };
         r.mercs.push({
-          def: sdef, isSummon: true, life: durT,
+          def: sdef, isSummon: true, life: durT, maxLife: durT,
           x: r.px + (type === 'drone' ? -60 + i * 45 : 120),
           y: r.py - (type === 'drone' ? 46 + i * 10 : 0),
           cd: 0,
@@ -1365,6 +1391,12 @@ const BT = {
         x: r.px, y: r.py - 6, vx: Math.cos(a) * bs, vy: Math.sin(a) * bs,
         dmg, pierce: r.pierce + r.mods.pierce, life: 1.4, hit: [],
         explode: g.explode || r.mods.explode, er: g.er || r.mods.er || 46,
+        /* 武器元素效果：燃烧瓶 S02 burn:0.7 此前全项目零消费
+         * —— 配置里写了「燃烧弹」，实际打中没有任何持续伤害。 */
+        el: g.el || '物',
+        burn: g.burn || 0, burnT: g.burn ? 3 : 0,
+        slow: g.slow || 0, slowT: g.slowT || 0,
+        chain: g.chain || 0, chainN: g.chainN || 0,
       });
     }
     /* 枪口火光 / 后坐力：供绘制层做开火反馈 */
@@ -1380,7 +1412,10 @@ const BT = {
   refreshGun() {
     const r = this.run; if (!r || !this.P) return;
     const a = E.attrs(this.P);
-    r.gunId = (p && p.gun) || r.gunId || 'W01';
+    /* BUG：此处原写 `(p && p.gun)`，小写 p 在本作用域根本不存在
+     * → 战斗中点「🔄 切换武器」直接抛 ReferenceError: p is not defined，
+     *   切换成功后的数值同步和 toast 全部中断（换枪不换数值）。 */
+    r.gunId = (this.P && this.P.gun) || r.gunId || 'W01';
     r.atk = a.atk; r.rate = a.rate; r.range = a.range; r.pierce = a.pierce;
     r.spread = a.spread; r.pellets = a.pellets || 1; r.crit = a.crit;
     r.critDmg = a.critDmg; r.moveSpd = a.moveSpd;
@@ -1707,7 +1742,20 @@ const BT = {
 
   addFloat(x, y, v, cls) { this.run.floats.push({ x, y, v: String(v), cls, life: 0.7 }); },
 
-  nearest(x, y, ex, maxR) {
+  nearest(x, y, ex, maxR, opt) {
+    /* 狙击炮台 desc「优先攻击精英」此前从未实现 —— 纯按距离选敌，
+     * 实测近处的普通僵尸和远处的精英并存时，全程只打近处那只。
+     * preferElite：射程内只要有精英/BOSS，就锁定最近的精英；没有才按距离。 */
+    if (opt && opt.preferElite) {
+      let be = null, bd = maxR || 9999;
+      for (const z of this.run.zombies) {
+        if (z.dead) continue;
+        if (!(z.isBoss || z.boss || (z.d && z.d.elite))) continue;
+        const d = Math.hypot(z.x - x, z.y - y);
+        if (d < bd) { bd = d; be = z; }
+      }
+      if (be) return be;
+    }
     let best = null, bd = maxR || 9999;
     for (const z of this.run.zombies) {
       if (z.dead) continue;
@@ -1982,20 +2030,220 @@ const BT = {
     }
   },
 
-  /* 佣兵 / 召唤物 */
+  /* 佣兵 / 召唤物（真 3D）
+   * 修复前这里只有一行 20px 平面 emoji fillText，四个问题：
+   *   ① 无 depthScale → 佣兵不参与透视，在 3D 场景里像贴上去的标签
+   *   ② 无接触阴影 / 受光 / 厚度 → 与地面没有接触感，始终是飘着的纸片
+   *   ③ 配置里的 img 立绘（assets/icon/m_sd.jpg 等 4 张）从来没被读过
+   *   ④ 召唤物的 id 是 SUM_DRONE / SUM_CAR，而分支判断的是 'drone'/'armored'
+   *      → 永不匹配 → 无人机和装甲车都渲染成同一个 🧍 人形 emoji
+   * 现在：佣兵走与僵尸相同的立绘抠底 3D 管线，召唤物各有 3D 造型。 */
   drawMercs(c) {
     const r = this.run;
     for (const m of r.mercs) {
-      c.font = '20px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText(m.def.id === 'armored' ? '🚙' : m.def.id === 'drone' ? '🛸' : (m.def.icon || '🧍'),
-        m.x, m.y);
+      if (!isFinite(m.x) || !isFinite(m.y)) continue;
+      const sc = this.depthScale(m.y);
+
+      /* 召唤物离地悬浮：上下浮动 + 更小更淡的投影（强化"离地"体积感） */
+      const hover = m.isSummon ? Math.sin((r.time || 0) * 3 + (m.x || 0) * 0.05) * 3 * sc : 0;
+      const y = m.y + hover;
+      this.shadow3d(c, m.x, m.y + (m.isSummon ? 11 : 5) * sc, (m.isSummon ? 12 : 15) * sc, sc);
+
+      if (m.isSummon && m.def.id === 'SUM_DRONE') { this.drawDrone3d(c, m.x, y, sc, r); }
+      else if (m.isSummon && m.def.id === 'SUM_CAR') { this.drawCar3d(c, m.x, y, sc); }
+      else {
+        const sp = SPR.get(m.def.img);
+        if (sp) {
+          const h = 46 * sc, w = h * (sp.w / sp.h);
+          const bx = m.x - w / 2, by = y + 4 * sc - h;
+          /* 厚度侧壁（右下暗面）：让立绘成为实体块 */
+          this.drawSolid(c, sp, bx, by, w);
+          if (sp.rim) {
+            const k = w / sp.w;
+            c.drawImage(sp.rim, bx - sp.pad * k, by - sp.pad * k,
+              (sp.w + sp.pad * 2) * k, (sp.h + sp.pad * 2) * k);
+          }
+          c.drawImage(sp.cv, bx, by, w, h);
+        } else {
+          /* 立绘未就绪时的 3D 兜底：士兵几何体（圆柱躯干+球头+手持枪） */
+          this.drawMercShape(c, m.x, y, 15 * sc, m.def);
+        }
+      }
+
+      /* 存活条：召唤物有时限，按各自的 maxLife 归一化
+       * （修复前硬编码 /10，而 durT 最高 8×(1+9×0.1)=15.2s，进度条会撑爆） */
       if (m.isSummon && m.life != null) {
-        c.fillStyle = 'rgba(255,255,255,0.5)';
-        c.fillRect(m.x - 12, m.y + 13, 24, 2.5);
+        const mx = m.maxLife || m.life || 1;
+        const bw = 24 * sc;
+        c.fillStyle = 'rgba(0,0,0,.55)';
+        c.fillRect(m.x - bw / 2, m.y + 14 * sc, bw, 2.5);
         c.fillStyle = '#5cd8ff';
-        c.fillRect(m.x - 12, m.y + 13, 24 * Math.max(0, Math.min(1, m.life / 10)), 2.5);
+        c.fillRect(m.x - bw / 2, m.y + 14 * sc,
+          bw * Math.max(0, Math.min(1, m.life / mx)), 2.5);
       }
     }
+  },
+
+  /* 佣兵 3D 几何兜底（立绘未加载时用）：与僵尸同款的圆柱+球体建模 */
+  drawMercShape(c, x, y, sz, def) {
+    if (!isFinite(x) || !isFinite(y) || !isFinite(sz) || sz <= 0) return;
+    const cloth = '#2f4a63', clothHi = '#5d87a8';
+    const skin = '#c9a887', skinHi = '#f0d7b8';
+    c.save();
+    /* 腿 */
+    this.cylinder(c, x - sz * 0.16, y + sz * 0.16, sz * 0.17, sz * 0.34, cloth, clothHi, sz * 0.06);
+    this.cylinder(c, x + sz * 0.16, y + sz * 0.16, sz * 0.17, sz * 0.34, cloth, clothHi, sz * 0.06);
+    /* 躯干 + 战术背心暗部 */
+    this.cylinder(c, x, y - sz * 0.14, sz * 0.60, sz * 0.42, cloth, clothHi, sz * 0.16);
+    c.fillStyle = 'rgba(0,0,0,.20)';
+    c.beginPath(); c.ellipse(x, y + sz * 0.02, sz * 0.20, sz * 0.09, 0, 0, 7); c.fill();
+    /* 双臂（前伸持枪） */
+    this.cylinder(c, x - sz * 0.32, y - sz * 0.06, sz * 0.13, sz * 0.30, skin, skinHi, sz * 0.06);
+    this.cylinder(c, x + sz * 0.32, y - sz * 0.06, sz * 0.13, sz * 0.30, skin, skinHi, sz * 0.06);
+    /* 头盔（球体 + 高光） */
+    const hy = y - sz * 0.38;
+    this.sphere(c, x, hy, sz * 0.24, cloth, clothHi);
+    c.fillStyle = 'rgba(255,255,255,.18)';
+    c.beginPath(); c.ellipse(x - sz * 0.07, hy - sz * 0.11, sz * 0.09, sz * 0.05, -0.5, 0, 7); c.fill();
+    /* 面部（暗）+ 护目镜蓝光 */
+    c.fillStyle = 'rgba(0,0,0,.30)';
+    c.beginPath(); c.ellipse(x, hy + sz * 0.06, sz * 0.15, sz * 0.07, 0, 0, 7); c.fill();
+    c.fillStyle = '#7fe9ff'; c.shadowColor = '#7fe9ff'; c.shadowBlur = 5;
+    c.fillRect(x - sz * 0.13, hy + sz * 0.02, sz * 0.26, sz * 0.05);
+    c.shadowBlur = 0;
+    /* 手持武器（横向圆柱，带高光棱） */
+    const gx = x + sz * 0.34, gy = y + sz * 0.12;
+    const gg = c.createLinearGradient(0, gy - sz * 0.07, 0, gy + sz * 0.07);
+    gg.addColorStop(0, '#e8eef6'); gg.addColorStop(0.45, '#8d9bb0'); gg.addColorStop(1, '#39424f');
+    c.fillStyle = gg;
+    c.beginPath();
+    if (c.roundRect) c.roundRect(gx - sz * 0.30, gy - sz * 0.07, sz * 0.62, sz * 0.14, sz * 0.05);
+    else c.rect(gx - sz * 0.30, gy - sz * 0.07, sz * 0.62, sz * 0.14);
+    c.fill();
+    /* 兵种徽记（小图标浮在头顶，便于区分霰弹/机枪/狙击/哨箭） */
+    if (def && def.icon) {
+      c.font = Math.round(sz * 0.62) + 'px sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillStyle = 'rgba(255,255,255,.92)';
+      c.fillText(def.icon, x, hy - sz * 0.42);
+    }
+    c.restore();
+  },
+
+  /* 无人机召唤物：3D 碟形机体 + 旋翼 + 悬停光晕 */
+  drawDrone3d(c, x, y, sc, r) {
+    if (!isFinite(x) || !isFinite(y) || !isFinite(sc)) return;
+    c.save();
+    /* 机体：扁圆盘（顶面亮、底面暗） */
+    const w = 22 * sc, h = 7 * sc;
+    const g = c.createLinearGradient(0, y - h, 0, y + h);
+    g.addColorStop(0, '#dfe9f5'); g.addColorStop(0.5, '#7f93ad'); g.addColorStop(1, '#37424f');
+    c.fillStyle = g;
+    c.beginPath(); c.ellipse(x, y, w * 0.5, h * 0.5, 0, 0, 7); c.fill();
+    /* 顶盖高光（俯视可见的上面） */
+    c.fillStyle = 'rgba(255,255,255,.45)';
+    c.beginPath(); c.ellipse(x, y - h * 0.18, w * 0.30, h * 0.24, 0, 0, 7); c.fill();
+    /* 旋翼（两侧，随时间旋转的椭圆＝透视下的转动） */
+    const ph = (r && r.time ? r.time : 0) * 12;
+    c.strokeStyle = 'rgba(190,225,255,.55)'; c.lineWidth = 1.4 * sc;
+    for (const sx of [-1, 1]) {
+      const rx = x + sx * w * 0.40;
+      c.beginPath();
+      c.ellipse(rx, y - h * 0.30, 6 * sc * Math.abs(Math.cos(ph + (sx > 0 ? 1.2 : 0))), 1.6 * sc, 0, 0, 7);
+      c.stroke();
+      c.fillStyle = '#4a5666';
+      c.beginPath(); c.arc(rx, y - h * 0.30, 1.8 * sc, 0, 7); c.fill();
+    }
+    /* 机腹指示灯（发光） */
+    c.fillStyle = '#5cd8ff'; c.shadowColor = '#5cd8ff'; c.shadowBlur = 7 * sc;
+    c.beginPath(); c.arc(x, y + h * 0.22, 2.4 * sc, 0, 7); c.fill();
+    c.shadowBlur = 0;
+    c.restore();
+  },
+
+  /* 装甲车召唤物：3D 车体（顶面+正面+侧面）+ 炮塔 + 履带 */
+  drawCar3d(c, x, y, sc) {
+    if (!isFinite(x) || !isFinite(y) || !isFinite(sc)) return;
+    c.save();
+    const w = 30 * sc, h = 11 * sc;
+    /* 履带（下缘暗色实体块，带厚度） */
+    c.fillStyle = '#232b36';
+    c.beginPath();
+    if (c.roundRect) c.roundRect(x - w * 0.5, y + h * 0.10, w, h * 0.42, h * 0.20);
+    else c.rect(x - w * 0.5, y + h * 0.10, w, h * 0.42);
+    c.fill();
+    c.fillStyle = 'rgba(255,255,255,.14)';
+    c.fillRect(x - w * 0.5, y + h * 0.10, w, 1.4 * sc);
+    /* 负重轮 */
+    c.fillStyle = '#4b5766';
+    for (let i = -2; i <= 2; i++) {
+      c.beginPath(); c.arc(x + i * w * 0.19, y + h * 0.31, 2.1 * sc, 0, 7); c.fill();
+    }
+    /* 车体：顶面 + 正面 + 右侧面 */
+    const face = c.createLinearGradient(0, y - h, 0, y + h * 0.2);
+    face.addColorStop(0, '#6f7f5f'); face.addColorStop(1, '#39452f');
+    this.box3d(c, x, y + h * 0.16, w, h, 6 * sc, face,
+      'rgba(190,210,150,.75)', 'rgba(0,0,0,.52)', 'rgba(255,255,255,.22)');
+    /* 炮塔（小圆柱 + 顶面） */
+    this.cylinder(c, x - w * 0.06, y - h * 0.62, w * 0.34, h * 0.52, '#5c6b4c', '#8ea173', 2 * sc);
+    c.fillStyle = '#93a67d';
+    c.beginPath(); c.ellipse(x - w * 0.06, y - h * 0.62, w * 0.17, h * 0.13, 0, 0, 7); c.fill();
+    /* 炮管（带高光的圆柱，朝右＝朝向尸潮） */
+    const bg = c.createLinearGradient(0, y - h * 0.62 - 2.2 * sc, 0, y - h * 0.62 + 2.2 * sc);
+    bg.addColorStop(0, '#e6ecf2'); bg.addColorStop(0.45, '#8d9bb0'); bg.addColorStop(1, '#39424f');
+    c.fillStyle = bg;
+    c.fillRect(x + w * 0.06, y - h * 0.66, w * 0.42, 4.4 * sc);
+    c.restore();
+  },
+
+  /* 贯穿光束（电磁穿刺 / 高能射线 / 制导激光）
+   * 3D 表现：外层辉光柱 → 中层元素色 → 亮白核心，电系带锯齿抖动。
+   * 沿光束方向做纵向渐变（近端亮、远端衰减），强化空间纵深。 */
+  drawBeam3d(c, f, al) {
+    if (!isFinite(f.x) || !isFinite(f.y) || !isFinite(f.a) || !isFinite(f.len)) return;
+    const a = Math.max(0, Math.min(1, al));
+    const ex = f.x + Math.cos(f.a) * f.len, ey = f.y + Math.sin(f.a) * f.len;
+    const col = f.el === '火' ? '255,140,60' : f.el === '冰' ? '92,216,255'
+              : f.el === '电' ? '192,140,255' : '255,236,170';
+    c.save();
+    c.lineCap = 'round';
+    /* ① 外层辉光（最宽最淡） */
+    c.strokeStyle = 'rgba(' + col + ',' + (a * 0.22).toFixed(3) + ')';
+    c.lineWidth = 16 * (0.5 + a * 0.5);
+    c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(ex, ey); c.stroke();
+    /* ② 中层元素色柱 */
+    c.strokeStyle = 'rgba(' + col + ',' + (a * 0.75).toFixed(3) + ')';
+    c.lineWidth = 7 * (0.4 + a * 0.6);
+    c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(ex, ey); c.stroke();
+    /* ③ 亮白核心（细而实，做出"能量束"的体积） */
+    const cg = c.createLinearGradient(f.x, f.y, ex, ey);
+    cg.addColorStop(0, 'rgba(255,255,255,' + a + ')');
+    cg.addColorStop(1, 'rgba(255,255,255,' + (a * 0.15).toFixed(3) + ')');
+    c.strokeStyle = cg;
+    c.lineWidth = 2.6 * (0.4 + a * 0.6);
+    c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(ex, ey); c.stroke();
+    /* ④ 电系锯齿：沿光束抖动的分叉电弧，强化"穿刺/射线"的攻击感 */
+    if (f.el === '电') {
+      c.strokeStyle = 'rgba(235,220,255,' + (a * 0.8).toFixed(3) + ')';
+      c.lineWidth = 1.4;
+      const seg = 7;
+      c.beginPath();
+      for (let i = 0; i <= seg; i++) {
+        const t = i / seg;
+        const jx = f.x + (ex - f.x) * t + (i === 0 || i === seg ? 0 : (Math.random() - 0.5) * 13 * a);
+        const jy = f.y + (ey - f.y) * t + (i === 0 || i === seg ? 0 : (Math.random() - 0.5) * 13 * a);
+        if (i === 0) c.moveTo(jx, jy); else c.lineTo(jx, jy);
+      }
+      c.stroke();
+    }
+    /* ⑤ 枪口起点的爆点光球 */
+    const sr = 7 * (0.5 + a * 0.5);
+    const sg = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, sr);
+    sg.addColorStop(0, 'rgba(255,255,255,' + (a * 0.9).toFixed(3) + ')');
+    sg.addColorStop(1, 'rgba(' + col + ',0)');
+    c.fillStyle = sg;
+    c.beginPath(); c.arc(f.x, f.y, sr, 0, 7); c.fill();
+    c.restore();
   },
 
   /* =========================================================
@@ -2586,6 +2834,17 @@ const BT = {
       } else if (f.t === 'bolt') {
         c.strokeStyle = 'rgba(192,140,255,' + al + ')'; c.lineWidth = 2;
         c.beginPath(); c.moveTo(f.x1, f.y1); c.lineTo(f.x2, f.y2); c.stroke();
+      } else if (f.t === 'beam') {
+        /* 贯穿光束：电磁穿刺 / 高能射线 / 制导激光。
+         * 严重 BUG：这三种技能 push 的是 t:'beam'，而这里此前只有
+         * boom/nova/bolt/warn 四个分支 —— beam 没有任何渲染分支，
+         * 玩家释放技能后伤害照常结算，画面上却什么都不显示。
+         * 现在画成 3D 光束：外辉光 + 亮白核心 + 电系锯齿抖动。 */
+        this.drawBeam3d(c, f, al);
+      } else if (f.t === 'hitWall') {
+        /* 僵尸啃到防线：贴墙的冲击弧 */
+        c.strokeStyle = 'rgba(255,90,120,' + al + ')'; c.lineWidth = 3;
+        c.beginPath(); c.ellipse(f.x, f.y, f.r * (1.4 - al * 0.5), f.r * 0.45, 0, Math.PI, Math.PI * 2); c.stroke();
       } else if (f.t === 'warn') {
         c.strokeStyle = 'rgba(255,77,109,' + al + ')'; c.lineWidth = 3;
         c.beginPath(); c.arc(f.x, f.y, f.r * (1.3 - al * 0.5), 0, 7); c.stroke();
