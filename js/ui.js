@@ -982,14 +982,21 @@ r_tavern(p, tab) {
           <div class="gn">${it.n}</div>${n ? `<span class="gq">${n > 9999 ? (n / 1000).toFixed(1) + 'k' : n}</span>` : ''}</div>`;
       }).join('')}</div></div>
       <div class="card"><div class="card-t">分解 <span class="sub">碎片/芯片 → 金币</span></div>
-        ${['P01', 'P02', 'C01', 'C02', 'C03'].map((id) => {
+        ${['P01', 'P02'].map((id) => {
           const n = (p.mat || {})[id] || 0;
           const rate = E.DISMANTLE_RATE[id];
           return `<div class="zrow"><div class="zav">🧩</div>
             <div class="zi"><b>${E.itemName(id)}</b><span>×${n} · 单价 ${rate} 金币</span></div>
             <button class="btn sm ${n ? '' : 'd'}" data-dec2="${id}" ${n ? '' : 'disabled'}>分解</button></div>`;
         }).join('')}
-        <button class="btn o blk" id="bagDecAll">一键分解全部</button>
+        ${['白', '蓝', '红'].map((q) => {
+          const n = E.chipCountByQ(p, q);
+          const rate = ({ '白': 200, '蓝': 500, '红': 1200 })[q];
+          return `<div class="zrow"><div class="zav">🔲</div>
+            <div class="zi"><b>${q}色芯片</b><span>背包 ×${n} · 单价 ${rate} 金币</span></div>
+            <button class="btn sm ${n ? '' : 'd'}" data-decq="${q}" ${n ? '' : 'disabled'}>分解</button></div>`;
+        }).join('')}
+        <button class="btn o blk" id="bagDecAll">一键分解全部碎片</button>
       </div>
       <div class="card"><div class="card-t">宝箱 <span class="sub">表31 DR11</span></div>
         <div class="kv"><span>持有宝箱</span><b>${(p.mat || {}).I04 || 0}</b></div>
@@ -1041,6 +1048,12 @@ r_tavern(p, tab) {
       const r = E.dismantleMat(p, b.dataset.dec2, 1);
       this.toast(r.msg, r.ok ? 'ok' : 'err');
       if (r.ok) { if (window.SND) SND.play('coin'); this.open('bag', '材料'); this.home(); }
+    }; });
+    /* 芯片分解按钮（此前 C01/C02/C03 显示的是三个角色名且按钮永远灰着） */
+    $$('#pnBody [data-decq]').forEach((b) => { b.onclick = () => {
+      const r = E.dismantleChip(p, b.dataset.decq);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('coin'); E.save(p); this.open('bag', '材料'); this.home(); }
     }; });
     /* 材料页「消耗品」格子：此前无绑定，点了没反应 */
     $$('#pnBody [data-bu]').forEach((el) => { el.onclick = () => {
@@ -2079,9 +2092,12 @@ r_tavern(p, tab) {
     };
     const ad = $('#setAdmin'); if (ad) ad.onclick = () => { location.href = 'admin/'; };
     const st = $('#setAdStam'); if (st) st.onclick = () => {
+      /* 体力已满时先看广告会白扣次数（每日仅 10 次），提前拦截 */
+      if (E.staminaFull(p)) return this.toast('体力已满（' + EX.STAMINA_MAX + '），无需观看', 'err');
       const r = E.useAd(p, 'AD03');
       if (!r.ok) return this.toast(r.msg, 'err');
-      E.addStamina(p, 10); this.toast('体力 +10（今日剩余 ' + E.adLeft(p, 'AD03') + ' 次）', 'ok');
+      const got = E.addStamina(p, 10);
+      this.toast('体力 +' + got + '（今日剩余 ' + E.adLeft(p, 'AD03') + ' 次）', 'ok');
       this.open('set', '账号'); this.home();
     };
     /* 表24 AD04 免费抽奖 */
@@ -2103,9 +2119,11 @@ r_tavern(p, tab) {
       E.save(p); this.open('set', '账号'); this.home();
     };
     const st2 = $('#setAdStam2'); if (st2) st2.onclick = () => {
+      if (E.staminaFull(p)) return this.toast('体力已满（' + EX.STAMINA_MAX + '），无需观看', 'err');
       const r = E.useAd(p, 'AD03');
       if (!r.ok) return this.toast(r.msg, 'err');
-      E.addStamina(p, 10); this.toast('体力 +10（今日剩余 ' + E.adLeft(p, 'AD03') + ' 次）', 'ok');
+      const got = E.addStamina(p, 10);
+      this.toast('体力 +' + got + '（今日剩余 ' + E.adLeft(p, 'AD03') + ' 次）', 'ok');
       E.save(p); this.open('set', '账号'); this.home();
     };
     const rn = $('#setReNet'); if (rn) rn.onclick = async () => { this.toast('检测中…'); await Net.reset(); this.open('set', '网络'); };
