@@ -2283,7 +2283,11 @@ r_tavern(p, tab) {
     /* BUG：局内金币 HUD 从未刷新，一直是 0 */
     const bg = $('#btGold'); if (bg) bg.textContent = E.fmt(r.coin != null ? r.coin : r.gold);
     const bd2 = $('#btDia2'); if (bd2) bd2.textContent = E.fmt((BT.P && BT.P.diamond) || 0);
-    $('#btLv').textContent = r.lv;
+    /* 修复：index.html 里有两个 id="btLv"（顶部状态栏与左上英雄区），
+     * getElementById 只返回第一个，导致左上「Lv.N」永远停在 1。
+     * 现拆成两个独立 id 并都更新；同时补判空避免元素缺失时抛错打断渲染。 */
+    const bl1 = $('#btLv'); if (bl1) bl1.textContent = r.lv;
+    const bl2 = $('#btHeroLv'); if (bl2) bl2.textContent = r.lv;
     /* 顶部波次 */
     const bw = $('#btWave'); if (bw) bw.textContent = r.wave;
     const bwm = $('#btWaveMax'); if (bwm) bwm.textContent = r.waveTotal;
@@ -2313,6 +2317,16 @@ r_tavern(p, tab) {
       wb.style.width = Math.max(0, wv / wm * 100) + '%';
       if (wt) wt.textContent = Math.ceil(Math.max(0, wv));
       /* 截图：只显示当前血量数值（如 3000），不显示上限 */
+    }
+    /* 护盾条：新布局此前完全没有对应元素，护盾生效也看不见。
+     * maxShield>0 时显示并按比例填充，无护盾时隐藏，避免占位 */
+    const shw = $('#btShWrap'), shb = $('#btShBar');
+    if (shw && shb) {
+      const ms = Number(r.maxShield) || 0;
+      if (ms > 0) {
+        shw.style.display = '';
+        shb.style.width = Math.max(0, Math.min(1, (Number(r.shield) || 0) / ms)) * 100 + '%';
+      } else shw.style.display = 'none';
     }
     const rl = $('#btReload');
     if (r.reloading) {
