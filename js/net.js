@@ -162,7 +162,13 @@ async function ghReq(path, { method = 'GET', body = null, timeout = 14000, quick
       if (r.ok || r.status === 201) {
         return { ok: true, ep, json: await r.json() };
       }
-      if (r.status === 404) return { ok: true, ep, json: null, is404: true };
+      /* 404 处理：仅当端点是【官方/自定义可信】端点时才认定"文件确实不存在"。
+       * 反代端点常因不支持 ?ref= 或路径改写而误报 404，
+       * 若在此短路 return，就会让整个请求失败、不再尝试其他端点
+       * —— 这正是后台读不到存档的元凶之一。 */
+      const trusted = (ep === 'https://api.github.com' || GH.extra.indexOf(ep) >= 0);
+      if (r.status === 404 && trusted) return { ok: true, ep, json: null, is404: true };
+      if (r.status === 404) { markDead(ep); return { ok: false, ep }; }
       markDead(ep);
       return { ok: false, ep };
     } catch (e) { markDead(ep); return { ok: false, ep }; }
@@ -288,16 +294,42 @@ const Net = {
 
   async flush() {
     if (!QUEUE.length || !ONLINE) return 0;
-    let n = 0;
+    let n = 0, drop = 0;
     const q = [...QUEUE];
     QUEUE = [];
     for (const it of q) {
+      /* 旧档覆盖新档防护
+       * BUG：队列条目来自上次写失败的那一刻，跨会话常驻 localStorage。
+       *   玩家手机断网打了一局 → 存档进队列；回家用 PC 联网继续玩、
+       *   写了新存档；下次打开手机，flush 无条件重放那份【昨天的存档】，
+       *   直接把 PC 的进度整份覆盖 —— 且 Net.write 每次重新 GET sha，
+       *   不会 409 冲突，是静默覆盖，玩家只发现"进度没了"。
+       * 现在：补传前先比对云端时间戳，队列数据明显更旧就丢弃不传。 */
+      if (await this.staleOf(it)) { drop++; continue; }
       const ok = await this.write(it.path, it.obj, it.msg);
       if (ok) n++; else QUEUE.push(it);
       await sleep(1500);                 // 慢速，避免触发限流
     }
     try { localStorage.setItem(LS.queue, JSON.stringify(QUEUE)); } catch (e) {}
+    if (drop) { try { console.log('[存档] 丢弃过期补传 ' + drop + ' 条（云端已有更新的数据）'); } catch (e) {} }
     return n;
+  },
+
+  /* 队列里的这份数据是否已被云端 newer 版本取代。
+   * 只对带时间戳的对象（玩家存档 / 榜单）生效；其余一律返回 false（照常补传）。 */
+  async staleOf(it) {
+    try {
+      const o = it.obj;
+      if (!o || typeof o !== 'object') return false;
+      const mine = Number(o.offlineAt || o.lastSeen || o.updated || 0) || 0;
+      if (!mine) return false;
+      const r = await Net.read(it.path);
+      const d = r && r.data;
+      if (!d || typeof d !== 'object') return false;      /* 云端没有 → 照常补传 */
+      const theirs = Number(d.offlineAt || d.lastSeen || d.updated || 0) || 0;
+      /* 云端比队列数据新 1 分钟以上 → 队列这份已过期 */
+      return theirs > mine + 60000;
+    } catch (e) { return false; }
   },
 
   /** 列出目录 */
@@ -321,35 +353,76 @@ const Net = {
   },
 
   /* 列出目录
-   * ---------------------------------------------------------------
-   * 致命 BUG 修复（玩家只显示 1 个的真凶）：
-   * 玩家存档在 **players** 分支（30+ 个文件），而 **main** 分支的
-   * data/zb/players/ 只有 1 个历史遗留文件（uoy3fq9.json）。
-   * 请求靠 ?ref=players 指定分支，但多数公共反代端点会丢掉 query string
-   * 或缓存时忽略它 —— 于是悄悄返回了默认分支 main 的内容，
-   * 后台就只看到那 1 个玩家（且恰好是已注销的）。
-   * 现在：对 data/zb/ 路径，两个分支都列一遍并合并去重。
-   * --------------------------------------------------------------- */
+   * ===============================================================
+   * 致命 BUG 修复（后台长期只显示 1~2 个玩家的真凶）：
+   *
+   * ① 分支错乱：玩家存档全在 **players** 分支（实测 31 个），
+   *    main 分支只有 1 个历史遗留文件。原实现走
+   *    GET /contents/data/zb/players?ref=players，
+   *    但公共反代端点普遍丢失 ?ref= 查询参数（或按 URL 缓存忽略它），
+   *    静默返回默认分支 main 的内容 → 后台永远只看到那 1 个。
+   *
+   * ② 404 短路：ghReq 里 `status===404` 被当作"成功但为空"立刻返回，
+   *    任一反代端点返回 404 就会导致整个请求失败，不再尝试其他端点。
+   *
+   * 实测对比（同一环境）：
+   *    Net.list('data/zb/players/')  → 2 项   ✘（错的）
+   *    Net.read('.../a13t4gg118bwxb5.json') → 读到"西瓜哥" ✔
+   *    即 read 走对分支、list 走错分支。
+   *
+   * 解决方案：改用 **Git Trees API**
+   *    GET /git/trees/{branch}?recursive=1
+   * 一次请求返回整棵文件树，分支写在【路径】里而非 query string，
+   * 反代端点无法丢失，且一次拿全（实测 players=31 / users=143）。
+   * 结果按分支缓存 60 秒，避免重复请求。
+   * =============================================================== */
+  _treeCache: {},   // { branch: { at, paths } }
+  async tree(branch) {
+    const now = Date.now();
+    const c = this._treeCache[branch];
+    if (c && now - c.at < 60000) return c.paths;
+    const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
+    const eps = [...GH.extra, 'https://api.github.com'];   // trees API 只有官方支持，反代多不支持
+    for (const ep of eps) {
+      try {
+        const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/git/trees/${branch}?recursive=1`,
+          { headers: H }, 20000);
+        if (r.ok) {
+          const j = await r.json();
+          if (j && Array.isArray(j.tree)) {
+            const paths = j.tree.filter((t) => t.type === 'blob').map((t) => t.path);
+            this._treeCache[branch] = { at: now, paths: paths };
+            return paths;
+          }
+        }
+      } catch (e) {}
+    }
+    return null;
+  },
+
   async list(path) {
     if (/^data\/zb\//.test(path)) {
+      const norm = path.replace(/^\/+|\/+$/g, '');
+      const out = [];
       const brs = [];
       [GH.dataBranch, GH.branch].forEach((b) => { if (b && brs.indexOf(b) < 0) brs.push(b); });
-      const out = [];
       for (const b of brs) {
-        let got = null;
-        try { got = await ghReq(path, { method: 'GET' }, b); } catch (e) {}
-        /* 反代端点可能丢 ref 而返回默认分支内容 ——
-         * 若结果偏少（≤2 项，通常只有 .gitkeep）再用官方端点重试一次 */
-        const thin = !Array.isArray(got) || got.length <= 2;
-        if (thin && b !== GH.branch) {
+        let names = null;
+        const paths = await this.tree(b);
+        if (paths) {
+          names = paths
+            .filter((pp) => pp.startsWith(norm + '/'))
+            .map((pp) => pp.slice(norm.length + 1))
+            .filter((n) => n.indexOf('/') < 0);      // 只取直接子级
+        }
+        /* trees 不可用时退回 contents API（次要路径） */
+        if (!names) {
           try {
-            const g2 = await ghReq(path, { method: 'GET', onlyOfficial: true }, b);
-            if (Array.isArray(g2) && g2.length > (Array.isArray(got) ? got.length : 0)) got = g2;
+            const d = await ghReq(path, { method: 'GET', onlyOfficial: true }, b);
+            if (Array.isArray(d)) names = d.map((x) => x.name);
           } catch (e) {}
         }
-        if (Array.isArray(got)) {
-          got.forEach((x) => { if (x && x.name && out.indexOf(x.name) < 0) out.push(x.name); });
-        }
+        (names || []).forEach((n) => { if (n && out.indexOf(n) < 0) out.push(n); });
       }
       return out;
     }
