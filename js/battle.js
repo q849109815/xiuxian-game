@@ -294,7 +294,11 @@ const BT = {
   attach(canvas) {
     this.cv = canvas; this.ctx = canvas.getContext('2d');
     this.resize();
-    window.addEventListener('resize', () => this.resize());
+    /* attach 每局开战都会调用一次；旧的 resize 监听必须先移除，
+     * 否则打了 N 局就累积 N 个监听器，一次转屏会触发 N 次 resize()。 */
+    if (this._onResize) { window.removeEventListener('resize', this._onResize); this._onResize = null; }
+    this._onResize = () => this.resize();
+    window.addEventListener('resize', this._onResize);
   },
   resize() {
     if (!this.cv) return;
