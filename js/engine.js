@@ -136,8 +136,20 @@ const E = {
   },
   addStamina(p, v) {
     this.tickStamina(p);
-    p.stamina = Math.min(EX.STAMINA_MAX, (p.stamina || 0) + v);
-    return p.stamina;
+    const before = p.stamina || 0;
+    const after = Math.min(EX.STAMINA_MAX, before + v);
+    p.stamina = after;
+    /* 返回【实际增加量】而不是增加后的总量
+     * BUG：此前返回 p.stamina（总量），调用方无从判断到底加没加。
+     *   体力已达上限时 Math.min 会把增量截成 0 —— 玩家看广告领体力，
+     *   提示「体力 +10」，实际一点没加，而【广告次数已经被 useAd 扣掉了】，
+     *   每日 10 次的额度白白蒸发一次。
+     * 现在返回实际增量，UI 可据此提示真实数值；staminaFull() 供调用前拦截。 */
+    return Math.max(0, after - before);
+  },
+  staminaFull(p) {
+    this.tickStamina(p);
+    return (p.stamina || 0) >= EX.STAMINA_MAX;
   },
 
   /* =================================================
@@ -246,8 +258,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 实测：商店 SH09「传说芯片包」980 钻买 chipL:2 → 到手 2 块白色生命芯片；
    *       战令 Lv50「传说芯片×1」→ 白色；免费抽奖「芯片×1」→ 白色。 */
   rollChipByQuality(q) {
+    /* 兼容【字母码】与【中文品质名】两种入参
+     * 隐患：原映射表只有 n/e/l/white/blue/red，中文 '白'/'蓝'/'红' 不在表里
+     *  → Q['蓝'] 为 undefined → `|| '白'` 兜底成【白色】
+     *  → rollChipByQuality('蓝') / ('红') 静默返回白芯片，品质被吞掉。
+     * 当前调用点都传字母码所以没暴露，但 giveChipByQuality 收的是中文名，
+     * 两条路径入参语义不一致，极易写错。现在两种都认。 */
     const Q = { n: '白', e: '蓝', l: '红', white: '白', blue: '蓝', red: '红' };
-    const want = Q[q] || '白';
+    const want = Q[q] || (q === '蓝' || q === '红' ? q : '白');
     const pool = (EX.chips || []).filter((c) => c.q === want);
     const use = pool.length ? pool : (EX.chips || []);
     if (!use.length) return null;
@@ -908,8 +926,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (p.monthCard.last === d) return { ok: false, msg: '今日已领取' };
     p.monthCard.last = d;
     p.diamond = (p.diamond || 0) + 50;
-    this.addStamina(p, 60);
-    return { ok: true, msg: '月卡奖励：钻石+50 体力+60（剩 ' + this.monthCardLeft(p) + ' 天）' };
+    const gs = this.addStamina(p, 60);
+    /* 体力满时 addStamina 会被上限截断，用真实增量提示，避免「说给60实际给0」 */
+    return { ok: true, msg: '月卡奖励：钻石+50 体力+' + gs + '（剩 ' + this.monthCardLeft(p) + ' 天）' };
   },
 
   /* =========================================================
@@ -1491,6 +1510,30 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const gold = rate * t;
     p.gold = (p.gold || 0) + gold;
     return { ok: true, msg: '分解 ' + this.itemName(id) + '×' + t + ' → 金币 +' + this.fmt(gold), gold: gold };
+  },
+  /* 分解【背包里的芯片】
+   * BUG：分解面板硬编码列出 P01/P02/C01/C02/C03，全部读 p.mat[id]。
+   *   但 C01/C02/C03 是【角色 ID】（幸存者-杰克 / 医疗兵-艾拉 / 重装兵-雷），
+   *   芯片真实存放在 p.bag —— p.mat 里永远不会有 C0x。
+   *   结果：① 三行显示的是三个【角色名】而不是芯片，玩家会以为能分解角色；
+   *        ② 数量恒为 0 → 三个「分解」按钮【永远灰色不可点】；
+   *        ③ 一行「一键分解全部」里也混着这三个死条目。
+   * 现在改为按品质分解背包芯片（白200 / 蓝500 / 红1200 金币），
+   * 优先分解该品质里主属性数值最低的一颗（最不心疼）。 */
+  chipCountByQ(p, q) { return (p.bag || []).filter((c) => c.q === q).length; },
+  dismantleChip(p, q) {
+    const rate = ({ '白': 200, '蓝': 500, '红': 1200 })[q];
+    if (!rate) return { ok: false, msg: '未知芯片品质' };
+    const list = (p.bag || []).filter((c) => c.q === q);
+    if (!list.length) return { ok: false, msg: '背包里没有' + q + '色芯片' };
+    /* 挑主属性数值最低的一颗 */
+    list.sort((a, b) => (a.main && a.main.v || 0) - (b.main && b.main.v || 0));
+    const c = list[0];
+    const i = (p.bag || []).findIndex((x) => x.id === c.id);
+    if (i < 0) return { ok: false, msg: '未找到该芯片' };
+    p.bag.splice(i, 1);
+    p.gold = (p.gold || 0) + rate;
+    return { ok: true, msg: '分解' + q + '色芯片 → 金币 +' + this.fmt(rate), gold: rate };
   },
   dismantleAll(p) {
     let gold = 0, cnt = 0;
