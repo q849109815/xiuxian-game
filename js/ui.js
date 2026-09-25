@@ -496,14 +496,14 @@ r_tavern(p, tab) {
       /* 截图41：宝石属性 tab，三颗宝石 + 绿色「卸下」+ 橙色「装备设造」 */
       const gb = E.gemBonus(p);
       return `<div class="card"><div class="card-t">宝石属性
-        <span class="sub">Lv.${p.gemLv || 0}</span></div>
+        <span class="sub">Lv.${p.gemOn ? E.gemLvOf(p, p.gemOn) : 0}</span></div>
         ${(EX.gems || []).map((g) => {
           const on = p.gemOn === g.id;
           return `<div class="zrow">
             ${g.img ? `<div class="zav"><img src="${g.img}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>`
                     : `<div class="zav">${g.icon}</div>`}
             <div class="zi"><b>${g.n}</b><span>${g.desc}</span>
-              <span style="color:${on ? 'var(--yel)' : 'rgba(255,255,255,.55)'}">Lv.${p.gemLv || 0}：${E.gemBonusOf ? E.gemBonusOf(p, g.id) : '—'}${on ? '（已镶嵌）' : ''}</span></div>
+              <span style="color:${on ? 'var(--yel)' : 'rgba(255,255,255,.55)'}">Lv.${E.gemLvOf(p, g.id)}：${E.gemBonusOf ? E.gemBonusOf(p, g.id) : '—'}${on ? '（已镶嵌）' : ''}</span></div>
             ${on ? '<button class="btn g sm" data-gemoff="1">卸下</button>'
                  : `<button class="btn sm" data-gemon="${g.id}">镶嵌</button>`}
           </div>`;
@@ -522,7 +522,28 @@ r_tavern(p, tab) {
       </div>`;
     }
     /* 装备总览 */
-    return `<div class="card" style="text-align:center">
+    /* 角色选择：
+     * 此前 EX.chars 共 4 个角色（各自 hp/spd/armor/crit 不同，C02~C04 分别
+     * 通关 1-3 / 2-3 / 3-3 解锁），但 E.switchChar() 全项目【零调用】，
+     * UI 里也只有设置页显示一行角色名 —— 玩家永远只能玩 C01，
+     * 另外 3 个角色及其专属皮肤（11 款中的 8 款）全部无法使用。 */
+    const un = (EX.chars || []).filter((x) => E.charUnlocked(p, x.id)).length;
+    return `<div class="card"><div class="card-t">选择角色
+        <span class="sub">已解锁 ${un} / ${(EX.chars || []).length}</span></div>
+      <div class="lbl" style="text-align:left;margin-bottom:6px">点击已解锁角色切换（属性与外观同时生效）</div>
+      <div class="grid4">${(EX.chars || []).map((ch2) => {
+        const ok2 = E.charUnlocked(p, ch2.id);
+        const on2 = (p.char || 'C01') === ch2.id;
+        return `<div class="gcell ${on2 ? '' : 'sel'}" data-chsel="${ch2.id}"
+          style="${ok2 ? '' : 'opacity:.45'}">${ch2.img
+            ? `<img src="${ch2.img}">` : `<div class="gi">${ch2.icon}</div>`}
+          <div class="gn">${ch2.n}${on2 ? '<span class="tag y" style="font-size:8px">使用中</span>' : ''}</div>
+          <div class="lbl" style="font-size:8px;line-height:1.3">${ok2
+            ? `生命${ch2.hp} · 护甲${ch2.armor} · 暴击${Math.round((ch2.crit || 0) * 100)}%`
+            : (ch2.unlockTxt || '未解锁')}</div></div>`;
+      }).join('') || '<div class="lbl">暂无角色</div>'}</div>
+    </div>
+    <div class="card" style="text-align:center">
       <div style="position:relative;display:inline-block">
         ${c.img ? `<img src="${c.img}" style="width:120px;height:160px;object-fit:cover;border-radius:14px;
           border:3px solid rgba(255,201,60,.5);box-shadow:0 6px 20px rgba(0,0,0,.5)">`
@@ -550,14 +571,24 @@ r_tavern(p, tab) {
     <button class="btn o" id="roleForge" style="width:100%">装备设造</button>`;
   },
   b_role(p, tab) {
+    /* 角色切换（此前 switchChar 零调用，4 个角色只有 C01 能用） */
+    $$('#pnBody [data-chsel]').forEach((el) => { el.onclick = () => {
+      const r = E.switchChar(p, el.dataset.chsel);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pickup'); this.open('role', '装备'); this.home(); }
+    }; });
     $$('#pnBody [data-gemon]').forEach((b) => { b.onclick = () => {
       const g = (EX.gems || []).find((x) => x.id === b.dataset.gemon);
-      if (!((p.gems || {})[b.dataset.gemon] > 0)) return this.toast('该宝石数量不足', 'err');
-      p.gemOn = b.dataset.gemon; E.save(p);
+      /* 镶嵌 = 占用 1 颗（从背包扣除），卸下时返还。
+       * 此前角色页镶嵌不扣、宝石页镶嵌扣 1 颗，两处逻辑不一致；
+       * 且两处卸下都不返还 —— 反复镶嵌卸下会让宝石凭空蒸发。 */
+      const r = E.setGem(p, b.dataset.gemon);
+      if (!r.ok) return this.toast(r.msg, 'err');
       this.toast('已镶嵌 ' + g.n, 'ok'); this.open('role', '宝石'); this.home();
     }; });
     $$('#pnBody [data-gemoff]').forEach((b) => { b.onclick = () => {
-      p.gemOn = null; E.save(p); this.toast('已卸下', 'ok'); this.open('role', '宝石'); this.home();
+      const r = E.setGem(p, null);
+      this.toast(r.msg, r.ok ? 'ok' : 'err'); this.open('role', '宝石'); this.home();
     }; });
     $$('#pnBody [data-forge]').forEach((b) => { b.onclick = () => {
       const r = E.forgeEquip(p, b.dataset.forge);
@@ -1273,8 +1304,9 @@ r_tavern(p, tab) {
         ${g ? ' · ' + g.desc : ''}
       </div>
       <button class="btn" id="gemInlay" style="width:100%;margin-top:10px">镶 嵌</button>
+      <button class="btn g" id="gemOff" style="width:100%;margin-top:6px">卸 下（返还背包）</button>
       <button class="btn o" id="gemFuse" style="width:100%;margin-top:6px">🔨 宝石合成（3 颗 → 升一级）</button>
-      <div class="sub" style="margin-top:6px">当前宝石等级：<b style="color:var(--yel)">Lv.${p.gemLv || 0}</b>
+      <div class="sub" style="margin-top:6px">当前宝石等级：<b style="color:var(--yel)">Lv.${p.gemOn ? E.gemLvOf(p, p.gemOn) : 0}</b>
         加成：${E.gemBonusTxt ? E.gemBonusTxt(p) : '—'}
         <span style="opacity:.7">（百分比加成，只随宝石合成等级提升，与角色等级无关）</span></div>
     </div>`;
@@ -1289,12 +1321,20 @@ r_tavern(p, tab) {
     $$('#pnBody [data-gsel]').forEach((el) => { el.onclick = () => {
       this.gemSel = el.dataset.gsel; this.open('gem');
     }; });
+    const ob = $('#gemOff');
+    if (ob) ob.onclick = () => {
+      if (!p.gemOn) return this.toast('当前没有镶嵌宝石', 'err');
+      const r = E.setGem(p, null);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { E.save(p); this.open('gem'); this.home(); }
+    };
     const ib = $('#gemInlay');
     if (ib) ib.onclick = () => {
       const id = this.gemSel; const g = (EX.gems || []).find((x) => x.id === id);
       if (!g) return this.toast('请选择宝石', 'err');
-      if (!((p.gems || {})[id] > 0)) return this.toast('该宝石数量不足', 'err');
-      p.gems[id]--; p.gemOn = id;
+      /* 走统一入口：占用 1 颗并在更换时返还（此前直接扣且永不返还） */
+      const r = E.setGem(p, id);
+      if (!r.ok) return this.toast(r.msg, 'err');
       if (window.SND) SND.play('upgrade');
       E.save(p); this.toast('镶嵌成功：' + g.n, 'ok'); this.open('gem'); this.home();
     };
