@@ -217,8 +217,11 @@ const UA = {
       uid: localStorage.getItem(this.K_UID) || '',
     };
   },
+  /* 需求：必须输入账号登录，不再免密自动进入。
+   * 「记住账号」现在只回填账号名，不再触发自动登录，故恒为 false。
+   * 保留此函数是因为设置页等外部代码会调用它做展示判断。 */
   shouldAuto() {
-    return localStorage.getItem(this.K_AUTO) === '1' && !!localStorage.getItem(this.K_UID);
+    return false;
   },
   logout() {
     localStorage.removeItem(this.K_AUTO);
