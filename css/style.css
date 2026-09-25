@@ -1072,7 +1072,18 @@ input{font-family:inherit}
 
 /* ========== 章节 CG 过场 ==========
  * EX.cgImg / EX.chapterCg 此前是死配置：3 张 CG 图已生成但从不展示，
- * 玩家全程看不到任何过场演出。现在进入新章节时播放一次。 */
+ * 玩家全程看不到任何过场演出。现在进入新章节时播放一次。
+ *
+ * 补基础显隐规则：#cgModal 和 #lvup 此前只有 .cg-box / .lvup-* 等子元素样式，
+ * 容器本身（class="modal"）没有任何 CSS —— 而 .modal 在 style.css 里根本没有定义，
+ * 于是它们保持 div 默认的 display:block 常驻在文档流里，从未被隐藏。
+ * cgModal 占 y=0..451，正好压在登录页账号框/密码框/记住账号/忘记密码之上，
+ * 玩家用鼠标或手指根本点不到输入框（此前测试都用 fill 程序化赋值，绕过了点击，故未暴露）。
+ * 现按 #choice 的既有写法补齐：容器默认 display:none，加 .on 才 flex 居中显示。 */
+#cgModal{position:absolute;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.72)}
+#cgModal.on{display:flex}
+#lvup{position:absolute;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.72)}
+#lvup.on{display:flex}
 #cgModal .cg-box { position:relative; width:min(88vw,420px); border-radius:14px;
   overflow:hidden; background:#0d1420; border:2px solid rgba(255,201,60,.5);
   box-shadow:0 12px 40px rgba(0,0,0,.8); animation:cgIn .35s ease-out; }
