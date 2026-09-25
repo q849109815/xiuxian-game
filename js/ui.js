@@ -1321,8 +1321,8 @@ r_tavern(p, tab) {
     return `<div class="card"><div class="card-t">好友列表
       <span class="sub">${fs.length} 人 · 每个 +0.5% 攻击</span></div>
       ${fs.length ? fs.map((f) => `<div class="zrow">
-        ${this.zAvatarHTML(f.id)}
-        <div class="zi"><b>${f.n}</b><span>战力 ${E.fmt(f.pw || 0)} · 可发送体力</span></div>
+        ${this.zAvatarHTML(f.id || f)}
+        <div class="zi"><b>${(f && f.n) || f.id || '未知'}</b><span>战力 ${E.fmt((f && f.pw) || 0)} · 可发送体力</span></div>
         ${(function () {
           const today = new Date().toDateString();
           const sent = (p.sendStDate === today) ? (p.sendStTo || []) : [];
