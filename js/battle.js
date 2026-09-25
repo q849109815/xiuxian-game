@@ -82,8 +82,21 @@ const BT = {
        *      后期该有的稀有金属/碎片全部掉不出来
        * 现在按玩家当前进度章节取值，无尽打越深掉落档越高。 */
       const ch = p ? Math.max(1, (E.chapterOf ? E.chapterOf(p.curLevel || '1-1') : 1)) : 1;
+      /* 严重BUG：无尽模式此前【没有 rwMul 字段】
+       *   run.rwMul = def.rwMul → undefined
+       *   mkZ(): z.gold = Math.round((d.gold||3) * undefined) = NaN
+       *          z.xp   = NaN
+       * 实测后果（无尽模式）：
+       *   ① r.gold 恒 NaN → 结算 Math.floor(NaN*0.3)||0 = 0，击杀一分钱拿不到
+       *   ② r.xp  恒 NaN → 局内等级永远卡在 Lv.1
+       *      → 升级从不发生 → 技能三选一【一次都不出现】
+       *      无尽模式只能靠初始属性硬打，实测 12 波即阵亡
+       * 现在按玩家当前进度关卡的倍率取值，无尽收益随进度提升。 */
+      const curId = p && E.curLevel ? E.curLevel(p) : '1-1';
+      const curD = (EX.levels || []).find((x) => x.id === curId);
       return { id: 'endless', ch: ch, n: '无尽模式', waves: 9999,
         pool: EX.zombies.map((z) => z.id), per: [8, 20], mul: 1.0,
+        rwMul: Math.max(1, (curD && curD.mul) || 1),
         cond: 'endless', boss: null, scene: 'city', endless: true };
     }
     const d = EX.levels.find((x) => x.id === levelId) || EX.levels[0];
@@ -129,7 +142,9 @@ const BT = {
       /* 防线血量（真实玩法：漏怪突破即失败） */
       wallMax: Math.round(maxHp * 0.6), wallHp: Math.round(maxHp * 0.6),
       hp: Math.round(maxHp * 0.6), maxHp: Math.round(maxHp * 0.6),
-      shield: a.shield, maxShield: a.shield,
+      /* 兜底：即使 attrs() 因热更/旧版本没返回 shield，也不能是 undefined
+       * （undefined 经 Math.max 会变成 NaN，护盾系统整体失效） */
+      shield: Number(a.shield) || 0, maxShield: Number(a.shield) || 0,
       turrets: [], mercs: [], coin: 0, cd: {},
       atk: a.atk, rate: a.rate, range: a.range, pierce: a.pierce, spread: a.spread,
       pellets: a.pellets || 1, crit: a.crit, critDmg: a.critDmg, moveSpd: a.moveSpd,
@@ -150,7 +165,9 @@ const BT = {
        *      → 建造/升级不扣钱、可无限白嫖
        *   ③ 局内经验 NaN → 战斗中永远升不了级
        * 现在把 def.rwMul 同步到 run 上。 */
-      rwMul: def.rwMul,
+      /* 兜底：任何模式/关卡若漏配 rwMul，退化用 def.mul，
+       * 绝不让它变成 undefined 参与乘法（NaN 会静默污染金币/经验/等级） */
+      rwMul: (def.rwMul != null && isFinite(def.rwMul)) ? def.rwMul : Math.max(1, def.mul || 1),
       /* 连升多级的待选技能次数，开局清零 */
       _pendingOffers: 0,
       zombies: [], bullets: [], pools: [], efx: [], floats: [], drops: [],
@@ -1334,7 +1351,10 @@ const BT = {
     const r = this.run;
     r.skills[id] = (r.skills[id] || 0) + 1;
     this.applyMods();
-    if (id === 'hudun') { r.maxShield += 120; r.shield = r.maxShield; }
+    /* 死代码已移除：原为 `if (id === 'hudun') { r.maxShield += 120; ... }`
+     * 但 EX.skills 里根本没有 id 为 'hudun' 的技能（18 个技能见 config），
+     * 该判断恒为 false，从未执行过一次。护盾的正规来源是 I02 护盾发生器
+     * 与（未来的）stat:'shield' 天赋/芯片，走 applyItem / applyMods。 */
     UI.toast('✨ ' + EX.skills.find((s) => s.id === id).n + ' Lv.' + r.skills[id], 'ok');
     this.paused = false;
     /* 连升多级时，选完这一组后若还有未使用的升级次数，继续弹下一组 */
@@ -1361,8 +1381,9 @@ const BT = {
         r.mods[k] = (Number(r.mods[k]) || 0) + v * lv;
       }
     }
-    r.shield = Math.max(r.shield, r.mods.shield);
-    r.maxShield = Math.max(r.maxShield, r.mods.shield);
+    /* Number() 兜底：r.shield 为 undefined/NaN 时 Math.max 会再次污染成 NaN */
+    r.shield = Math.max(Number(r.shield) || 0, Number(r.mods.shield) || 0);
+    r.maxShield = Math.max(Number(r.maxShield) || 0, Number(r.mods.shield) || 0);
   },
 
   addFloat(x, y, v, cls) { this.run.floats.push({ x, y, v: String(v), cls, life: 0.7 }); },
@@ -1408,7 +1429,7 @@ const BT = {
     if (r.reviveLeft > 0) {
       r.reviveLeft--;
       r.wallHp = r.wallMax != null ? r.wallMax : r.maxHp;
-      r.hp = r.wallHp; r.shield = r.maxShield;
+      r.hp = r.wallHp; r.shield = Number(r.maxShield) || 0;
       for (const z of r.zombies.slice()) {
         if (Math.hypot(z.x - r.px, z.y - r.py) < 190) z.dead = true;
       }
