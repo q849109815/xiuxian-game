@@ -432,6 +432,30 @@ const BT = {
     /* --- 主动技能冷却 --- */
     for (const k in r.cd) if (r.cd[k] > 0) r.cd[k] -= dt;
 
+    /* --- 自动战斗：冷却好了自动释放主动/召唤技能 ---
+     * 严重 BUG：BT.auto 此前全项目零读取（只有初始化 BT.auto = true），
+     * 「🤖 自动战斗」按钮点击后只切换了这一个变量 + 弹 toast + 按钮高亮，
+     * 战斗逻辑完全不看它。而主动技能（温压弹/干冰弹/电磁穿刺…）只有
+     * 玩家手动点技能格才会释放 —— 玩家以为开了自动，实际什么都没发生。
+     * 现在 auto 为真时按 0.5s 节流自动释放（与人工点击节奏接近）。
+     * 注：tick 在 paused 时不会被主循环调用，技能三选一期间不会误放。 */
+    if (BT.auto) {
+      r._autoT = (r._autoT || 0) + dt;
+      if (r._autoT >= (BT.autoGap || 0.5)) {
+        r._autoT = 0;
+        const live = (r.zombies || []).some((z) => !z.dead);
+        if (live) {
+          for (const id in r.skills) {
+            const d = EX.skills.find((x) => x.id === id);
+            if (!d || d.kind === 'passive') continue;
+            if ((r.cd[id] || 0) > 0) continue;
+            this.castSkill(id);
+            break;               /* 每次只放一个，避免一瞬间全部倾泻 */
+          }
+        }
+      }
+    }
+
     if (r.spawnLeft > 0) {
       r.spawnT -= dt;
       if (r.spawnT <= 0) {
@@ -868,7 +892,9 @@ const BT = {
     const m = def.mods || {};
     if (window.SND) SND.play(def.el === '火' ? 'explode' : def.el === '冰' ? 'pick' : 'crit');
 
-    const dmgBase = (r.atk || 1) * (r.def.rwMul || 1);
+    /* 技能伤害总系数（EX.SKILL_DMG_K）：修复 11 个技能后统一校准强度，
+     * 详见 config.js 注释。缺省为 1，不改变历史行为。 */
+    const dmgBase = (r.atk || 1) * (r.def.rwMul || 1) * (EX.SKILL_DMG_K != null ? EX.SKILL_DMG_K : 1);
     let hit = 0;
 
     if (id === 'wenyadan') {
@@ -1042,6 +1068,22 @@ const BT = {
       });
     }
     if (r.mag <= 0) this.reload();
+  },
+
+  /* 战斗中切换武器后同步武器数值
+   * BUG：战斗中的「🔄 切换」按钮此前只弹一句 toast，不切换任何东西
+   * （真正的切换入口 E.switchGun 只在武器库面板里）。而 run 的 atk/rate/
+   * mag 等都在 start 时快照，切换武器后必须重算，否则换枪不换数值。 */
+  refreshGun() {
+    const r = this.run; if (!r || !this.P) return;
+    const a = E.attrs(this.P);
+    r.atk = a.atk; r.rate = a.rate; r.range = a.range; r.pierce = a.pierce;
+    r.spread = a.spread; r.pellets = a.pellets || 1; r.crit = a.crit;
+    r.critDmg = a.critDmg; r.moveSpd = a.moveSpd;
+    r.dmgMin = a.dmgMin; r.dmgMax = a.dmgMax; r.ls = a.ls;
+    r.erMul = a.erMul; r.reloadCut = a.reloadCut;
+    r.mag = a.mag; r.magMax = a.mag;
+    r.reloading = false; r.reloadT = 0; r.shootT = 0;
   },
 
   reload() {
