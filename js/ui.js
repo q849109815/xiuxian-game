@@ -1830,10 +1830,12 @@ r_tavern(p, tab) {
     <div class="card"><div class="card-t">${tab}图鉴 <span class="sub">${got.length}/${list.length}</span></div>
       <div class="grid4">${list.map((x) => {
         const has = got.indexOf(x.id) >= 0;
-        return `<div class="gcell ${has ? '' : 'sel'}"${has ? '' : ` data-cdxh="${kind}|${x.id}"`}>
+        return `<div class="gcell ${has ? '' : 'sel'}"${has
+            ? ` data-cdxs="${kind}|${x.id}"` : ` data-cdxh="${kind}|${x.id}"`}>
           ${x.img ? `<img src="${x.img}" style="width:60%;height:60%;object-fit:contain">`
                   : `<div class="gi">${x.icon || '❓'}</div>`}
           <div class="gn">${has ? x.n : '???'}</div>
+          ${has && x.skill ? `<div style="font-size:9px;color:#8fb4ff;line-height:1.2;margin-top:1px">${x.skill}</div>` : ''}
           ${has ? '<span class="gq">✔</span>' : '<span class="gq" style="background:#666">未解锁</span>'}
         </div>`;
       }).join('')}</div>
@@ -1845,6 +1847,13 @@ r_tavern(p, tab) {
       const [kind, id] = b.dataset.cdxh.split('|');
       const hint = E.codexHint(p, kind, id);
       this.toast(hint, 'err');
+    }; });
+    /* 已解锁条目：点击查看该怪物的技能说明（表：僵尸 12 条技能） */
+    $$('#pnBody [data-cdxs]').forEach((b) => { b.onclick = () => {
+      const [kind, id] = b.dataset.cdxs.split('|');
+      const z = (EX.zombies || []).find((x) => x.id === id);
+      if (!z || !z.skill) { this.toast('暂无技能说明', 'ok'); return; }
+      this.toast(z.skill + '：' + (z.sk || ''), 'ok');
     }; });
   },
 
