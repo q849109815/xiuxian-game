@@ -1481,6 +1481,20 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     (p.skins || []).forEach((sk) => add('skin', sk));
     return n;
   },
+  /* 图鉴解锁条件提示
+   * BUG：图鉴面板此前给「未解锁」格子挂了 data-cdx，点击直接调 codexUnlock
+   *      解锁并发奖。新号可把三个图鉴共 30 个未解锁条目一口气点完，
+   *      白拿 5900 金币 + 295 成就点（初始金币才 2000、成就点 0），
+   *      收集系统与成就商店经济全部失衡。
+   * 现在未解锁格子只提示真实解锁途径，不再发放任何奖励。 */
+  codexHint(p, kind, id) {
+    if (kind === 'zombie') return '❔ 击败该怪物后自动解锁图鉴';
+    if (kind === 'gun') return '❔ 装备该武器后自动解锁图鉴';
+    if (kind === 'skin') return '❔ 获得该皮肤后自动解锁图鉴';
+    return '❔ 未解锁';
+  },
+  /* 只允许由真实获得途径调用（击杀 / 装备武器 / 获得皮肤），
+   * 不得由面板点击直接调用，否则图鉴奖励等于无限白嫖。 */
   codexUnlock(p, kind, id) {
     p.codex = p.codex || {};
     p.codex[kind] = p.codex[kind] || [];
