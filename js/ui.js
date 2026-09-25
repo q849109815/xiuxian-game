@@ -1667,7 +1667,8 @@ r_tavern(p, tab) {
     const b = EX.buildings.find((x) => x.id === tab) || EX.buildings[0];
     const cur = p.build[b.id] || 1;
     const cost = E.buildCost(p, b.id);
-    const val = b.stat === 'gold' ? (b.offline * cur) + ' 金币/小时' : '+' + (cur * b.per * 100).toFixed(0) + '%';
+    /* 仓库（stat==='gold'）此前显示写死的 offline(120)×等级，与实际产出不符 */
+    const val = b.stat === 'gold' ? E.offlineRate(p) + ' 金币/小时' : '+' + (cur * b.per * 100).toFixed(0) + '%';
     return `<div class="card"><div class="card-t">${b.icon} ${b.n} <span class="sub">Lv.${cur}/${b.max}</span></div>
       <div class="kv"><span>效果</span><b style="color:var(--green)">${val}</b></div>
       <div class="kv"><span>说明</span><b style="font-size:11px">${b.desc}</b></div>
