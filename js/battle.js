@@ -1749,39 +1749,112 @@ const BT = {
   },
 
   depthScale(y) {
-    const t = Math.max(0, Math.min(1, y / (this.wallY || this.H)));
-    return 0.80 + Math.pow(t, 1.2) * 0.42;      /* 远处 0.80 倍 → 近处 1.22 倍（弱透视，贴近平视俯瞰） */
+    const wall = this.wallY || this.H;
+    const hz = wall * 0.10;
+    const t = Math.max(0, Math.min(1, (y - hz) / Math.max(1, wall - hz)));
+    /* 强透视：远处 0.66 倍 → 近处 1.42 倍（近大远小对比拉开 = 真纵深） */
+    return 0.66 + Math.pow(t, 1.25) * 0.76;
   },
 
-  /* ===== 2.5D 透视地面网格 ===== */
+  /* 深度雾化：越远越淡（大气透视），返回 0~1 的不透明度系数 */
+  depthFog(y) {
+    const wall = this.wallY || this.H;
+    const hz = wall * 0.10;
+    const t = Math.max(0, Math.min(1, (y - hz) / Math.max(1, wall - hz)));
+    return 0.55 + Math.pow(t, 0.85) * 0.45;
+  },
+
+  /* ===== 真 3D 透视地面：消失点 + 大气雾化 + 明暗纵深条带 + 收敛网格 ===== */
   drawPerspGround(c) {
-    const W = this.W, H = this.H, wall = this.wallY;
-    const vanishY = H * 0.10, vanishX = W / 2;
-    /* 横向线：远处密、近处疏（幂次分布制造纵深） */
-    for (let i = 0; i <= 12; i++) {
-      const t = i / 12;
-      const y = vanishY + Math.pow(t, 1.9) * (wall - vanishY);
-      const a = 0.05 + t * 0.22;
-      c.strokeStyle = 'rgba(120,170,220,' + a.toFixed(3) + ')';
-      c.lineWidth = t < 0.3 ? 0.6 : 1.1;
+    const W = this.W, H = this.H, wall = this.wallY || (H - 96);
+    const hz = H * 0.10, vpx = W / 2;
+    if (!isFinite(W) || !isFinite(H)) return;
+    c.save();
+    /* 1) 远景大气雾化：越靠近地平线越淡（纵深的关键） */
+    const fog = c.createLinearGradient(0, hz - H * 0.05, 0, hz + (wall - hz) * 0.34);
+    fog.addColorStop(0, 'rgba(16,26,42,0.78)');
+    fog.addColorStop(1, 'rgba(16,26,42,0)');
+    c.fillStyle = fog;
+    c.fillRect(0, hz - H * 0.05, W, (wall - hz) * 0.34 + H * 0.05);
+
+    /* 2) 地面明暗纵深条带：远密近疏 = 透视压缩 */
+    for (let i = 0; i < 16; i++) {
+      const t0 = i / 16, t1 = (i + 1) / 16;
+      const y0 = hz + Math.pow(t0, 1.9) * (wall - hz);
+      const y1 = hz + Math.pow(t1, 1.9) * (wall - hz);
+      const a = 0.028 + t0 * 0.052;
+      c.fillStyle = (i % 2)
+        ? 'rgba(140,190,240,' + a.toFixed(3) + ')'
+        : 'rgba(6,12,22,' + (a * 1.6).toFixed(3) + ')';
+      c.fillRect(0, y0, W, Math.max(1, y1 - y0));
+    }
+
+    /* 3) 横向网格线：消失点处密集，近处稀疏 */
+    for (let i = 0; i <= 14; i++) {
+      const t = i / 14;
+      const y = hz + Math.pow(t, 1.9) * (wall - hz);
+      const a = 0.05 + t * 0.26;
+      c.strokeStyle = 'rgba(120,175,225,' + a.toFixed(3) + ')';
+      c.lineWidth = t < 0.25 ? 0.6 : (t < 0.6 ? 1.0 : 1.6);
       c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
     }
-    /* 纵向线：从消失点向下发散 */
-    for (let i = -7; i <= 7; i++) {
-      const xT = vanishX + i * 6;
-      const xB = vanishX + i * (W / 5.5);
-      c.strokeStyle = 'rgba(120,170,220,0.13)';
+
+    /* 4) 纵向网格线：自消失点向下发散（透视收敛） */
+    for (let i = -8; i <= 8; i++) {
+      const xT = vpx + i * 4;
+      const xB = vpx + i * (W / 5.0);
+      c.strokeStyle = 'rgba(120,175,225,' + (0.10 + Math.min(0.10, Math.abs(i) * 0.012)).toFixed(3) + ')';
       c.lineWidth = 1;
-      c.beginPath(); c.moveTo(xT, vanishY); c.lineTo(xB, wall); c.stroke();
+      c.beginPath(); c.moveTo(xT, hz); c.lineTo(xB, wall); c.stroke();
     }
-    /* 地平线雾 */
-    const g = c.createLinearGradient(0, vanishY - 10, 0, vanishY + H * 0.16);
-    g.addColorStop(0, 'rgba(6,10,18,0.85)');
-    g.addColorStop(1, 'rgba(6,10,18,0)');
-    c.fillStyle = g; c.fillRect(0, vanishY - 10, W, H * 0.18);
+
+    /* 5) 消失点辉光：远处光源，强化纵深 */
+    const gl = c.createRadialGradient(vpx, hz, 0, vpx, hz, Math.max(40, W * 0.55));
+    gl.addColorStop(0, 'rgba(150,200,255,0.15)');
+    gl.addColorStop(1, 'rgba(150,200,255,0)');
+    c.fillStyle = gl;
+    c.fillRect(0, hz - H * 0.08, W, (wall - hz) * 0.55 + H * 0.08);
+
+    /* 6) 防线前的地面暖光（玩家脚下最亮 = 近处） */
+    const wl = c.createLinearGradient(0, wall - 90, 0, wall);
+    wl.addColorStop(0, 'rgba(255,180,90,0)');
+    wl.addColorStop(1, 'rgba(255,180,90,0.17)');
+    c.fillStyle = wl; c.fillRect(0, wall - 90, W, 90);
+    c.restore();
   },
 
-  /* ===== 贴地阴影（2.5D 关键） ===== */
+  /* ===== 真 3D 盒体：底边中心 (x,y)，宽 w / 高 h / 进深 dp =====
+   * 三面不同亮度（光来自左上）：顶面最亮、正面中间、右侧面最暗。
+   * 这是掩体/墙/炮台从"色块"变成"立体物"的关键。 */
+  box3d(c, x, y, w, h, dp, face, top, side, rim) {
+    if (!isFinite(x) || !isFinite(y) || !isFinite(w) || !isFinite(h) || w <= 0 || h <= 0) return;
+    const oy = dp * 0.45, ix = Math.min(w * 0.18, w * 0.5);
+    const x0 = x - w / 2, x1 = x + w / 2, y1 = y - h;
+    c.save();
+    /* 右侧面（背光） */
+    c.beginPath();
+    c.moveTo(x1, y1); c.lineTo(x1 - ix, y1 - oy);
+    c.lineTo(x1 - ix, y - oy); c.lineTo(x1, y); c.closePath();
+    c.fillStyle = side || 'rgba(0,0,0,.45)'; c.fill();
+    /* 顶面（受光最强） */
+    c.beginPath();
+    c.moveTo(x0, y1); c.lineTo(x0 + ix, y1 - oy);
+    c.lineTo(x1 - ix, y1 - oy); c.lineTo(x1, y1); c.closePath();
+    c.fillStyle = top || 'rgba(255,255,255,.28)'; c.fill();
+    /* 正面 + 环境光衰减渐变 */
+    c.fillStyle = face; c.fillRect(x0, y1, w, h);
+    const g = c.createLinearGradient(0, y1, 0, y);
+    g.addColorStop(0, 'rgba(255,255,255,.10)');
+    g.addColorStop(0.38, 'rgba(255,255,255,0)');
+    g.addColorStop(1, 'rgba(0,0,0,.44)');
+    c.fillStyle = g; c.fillRect(x0, y1, w, h);
+    if (rim) { c.strokeStyle = rim; c.lineWidth = 1.2; c.strokeRect(x0, y1, w, h); }
+    /* 顶面棱线高光 */
+    c.strokeStyle = 'rgba(255,255,255,.36)'; c.lineWidth = 1.2;
+    c.beginPath(); c.moveTo(x0, y1); c.lineTo(x1, y1); c.stroke();
+    c.restore();
+  },
+
   shadow(c, x, y, r, sc) {
     c.fillStyle = 'rgba(0,0,0,0.34)';
     c.beginPath();
@@ -1817,20 +1890,34 @@ const BT = {
       const el = EX.elements.find((x) => x.k === t.def.el) || { c: '#ffd76a' };
       const tg = this.nearest(t.x, t.y, null, t.def.rng + t.lv * 12);
       const a = tg ? Math.atan2(tg.y - t.y, tg.x - t.x) : -Math.PI / 2;
-      /* 底座 */
-      c.fillStyle = 'rgba(20,28,42,0.92)';
-      c.beginPath(); c.arc(t.x, t.y, 15, 0, 7); c.fill();
+      const sc = this.depthScale(t.y);
+      const R = 15 * sc;
+      /* 接地投影 */
+      c.fillStyle = 'rgba(0,0,0,.38)';
+      c.beginPath(); c.ellipse(t.x + 3 * sc, t.y + 3 * sc, R * 1.05, R * 0.42, 0, 0, 7); c.fill();
+      /* 底座：立体圆柱（俯视可见顶面椭圆） */
+      this.cylinder(c, t.x, t.y - R * 0.55, R * 1.7, R * 0.62, '#1b2434', '#3d4a63', R * 0.30);
+      c.fillStyle = '#2b3650';
+      c.beginPath(); c.ellipse(t.x, t.y - R * 0.55, R * 0.85, R * 0.34, 0, 0, 7); c.fill();
       c.strokeStyle = el.c; c.lineWidth = 2;
-      c.beginPath(); c.arc(t.x, t.y, 15, 0, 7); c.stroke();
-      /* 炮管 */
-      c.save(); c.translate(t.x, t.y); c.rotate(a);
-      c.fillStyle = el.c; c.fillRect(4, -3.5, 20, 7);
+      c.beginPath(); c.ellipse(t.x, t.y - R * 0.55, R * 0.85, R * 0.34, 0, 0, 7); c.stroke();
+      /* 炮管：带厚度与高光，指向目标 */
+      c.save(); c.translate(t.x, t.y - R * 0.35); c.rotate(a);
+      const bg = c.createLinearGradient(0, -4 * sc, 0, 4 * sc);
+      bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.42, el.c); bg.addColorStop(1, 'rgba(0,0,0,.55)');
+      c.fillStyle = bg;
+      c.beginPath();
+      if (c.roundRect) c.roundRect(2 * sc, -3.6 * sc, 21 * sc, 7.2 * sc, 2 * sc);
+      else c.rect(2 * sc, -3.6 * sc, 21 * sc, 7.2 * sc);
+      c.fill();
+      c.fillStyle = 'rgba(255,255,255,.75)';
+      c.beginPath(); c.arc(23 * sc, 0, 2.2 * sc, 0, 7); c.fill();
       c.restore();
       /* 图标与等级 */
-      c.font = '13px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText(t.def.icon, t.x, t.y - 1);
-      c.font = '9px sans-serif'; c.fillStyle = '#ffd76a';
-      c.fillText('Lv' + t.lv, t.x, t.y + 22);
+      c.font = Math.round(13 * sc) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(t.def.icon, t.x, t.y - R * 0.55);
+      c.font = Math.round(9 * sc) + 'px sans-serif'; c.fillStyle = '#ffd76a';
+      c.fillText('Lv' + t.lv, t.x, t.y + 12 * sc);
     }
   },
 
@@ -2341,50 +2428,56 @@ const BT = {
     for (const o of (r.obstacles || [])) {
       if (o.dead) continue;
       const hpr = o.hp / o.maxHp;
-      /* 阴影 */
-      c.fillStyle = 'rgba(0,0,0,.34)';
-      c.beginPath(); c.ellipse(o.x, o.y + o.h / 2 + 2, o.w * 0.55, o.h * 0.3, 0, 0, 7); c.fill();
-      /* 主体：石块/金属灰 */
-      const g = c.createLinearGradient(o.x, o.y - o.h / 2, o.x, o.y + o.h / 2);
-      g.addColorStop(0, '#7d8899'); g.addColorStop(1, '#464f60');
-      c.fillStyle = g;
-      c.fillRect(o.x - o.w / 2, o.y - o.h / 2, o.w, o.h);
-      c.strokeStyle = 'rgba(255,255,255,.22)'; c.lineWidth = 1.5;
-      c.strokeRect(o.x - o.w / 2, o.y - o.h / 2, o.w, o.h);
-      /* 顶部高光 */
-      c.fillStyle = 'rgba(255,255,255,.14)';
-      c.fillRect(o.x - o.w / 2, o.y - o.h / 2, o.w, 3);
+      const sc = this.depthScale(o.y);
+      const w = o.w * sc, h = o.h * sc, dp = Math.max(6, Math.min(20, w * 0.55));
+      const by = o.y + h * 0.36;
+      /* 接地投影：随深度拉长并向右下偏（光源左上） */
+      c.fillStyle = 'rgba(0,0,0,.36)';
+      c.beginPath(); c.ellipse(o.x + dp * 0.34, by + h * 0.06, w * 0.66, h * 0.15, 0, 0, 7); c.fill();
+      /* 石块主体：三面立体 */
+      const g = c.createLinearGradient(0, by - h, 0, by);
+      g.addColorStop(0, '#8593a6'); g.addColorStop(1, '#464f60');
+      this.box3d(c, o.x, by, w, h, dp, g,
+        'rgba(198,214,236,.58)', 'rgba(0,0,0,.48)', 'rgba(255,255,255,.24)');
       /* 血条（受损才显示） */
       if (hpr < 1) {
-        c.fillStyle = 'rgba(0,0,0,.55)';
-        c.fillRect(o.x - o.w / 2, o.y - o.h / 2 - 6, o.w, 3);
+        const tx = o.x - w * 0.42, tw = w * 0.84;
+        c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(tx, by - h - 8, tw, 3);
         c.fillStyle = hpr > 0.4 ? '#8bc34a' : '#ff7043';
-        c.fillRect(o.x - o.w / 2, o.y - o.h / 2 - 6, o.w * hpr, 3);
+        c.fillRect(tx, by - h - 8, tw * hpr, 3);
       }
     }
 
     /* 可破坏油桶（表28：击破爆炸） */
     for (const b of (r.barrels || [])) {
       if (b.dead) continue;
-      c.fillStyle = 'rgba(0,0,0,.34)';
-      c.beginPath(); c.ellipse(b.x, b.y + 10, 12, 5, 0, 0, 7); c.fill();
-      /* 桶身：红橙色危险物 */
-      const g2 = c.createLinearGradient(b.x - 10, b.y, b.x + 10, b.y);
-      g2.addColorStop(0, '#c0392b'); g2.addColorStop(0.5, '#e74c3c'); g2.addColorStop(1, '#922b21');
-      c.fillStyle = g2;
-      c.beginPath(); c.roundRect ? c.roundRect(b.x - 10, b.y - 13, 20, 26, 3) : c.rect(b.x - 10, b.y - 13, 20, 26);
-      c.fill();
-      c.strokeStyle = 'rgba(255,220,120,.8)'; c.lineWidth = 1.5; c.stroke();
+      const sc = this.depthScale(b.y);
+      const bw = 20 * sc, bh = 26 * sc;
+      const by = b.y + bh * 0.42;
+      /* 接地投影（右下偏移） */
+      c.fillStyle = 'rgba(0,0,0,.36)';
+      c.beginPath(); c.ellipse(b.x + 3 * sc, by + 2, bw * 0.66, bh * 0.16, 0, 0, 7); c.fill();
+      /* 桶身：立体圆柱（左暗-中亮-右暗） */
+      this.cylinder(c, b.x, by - bh, bw, bh, '#c0392b', '#ff7f6e', 3 * sc);
+      /* 顶盖：椭圆＝俯视能看到的顶面 */
+      c.fillStyle = '#e8564a';
+      c.beginPath(); c.ellipse(b.x, by - bh, bw * 0.5, bw * 0.19, 0, 0, 7); c.fill();
+      c.strokeStyle = 'rgba(255,220,120,.85)'; c.lineWidth = 1.4; c.stroke();
+      /* 桶箍（两道，增强圆柱感） */
+      c.strokeStyle = 'rgba(0,0,0,.34)'; c.lineWidth = 1.6;
+      c.beginPath(); c.ellipse(b.x, by - bh * 0.62, bw * 0.5, bw * 0.11, 0, 0, 7); c.stroke();
+      c.beginPath(); c.ellipse(b.x, by - bh * 0.24, bw * 0.5, bw * 0.11, 0, 0, 7); c.stroke();
       /* 危险标记 */
-      c.fillStyle = '#ffd76a'; c.font = 'bold 11px sans-serif'; c.textAlign = 'center';
-      c.fillText('!', b.x, b.y + 4);
+      c.fillStyle = '#ffd76a'; c.font = 'bold ' + Math.round(11 * sc) + 'px sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('!', b.x, by - bh * 0.45);
       /* 血量环 */
       const hpr2 = b.hp / b.maxHp;
       if (hpr2 < 1) {
         c.strokeStyle = 'rgba(0,0,0,.6)'; c.lineWidth = 3;
-        c.beginPath(); c.arc(b.x, b.y, 15, 0, 7); c.stroke();
+        c.beginPath(); c.arc(b.x, by - bh * 0.5, 15 * sc, 0, 7); c.stroke();
         c.strokeStyle = '#ff5252'; c.lineWidth = 2.5;
-        c.beginPath(); c.arc(b.x, b.y, 15, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * hpr2); c.stroke();
+        c.beginPath(); c.arc(b.x, by - bh * 0.5, 15 * sc, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * hpr2); c.stroke();
       }
     }
 
@@ -2405,8 +2498,19 @@ const BT = {
     for (const f of r.efx) {
       const al = f.life / f.max;
       if (f.t === 'boom') {
+        const rr = f.r * (1.2 - al * 0.5);
+        /* 地面透视冲击环（椭圆＝贴地的 3D 圆环） */
+        c.strokeStyle = 'rgba(255,150,60,' + (al * 0.55).toFixed(3) + ')'; c.lineWidth = 3;
+        c.beginPath(); c.ellipse(f.x, f.y, rr, rr * 0.38, 0, 0, 7); c.stroke();
+        /* 立体火球（径向渐变球体） */
+        const bg = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, Math.max(1, rr * 0.8));
+        bg.addColorStop(0, 'rgba(255,240,200,' + (al * 0.85).toFixed(3) + ')');
+        bg.addColorStop(0.45, 'rgba(255,150,60,' + (al * 0.55).toFixed(3) + ')');
+        bg.addColorStop(1, 'rgba(255,90,30,0)');
+        c.fillStyle = bg;
+        c.beginPath(); c.arc(f.x, f.y, Math.max(1, rr * 0.8), 0, 7); c.fill();
         c.strokeStyle = 'rgba(255,150,60,' + al + ')'; c.lineWidth = 3;
-        c.beginPath(); c.arc(f.x, f.y, f.r * (1.2 - al * 0.5), 0, 7); c.stroke();
+        c.beginPath(); c.arc(f.x, f.y, rr, 0, 7); c.stroke();
       } else if (f.t === 'nova') {
         c.strokeStyle = 'rgba(92,216,255,' + al + ')'; c.lineWidth = 2.5;
         c.beginPath(); c.arc(f.x, f.y, f.r * (1.25 - al * 0.4), 0, 7); c.stroke();
@@ -2427,14 +2531,38 @@ const BT = {
 
     /* 子弹 */
     for (const b of r.bullets) {
+      if (!isFinite(b.x) || !isFinite(b.y)) continue;
+      const bs = this.depthScale(b.y);
+      /* 地面投影点：子弹悬空飞行 → 地面上一个淡影，强化 3D 空间感 */
+      c.fillStyle = 'rgba(0,0,0,.22)';
+      c.beginPath(); c.ellipse(b.x, b.y + 6 * bs, 3.4 * bs, 1.4 * bs, 0, 0, 7); c.fill();
       if (b.enemy) {
-        c.fillStyle = b.kind === 'poison' ? '#7be86a' : '#c8e05a';
-        c.beginPath(); c.arc(b.x, b.y, 5, 0, 7); c.fill();
+        const er = 5 * bs;
+        const eg = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, er * 2.1);
+        const ec = b.kind === 'poison' ? '123,232,106' : '200,224,90';
+        eg.addColorStop(0, 'rgba(255,255,255,.85)');
+        eg.addColorStop(0.35, 'rgba(' + ec + ',.95)');
+        eg.addColorStop(1, 'rgba(' + ec + ',0)');
+        c.fillStyle = eg;
+        c.beginPath(); c.arc(b.x, b.y, er * 2.1, 0, 7); c.fill();
       } else {
-        c.fillStyle = '#ffd76a';
-        c.beginPath(); c.arc(b.x, b.y, 3.2, 0, 7); c.fill();
-        c.strokeStyle = 'rgba(255,215,106,0.5)'; c.lineWidth = 1.5;
-        c.beginPath(); c.moveTo(b.x, b.y); c.lineTo(b.x - b.vx * 0.014, b.y - b.vy * 0.014); c.stroke();
+        /* 拖尾：由粗到细的锥形光迹 */
+        const tx = b.x - b.vx * 0.030, ty = b.y - b.vy * 0.030;
+        const lg = c.createLinearGradient(b.x, b.y, tx, ty);
+        lg.addColorStop(0, 'rgba(255,236,170,.92)');
+        lg.addColorStop(1, 'rgba(255,180,60,0)');
+        c.strokeStyle = lg; c.lineCap = 'round';
+        c.lineWidth = 3.4 * bs;
+        c.beginPath(); c.moveTo(b.x, b.y); c.lineTo(tx, ty); c.stroke();
+        /* 弹头：立体发光球（高光偏左上） */
+        const hr = 3.2 * bs;
+        const hg = c.createRadialGradient(b.x - hr * 0.4, b.y - hr * 0.4, 0, b.x, b.y, hr * 2.0);
+        hg.addColorStop(0, 'rgba(255,255,255,.95)');
+        hg.addColorStop(0.40, 'rgba(255,215,106,.95)');
+        hg.addColorStop(1, 'rgba(255,140,40,0)');
+        c.fillStyle = hg;
+        c.beginPath(); c.arc(b.x, b.y, hr * 2.0, 0, 7); c.fill();
+        c.lineCap = 'butt';
       }
     }
 
@@ -2496,22 +2624,44 @@ const BT = {
       }
     }
 
-    /* ===== 2.5D 立体防线（底部城墙） ===== */
+    /* ===== 真 3D 防线城墙：顶面（俯视可见）+ 正面 + 底部暗面 + 立体墙垛 ===== */
     const wy = this.wallY;
-    const wg = c.createLinearGradient(0, wy - 6, 0, wy + 34);
-    wg.addColorStop(0, '#4a5568'); wg.addColorStop(0.35, '#2d3748'); wg.addColorStop(1, '#151b26');
+    const TOPD = 13;                                  /* 顶面进深：俯视能看到的墙头 */
+    /* 墙头顶面（受光最强，暖色） */
+    const tg = c.createLinearGradient(0, wy - TOPD, 0, wy);
+    tg.addColorStop(0, '#8a6a44'); tg.addColorStop(0.5, '#6d5636'); tg.addColorStop(1, '#54432a');
+    c.fillStyle = tg;
+    c.fillRect(0, wy - TOPD, W, TOPD);
+    /* 顶面砖缝（纵深纹理） */
+    c.strokeStyle = 'rgba(0,0,0,.22)'; c.lineWidth = 1;
+    for (let x = 0; x < W; x += 22) {
+      c.beginPath(); c.moveTo(x, wy - TOPD); c.lineTo(x, wy); c.stroke();
+    }
+    /* 顶面/正面交界棱线（高光） */
+    c.fillStyle = 'rgba(255,190,90,0.42)';
+    c.fillRect(0, wy - 1.5, W, 2.2);
+    /* 墙体正面（环境变量：上亮下暗） */
+    const wg = c.createLinearGradient(0, wy, 0, wy + 30);
+    wg.addColorStop(0, '#4a5568'); wg.addColorStop(0.35, '#2d3748'); wg.addColorStop(1, '#0d1219');
     c.fillStyle = wg;
-    c.fillRect(0, wy - 4, W, 30);
-    /* 城墙顶面高光（伪 3D 厚度） */
-    c.fillStyle = 'rgba(255,165,60,0.30)';
-    c.fillRect(0, wy - 6, W, 3);
-    /* 墙垛 */
-    c.fillStyle = '#3a4557';
+    c.fillRect(0, wy, W, 30);
+    /* 墙面砖块（立体凹凸） */
+    c.strokeStyle = 'rgba(0,0,0,.28)'; c.lineWidth = 1;
+    for (let yy = wy + 8; yy < wy + 30; yy += 11) {
+      c.beginPath(); c.moveTo(0, yy); c.lineTo(W, yy); c.stroke();
+    }
+    for (let x = 11; x < W; x += 22) {
+      c.beginPath(); c.moveTo(x, wy + 8); c.lineTo(x, wy + 30); c.stroke();
+    }
+    /* 立体墙垛：每个都有顶面 + 正面 + 侧面 */
     for (let x = 0; x < W; x += 26) {
-      c.fillRect(x + 3, wy - 11, 16, 8);
-      c.fillStyle = 'rgba(255,215,106,0.18)';
-      c.fillRect(x + 3, wy - 11, 16, 2);
-      c.fillStyle = '#3a4557';
+      const bw = 16, bh = 9, bx = x + 3, byy = wy - TOPD + 3;
+      this.box3d(c, bx + bw / 2, byy, bw, bh, 7,
+        (function () { const g2 = c.createLinearGradient(0, byy - bh, 0, byy);
+          g2.addColorStop(0, '#4d5a70'); g2.addColorStop(1, '#2b3444'); return g2; })(),
+        'rgba(200,215,240,.50)', 'rgba(0,0,0,.50)', 'rgba(255,255,255,.18)');
+      c.fillStyle = 'rgba(255,215,106,0.22)';
+      c.fillRect(bx, byy - bh, bw, 2);
     }
     /* 防线受损闪红 */
     const wr = r.wallHp != null ? r.wallHp / r.wallMax : (r.hp / r.maxHp);
@@ -2578,9 +2728,16 @@ const BT = {
     c.textAlign = 'center'; c.textBaseline = 'middle';
     for (const f of r.floats) {
       const al = Math.max(0, f.life / 0.7);
-      c.font = (f.cls === 'crit' ? 'bold 17px' : f.cls === 'hurt' ? 'bold 14px' : '13px') + ' sans-serif';
+      const fs = this.depthScale(f.y);
+      const px = (f.cls === 'crit' ? 17 : f.cls === 'hurt' ? 14 : 13) * fs;
+      c.font = (f.cls === 'crit' ? 'bold ' : '') + px.toFixed(1) + 'px sans-serif';
+      c.globalAlpha = al;
+      /* 描边：让飘字在 3D 场景里不糊 */
+      c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,.65)';
+      c.strokeText(f.v, f.x, f.y);
       c.fillStyle = f.cls === 'crit' ? '#ff4d6d' : f.cls === 'hurt' ? '#ff8fa4' : '#ffe9a8';
-      c.globalAlpha = al; c.fillText(f.v, f.x, f.y); c.globalAlpha = 1;
+      c.fillText(f.v, f.x, f.y);
+      c.globalAlpha = 1;
     }
   },
 };
