@@ -274,6 +274,9 @@ APP.pages['acc-compensate'] = {
       const type = this.val('#cpType'), exp = this.num('#cpExp');
       const why = this.val('#cpReason') || '未填写';
       const op = this.val('#cpOp') || 'admin';
+      /* 数量校验：grant() 内部会把负数/0 钳成 0，但界面仍提示「已补发 ×-100」，
+       * 运营看到的是成功、实际一件没发——典型的静默失效。这里提前拦下。 */
+      if (!(n > 0)) return this.toast('补发数量必须大于 0', 'err');
       this.grant(p, id, n);
       if (type === '临时' && exp > 0) {
         p.tempItems = p.tempItems || [];
@@ -288,6 +291,9 @@ APP.pages['acc-compensate'] = {
       if (await this.save(p)) {
         AUDIT.log('道具补发', p.uid, U.itemName(id) + '×' + n + ' 原因:' + why + ' 操作人:' + op);
         this.toast('已补发 ' + U.itemName(id) + ' ×' + n, 'ok'); this.render();
+      } else {
+        /* 写回失败（网络/限流）时此前完全静默，运营以为发成功了 */
+        this.toast('补发失败：存档未写入云端，请重试', 'err');
       }
     };
     /* 批量 */
@@ -308,13 +314,23 @@ APP.pages['acc-compensate'] = {
       if (!hit.length) return this.toast('无匹配玩家', 'err');
       if (!confirm('确定给 ' + hit.length + ' 名玩家补发？')) return;
       const id = this.val('#cpItem2'), n = this.num('#cpN2'), why = this.val('#cpR2') || '批量补偿';
+      /* 同上：数量必须先校验，否则界面提示成功、实际每人发了 0 件 */
+      if (!(n > 0)) return this.toast('补发数量必须大于 0', 'err');
       let ok = 0;
+      const fail = [];
       for (const p of hit) {
         this.grant(p, id, n);
         if (await this.save(p)) ok++;
+        else fail.push(p.uid);   /* 网络失败时记录名单，便于重试 */
       }
-      AUDIT.log('批量补发', hit.length + '人', U.itemName(id) + '×' + n + ' 原因:' + why);
-      this.toast('已补发 ' + ok + ' 人', 'ok');
+      AUDIT.log('批量补发', hit.length + '人', U.itemName(id) + '×' + n + ' 原因:' + why
+        + (fail.length ? ' 失败:' + fail.length + '人(' + fail.slice(0, 5).join(',') + ')' : ''));
+      if (fail.length) {
+        this.toast('成功 ' + ok + ' 人，失败 ' + fail.length + ' 人：' + fail.slice(0, 8).join(', ')
+          + (fail.length > 8 ? ' 等' : ''), 'err');
+      } else {
+        this.toast('已补发 ' + ok + ' 人', 'ok');
+      }
     };
   },
 };
