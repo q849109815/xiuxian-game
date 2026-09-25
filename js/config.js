@@ -150,8 +150,11 @@ const EX = {
     { src: 'BOSS感染母体', item: 'M03', rate: 1.00, min: 4, max: 6, ch: 1.8, q: '紫', first: 1 },
     { src: 'BOSS感染母体', item: 'C02', rate: 0.40, min: 1, max: 1, ch: 1.8, q: '蓝' },
     { src: 'BOSS感染母体', item: 'P02', rate: 0.30, min: 1, max: 2, ch: 1.8, q: '紫' },
-    { src: 'BOSS巨型母体', item: 'M03', rate: 1.00, min: 5, max: 8, ch: 2.0, q: '紫', first: 1 },
-    { src: 'BOSS巨型母体', item: 'C03', rate: 0.30, min: 1, max: 1, ch: 2.0, q: '红', first: 1 },
+    /* 已删除孤立条目 BOSS巨型母体（M03 5-8 / C03 30%）
+     * BOSS 表里没有「巨型母体」这个名字（只有 巨型丧尸 / 感染母体），
+     * 而 kill() 用 'BOSS' + bossDef.n 【精确匹配】→ 这 2 条永远匹配不到，
+     * 是纯死配置。其数值与下方「BOSS开垦者」的 M03 5-8 完全一致，
+     * 属重复草稿，删除不影响任何实际掉落。 */
     /* ===== 6 个真实 BOSS 的掉落（此前完全缺失）=====
      * 上一轮补进了开垦者/巢穴之母/深渊领主/暴食者/修道士/尸王 6 个 BOSS，
      * 但 globalDrops 里没有对应 src。而 kill() 是 'BOSS'+bossDef.n 精确匹配，
