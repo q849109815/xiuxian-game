@@ -632,7 +632,12 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* 护甲：角色基础 × (1+天赋) + 芯片；皮肤加成 */
     const armorUp = this.talentVal(p, 'armor') + this.chipVal(p, 'armor')
       + ((sk && sk.bonus && sk.bonus.armor) || 0);
-    const armor = c.armor * (1 + armorUp);
+    /* 护甲天赋固定值部分
+     * 严重BUG：默认角色 C01 基础护甲就是 0，而天赋是纯百分比（+3%/级），
+     * 0 × (1+20×3%) = 0 —— 点满 20 级花掉数十万金币，护甲纹丝不动。
+     * 加每级 +3 点固定护甲，基础为 0 的角色也能真正受益。 */
+    const armorFlat = (p.talents.t_armor || 0) * 3;
+    const armor = c.armor * (1 + armorUp) + armorFlat;
     /* 暴击 */
     /* 武器词条加成（表30） */
     const af = this.affixBonus(p);
@@ -735,6 +740,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       + Object.values(p.talents || {}).reduce((s, v) => s + v, 0) * 90
       + a.crit * 800 + Math.max(0, a.critDmg - 1.5) * 200
       + a.rate * 15 + a.ls * 500
+      /* 护甲此前既不计入战力、也不参与减伤，属于纯装饰属性 */
+      + a.armor * 10
       + eqP) * (1 + EX.starBonus(p.charStar));
   },
 
