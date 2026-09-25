@@ -1,8 +1,8 @@
 /* =========================================================
- * battle.js —— 战斗引擎（俯视角 · 摇杆移动 · 自动射击 · 换弹）
+ * battle.js —— 战斗引擎（俯视角 · 自动瞄准射击 · 换弹 · 3D 骨骼动画）
  * 依据资料：
  *   - GD-008 战斗系统（俯视角弹幕、自动瞄准、碰撞判定、穿透击退爆炸）
- *   - 06 操作方案（左侧虚拟摇杆 / WASD，自动瞄准自动开火，R 换弹）
+ *   - 06 操作方案（自动瞄准自动开火，R 换弹；虚拟摇杆已移除）
  *   - 09 怪物技能机制表（12 种怪物 AI + BOSS 阶段）
  *   - 10 局内技能表（12 项，含互斥规则）
  * ========================================================= */
@@ -636,17 +636,8 @@ const BT = {
     for (const z of r.zombies) if (z.hitT > 0) z.hitT = Math.max(0, z.hitT - dt);
     this.tickBuffs(dt);            /* 消耗品增益计时（I03 攻击 +30%） */
 
-    /* --- 玩家移动（摇杆） --- */
-    const joy = BT.joy || { x: 0, y: 0 };
-    const spd = r.moveSpd * (1 + r.mods.moveMul);
-    let mx = joy.x, my = joy.y;
-    const len = Math.hypot(mx, my);
-    if (len > 1) { mx /= len; my /= len; }
-    if (len > 0.08) {
-      /* 真实玩法：玩家固定在底部防线，不跑位；摇杆=瞄准方向 */
-      if (mx || my) { r.aimX = mx; r.aimY = my; r.aiming = true; }
-      else r.aiming = false;
-    }
+    /* --- 瞄准 --- 摇杆已移除，改为全自动锁定最近目标（r.aiming 恒为 false） */
+    r.aiming = false;
 
     /* --- 换弹 --- */
     if (r.reloading) {
@@ -880,6 +871,12 @@ const BT = {
     /* --- 僵尸 --- */
     for (const z of r.zombies) {
       if (z.dead) continue;
+      /* 动画相位：此前 animT 全项目只有读取、从未赋值，
+       * 恒为 undefined → sin(0)=0 → 走路摆动/身体起伏全部静止不动。
+       * 这里按 dt 累加，并按实际移动速度缩放（被冰冻减速时步伐变慢）。 */
+      const spNow = (z.spd || 40) * (1 - (z.slow || 0));
+      z.animT = (z.animT || 0) + dt * (0.55 + Math.min(1.4, spNow / 46));
+      if (z.animT > 1e6) z.animT = 0;
       /* 免疫减速的 BOSS（深渊领主「狂暴免疫」阶段）不受任何减速影响 */
       if (z.immuneSlow) { z.slow = 0; z.slowT = 0; }
       else if (z.slowT > 0) { z.slowT -= dt; if (z.slowT <= 0) z.slow = 0; }
@@ -1521,6 +1518,16 @@ const BT = {
       r.skillDmg[k] = (r.skillDmg[k] || 0) + d;
     }
     this.addFloat(z.x, z.y - 14, Math.round(d), crit ? 'crit' : 'dmg');
+    /* 命中火花：3D 粒子向外飞散（子弹打击感，此前命中只有飘字、无任何特效） */
+    if (r.efx && r.efx.length < 90) {
+      const ra0 = Math.random() * Math.PI * 2;
+      r.efx.push({
+        t: 'spark', x: z.x, y: z.y - 12, life: 0.28, max: 0.28,
+        n: crit ? 9 : 6, sp: crit ? 130 : 88,
+        col: crit ? '255,120,90' : (src === '冰' ? '140,230,255' : src === '电' ? '200,160,255' : '255,215,120'),
+        dir: ra0,
+      });
+    }
     if (z.hp <= 0) this.kill(z);
   },
 
@@ -2596,80 +2603,181 @@ const BT = {
     c.restore();
   },
 
-  /* ---------- 3D 僵尸 ---------- */
-  drawZombieShape(c, x, y, sz, z) {
+  /* =========================================================
+   * 真 3D 骨骼人形（可动模型）
+   * 旧实现的两处硬伤：
+   *  ① 角色是"一张抠底立绘 + 阴影" —— 本质是平面纸片，贴在 3D 场景里必然扁平
+   *  ② animT 全项目只有读取、从未赋值 → 恒为 undefined → sin(0)=0，动画完全静止
+   * 现在改为多部件程序化骨骼模型：
+   *   - 每条腿分大腿/小腿两段（膝盖弯曲），走路循环交替摆动 + 抬脚
+   *   - 躯干随步伐上下起伏 + 左右轻倾
+   *   - 手臂与腿反相摆动，前伸抓挠
+   *   - 头部随步伐晃动，眼睛/嘴独立绘制
+   *   - 每个部件都是圆柱或球体，带横向受光渐变（左暗-中亮-右暗）
+   * → 真正"会动"的立体角色，不再是纸片
+   * ========================================================= */
+
+  /* 肢体：两点之间的锥形柱体，沿垂直方向做受光渐变（立体感来源） */
+  limb(c, x1, y1, x2, y2, w, base, hi) {
+    if (!isFinite(x1) || !isFinite(y1) || !isFinite(x2) || !isFinite(y2) || !isFinite(w) || w <= 0) return;
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len * w * 0.5, ny = dx / len * w * 0.5;
+    const g = c.createLinearGradient(x1 - nx, y1 - ny, x1 + nx, y1 + ny);
+    g.addColorStop(0, 'rgba(0,0,0,.42)');
+    g.addColorStop(0.40, base);
+    g.addColorStop(0.60, hi);
+    g.addColorStop(1, 'rgba(0,0,0,.46)');
+    c.fillStyle = g;
+    c.beginPath();
+    c.moveTo(x1 + nx, y1 + ny);
+    c.lineTo(x2 + nx * 0.86, y2 + ny * 0.86);
+    c.lineTo(x2 - nx * 0.86, y2 - ny * 0.86);
+    c.lineTo(x1 - nx, y1 - ny);
+    c.closePath(); c.fill();
+  },
+
+  /* 躯干：上宽下窄的锥柱 + 顶肩 + 纵向明暗 */
+  torso3d(c, x, y, w, h, base, hi, bend) {
+    if (!isFinite(x) || !isFinite(y) || !isFinite(w) || !isFinite(h) || w <= 0 || h <= 0) return;
+    const g = c.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+    g.addColorStop(0, 'rgba(0,0,0,.44)');
+    g.addColorStop(0.30, base);
+    g.addColorStop(0.55, hi);
+    g.addColorStop(0.78, base);
+    g.addColorStop(1, 'rgba(0,0,0,.50)');
+    c.fillStyle = g;
+    c.beginPath();
+    c.moveTo(x - w * 0.30, y);
+    c.lineTo(x + w * 0.30, y);
+    c.lineTo(x + w * 0.52, y + h * 0.30);
+    c.lineTo(x + w * 0.44, y + h);
+    c.lineTo(x - w * 0.44, y + h);
+    c.lineTo(x - w * 0.52, y + h * 0.30);
+    c.closePath(); c.fill();
+    /* 肩部横板（顶面受光） */
+    c.fillStyle = 'rgba(255,255,255,.14)';
+    c.beginPath(); c.ellipse(x, y + h * 0.06, w * 0.52, h * 0.10, 0, 0, 7); c.fill();
+    if (bend) { c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(x - w * 0.4, y + h * 0.55, w * 0.8, h * 0.2); }
+  },
+
+  /* 主绘制：o = {x,y,sz,ph,stride,skin,skinHi,cloth,clothHi,face,
+   *              armReach, frozen, shield, big, eye, aim, gun, kick} */
+  figure3d(c, o) {
+    const x = o.x, y = o.y, sz = o.sz;
     if (!isFinite(x) || !isFinite(y) || !isFinite(sz) || sz <= 0) return;
-    const d = (z && z.d) || {};
-    const big = !!z.isBoss || !!d.elite;
-    const S = sz / 24;                       /* 缩放系数 */
-    const skin = big ? '#5d8290' : '#73996d';
-    const skinHi = big ? '#9fd0dd' : '#a8d69f';
-    const cloth = big ? '#2f4550' : '#3d5140';
-    const clothHi = big ? '#577786' : '#6b866e';
+    const ph = o.ph || 0;
+    const stride = o.stride == null ? 1 : Math.max(0, Math.min(1.6, o.stride));
+    const skin = o.skin || '#73996d', skinHi = o.skinHi || '#a8d69f';
+    const cloth = o.cloth || '#3d5140', clothHi = o.clothHi || '#6b866e';
+    const frozen = !!o.frozen;
+
+    /* —— 走路循环（步频 6.2rad/s）—— */
+    const cyc = ph * 6.2;
+    const sA = Math.sin(cyc) * stride;            /* A 侧肢体相位 */
+    const sB = Math.sin(cyc + Math.PI) * stride;  /* B 侧反相 */
+    const liftA = Math.max(0, Math.sin(cyc)) * sz * 0.085 * stride;   /* 抬脚 */
+    const liftB = Math.max(0, Math.sin(cyc + Math.PI)) * sz * 0.085 * stride;
+    const bob = Math.abs(Math.sin(cyc)) * sz * 0.055 * stride;        /* 身体起伏 */
+    const sway = Math.sin(cyc * 0.5) * sz * 0.035 * stride;           /* 左右晃 */
 
     c.save();
-    this.shadow3d(c, x, y + sz * 0.52, sz * 0.5, S);
+    /* —— 地面投影：随起伏缩放（抬脚时影子变小）—— */
+    const shS = 1 - Math.abs(Math.sin(cyc)) * 0.14 * stride;
+    this.shadow3d(c, x, y + sz * 0.10, sz * 0.46 * shS, sz / 24);
 
-    /* 腿（两根圆柱，带前后错开＝立体） */
-    this.cylinder(c, x - sz * 0.15, y + sz * 0.16, sz * 0.16, sz * 0.34, cloth, clothHi, sz * 0.06);
-    this.cylinder(c, x + sz * 0.15, y + sz * 0.16, sz * 0.16, sz * 0.34, cloth, clothHi, sz * 0.06);
+    const hipY = y - sz * 0.30 - bob;      /* 髋 */
+    const shY = y - sz * 0.66 - bob;       /* 肩 */
+    const legW = sz * 0.155, armW = sz * 0.135;
+    const spread = sz * 0.145;
 
-    /* 躯干（椭球感：圆柱 + 顶肩） */
-    this.cylinder(c, x, y - sz * 0.14, sz * 0.62, sz * 0.42, cloth, clothHi, sz * 0.16);
-    /* 胸腹破布层次（暗部） */
-    c.fillStyle = 'rgba(0,0,0,.22)';
-    c.beginPath(); c.ellipse(x, y + sz * 0.02, sz * 0.22, sz * 0.10, 0, 0, 7); c.fill();
+    /* —— 后侧腿（先画，压暗＝在身后）—— */
+    c.save(); c.globalAlpha = 0.72;
+    const kneeBx = x + spread + sB * sz * 0.09, kneeBy = hipY + sz * 0.20 - liftB;
+    this.limb(c, x + spread * 0.5, hipY, kneeBx, kneeBy, legW * 0.92, cloth, clothHi);
+    this.limb(c, kneeBx, kneeBy, x + spread + sB * sz * 0.05, y - liftB, legW * 0.80, cloth, clothHi);
+    c.restore();
+    /* —— 后侧手臂 —— */
+    c.save(); c.globalAlpha = 0.72;
+    const elbBx = x + spread * 1.9 + sB * sz * 0.07, elbBy = shY + sz * 0.20;
+    this.limb(c, x + spread * 1.1, shY + sz * 0.04, elbBx, elbBy, armW * 0.88, skin, skinHi);
+    this.limb(c, elbBx, elbBy, x + spread * 1.7 - sB * sz * 0.06, shY + sz * 0.44, armW * 0.78, skin, skinHi);
+    c.restore();
 
-    /* 前伸双臂（圆柱 + 手球） */
-    const swing = Math.sin((z.animT || 0) * 6) * sz * 0.05;
-    this.cylinder(c, x - sz * 0.36, y - sz * 0.08 + swing, sz * 0.14, sz * 0.32, skin, skinHi, sz * 0.06);
-    this.cylinder(c, x + sz * 0.36, y - sz * 0.08 - swing, sz * 0.14, sz * 0.32, skin, skinHi, sz * 0.06);
-    this.sphere(c, x - sz * 0.36, y + sz * 0.26 + swing, sz * 0.09, skin, skinHi);
-    this.sphere(c, x + sz * 0.36, y + sz * 0.26 - swing, sz * 0.09, skin, skinHi);
+    /* —— 躯干 —— */
+    this.torso3d(c, x + sway, shY, sz * 0.62, sz * 0.40, cloth, clothHi, true);
+    /* 胸腹暗部（破布层次） */
+    c.fillStyle = 'rgba(0,0,0,.20)';
+    c.beginPath(); c.ellipse(x + sway, shY + sz * 0.26, sz * 0.20, sz * 0.09, 0, 0, 7); c.fill();
 
-    /* 头（球体 + 下颌阴影） */
-    const hy = y - sz * 0.36;
-    this.sphere(c, x, hy, sz * 0.26, skin, skinHi);
+    /* —— 前侧腿 —— */
+    const kneeAx = x - spread + sA * sz * 0.09, kneeAy = hipY + sz * 0.20 - liftA;
+    this.limb(c, x - spread * 0.5, hipY, kneeAx, kneeAy, legW, cloth, clothHi);
+    this.limb(c, kneeAx, kneeAy, x - spread + sA * sz * 0.05, y - liftA, legW * 0.88, cloth, clothHi);
+    /* 脚（两只有厚度的暗块，随抬脚离地） */
+    c.fillStyle = 'rgba(0,0,0,.55)';
+    c.beginPath(); c.ellipse(x - spread + sA * sz * 0.05, y - liftA + sz * 0.02, sz * 0.11, sz * 0.05, 0, 0, 7); c.fill();
+    c.beginPath(); c.ellipse(x + spread + sB * sz * 0.05, y - liftB + sz * 0.02, sz * 0.11, sz * 0.05, 0, 0, 7); c.fill();
+
+    /* —— 前侧手臂（僵尸前伸抓挠；主角持枪时改为指向 aim）—— */
+    if (o.gun && isFinite(o.aim)) {
+      const gx = Math.cos(o.aim) * sz * 0.42, gy = Math.sin(o.aim) * sz * 0.42;
+      const k = o.kick || 0;
+      this.limb(c, x - spread * 1.0, shY + sz * 0.06, x + gx * 0.55, shY + sz * 0.10 + gy * 0.55, armW, skin, skinHi);
+      this.limb(c, x + gx * 0.55, shY + sz * 0.10 + gy * 0.55,
+        x + gx - Math.cos(o.aim) * k, shY + sz * 0.12 + gy - Math.sin(o.aim) * k, armW * 0.86, skin, skinHi);
+    } else {
+      const reach = o.armReach == null ? 1 : o.armReach;
+      const elbAx = x - spread * 1.9 + sA * sz * 0.07, elbAy = shY + sz * 0.24;
+      const handAy = shY + sz * (0.52 + 0.10 * reach) + sA * sz * 0.10;
+      this.limb(c, x - spread * 1.1, shY + sz * 0.05, elbAx, elbAy, armW, skin, skinHi);
+      this.limb(c, elbAx, elbAy, x - spread * 1.5 - sA * sz * 0.05, handAy, armW * 0.86, skin, skinHi);
+      /* 手（球） */
+      this.sphere(c, x - spread * 1.5 - sA * sz * 0.05, handAy, sz * 0.085, skin, skinHi);
+    }
+    /* 后手球 */
+    this.sphere(c, x + spread * 1.7 - sB * sz * 0.06, shY + sz * 0.46, sz * 0.075, skin, skinHi);
+
+    /* —— 头（球体 + 晃动）—— */
+    const hx = x + sway + Math.sin(cyc * 0.9) * sz * 0.022 * stride;
+    const hy = shY - sz * 0.24 - bob * 0.4;
+    this.sphere(c, hx, hy, sz * 0.255, skin, skinHi);
     /* 头顶高光 */
-    c.fillStyle = 'rgba(255,255,255,.20)';
-    c.beginPath(); c.ellipse(x - sz * 0.08, hy - sz * 0.12, sz * 0.10, sz * 0.06, -0.5, 0, 7); c.fill();
-
-    /* 眼窝（凹陷暗） */
-    c.fillStyle = 'rgba(0,0,0,.42)';
-    c.beginPath(); c.ellipse(x, hy + sz * 0.02, sz * 0.17, sz * 0.08, 0, 0, 7); c.fill();
+    c.fillStyle = 'rgba(255,255,255,.18)';
+    c.beginPath(); c.ellipse(hx - sz * 0.075, hy - sz * 0.115, sz * 0.095, sz * 0.055, -0.5, 0, 7); c.fill();
+    /* 眼窝（凹陷） */
+    c.fillStyle = 'rgba(0,0,0,.40)';
+    c.beginPath(); c.ellipse(hx, hy + sz * 0.025, sz * 0.165, sz * 0.075, 0, 0, 7); c.fill();
     /* 发光眼睛 */
-    const eye = z && z.slowT > 0 ? '#7fe9ff' : (big ? '#ff5a5a' : '#ffe066');
-    c.fillStyle = eye; c.shadowColor = eye; c.shadowBlur = 6 * S;
-    c.beginPath(); c.arc(x - sz * 0.10, hy + sz * 0.01, sz * 0.045, 0, 7); c.fill();
-    c.beginPath(); c.arc(x + sz * 0.10, hy + sz * 0.01, sz * 0.045, 0, 7); c.fill();
+    const eye = frozen ? '#7fe9ff' : (o.eye || (o.big ? '#ff5a5a' : '#ffe066'));
+    c.fillStyle = eye; c.shadowColor = eye; c.shadowBlur = 6 * (sz / 24);
+    c.beginPath(); c.arc(hx - sz * 0.095, hy + sz * 0.012, sz * 0.045, 0, 7); c.fill();
+    c.beginPath(); c.arc(hx + sz * 0.095, hy + sz * 0.012, sz * 0.045, 0, 7); c.fill();
     c.shadowBlur = 0;
-
-    /* 嘴（张口） */
+    /* 张口 + 牙 */
     c.fillStyle = '#241a1a';
-    c.beginPath(); c.ellipse(x, hy + sz * 0.13, sz * 0.07, sz * 0.045, 0, 0, 7); c.fill();
-    /* 牙 */
+    c.beginPath(); c.ellipse(hx, hy + sz * 0.125, sz * 0.068, sz * 0.045, 0, 0, 7); c.fill();
     c.fillStyle = '#e8e2d0';
-    c.fillRect(x - sz * 0.04, hy + sz * 0.10, sz * 0.02, sz * 0.03);
-    c.fillRect(x + sz * 0.02, hy + sz * 0.10, sz * 0.02, sz * 0.03);
+    c.fillRect(hx - sz * 0.038, hy + sz * 0.098, sz * 0.020, sz * 0.030);
+    c.fillRect(hx + sz * 0.018, hy + sz * 0.098, sz * 0.020, sz * 0.030);
 
     /* BOSS/精英：头顶红色等级环 */
-    if (big) {
+    if (o.big) {
       c.fillStyle = '#ff4d6d';
-      c.beginPath(); c.arc(x, hy - sz * 0.36, sz * 0.10, 0, 7); c.fill();
+      c.beginPath(); c.arc(hx, hy - sz * 0.36, sz * 0.10, 0, 7); c.fill();
       c.fillStyle = 'rgba(255,255,255,.85)';
       c.font = 'bold ' + Math.round(sz * 0.13) + 'px sans-serif';
       c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText('!', x, hy - sz * 0.35);
+      c.fillText('!', hx, hy - sz * 0.35);
     }
     /* 护盾僵尸：正面盾牌（有厚度） */
-    if (d.front) {
-      const sw = sz * 0.5, sh = sz * 0.42;
+    if (o.shield) {
+      const sw = sz * 0.50, sh = sz * 0.42;
       c.save();
-      c.translate(x, y - sz * 0.05);
-      c.fillStyle = 'rgba(0,0,0,.3)';
+      c.translate(x, y - sz * 0.30);
+      c.fillStyle = 'rgba(0,0,0,.32)';
       c.beginPath(); c.ellipse(3, 4, sw * 0.5, sh * 0.5, 0, 0, 7); c.fill();
       const sg = c.createLinearGradient(-sw / 2, 0, sw / 2, 0);
-      sg.addColorStop(0, '#6b7a8c'); sg.addColorStop(.45, '#c8d4e2'); sg.addColorStop(1, '#4a5566');
+      sg.addColorStop(0, '#6b7a8c'); sg.addColorStop(0.45, '#c8d4e2'); sg.addColorStop(1, '#4a5566');
       c.fillStyle = sg;
       c.beginPath();
       if (c.roundRect) c.roundRect(-sw / 2, -sh / 2, sw, sh, 4); else c.rect(-sw / 2, -sh / 2, sw, sh);
@@ -2677,91 +2785,90 @@ const BT = {
       c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 1.5; c.stroke();
       c.restore();
     }
-    /* 冰冻状态：整体罩一层冰蓝 */
-    if (z && z.slowT > 0) {
-      c.fillStyle = 'rgba(120,220,255,.30)';
-      c.beginPath(); c.arc(x, y, sz * 0.62, 0, 7); c.fill();
+    /* 冰冻状态：整体罩冰蓝 */
+    if (frozen) {
+      c.fillStyle = 'rgba(120,220,255,.28)';
+      c.beginPath(); c.arc(x, y - sz * 0.38, sz * 0.60, 0, 7); c.fill();
       c.strokeStyle = 'rgba(190,245,255,.7)'; c.lineWidth = 1.5;
-      c.beginPath(); c.arc(x, y, sz * 0.62, 0, 7); c.stroke();
+      c.beginPath(); c.arc(x, y - sz * 0.38, sz * 0.60, 0, 7); c.stroke();
     }
     c.restore();
   },
 
+  /* ---------- 3D 僵尸 ---------- */
+  drawZombieShape(c, x, y, sz, z) {
+    if (!isFinite(x) || !isFinite(y) || !isFinite(sz) || sz <= 0) return;
+    const d = (z && z.d) || {};
+    const big = !!z.isBoss || !!d.elite;
+    /* 每类僵尸的配色/体型差异（精英偏紫、BOSS 偏冷灰、毒系偏绿、护盾带盾） */
+    let skin = '#73996d', skinHi = '#a8d69f', cloth = '#3d5140', clothHi = '#6b866e';
+    if (z.isBoss) { skin = '#4e6f7d'; skinHi = '#8fbccb'; cloth = '#26333d'; clothHi = '#48606f'; }
+    else if (d.elite) { skin = '#7d6f9c'; skinHi = '#b9a6dd'; cloth = '#332a4a'; clothHi = '#5d4d85'; }
+    else if (d.poison) { skin = '#5f8a4a'; skinHi = '#96c977'; cloth = '#2f3f28'; clothHi = '#557043'; }
+    else if (d.armor) { skin = '#8a8f96'; skinHi = '#c3c9d1'; cloth = '#3a4046'; clothHi = '#666e78'; }
+    /* 步频随移动速度：被减速时步伐变慢，静止啃墙时几乎不摆 */
+    const moving = z && (z.slow || 0) < 0.9;
+    const stride = z.isBoss ? 0.55 : (moving ? 1 : 0.25);
+    this.figure3d(c, {
+      x: x, y: y, sz: sz,
+      ph: (z.animT || 0),
+      stride: stride,
+      skin: skin, skinHi: skinHi, cloth: cloth, clothHi: clothHi,
+      frozen: z && z.slowT > 0,
+      shield: !!d.front,
+      big: big,
+      eye: d.fire ? '#ff8a3c' : null,
+      armReach: 1,
+    });
+  },
+
   /* ---------- 3D 主角（末日士兵） ---------- */
+  /* ---------- 3D 主角（末日士兵）：骨骼模型 + 呼吸 + 持枪臂跟随瞄准 ---------- */
   drawHeroShape(c, x, y) {
-    const S = 1;
+    if (!isFinite(x) || !isFinite(y)) return;
+    const r = this.run || {};
+    const t = r.time || 0;
+    const sz = 46;
+    /* 站立小幅呼吸（stride 很小＝不迈步，只有起伏） */
+    const breathe = 0.18;
+    let aim = -Math.PI / 2;
+    let nz = null, nd = 1e9;
+    for (const z of (r.zombies || [])) {
+      if (z.dead) continue;
+      const dd = (z.x - x) * (z.x - x) + (z.y - y) * (z.y - y);
+      if (dd < nd) { nd = dd; nz = z; }
+    }
+    if (nz) aim = Math.atan2(nz.y - (y - 12), nz.x - x);
+    const kick = r.muzzleT > 0 ? 4.5 : 0;
+    this.figure3d(c, {
+      x: x, y: y, sz: sz,
+      ph: t * 0.55,                 /* 缓慢呼吸节奏 */
+      stride: breathe,
+      skin: '#e3b98d', skinHi: '#ffd9ae',
+      cloth: '#41536e', clothHi: '#6d84a8',
+      big: false,
+      armReach: 0.4,
+      gun: true, aim: aim, kick: kick,
+    });
+    /* 战术头盔（半球 + 高光）叠在头部 */
+    const hy = y - sz * 0.90;
     c.save();
-    /* 地面投影 */
-    this.shadow3d(c, x, y + 20, 22, S);
-
-    /* 腿（两根圆柱，立体受光） */
-    this.cylinder(c, x - 7.5, y + 4, 9, 15, '#2b374c', '#48597a', 3);
-    this.cylinder(c, x + 7.5, y + 4, 9, 15, '#2b374c', '#48597a', 3);
-    c.beginPath(); c.roundRect ? c.roundRect(x - 12, y + 4, 9, 15, 3) : c.rect(x - 12, y + 4, 9, 15); c.fill();
-    c.beginPath(); c.roundRect ? c.roundRect(x + 3, y + 4, 9, 15, 3) : c.rect(x + 3, y + 4, 9, 15); c.fill();
-
-    /* 靴子 */
-    c.fillStyle = '#1a2230';
-    c.beginPath(); c.roundRect ? c.roundRect(x - 13, y + 16, 11, 5, 2) : c.rect(x - 13, y + 16, 11, 5); c.fill();
-    c.beginPath(); c.roundRect ? c.roundRect(x + 2, y + 16, 11, 5, 2) : c.rect(x + 2, y + 16, 11, 5); c.fill();
-
-    /* 躯干（战术夹克，圆柱受光） */
-    this.cylinder(c, x, y - 12, 26, 20, '#41536e', '#6d84a8', 7);
-    /* 胸口护甲（凸起，高光） */
-    c.fillStyle = 'rgba(255,190,90,.55)';
-    c.beginPath(); c.roundRect ? c.roundRect(x - 8, y - 9, 16, 5, 2) : c.rect(x - 8, y - 9, 16, 5); c.fill();
-    /* 腰带 */
-    c.fillStyle = '#20293a';
-    c.fillRect(x - 13, y - 1, 26, 4);
-    c.fillStyle = '#ffd76a';
-    c.fillRect(x - 4, y - 1, 8, 4);
-
-    /* 手臂（两侧圆柱，右臂持枪前伸） */
-    this.cylinder(c, x - 15, y - 10, 7, 16, '#3a4a63', '#5e739a', 3);
-    this.cylinder(c, x + 13, y - 11, 7, 14, '#3a4a63', '#5e739a', 3);
-
-    /* 头（球体 + 肤色） */
-    const hy = y - 22;
-    this.sphere(c, x, hy, 8.5, '#e3b98d', '#ffd9ae');
-    /* 战术头盔（半球 + 高光） */
-    c.save();
-    c.beginPath(); c.arc(x, hy - 1, 9.5, Math.PI * 1.02, Math.PI * 1.98); c.fill();
-    const hg = c.createLinearGradient(x - 9, hy - 10, x + 9, hy + 2);
-    hg.addColorStop(0, '#4c5f7d'); hg.addColorStop(.5, '#7d92b3'); hg.addColorStop(1, '#33415a');
-    c.fillStyle = hg; c.fill();
-    c.restore();
-    /* 帽檐 */
+    const hg = c.createLinearGradient(x - 10, hy - 10, x + 10, hy + 3);
+    hg.addColorStop(0, '#4c5f7d'); hg.addColorStop(0.5, '#7d92b3'); hg.addColorStop(1, '#33415a');
+    c.fillStyle = hg;
+    c.beginPath(); c.arc(x, hy - 1, 10.5, Math.PI * 1.02, Math.PI * 1.98); c.fill();
     c.fillStyle = '#2c3850';
-    c.beginPath(); c.ellipse(x, hy - 2, 10, 3.2, 0, 0, 7); c.fill();
+    c.beginPath(); c.ellipse(x, hy - 2, 11, 3.4, 0, 0, 7); c.fill();
     /* 护目镜（发光） */
-    c.fillStyle = '#5cd8ff'; c.shadowColor = '#5cd8ff'; c.shadowBlur = 5;
-    c.beginPath(); c.roundRect ? c.roundRect(x - 7, hy - 1, 14, 3.5, 1.6) : c.rect(x - 7, hy - 1, 14, 3.5); c.fill();
+    c.fillStyle = '#5cd8ff'; c.shadowColor = '#5cd8ff'; c.shadowBlur = 6;
+    c.beginPath();
+    if (c.roundRect) c.roundRect(x - 7.5, hy - 1.5, 15, 4, 1.8); else c.rect(x - 7.5, hy - 1.5, 15, 4);
+    c.fill();
     c.shadowBlur = 0;
-
-    /* 枪（立体：枪管 + 枪身 + 高光） */
-    c.save();
-    c.translate(x + 15, y - 8);
-    c.rotate(-0.12);
-    /* 枪身 */
-    const gg = c.createLinearGradient(-4, 0, 4, 0);
-    gg.addColorStop(0, '#3a4250'); gg.addColorStop(.5, '#79859a'); gg.addColorStop(1, '#2b323d');
-    c.fillStyle = gg;
-    c.beginPath(); c.roundRect ? c.roundRect(-3.5, -14, 7, 26, 2) : c.rect(-3.5, -14, 7, 26); c.fill();
-    /* 枪管（前伸） */
-    c.fillStyle = '#8e9aad';
-    c.fillRect(-2, -20, 4, 8);
-    /* 枪口火光点 */
-    c.fillStyle = '#ffd76a';
-    c.beginPath(); c.arc(0, -20, 2, 0, 7); c.fill();
-    /* 弹夹（前凸，有厚度） */
-    c.fillStyle = '#39424f';
-    c.beginPath(); c.roundRect ? c.roundRect(2, -2, 5, 10, 1.5) : c.rect(2, -2, 5, 10); c.fill();
     c.restore();
-
     /* 头顶选中光环（金色，表示玩家） */
     c.strokeStyle = 'rgba(255,201,60,.55)'; c.lineWidth = 2;
-    c.beginPath(); c.ellipse(x, y + 20, 20, 8, 0, 0, 7); c.stroke();
-    c.restore();
+    c.beginPath(); c.ellipse(x, y + sz * 0.10, 20, 8, 0, 0, 7); c.stroke();
   },
 
   draw() {
@@ -2889,6 +2996,33 @@ const BT = {
         /* 僵尸啃到防线：贴墙的冲击弧 */
         c.strokeStyle = 'rgba(255,90,120,' + al + ')'; c.lineWidth = 3;
         c.beginPath(); c.ellipse(f.x, f.y, f.r * (1.4 - al * 0.5), f.r * 0.45, 0, Math.PI, Math.PI * 2); c.stroke();
+      } else if (f.t === 'spark') {
+        /* 命中火花：立体粒子 + 贴地冲击环（子弹打击特效） */
+        const sp = (1 - al) * (f.sp || 88);
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < (f.n || 6); i++) {
+          const a = (f.dir || 0) + (i / (f.n || 6)) * Math.PI * 2;
+          const px = f.x + Math.cos(a) * sp, py = f.y + Math.sin(a) * sp * 0.72;
+          const pr = Math.max(0.6, 2.6 * al);
+          const pg = c.createRadialGradient(px, py, 0, px, py, pr * 2.4);
+          pg.addColorStop(0, 'rgba(255,255,255,' + (al * 0.95).toFixed(3) + ')');
+          pg.addColorStop(0.4, 'rgba(' + f.col + ',' + (al * 0.8).toFixed(3) + ')');
+          pg.addColorStop(1, 'rgba(' + f.col + ',0)');
+          c.fillStyle = pg;
+          c.beginPath(); c.arc(px, py, pr * 2.4, 0, 7); c.fill();
+        }
+        /* 中心闪光 */
+        const cg = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, 12 * al + 2);
+        cg.addColorStop(0, 'rgba(255,255,255,' + (al * 0.9).toFixed(3) + ')');
+        cg.addColorStop(1, 'rgba(' + f.col + ',0)');
+        c.fillStyle = cg;
+        c.beginPath(); c.arc(f.x, f.y, 12 * al + 2, 0, 7); c.fill();
+        c.restore();
+        /* 贴地椭圆冲击环（透视） */
+        c.strokeStyle = 'rgba(' + f.col + ',' + (al * 0.5).toFixed(3) + ')';
+        c.lineWidth = 1.6;
+        c.beginPath(); c.ellipse(f.x, f.y + 10, 10 + sp * 0.22, (10 + sp * 0.22) * 0.36, 0, 0, 7); c.stroke();
       } else if (f.t === 'warn') {
         c.strokeStyle = 'rgba(255,77,109,' + al + ')'; c.lineWidth = 3;
         c.beginPath(); c.arc(f.x, f.y, f.r * (1.3 - al * 0.5), 0, 7); c.stroke();
@@ -2960,7 +3094,10 @@ const BT = {
       /* 立体精灵：抠底立绘 + 接触阴影 + 轮廓光 + 走动起伏。
        * 此前是直接 drawImage 一张 256×256 深色底 JPG —— 贴在战场上就是
        * 一块方纸片，这是画面"扁平/有纸质感"的主要来源。 */
-      const sp = SPR.get(z.img);
+      /* 默认走"真 3D 骨骼模型"（会动的立体角色）。
+       * 立绘（SPR）本质是平面图片，贴在 3D 场景里必然呈现纸片感，
+       * 只有在 BT.spriteMode=true 时才退回立绘。 */
+      const sp = this.spriteMode ? SPR.get(z.img) : null;
       const bob = Math.sin(((z.animT || 0) * 7) + ((z.id || z.x || 0) % 7)) * sz * 0.04;
       if (sp) {
         const h = sz * 1.72, w = h * (sp.w / sp.h);
@@ -3061,7 +3198,7 @@ const BT = {
     const skl = (window.EX && EX.skins ? EX.skins : []);
     const sk = skl.find((s) => s.id === (this.P && this.P.skin));
     const heroSrc = (sk && sk.img) || this.charImg || (this.P && this.P.avatarImg);
-    const hsp = SPR.get(heroSrc);
+    const hsp = this.spriteMode ? SPR.get(heroSrc) : null;
     let heroDrawn = false;
     if (this.card3d) this.drawCard(c, r.px, r.py + 20, 60, 76, 'hero', { t: r.time || 0, ph: 0, sw: 0.85, glow: true });
     if (hsp) {
@@ -3078,12 +3215,8 @@ const BT = {
       heroDrawn = true;
     }
     if (!heroDrawn) {
-      const cim = IMG.get(this.charImg);
-      if (cim) { c.drawImage(cim, r.px - 26, r.py - 26, 52, 52); heroDrawn = true; }
-    }
-    if (!heroDrawn) {
       c.save();
-      /* 几何士兵：整体放大到与立绘一致（3D 细节更清晰） */
+      /* 3D 骨骼士兵：整体放大到与立绘一致（细节更清晰） */
       c.translate(r.px, r.py); c.scale(1.15, 1.15); c.translate(-r.px, -r.py);
       this.drawHeroShape(c, r.px, r.py);
       c.restore();
@@ -3117,9 +3250,12 @@ const BT = {
   },
 };
 
+/* 摇杆已移除：保留字段仅为兼容旧调用，不再驱动移动 */
 BT.joy = { x: 0, y: 0 };
 BT.speed = 1;
 BT.auto = true;
 /* 战斗内 3D 卡片（僵尸/主角/武器）。关掉则退回原来的扁平+贴地阴影 */
 BT.card3d = (window.EX && EX.CARD3D !== false);
+/* true=使用平面立绘（纸片感），false=使用真 3D 骨骼模型（会动，默认） */
+BT.spriteMode = false;
 window.BT = BT;
