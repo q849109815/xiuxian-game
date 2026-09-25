@@ -931,15 +931,26 @@ const EX = {
   ],
 
 
-  /* 【炮台表】局内用金币建造/升级，部署在防线前 */
+  /* 【炮台表】局内用金币建造/升级，部署在防线前
+   * slow/slowT 减速强度与时长 / burn/burnT 灼烧强度与时长
+   * chain/chainN 链式概率与跳跃数 / preferElite 优先攻击精英
+   * 严重BUG：此前这四个 describe 的效果全都只写在 desc 里，
+   *   el 字段仅用于特效取色，命中处理硬编码 hurt(..., '物')。
+   *   实测：寒冰炮台命中后 slow 恒 0、火焰炮台 burnT 恒 0、
+   *   电磁炮台三只紧挨只打中 1 只、狙击炮台照打最近的普通僵尸。
+   *   玩家花 120~220 局内金币建造 + 升级，买到的四种炮台手感完全一样。 */
   turrets: [
-    { id: 'T_HB', n: '寒冰炮台', icon: '❄️', img: 'assets/icon/t_hb.jpg', img: 'assets/icon/t_hb.jpg', el: '冰', dmg: 14, rate: 1.0, rng: 150,
+    { id: 'T_HB', n: '寒冰炮台', icon: '❄️', img: 'assets/icon/t_hb.jpg', el: '冰', dmg: 14, rate: 1.0, rng: 150,
+      slow: 0.45, slowT: 1.8,
       cost: 120, upCost: 90, desc: '减速命中的僵尸' },
-    { id: 'T_HY', n: '火焰炮台', icon: '🔥', img: 'assets/icon/t_hy.jpg', img: 'assets/icon/t_hy.jpg', el: '火', dmg: 22, rate: 0.9, rng: 140,
+    { id: 'T_HY', n: '火焰炮台', icon: '🔥', img: 'assets/icon/t_hy.jpg', el: '火', dmg: 22, rate: 0.9, rng: 140,
+      burn: 0.35, burnT: 3,
       cost: 150, upCost: 110, desc: '持续灼烧伤害' },
-    { id: 'T_DC', n: '电磁炮台', icon: '⚡', img: 'assets/icon/t_dc.jpg', img: 'assets/icon/t_dc.jpg', el: '电', dmg: 18, rate: 1.3, rng: 165,
+    { id: 'T_DC', n: '电磁炮台', icon: '⚡', img: 'assets/icon/t_dc.jpg', el: '电', dmg: 18, rate: 1.3, rng: 165,
+      chain: 1, chainN: 2,
       cost: 180, upCost: 130, desc: '链式电击多个目标' },
-    { id: 'T_JJ', n: '狙击炮台', icon: '🎯', img: 'assets/icon/t_jj.jpg', img: 'assets/icon/t_jj.jpg', el: '物', dmg: 55, rate: 0.5, rng: 210,
+    { id: 'T_JJ', n: '狙击炮台', icon: '🎯', img: 'assets/icon/t_jj.jpg', el: '物', dmg: 55, rate: 0.5, rng: 210,
+      preferElite: true,
       cost: 220, upCost: 160, desc: '高单体伤害，优先攻击精英' },
   ],
   /* 炮台部署槽位（防线前 4 个位置，按屏幕比例） */
