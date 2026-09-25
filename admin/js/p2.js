@@ -339,8 +339,13 @@ APP.pages['act-shop'] = {
     if (go) go.onclick = async () => {
       const db = await DB.get(DBP.actshop, { list: [] });
       db.list = db.list || [];
+      const it2 = this.val('#ashItem'), n2 = this.num('#ashN'), c2 = this.num('#ashCost');
+      /* 同成就商店：空记录会把游戏端活动商店的 12 件默认商品清成 0 */
+      if (!it2) return this.toast('请先选择物品', 'err');
+      if (!(n2 > 0)) return this.toast('数量必须大于 0', 'err');
+      if (!(c2 >= 0)) return this.toast('价格不能为负', 'err');
       db.list.unshift({ id: 'AS' + Date.now(), act: this.val('#ashAct'),
-        item: this.val('#ashItem'), n: this.num('#ashN'), cost: this.num('#ashCost'),
+        item: it2, n: n2, cost: c2,
         limit: this.num('#ashLim'), daily: this.num('#ashDay'), refresh: this.num('#ashRef') });
       if (await DB.set(DBP.actshop, db, '添加活动商品')) { this.toast('已添加', 'ok'); this.render(); }
     };
@@ -389,11 +394,18 @@ APP.pages['ach-shop'] = {
     if (go) go.onclick = async () => {
       const db = await DB.get(DBP.achshop, { list: [] });
       db.list = db.list || [];
-      db.list.unshift({ id: 'AH' + Date.now(), item: this.val('#ahItem'), n: this.num('#ahN'),
-        cost: this.num('#ahCost'), limit: this.num('#ahLim'), refresh: this.num('#ahRef'),
+      const it = this.val('#ahItem'), n = this.num('#ahN'), cost = this.num('#ahCost');
+      /* 校验：此前点"添加"不校验，会产生 { item:'', n:0, cost:0 } 的空记录。
+       * 这条空记录上传云端后，游戏端过滤掉它 → 成就商店 12 件商品被清成 0 件，
+       * 玩家进商店什么都没有（线上已发生）。这里拦住空记录。 */
+      if (!it) return this.toast('请先选择物品', 'err');
+      if (!(n > 0)) return this.toast('数量必须大于 0', 'err');
+      if (!(cost >= 0)) return this.toast('价格不能为负', 'err');
+      db.list.unshift({ id: 'AH' + Date.now(), item: it, n: n,
+        cost: cost, limit: this.num('#ahLim'), refresh: this.num('#ahRef'),
         unlock: this.val('#ahUnlock') });
       if (await DB.set(DBP.achshop, db, '添加成就商店商品')) {
-        AUDIT.log('配置成就商店', U.itemName(this.val('#ahItem')), this.num('#ahCost') + '点');
+        AUDIT.log('配置成就商店', U.itemName(it), cost + '点');
         this.toast('已添加', 'ok'); this.render();
       }
     };
