@@ -200,7 +200,10 @@ const BT = {
   emptyMods() {
     return { dmgMul: 0, rateMul: 0, spread: 0, pierce: 0, crit: 0, critDmg: 0,
       healOnKill: 0, chain: 0, chainN: 0, auraR: 0, auraDps: 0, knock: 0,
-      novaR: 0, novaSlow: 0, novaCd: 0, explode: 0, er: 0, shield: 0, moveMul: 0 };
+      novaR: 0, novaSlow: 0, novaCd: 0, explode: 0, er: 0, shield: 0, moveMul: 0,
+      /* 分裂子弹（被动 fenliezidan）：此前该键既不在 emptyMods 里、
+       * mods.split 也全项目零引用 → 技能说明"命中后分裂成多枚"从未发生 */
+      split: 0 };
   },
 
   startWave(w) {
@@ -674,13 +677,28 @@ const BT = {
         if (Math.hypot(z.x - b.x, z.y - b.y) > 18) continue;
         b.hit.push(z);
         let dmg = b.dmg;
-        if (z.def) dmg *= (1 - z.def);
+        /* z.def 已统一在 hurt() 内应用（对所有伤害来源生效），此处不再重复 */
         if (z.front) {
           const a = Math.atan2(b.y - z.y, b.x - z.x);
           let diff = Math.abs(a - z.facing); while (diff > Math.PI) diff = Math.abs(diff - 2 * Math.PI);
           if (diff < 1.1) dmg *= (1 - z.front);
         }
         this.hurt(z, dmg, Math.random() < r.crit, '物');
+        /* 分裂子弹（被动 fenliezidan）：命中后向两侧散射 N 枚子弹。
+         * isSplit 守卫避免分裂出的子弹再次分裂导致指数爆炸；
+         * 上限 8 枚，防止 Lv10（split=20）时同屏子弹数失控。 */
+        if (r.mods.split > 0 && !b.isSplit) {
+          const n = Math.min(8, Math.round(Number(r.mods.split) || 0));
+          const base = Math.atan2(b.vy, b.vx);
+          for (let i = 0; i < n; i++) {
+            const ang = base + (i - (n - 1) / 2) * 0.42;
+            r.bullets.push({
+              x: z.x, y: z.y, vx: Math.cos(ang) * 520, vy: Math.sin(ang) * 520,
+              dmg: b.dmg * 0.55, pierce: 0, life: 0.8, hit: [z],
+              from: 'split', el: b.el || '物', isSplit: true, explode: 0, er: 0,
+            });
+          }
+        }
         if (r.mods.explode > 0) this.explode(b.x, b.y, r.mods.er, b.dmg * r.mods.explode);
         if (r.mods.chain > 0 && Math.random() < r.mods.chain) this.chain(z, r.mods.chainN, b.dmg * 0.55);
         if (b.pierce <= 0) { b.life = 0; break; }
@@ -1130,6 +1148,12 @@ const BT = {
     const r = this.run;
     /* 表20 公式2：暴击 = 基础 × (1 + 暴击伤害%) */
     let d = dmg * (1 + (crit ? r.critDmg : 0));
+    /* 单位减伤率（怪物表 def / BOSS def）：对所有伤害来源统一生效。
+     * 此前只在"子弹命中"这一条路径上应用 z.def，技能/爆炸/闪电链/
+     * 燃烧/毒池/油桶等 10 处伤害来源全部绕过 → BOSS 的 def(0.2~0.4)
+     * 与重甲僵尸 def(0.55) 对技能形同虚设。 */
+    const defR = Number(z.def || 0);
+    if (defR > 0) d = d * (1 - defR);
     /* 表20 公式3：最终伤害 = 基础伤害 - 怪物护甲（最低造成 1 点）
      * 此前怪物表无 armor 字段，护甲减伤完全未生效 */
     const armor = Number((z.d && z.d.armor) || 0);
@@ -1219,8 +1243,16 @@ const BT = {
 
   boom(z) {
     const r = this.run;
+    if (z._boomed) return;
+    z._boomed = true;
     r.efx.push({ t: 'boom', x: z.x, y: z.y, r: 72, life: 0.4, max: 0.4 });
     if (Math.hypot(r.px - z.x, r.py - z.y) < 72) this.hurtPlayer(z.dmg, z.n);
+    /* 自爆僵尸贴脸自爆时此前只置 dead=true，不走 kill()
+     * → 不计入击杀数、不给金币/经验、不触发掉落：
+     * 玩家明明把它打"没了"却颗粒无收，还挨了一次爆炸伤害。
+     * 现在统一走 kill() 发放奖励；kill() 内对 zibao 不会回调 boom
+     * （_boomed 守卫 + z.d.id !== 'zibao' 判断），不会递归。 */
+    if (!z.dead) this.kill(z);
     z.dead = true;
   },
 
