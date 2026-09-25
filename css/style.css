@@ -588,7 +588,11 @@ input{font-family:inherit}
   background:linear-gradient(180deg,rgba(6,10,18,.92),rgba(6,10,18,0))}
 .btb-icon,.btb-speed{flex:0 0 auto;width:34px;height:34px;border-radius:9px;
   background:rgba(12,18,30,.9);border:1px solid rgba(255,255,255,.14);
-  color:#cfd8e8;font-size:15px;display:flex;align-items:center;justify-content:center}
+  color:#cfd8e8;font-size:15px;display:flex;align-items:center;justify-content:center;
+  /* 手机端：视觉尺寸不变，用伪元素把可点热区撑到 44×44（Apple HIG 最小触控目标） */
+  position:relative}
+.btb-icon::after,.btb-speed::after{content:'';position:absolute;left:50%;top:50%;
+  width:44px;height:44px;transform:translate(-50%,-50%)}
 .btb-speed{font-size:12px;font-weight:800;color:#ffd76a;border-color:rgba(255,215,106,.35)}
 .btb-mid{flex:1;text-align:center;min-width:0}
 .btb-lv{font-size:12px;font-weight:700;color:#e6edf7;
@@ -617,9 +621,13 @@ input{font-family:inherit}
 
 /* --- 右侧功能栏 --- */
 .bt-side{position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:6;
-  display:flex;flex-direction:column;gap:7px}
+  display:flex;flex-direction:column;gap:9px}
 .bts{width:36px;height:36px;border-radius:50%;font-size:16px;
-  background:rgba(12,18,30,.9);border:1px solid rgba(255,255,255,.14);color:#cfd8e8}
+  background:rgba(12,18,30,.9);border:1px solid rgba(255,255,255,.14);color:#cfd8e8;
+  /* 手机端：同上，热区撑到 44×44；gap 9px 保证相邻热区不重叠（中心距 45 > 44） */
+  position:relative}
+.bts::after{content:'';position:absolute;left:50%;top:50%;
+  width:44px;height:44px;transform:translate(-50%,-50%)}
 .bts.on{border-color:#5fd07a;color:#5fd07a;background:rgba(95,208,122,.14)}
 
 /* --- 底部：防线生命 --- */
@@ -634,6 +642,10 @@ input{font-family:inherit}
 
 /* --- 底部：技能栏 --- */
 .bt-skills{position:absolute;left:8px;right:8px;bottom:150px;z-index:6;
+  /* 必须显式声明 row + top:auto：本类在上方(445行)被定义为纵向侧边栏，
+     后续规则未声明 flex-direction/top 时会沿用旧值，导致技能按钮竖排、
+     容器被 top+bottom 拉成整屏高度，从而盖住右侧「自动/切换」按钮 */
+  top:auto;flex-direction:row;align-items:center;
   display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
 .bt-skills .bs{position:relative;width:42px;height:42px;border-radius:11px;
   display:flex;align-items:center;justify-content:center;overflow:hidden;
@@ -657,11 +669,17 @@ input{font-family:inherit}
 .bt-bottom{position:absolute;left:10px;right:10px;bottom:14px;height:82px;z-index:6;
   display:flex;align-items:center;justify-content:space-between}
 .joy{position:relative;width:82px;height:82px;border-radius:50%;flex:0 0 auto;
+  /* 必须清空定位偏移：本类早期被定义为 absolute 侧边控件(left:18px/bottom:24px)，
+     改为 flex 内 relative 后若不重置，会产生 18px 左移 + 24px 上移，
+     导致摇杆上飘出容器并压住炮台建造栏 */
+  left:auto;right:auto;top:auto;bottom:auto;
   background:rgba(10,16,28,.72);border:2px solid rgba(255,255,255,.14)}
 .joy i{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;
   border-radius:50%;background:linear-gradient(180deg,#ffa53c,#ff7a3c);
   box-shadow:0 2px 8px rgba(0,0,0,.5)}
 .bt-reload{position:relative;flex:0 0 auto;width:82px;height:82px;border-radius:50%;
+  /* 同 .joy：清空早期 absolute 定位遗留的 right:18px/bottom:30px 偏移 */
+  left:auto;right:auto;top:auto;bottom:auto;
   background:rgba(10,16,28,.72);border:2px solid rgba(255,215,106,.35);
   display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
 .bt-reload .gun-ic{width:38px;height:38px;object-fit:contain;border-radius:6px}
