@@ -72,7 +72,43 @@ const MAIN = {
      * 若排在它后面，配置要等近 10 秒才到位，界面会先渲染成旧数据。 */
     this.syncCloudCfg().then(() => { try { UI.home(); } catch (e) {} }).catch(() => {});
     await this.claimMail();
-    this.startSave(); this.loadLeaderboard();
+    this.startSave(); this.loadLeaderboard(); this.startCfgSync();
+  },
+
+  /* ---------- 后台配置周期性重拉 ----------
+   * BUG：syncCloudCfg() 此前【只在登录时调用一次】。
+   * 后果：运营在后台改了数值配置 / 活动商店 / 成就商店 / 排行榜奖励后，
+   *   只要玩家不刷新页面、不重新登录，就永远读到登录那一刻的旧表。
+   *   典型场景：发现 BOSS 太肉、紧急热更调低血量 —— 在线玩家全都看不到，
+   *   只能在群里喊"刷新页面"，且无法确认谁刷了。
+   * 现在两个触发点：
+   *   ① 页面从后台切回前台（visibilitychange），距上次同步 >60s 才拉
+   *   ② 兜底轮询，间隔 10 分钟，且只在页面可见时执行
+   * 频率控制：单次同步 5 个文件，10 分钟一次 ≈ 30 次/小时/玩家，
+   *   远低于 GitHub token 5000 次/小时限额；页面不可见时完全不请求。
+   * applyCloudCfg 全部是「整体替换」而非累加，重复调用幂等，不会重复发奖。 */
+  startCfgSync() {
+    if (this._cfgT) clearInterval(this._cfgT);
+    this._cfgAt = Date.now();
+    this._cfgT = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      this.refreshCloudCfg();
+    }, 600000);   /* 10 分钟 */
+    if (this._visBound) return;
+    this._visBound = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - (this._cfgAt || 0) < 60000) return;   /* 60 秒内不重复拉 */
+      this.refreshCloudCfg();
+    });
+  },
+  async refreshCloudCfg() {
+    if (!P) return;
+    this._cfgAt = Date.now();
+    try {
+      await this.syncCloudCfg();
+      try { UI.home(); } catch (e) {}
+    } catch (e) {}
   },
 
   /* 旧档字段补全 */
@@ -355,8 +391,16 @@ const MAIN = {
         EX.activities = base;
       } else if (key === 'achshop' && Array.isArray(db.list)) {
         /* 后台 { id, item, n:数量, cost, limit, refresh, unlock }
-         *  → 游戏端 { id, n:名称, t, cost, limit, per, need, give:{item:数量} } */
-        EX.achShop = db.list.filter((x) => x && x.item).map((x, i) => ({
+         *  → 游戏端 { id, n:名称, t, cost, limit, per, need, give:{item:数量} }
+         *
+         * 致命 BUG 修复（线上已发生）：此前是【无条件整体覆盖】。
+         *   后台「添加商品」无校验，运营点一下"添加"就会产生一条
+         *   { id:'AH...', item:'', n:0, cost:0 } 的空记录并上传云端。
+         *   游戏端 filter(x => x.item) 把它滤掉 → EX.achShop = []，
+         *   于是内置的 12 件成就商店商品【全部消失，玩家进去空空如也】。
+         * 现在：云端有效条目为 0 时保留内置默认（只是草稿 / 空记录不算接管），
+         *   有效条目 > 0 才由后台接管。actshop 同此逻辑。 */
+        const arr = db.list.filter((x) => x && x.item).map((x, i) => ({
           id: x.id || ('AH' + i), n: nm(x.item) + '×' + (x.n || 1), t: '材料',
           cost: Number(x.cost) || 0, limit: Number(x.limit) || 0,
           /* 此前 per 硬编码 'day' —— 后台「刷新周期(天)」配了 7 天或 0（不刷新），
@@ -370,8 +414,11 @@ const MAIN = {
           need: this.needFromText(x.unlock), refresh: Number(x.refresh) || 0,
           unlock: x.unlock || '', give: { [x.item]: Number(x.n) || 1 },
         }));
+        if (arr.length) EX.achShop = arr;
+        else console.warn('[cfg] achshop 云端无有效商品（可能只有空记录草稿），保留内置默认 '
+          + ((EX.achShop || []).length) + ' 条');
       } else if (key === 'actshop' && Array.isArray(db.list)) {
-        EX.eventShop = db.list.filter((x) => x && x.item).map((x, i) => ({
+        const arr2 = db.list.filter((x) => x && x.item).map((x, i) => ({
           id: x.id || ('AS' + i), n: nm(x.item) + '×' + (x.n || 1), t: '材料',
           act: x.act || '', cost: Number(x.cost) || 0, limit: Number(x.limit) || 0,
           daily: Number(x.daily) || 0, refresh: Number(x.refresh) || 0,
@@ -382,6 +429,10 @@ const MAIN = {
           per: (Number(x.daily) || 0) > 0 ? 'day' : 'once',
           give: { [x.item]: Number(x.n) || 1 },
         }));
+        /* 同 achshop：空记录草稿不能把内置 12 件活动商店商品清成 0 */
+        if (arr2.length) EX.eventShop = arr2;
+        else console.warn('[cfg] actshop 云端无有效商品，保留内置默认 '
+          + ((EX.eventShop || []).length) + ' 条');
       } else if (key === 'rankrw' && Array.isArray(db.list)) {
         /* 后台 { id, board, a:名次起, b:名次止, item, n:数量, settle:天数, stack }
          *  → 游戏端 { id, board, rank, lo, hi, rw:{item:数量}, cyc, stack }
