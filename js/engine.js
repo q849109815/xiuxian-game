@@ -652,6 +652,18 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       atk: ((atk + (p.lvBonusAtk || 0)) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct + this.equipBonus(p).atkPct + this.friendBonus(p))) * (1 + EX.starBonus(p.charStar)),
       hp: ((Math.round(hp) + (p.lvBonusHp || 0)) * (1 + this.gemBonus(p).hpPct + this.equipBonus(p).hpPct)) * (1 + EX.starBonus(p.charStar)),
       gunBase, armor: Math.round(armor),
+      /* 护盾（常驻值）
+       * 严重BUG：attrs() 此前从不返回 shield，而 battle.js 用
+       *   shield: a.shield, maxShield: a.shield  初始化 run，
+       *   applyMods() 里 r.shield = Math.max(r.shield, r.mods.shield)
+       * → Math.max(undefined, 0) = NaN，run.shield 全程 NaN。
+       * 后果：① if (r.shield > 0) 恒为 false，护盾从不吸收伤害
+       *       ② 头顶护盾圈（r.shield > 0）从不绘制
+       *       ③ 护盾天赋/芯片的常驻加成永远不生效
+       *       （仅有 I02 护盾发生器能临时生效，因为那行写了 (r.shield||0)）
+       * 现在返回数值（当前配置无护盾天赋/芯片 → 恒 0，但类型正确）。
+       * 后台若新增 stat:'shield' 的天赋或芯片主属性，会自动生效。 */
+      shield: Math.round(this.talentVal(p, 'shield') + this.chipVal(p, 'shield')),
       mag: g.mag + af.mag + Math.round(this.gunStatVal(p, 'mag')),
       pierce: g.pierce + af.pierce + Math.floor(this.gunStatVal(p, 'pierce')),
             /* 射程 300→380：僵尸从上方走到射程边缘约需 8 秒（spd 58），
