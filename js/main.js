@@ -149,6 +149,41 @@ const MAIN = {
      * 后台就只能靠不稳的目录枚举，结果长期只显示一个玩家。
      * 这里在每次启动/初始化时补登记（本机节流 6 小时一次）。 */
     this.tickIndex(p);
+    /* 旧存档兼容：商店【内联发放】路径曾缺少 skin/title/frame/gem 分支，
+     * 一律掉进 else 写进 p.mat —— 玩家花 680 钻买 SH08 皮肤，
+     * 提示「购买成功」，皮肤页里却什么都没有（钱白花）。
+     * （E.grant() 早已正确处理，但商店这条内联路径漏了，已单独修复。）
+     * 这里把历史写进 p.mat 的这类伪键补回各自的真实容器。 */
+    if (p.mat && typeof p.mat === 'object') {
+      const take = (key) => { const v = p.mat[key]; if (v) { delete p.mat[key]; return v; } return null; };
+      const sk = take('skin');
+      if (sk && typeof sk === 'string') {
+        p.skins = Array.isArray(p.skins) ? p.skins : [];
+        if (p.skins.indexOf(sk) < 0) p.skins.push(sk);
+        if (!p.skin || typeof p.skin !== 'string') p.skin = sk;
+      }
+      const ti = take('title');
+      if (ti && typeof ti === 'string') {
+        p.titles = Array.isArray(p.titles) ? p.titles : [];
+        if (p.titles.indexOf(ti) < 0) p.titles.push(ti);
+      }
+      const fr = take('frame');
+      if (fr && typeof fr === 'string') {
+        p.frames = Array.isArray(p.frames) ? p.frames : [];
+        if (p.frames.indexOf(fr) < 0) p.frames.push(fr);
+      }
+      const gm = take('gem');
+      if (gm && typeof gm === 'string') {
+        p.gems = (p.gems && typeof p.gems === 'object') ? p.gems : {};
+        p.gems[gm] = (p.gems[gm] || 0) + 1;
+      }
+      /* 活动代币曾被写进 p.mat.evToken（内联路径漏分支） */
+      const ev = Math.floor(Number(p.mat.evToken) || 0);
+      if (ev > 0) { p.evToken = (p.evToken || 0) + ev; p.evScore = (p.evScore || 0) + ev; delete p.mat.evToken; }
+    }
+    /* 类型规范化：放在 migrate 最后，确保补字段之后再做类型收敛 */
+    try { E.sanitize(p); } catch (e) {}
+
   },
 
   /* ---------- 玩家索引登记（节流） ---------- */
