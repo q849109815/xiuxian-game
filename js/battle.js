@@ -179,6 +179,9 @@ const BT = {
       lv: 1, xp: 0, xpNeed: 18,
       gold: 0, kills: 0, time: 0, over: false,
       reviveLeft: a.revive, novaT: 0, auraT: 0,
+      /* 玩家护甲：此前 run 里根本没有这个字段，
+       * 而 hurtPlayer() 也不读它 → 护甲养成线（天赋/芯片/皮肤/角色表）全废 */
+      armor: Number(a.armor) || 0,
       poison: 0, poisonT: 0, hitFlash: 0,
       boss: null, bossPhase: 0, warned: false,
     };
@@ -1183,6 +1186,15 @@ const BT = {
       if (r.shield <= 0) UI.toast('🛡️ 护盾破碎', 'err');
     }
     /* 真实玩法：伤害打在防线血量上，漏怪突破 → 防线归零 → 失败 */
+    /* 玩家护甲减伤（角色基础 + 天赋 + 芯片 + 皮肤）
+     * 严重BUG：attrs().armor 此前全项目零消费 —— 实测把角色护甲设成
+     * 0 / 50 / 200，防线掉血都是 100，一模一样。
+     * 护甲天赋(max20) / 护甲芯片(CH03) / 护甲皮肤(装甲骑士+20% 等) /
+     * 角色表 armor 字段，四条养成线全是「涨数字不涨实力」；
+     * 而战力还因「天赋点数×90」虚涨 1800，玩家更难察觉。
+     * 用收益递减公式（上限 50%），避免高护甲直接免疫。 */
+    const ar = Number(r.armor || 0);
+    if (ar > 0) d = Math.max(1, d * (1 - Math.min(0.5, ar / (ar + 120))));
     r.wallHp = Math.max(0, (r.wallHp != null ? r.wallHp : r.hp) - d);
     r.hp = r.wallHp;
     r.hitFlash = 0.18;
@@ -1202,7 +1214,10 @@ const BT = {
     const gAdd = Math.round(z.gold * (1 + E.talentVal(this.P, 'gold')));
     r.gold += gAdd;
     r.coin = (r.coin || 0) + gAdd;   /* 局内金币：用于建造/升级炮台 */
-    this.gainXp(z.xp);
+    /* 经验加成天赋此前只作用于 pick()（拾取掉落），
+     * 而击杀这条主要经验来源走的是 gainXp(z.xp)，完全没乘天赋
+     * → 实测天赋 Lv0 与 Lv20 击杀经验都是 4，点满 20 级毫无收益。 */
+    this.gainXp(Math.max(1, Math.round((z.xp || 2) * (1 + E.talentVal(this.P, 'xp')))));
     if (z.d.split) {
       const dd = EX.zombies.find((x) => x.id === 'xiaozombie');
       for (let i = 0; i < z.d.split; i++) {
