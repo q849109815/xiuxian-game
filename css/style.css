@@ -1096,3 +1096,52 @@ input{font-family:inherit}
   text-shadow:0 2px 8px rgba(255,201,60,.4); }
 #cgModal .cg-d { font-size:11px; color:#8fa0c0; line-height:1.6; margin-bottom:12px; }
 #cgModal #cgGo { width:100%; }
+
+/* ========== 补：HTML 实际使用但此前无定义的类名 ==========
+ * 扫描发现 style.css 定义了一套命名（.lg-title / .lg-slogan / .hm-nm / .hm-mid），
+ * 而 index.html 用的是另一套（lg-t / lg-s / hm-name / hm-info），JS 中两者均无引用。
+ * 结果是这些元素完全裸奔：登录页主标题「向 僵 尸 开 炮」设计稿为 25px/800 粗/居中/金渐变，
+ * 实际渲染成 16px/400/左对齐/纯白；主界面昵称失去 14px 粗体与超长省略，
+ * 且 .hm-info 缺少 flex:1;min-width:0，长昵称会挤压右侧货币区。
+ * 这里按 HTML 实际使用的类名补齐（保留原有定义，避免影响其它引用点）。 */
+
+/* 登录页头部 */
+.lg-logo{text-align:center;font-size:44px;line-height:1;margin-bottom:6px;
+  filter:drop-shadow(0 4px 10px rgba(255,160,32,.45))}
+.lg-t{text-align:center;font-size:25px;font-weight:800;letter-spacing:4px;
+  background:linear-gradient(180deg,#fff,var(--gold) 55%,#ff8a3c);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.lg-s{text-align:center;font-size:10px;color:var(--txt3);letter-spacing:2px;margin-top:4px}
+
+/* 主界面顶部玩家信息 */
+.hm-info{flex:1;min-width:0}
+.hm-name{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:700;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-name b{font-weight:800;overflow:hidden;text-overflow:ellipsis}
+.hm-lv{font-size:10px;font-weight:800;flex:0 0 auto;padding:1px 5px;border-radius:4px;
+  background:rgba(255,215,106,.16);color:var(--gold);border:1px solid rgba(255,215,106,.3)}
+.hm-pw{font-size:10px}
+.hm-prog{font-size:10px;color:var(--txt2);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 面板内表单字段容器（兑换码 / 改密码 / 销户 等） */
+.fld{margin-top:10px}
+.fld label{display:block;font-size:11px;color:var(--txt2);margin-bottom:5px;letter-spacing:1px}
+.fld input{width:100%;padding:9px 11px;border-radius:8px;font-size:13px;
+  background:rgba(10,16,28,.85);border:1px solid var(--line);color:var(--txt);outline:none}
+.fld input:focus{border-color:var(--gold)}
+
+/* 局内技能选择：刷新按钮 */
+.ch-rf{display:block;width:100%;margin:0 0 4px;padding:8px;border-radius:9px;
+  font-size:12px;font-weight:700;color:var(--gold);
+  background:rgba(255,215,106,.1);border:1px solid rgba(255,215,106,.32)}
+.ch-rf:active{transform:scale(.98)}
+.ch-rf:disabled{opacity:.45}
+
+/* 战斗中护盾条：此前 .shbar 有定义但 .bt-wall 里没有对应元素，
+   且 btTick 只写旧布局 id(#btShWrap/#btShBar)，导致护盾量在 HUD 上完全看不到。
+   现按 .bw-hp 的视觉规格补齐，仅在 maxShield>0 时显示。 */
+.bw-sh{flex:0 0 58px;height:13px;border-radius:8px;overflow:hidden;
+  background:rgba(10,16,28,.6);border:1px solid rgba(92,216,255,.25)}
+.bw-sh i{display:block;height:100%;width:0;border-radius:6px;
+  background:linear-gradient(90deg,#5cd8ff,#a8e8ff);transition:width .18s}
