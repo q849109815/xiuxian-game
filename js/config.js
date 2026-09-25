@@ -728,7 +728,10 @@ const EX = {
     { k: 'skin', n: '皮肤图鉴', icon: '👕' },
   ],
   codexOf(kind) {
-    if (kind === 'zombie') return (this.zombies || []).map((z) => ({ id: z.id, n: z.n, icon: z.icon, img: z.img }));
+    /* 带上 skill/sk：图鉴此前只显示图标+名字，怪物表配的 12 条技能名与
+     * 说明（「重甲僵尸：护甲，减伤高，需穿透/爆炸破甲」「护盾僵尸：正面免疫，
+     * 需绕后或破盾」）全项目零展示，玩家无从得知应对方式。 */
+    if (kind === 'zombie') return (this.zombies || []).map((z) => ({ id: z.id, n: z.n, icon: z.icon, img: z.img, skill: z.skill, sk: z.sk }));
     if (kind === 'gun') return (this.guns || []).map((g) => ({ id: g.id, n: g.n, icon: g.icon, img: g.img }));
     if (kind === 'skin') return (this.skins || []).map((s) => ({ id: s.id, n: s.n, icon: s.icon, img: s.img }));
     return [];
