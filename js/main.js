@@ -260,8 +260,43 @@ const MAIN = {
     this.uploadRank();
   },
   startSave() { if (saveT) clearInterval(saveT); saveT = setInterval(() => { if (P) this.save(); }, 30000); },
-  async uploadRank() {
+  /* 榜单上传节流键：记录上次成功上传时自己的成绩指纹 + 时间戳。
+   * BUG：save() 每 30 秒触发一次，uploadRank() 无条件执行，
+   *   每次都是「读 leaderboard + 写 leaderboard + 读 endless + 写 endless」= 4 次 API。
+   *   单玩家 8 次/分钟 ≈ 480 次/小时；10 人同时在线就逼近 GitHub token
+   *   5000 次/小时限额，之后写入全部失败进队列、榜单彻底停止更新。
+   *   而玩家的层数/战力/积分绝大多数时候根本没变 —— 全是无效写入。
+   * 现在：成绩指纹未变 且 距上次上传 <10 分钟 → 直接跳过。
+   *   指纹变了（打完无尽/战力提升/拿到活动积分）立刻上传，不影响榜单实时性。 */
+  rankKey() {
+    if (!P) return '';
+    return [P.uid, P.name, P.lv || 1, E.curLevel(P), E.power(P),
+      P.endlessBest || 0, P.evScore || 0].join('|');
+  },
+  /* 两条榜单记录合并：只增字段取大值，展示字段取较新的一份 */
+  mergeRow(old, row) {
+    if (!old || typeof old !== 'object') return row;
+    const oAt = Number(old.at || 0), nAt = Number(row.at || 0);
+    const newer = nAt >= oAt ? row : old;
+    const mx = (a, b) => Math.max(Number(a || 0), Number(b || 0));
+    return {
+      uid: row.uid || old.uid, u: row.uid || old.uid,
+      name: newer.name != null ? newer.name : old.name,
+      n: newer.n != null ? newer.n : old.n,
+      lv: newer.lv != null ? newer.lv : old.lv,
+      pw: newer.pw != null ? newer.pw : old.pw,
+      eb: mx(old.eb, row.eb), t: mx(old.t, row.t),
+      ev: mx(old.ev, row.ev),
+      at: Math.max(oAt, nAt),
+    };
+  },
+  async uploadRank(force) {
     if (!P || !Net.online) return;
+    try {
+      const fp = this.rankKey();
+      if (!force && this._rankFp === fp
+        && Date.now() - (this._rankAt || 0) < 600000) return;   /* 10 分钟 */
+    } catch (e) {}
     try {
       const r = await Net.read('data/zb/leaderboard.json');
       const lb = (r && r.data && r.data.list) ? r.data.list : [];
@@ -274,17 +309,29 @@ const MAIN = {
       const row = { uid: P.uid, u: P.uid, name: P.name, n: P.name,
         lv: E.curLevel(P), pw: E.power(P),
         eb: P.endlessBest || 0, t: P.endlessBest || 0,
-        ev: P.evScore || 0 };
+        ev: P.evScore || 0, at: Date.now() };
+      /* 合并而非覆盖
+       * BUG：此前是 `lb[i] = row` 整行替换，而 lb 来自本次读到的快照。
+       *   玩家 A 读快照 → B 上传了新纪录 → A 写入 A 的旧快照
+       *   （Net.write 每次重新 GET sha，所以不会 409 冲突，而是【静默覆盖】）
+       *   → B 的新层数被回退成 A 快照里的旧值。
+       *   更糟的是写失败会进 localStorage 队列、跨会话重放：
+       *   A 断网一天后重连，队列里那份 24 小时前的榜单被推上去，
+       *   期间所有人的成绩一起回退，且 B 若不在线就永远补不回来。
+       * 现在按 uid 合并：无尽层数 / 活动积分取【较大值】（都是只增的历史最佳），
+       *   昵称/等级/战力取时间戳较新的一份。这样任何一份旧快照都不可能把
+       *   别人的成绩改小。 */
       const i = lb.findIndex((x) => (x.uid || x.u) === P.uid);
-      if (i >= 0) lb[i] = row; else lb.push(row);
+      if (i >= 0) lb[i] = this.mergeRow(lb[i], row); else lb.push(row);
       lb.sort((a, b) => (b.eb || 0) - (a.eb || 0) || b.pw - a.pw);
       await Net.write('data/zb/leaderboard.json', { list: lb.slice(0, 50), updated: Date.now() });
       /* 同步无尽榜：后台 DBP.endless 读的就是这个文件 */
       const er = await Net.read('data/zb/endless.json');
       const el = (er && er.data && er.data.list) ? er.data.list : [];
-      const erow = { uid: P.uid, name: P.name, t: P.endlessBest || 0, lv: E.curLevel(P) };
+      const erow = { uid: P.uid, name: P.name, t: P.endlessBest || 0, lv: E.curLevel(P), at: Date.now() };
+      /* 同上：无尽榜也按 uid 合并，层数取较大值 */
       const j = el.findIndex((x) => (x.uid || x.u) === P.uid);
-      if (j >= 0) el[j] = erow; else el.push(erow);
+      if (j >= 0) el[j] = this.mergeRow(el[j], erow); else el.push(erow);
       el.sort((a, b) => (b.t || 0) - (a.t || 0));
       await Net.write('data/zb/endless.json', { list: el.slice(0, 50), updated: Date.now() });
       /* 回写「我的排名」
@@ -305,6 +352,8 @@ const MAIN = {
        * → 表33 RK08/RK09/RK10 奖励永不可领。现在按活动积分正常计算。 */
       const byEv = lb.slice().sort((a, b) => (b.ev || 0) - (a.ev || 0));
       P.rankEv = (P.evScore || 0) > 0 ? pos(byEv) : 0;
+      /* 记指纹：只有真正上传成功才记，失败时下次存档会重试 */
+      this._rankFp = this.rankKey(); this._rankAt = Date.now();
       try { E.save(P); } catch (e) {}
     } catch (e) {}
   },
