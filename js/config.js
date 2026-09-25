@@ -1136,13 +1136,18 @@ const EX = {
 
   /* 【佣兵表】基地酒馆招募，战斗中协同作战 */
   mercs: [
-    { id: 'M_SD', n: '霰弹枪士', icon: '🔫', img: 'assets/icon/m_sd.jpg', img: 'assets/icon/m_sd.jpg', dmg: 26, rate: 1.1, rng: 130, cost: 800,
-      desc: '近距离扇形霰弹，清小怪快' },
-    { id: 'M_JQ', n: '机枪大兵', icon: '⚙️', img: 'assets/icon/m_jq.jpg', img: 'assets/icon/m_jq.jpg', dmg: 15, rate: 3.0, rng: 150, cost: 1200,
+    /* BUG修复：desc 承诺的能力此前从未实现 —— 佣兵一律走单发 spawnBullet +
+     * nearest 纯按距离选敌，于是
+     *   ① 霰弹枪士「扇形霰弹」实际只打 1 颗子弹（实测一次开火 1 发）
+     *   ② 精准狙击手「点杀精英」实测锁定的是近处普通僵尸（166 < 精英 221）
+     * 现在把两条能力落成真实配置字段，由战斗逻辑消费。 */
+    { id: 'M_SD', n: '霰弹枪士', icon: '🔫', img: 'assets/icon/m_sd.jpg', dmg: 26, rate: 1.1, rng: 130, cost: 800,
+      pellets: 3, spread: 0.22, desc: '近距离扇形霰弹，清小怪快' },
+    { id: 'M_JQ', n: '机枪大兵', icon: '⚙️', img: 'assets/icon/m_jq.jpg', dmg: 15, rate: 3.0, rng: 150, cost: 1200,
       desc: '高射速持续压制' },
-    { id: 'M_JZ', n: '精准狙击手', icon: '🎯', img: 'assets/icon/m_jz.jpg', img: 'assets/icon/m_jz.jpg', dmg: 90, rate: 0.45, rng: 240, cost: 1600,
-      desc: '远程高伤，点杀精英' },
-    { id: 'M_SJ', n: '哨箭达人', icon: '🏹', img: 'assets/icon/m_sj.jpg', img: 'assets/icon/m_sj.jpg', dmg: 34, rate: 1.6, rng: 180, cost: 1000,
+    { id: 'M_JZ', n: '精准狙击手', icon: '🎯', img: 'assets/icon/m_jz.jpg', dmg: 90, rate: 0.45, rng: 240, cost: 1600,
+      elite: 1, desc: '远程高伤，点杀精英' },
+    { id: 'M_SJ', n: '哨箭达人', icon: '🏹', img: 'assets/icon/m_sj.jpg', dmg: 34, rate: 1.6, rng: 180, cost: 1000,
       desc: '穿透箭矢，命中一排' },
   ],
 
