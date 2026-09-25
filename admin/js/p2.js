@@ -616,11 +616,10 @@ APP.pages['stat-retain'] = {
     const e = D('#rtExport');
     if (e) e.onclick = () => {
       const rows = this.PLIST.map((p) => [p.uid, p.name, p.lv || 1,
-        U.dt(p.created), U.dt(p.lastSeen)].join(','));
-      const csv = 'UID,昵称,等级,注册时间,最后登录\n' + rows.join('\n');
-      const b = new Blob([csv], { type: 'text/csv' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(b); a.download = '留存数据.csv'; a.click();
+        U.dt(p.created), U.dt(p.lastSeen)]);
+      /* 走 U.csv：单元格转义（昵称含逗号/引号/换行不再破坏列）+ 带 BOM（Excel 中文不乱码） */
+      const csv = U.csv(['UID', '昵称', '等级', '注册时间', '最后登录'], rows);
+      U.download('留存数据.csv', csv, 'text/csv');
       this.toast('已导出 ' + this.PLIST.length + ' 条', 'ok');
     };
   },
