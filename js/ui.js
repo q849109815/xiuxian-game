@@ -1788,23 +1788,21 @@ r_tavern(p, tab) {
     <div class="card"><div class="card-t">${tab}图鉴 <span class="sub">${got.length}/${list.length}</span></div>
       <div class="grid4">${list.map((x) => {
         const has = got.indexOf(x.id) >= 0;
-        return `<div class="gcell ${has ? '' : 'sel'}"${has ? '' : ` data-cdx="${kind}|${x.id}"`}>
+        return `<div class="gcell ${has ? '' : 'sel'}"${has ? '' : ` data-cdxh="${kind}|${x.id}"`}>
           ${x.img ? `<img src="${x.img}" style="width:60%;height:60%;object-fit:contain">`
                   : `<div class="gi">${x.icon || '❓'}</div>`}
           <div class="gn">${has ? x.n : '???'}</div>
-          ${has ? '<span class="gq">✔</span>' : '<span class="gq" style="background:#666">解锁</span>'}
+          ${has ? '<span class="gq">✔</span>' : '<span class="gq" style="background:#666">未解锁</span>'}
         </div>`;
       }).join('')}</div>
-      <div class="sub" style="padding:6px 2px">点击未解锁条目可解锁并领奖。</div>
+      <div class="sub" style="padding:6px 2px">灰色条目需在游戏中真实获得后自动解锁（击败怪物 / 装备武器 / 获得皮肤），点击查看解锁条件。</div>
     </div>`;
   },
   b_codex(p, tab) {
-    $$('#pnBody [data-cdx]').forEach((b) => { b.onclick = () => {
-      const [kind, id] = b.dataset.cdx.split('|');
-      const r = E.codexUnlock(p, kind, id);
-      if (r.ok) { this.toast(r.msg, 'ok'); if (window.SND) SND.play('pickup'); }
-      else this.toast(r.already ? '已解锁' : r.msg, r.already ? 'ok' : 'err');
-      this.open('codex', tab); this.home();
+    $$('#pnBody [data-cdxh]').forEach((b) => { b.onclick = () => {
+      const [kind, id] = b.dataset.cdxh.split('|');
+      const hint = E.codexHint(p, kind, id);
+      this.toast(hint, 'err');
     }; });
   },
 
@@ -2479,8 +2477,20 @@ r_tavern(p, tab) {
       if (b2) b2.onclick = () => {
         const r = E.useAd(this.P, 'AD02'); if (!r.ok) return this.toast(r.msg, 'err');
       try { OPS.track('ad_watch', {}); } catch (e) {}
-        this.P.gold += Math.floor((d.rw.gold || 0));
-        this.toast('奖励翻倍！金币 +' + E.fmt(d.rw.gold), 'ok');
+        /* 表24 AD02 配置的 rw 是「通关奖励 ×2」，但此前只补了一份金币，
+         * 钻石与经验不翻倍，与按钮文案「双倍奖励」及配置表不符。
+         * 这里按结算包整体再补一份（金币 / 钻石 / 经验）。 */
+        const g2 = Math.floor((d.rw.gold || 0));
+        const d2 = Math.floor((d.rw.diamond || 0));
+        const e2 = Math.floor((d.rw.exp || d.rw.xp || 0));
+        this.P.gold += g2;
+        if (d2) this.P.diamond += d2;
+        if (e2 && window.E) E.addXp(this.P, e2);
+        const parts = [];
+        if (g2) parts.push('金币 +' + E.fmt(g2));
+        if (d2) parts.push('钻石 +' + d2);
+        if (e2) parts.push('经验 +' + e2);
+        this.toast('奖励翻倍！' + (parts.join(' · ') || '已翻倍'), 'ok');
         b2.disabled = true; b2.textContent = '已领取双倍'; this.home(); MAIN.save();
       };
       const br = $('#rsAdRev');
