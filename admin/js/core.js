@@ -689,8 +689,20 @@ const APP = {
     let base = this.PLIST;
     if (!this.SHOW_DEAD) base = base.filter((p) => !p.destroyed);
     if (!f) return base;
-    return base.filter((p) =>
-      (p.name || '').toLowerCase().indexOf(f) >= 0 || (p.uid || '').toLowerCase().indexOf(f) >= 0);
+    /* 手机号可搜
+     * BUG：玩家查询页搜索框 placeholder 写的是「UID / 昵称 / 手机号」，
+     *   而这里只匹配 name 和 uid —— 手机号从来没被搜过。
+     *   手机号在「账号资料」页可手工补录（p.ext.phone），玩家申诉时报手机号
+     *   是最常见的方式；运营输入手机号却搜不到任何人，只能挨个翻列表。
+     * 现在补上 ext.phone / ext.device 匹配（设备号同理，找回账号常用）。 */
+    return base.filter((p) => {
+      if ((p.name || '').toLowerCase().indexOf(f) >= 0) return true;
+      if ((p.uid || '').toLowerCase().indexOf(f) >= 0) return true;
+      const e = p.ext || {};
+      if ((e.phone || '').toLowerCase().indexOf(f) >= 0) return true;
+      if ((e.device || '').toLowerCase().indexOf(f) >= 0) return true;
+      return false;
+    });
   },
   /* 玩家卡片（可点选） */
   pcard(p, attr) {
