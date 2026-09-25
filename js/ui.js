@@ -1928,7 +1928,7 @@ r_tavern(p, tab) {
     return `<div class="card"><div class="card-t">账号 <span class="sub">账号密码登录</span></div>
       <div class="kv"><span>账号名</span><b>${this.esc(ac.name || '—')}</b></div>
       <div class="kv"><span>账号 ID</span><b style="font-size:10px">${this.esc(ac.uid || '—')}</b></div>
-      <div class="kv"><span>下次登录</span><b style="font-size:10px">${window.UA && UA.shouldAuto() ? '自动登录（已记住）' : '需重新输入'}</b></div>
+      <div class="kv"><span>下次登录</span><b style="font-size:10px">${ac.name ? '需输入密码（已记住账号名）' : '需重新输入'}</b></div>
       <div class="lbl" style="text-align:left;margin-top:6px">换设备时用同一账号名+密码登录，存档自动继承</div></div>
     <div class="card"><div class="card-t">修改密码</div>
       <div class="fld"><label>原密码</label><input id="spOld" type="password" placeholder="原密码"></div>
