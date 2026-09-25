@@ -73,6 +73,30 @@ const U = {
       { id: 'ach', n: '成就点', icon: '🏅' }, { id: 'stamina', n: '体力', icon: '⚡' },
       { id: 'evToken', n: '活动代币', icon: '🎟️' }];
     (EX.items || []).forEach((it) => out.push({ id: it.id, n: it.n, icon: it.icon || '📦' }));
+    /* 补齐此前缺失的四类可发放物品
+     * BUG：itemList() 只由「5 种货币 + EX.items(16 项)」构成，
+     *   而皮肤(11)、宝石(4)、称号(4)、头像框(2) 全都不在里面。
+     *   物品表 EX.items 里也没有这几类（只有 C01~C03 芯片在）。
+     * 后果：运营想补发【皮肤 / 宝石 / 称号 / 头像框】时，下拉框里根本选不到
+     *   —— 近几轮修的正是"皮肤买了拿不到""宝石发成 M05""称号是死数据"
+     *      这类问题，而后台恰恰没有办法给玩家补回这些东西。
+     * 现在按 EX 真实表补全，id 与 APP.grant 的分支一一对应。 */
+    (EX.skins || []).forEach((sk) => {
+      if (!sk || !sk.id) return;
+      out.push({ id: sk.id, n: '皮肤·' + (sk.n || sk.id), icon: sk.icon || '🥼' });
+    });
+    (EX.gems || []).forEach((g) => {
+      if (!g || !g.id) return;
+      out.push({ id: g.id, n: '宝石·' + (g.n || g.id), icon: g.icon || '💎' });
+    });
+    (EX.titles || []).forEach((t) => {
+      if (!t || !t.id) return;
+      out.push({ id: t.id, n: '称号·' + (t.n || t.id), icon: '🏅' });
+    });
+    (EX.frames || []).forEach((f) => {
+      if (!f || !f.id) return;
+      out.push({ id: f.id, n: '头像框·' + (f.n || f.id), icon: f.icon || '🖼️' });
+    });
     return out;
   },
   /* 物品选择器 HTML */
@@ -685,6 +709,53 @@ const APP = {
     else if (id === 'ach') p.ach = (p.ach || 0) + n;
     else if (id === 'stamina') p.stamina = (p.stamina || 0) + n;
     else if (id === 'evToken') p.evToken = (p.evToken || 0) + n;
+    /* 芯片（表32/表35）：C01 白 / C02 蓝 / C03 红，以及品质码 chipN/chipE/chipL/chipRed
+     * 严重 BUG 修复：这些 id 此前一律掉进 else 写进 p.mat['C01']，
+     *   而芯片真实存放在 p.bag（芯片对象数组），芯片面板只读 p.bag。
+     * 后果：运营在「道具补发 / 邮件附件 / 礼包模板 / 商店奖励」里发芯片，
+     *   后台提示「补发成功」，玩家【芯片页永远显示 0】，既不能装备也不能合成。
+     *   实测：APP.grant(p,'C01',1) → p.mat.C01=1、p.bag=0（游戏端 E.grant 则为 bag=1）。
+     * 现在按品质 roll 出真实芯片推进 p.bag，与游戏端 E.grant 行为一致。 */
+    else if (/^(C01|C02|C03|chipN|chipE|chipL|chipRed)$/.test(id)) {
+      const q = (id === 'C01' || id === 'chipN') ? '白'
+        : (id === 'C02' || id === 'chipE') ? '蓝' : '红';
+      const c = Math.max(1, n);
+      for (let i = 0; i < c; i++) {
+        try {
+          if (window.E && E.giveChipByQuality) E.giveChipByQuality(p, q);
+          else if (window.E && E.rollChipByQuality) {
+            const ch = E.rollChipByQuality(q); if (ch) (p.bag = p.bag || []).push(ch);
+          }
+        } catch (e) {}
+      }
+      return;
+    }
+    /* 皮肤（sk_xxx）→ p.skins 数组，并自动穿戴
+     * BUG：此前写进 p.mat['sk_c01b']，玩家皮肤页什么都没有。 */
+    else if (/^sk_/.test(id)) {
+      p.skins = p.skins || [];
+      if (p.skins.indexOf(id) < 0) p.skins.push(id);
+      p.skin = id;
+      return;
+    }
+    /* 宝石（G_R/G_B/G_G/G_P）→ p.gems 计数
+     * BUG：此前写进 p.mat['G_R']，宝石页永远数量 0，镶嵌/合成用不了。 */
+    else if (/^G_[A-Z]$/.test(id)) {
+      p.gems = p.gems || {};
+      p.gems[id] = (p.gems[id] || 0) + Math.max(1, n);
+      return;
+    }
+    /* 称号 → p.titles；头像框 → p.frames（两个都是"数组去重"，n 只作有无判断） */
+    else if ((EX.titles || []).some((x) => x.id === id)) {
+      p.titles = p.titles || [];
+      if (p.titles.indexOf(id) < 0) p.titles.push(id);
+      return;
+    }
+    else if ((EX.frames || []).some((x) => x.id === id)) {
+      p.frames = p.frames || [];
+      if (p.frames.indexOf(id) < 0) p.frames.push(id);
+      return;
+    }
     else {
       /* 旧存档迁移：p.use 里残留的消耗品并入 p.mat */
       if (p.use && Object.keys(p.use).length) {
