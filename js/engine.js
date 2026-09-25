@@ -1261,6 +1261,57 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   },
 
   /* =========================================================
+   * 活动奖励领取（表22：EV01~EV06 + 后台新建 ACTxxx）
+   * 严重 BUG：ui.js 的 actExtraBtn 此前用 isBuiltin(/^EV\d+$/) 把 6 个内置活动
+   *   全部排除 → 配了 rw 的活动（EV01 代币60+芯片、EV02 代币80+M03+钻石20、
+   *   EV03 钻石30+M01、EV06 代币120+传说芯片+限定称号 endless_king）
+   *   【页面上 data-actrw 领奖按钮数为 0】，奖励从上线起一次都没发出去过。
+   * ======================================================== */
+  actOf(id) { return (EX.acts || EX.activities || []).find((x) => x.id === id); },
+  /* UTC+8 日历日（YYYYMMDD 整数），与 sign() 同一基准 */
+  _utc8dayNum() {
+    const d = new Date(Date.now() + 8 * 3600000);
+    return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+  },
+  /* 本期是否已领（带周期重置）。旧档 actRwGot[id] 是数字 1 → 迁移为 {n:1} */
+  actRwGot(p, id) {
+    const a = this.actOf(id);
+    const g = p.actRwGot || (p.actRwGot = {});
+    let r = g[id];
+    if (!r || typeof r !== 'object') r = g[id] = { n: (typeof r === 'number' && r) ? 1 : 0 };
+    this._perReset(r, (a && a.per) || 'once', a && a.n);
+    return r.n > 0;
+  },
+  /* 参与条件校验：内置活动各有门槛，避免无条件白拿 */
+  actCondOk(p, a) {
+    const c = (a && a.cond) || {};
+    if (c.lvMin && (p.lv || 1) < c.lvMin) return { ok: false, msg: '等级不足（需 Lv.' + c.lvMin + '）' };
+    if (c.clearedMin && Object.keys(p.cleared || {}).length < c.clearedMin) {
+      return { ok: false, msg: '需通关 ' + c.clearedMin + ' 关' };
+    }
+    if (c.endlessMin && (p.endlessBest || 0) < c.endlessMin) {
+      return { ok: false, msg: '需无尽模式达到 ' + c.endlessMin + ' 波' };
+    }
+    if (c.raidToday && !(p.bossRaidUsed > 0 && (p.bossRaidDate || '') === new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10))) {
+      return { ok: false, msg: '需今日先挑战一次 BOSS 突袭' };
+    }
+    if (c.signToday && p.signDay !== this._utc8dayNum()) return { ok: false, msg: '需先完成今日签到' };
+    return { ok: true };
+  },
+  actRwTake(p, id) {
+    const a = this.actOf(id);
+    if (!a || !a.rw || !Object.keys(a.rw).length) return { ok: false, msg: '该活动无奖励' };
+    if (this.actRwGot(p, id)) return { ok: false, msg: '本期奖励已领取' };
+    const c = this.actCondOk(p, a);
+    if (!c.ok) return c;
+    const g = p.actRwGot || (p.actRwGot = {});
+    if (!g[id] || typeof g[id] !== 'object') g[id] = { n: 0 };
+    g[id].n = 1; g[id].t = Date.now();
+    this.grant(p, a.rw);
+    return { ok: true, msg: '已领取「' + (a.n || '活动') + '」奖励' };
+  },
+
+  /* =========================================================
    * 成就商店（表42：消耗成就点，限购按 日/周/月/终身）
    * ======================================================== */
   achShopKey(id) { return 'as_' + id; },
