@@ -1131,7 +1131,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 玩家今晚 23:00 买满，明早 00:30 再来买，只过了 1.5 小时 → 仍判定为同一天，
    * 限购不刷新，玩家白白少一天额度。运营意义上的「每日限购」应按自然日跨天算。
    * 周 / 月同理，改为按自然周、自然月（周一为周起点）。 */
-  _perReset(rec, per) {
+  _perReset(rec, per, evName) {
     const now = Date.now();
     const d = new Date(now + 8 * 36e5);          /* UTC+8 业务日 */
     if (per === 'day') {
@@ -1147,6 +1147,23 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       const key = d.getFullYear() * 100 + (d.getMonth() + 1);
       if (rec.mk !== key) { rec.n = 0; rec.mk = key; rec.t = now; }
     } else if (per === 'once') { /* 终身 */ }
+    /* per: 'ev'（活动期间限购）
+     * BUG：此前 'ev' 不进任何分支 → 计数【永不重置】。
+     *   活动商店 ES05/ES07/ES08/ES09/ES10/ES12 都是 per:'ev'。
+     *   运营的活动是【周期性重开】的（EV02「BOSS突袭」每月1-3日、
+     *   ES09/ES12「节日活动」每逢节日重开），但玩家第一轮买满后
+     *   计数永久锁死 —— 第二轮、第三轮活动再开，老玩家【一件都买不了】，
+     *   攒的活动代币再次变成废纸（代币本身此前也是零产出，已修）。
+     * 修法：① 活动名变了立刻重置（后台改活动/换节日）；
+     *       ② 按自然月兜底重置（配置里 per:'ev' 的活动都是每月/每季重开）。
+     * 注：单机架构拿不到服务端「活动期数」，只能用这两个信号近似，
+     *     若运营改为每周重开同名活动，需把下面改成按自然周。 */
+    else if (per === 'ev') {
+      const mk2 = d.getFullYear() * 100 + (d.getMonth() + 1);
+      if (rec.ev != null && rec.ev !== (evName || '')) { rec.n = 0; rec.t = now; }
+      if (rec.mk !== mk2) { rec.n = 0; rec.mk = mk2; rec.t = now; }
+      rec.ev = evName || '';
+    }
     return true;
   },
   achShopBuyItem(p, id) {
@@ -1155,7 +1172,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const b = p.achShopBuy || (p.achShopBuy = {});
     const k = this.achShopKey(id);
     if (!b[k]) b[k] = { n: 0, t: Date.now() };
-    this._perReset(b[k], it.per);
+    this._perReset(b[k], it.per, it.ev);
     /* 解锁条件（后台「解锁条件」配的「通关10关」）
      * 此前 need 恒为 0 且从不校验 —— 运营设了门槛，新玩家照样能直接兑换。 */
     if (it.need > 0 && Object.keys(p.cleared || {}).length < it.need) {
@@ -1300,7 +1317,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const b = p.evShopBuy || (p.evShopBuy = {});
     const k = 'es_' + id;
     if (!b[k]) b[k] = { n: 0, t: Date.now() };
-    this._perReset(b[k], it.per);
+    this._perReset(b[k], it.per, it.ev);
     if (b[k].n >= it.limit) return { ok: false, msg: '已达限购次数（' + it.limit + '）' };
     if ((p.evToken || 0) < it.cost) return { ok: false, msg: '活动代币不足（需 ' + it.cost + '）' };
     p.evToken -= it.cost;
