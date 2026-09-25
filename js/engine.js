@@ -555,6 +555,19 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   },
   /* 兼容旧调用：只返回金币 */
   offlineIncome(p) { return this.offlineCalc(p).gold; },
+  /* 仓库离线金币的「每小时实际产出」（供面板显示）
+   * BUG：基地面板此前写死 `buildings.warehouse.offline(120) × 等级` 显示，
+   *   而 offlineCalc 的真实公式是「章节档位 × 等级」：
+   *     第1章 32/小时·级、第2~4章 60、第5章+ 140。
+   *   实测（仓库 Lv5）：UI 恒显示 600/小时，
+   *     第1章实际只有 160（高估 3.75 倍），第6章实际 700（又低估）。
+   *   玩家按错误数字决定要不要升级仓库。现在直接返回真实值。 */
+  offlineRate(p) {
+    const lv = (p.build && p.build.warehouse) || 1;
+    const t = this.offlineTier(p);
+    const g = t.gold || [20, 40];
+    return Math.round((g[0] + (g[1] - g[0]) * 0.6) * lv);
+  },
   /* 领取离线收益（金币 + 金属 + 经验） */
   offlineClaim(p) {
     const c = this.offlineCalc(p);
@@ -724,6 +737,21 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   friendBonus(p) {
     const n = Math.min(20, (p.friends || []).length);
     return n * 0.005;
+  },
+
+  /* 军团属性加成
+   * BUG：军团面板明确写「军团可提供属性加成、军团副本与军团商店」，
+   *   但 p.legion 全项目只在 ui.js 出现，attrs() / power() 从不读它
+   *   → 加不加军团，属性一模一样（实测：加入前后 atk 26 / hp 1060，纹丝不动）。
+   *   玩家花 5000 金币捐一次换 100 贡献，换来的只有商店消费权，
+   *   面板承诺的那份「属性加成」从来不存在。
+   *   现在按军团贡献给加成：每 1000 贡献 +1% 攻击与生命，上限 10%。
+   *   （捐献 5000 金 = 100 贡献，故满加成约需 5 万金币，作为中后期金币出口。） */
+  legionBonus(p) {
+    if (!p.legion) return { atkPct: 0, hpPct: 0 };
+    const c = Math.max(0, Number(p.legionExp || 0));
+    const v = Math.min(0.10, Math.floor(c / 1000) * 0.01);
+    return { atkPct: v, hpPct: v };
   },
 
   power(p) {
