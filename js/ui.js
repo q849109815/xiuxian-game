@@ -1520,6 +1520,7 @@ r_tavern(p, tab) {
         <div class="zav">${a.icon || '🎪'}</div>
         <div class="zi"><b>${a.n}</b><span>${a.desc || ''}</span>
           <span style="font-size:9px;color:#8fa0c0">${a.time || ''} · ${a.rule || ''}</span>
+          ${a.rwDesc ? `<span style="font-size:9px;color:#ffd76a">🎁 ${a.rwDesc}</span>` : ''}
           ${a.id === 'EV02' ? `<span style="font-size:9px;color:#ffd76a">今日剩余 ${E.bossRaidLeft(p)} / 3 次</span>` : ''}
           ${a.id === 'EV04' ? `<span style="font-size:9px;color:${p.firstRech ? '#7ee38a' : '#ffd76a'}">${p.firstRech ? '已使用' : '未使用 · 首次购买钻石翻倍'}</span>` : ''}
         </div>
