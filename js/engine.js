@@ -134,21 +134,50 @@ const E = {
   NUMS: ['gold','diamond','stamina','lv','xp','tp','ach','evToken','evScore',
          'patrolAcc','patrolT','patrolFast','legionExp','legionContrib',
          'charStar','gunLv','gunAdv','endlessBest','adTotal','staminaAt'],
+  /* mailGot / cdkGot 是【数组】（存已领邮件ID、已兑换码），
+   * 此前误列进 OBJS → sanitize 把数组改写成对象 {}，
+   * 实测：登录后 mailGot=['m1','m2'] → {}，接着执行
+   *   `P.mailGot.indexOf(...)` 直接抛 "indexOf is not a function"，
+   * 且已领记录清空意味着【邮件、兑换码可以无限重复领取】（可刷奖励）。
+   * 现在归入 ARRS。 */
   ARRS: ['bag','skins','titles','frames','mercs','chars','gunOwn','friends',
-         'sendStTo','tempBuff','logs'],
+         'sendStTo','tempBuff','logs','mailGot','cdkGot'],
   OBJS: ['mat','chips','cleared','codex','equip','gems','build','talents',
          'tasks','stats','giftBuy','evShopBuy','achShopBuy','lgShopBuy',
-         'mailGot','cdkGot','adUsed','gunStats'],
+         'adUsed','gunStats'],
   sanitize(p) {
     if (!p || typeof p !== 'object') return p;
     const N = (v, d) => { const n = Number(v); return isFinite(n) ? n : (d || 0); };
-    this.NUMS.forEach((k) => { if (p[k] != null) p[k] = Math.max(0, N(p[k], 0)); });
-    if (p.stamina != null) p.stamina = Math.min(EX.STAMINA_MAX || 100, p.stamina);
-    if (p.gunLv != null) p.gunLv = Math.max(1, p.gunLv);
+    /* 时间戳类字段缺失时不能补 0：
+     *   patrolT=0 → 巡逻算成「离线 8 小时」白送金币（此前已修的 BUG 会复活）
+     *   staminaAt=0 → 体力瞬间回满
+     * 缺失一律补当前时间。 */
+    const TS = { patrolT: 1, staminaAt: 1, offlineAt: 1, created: 1, lastSeen: 1 };
+    this.NUMS.forEach((k) => {
+      if (p[k] == null) { p[k] = TS[k] ? Date.now() : 0; return; }
+      p[k] = Math.max(0, N(p[k], 0));
+    });
+    p.stamina = Math.min(EX.STAMINA_MAX || 100, p.stamina);
+    p.gunLv = Math.max(1, p.gunLv || 1);
+    if (!p.lv || p.lv < 1) p.lv = 1;   /* 等级最小 1，补 0 会让升级/经验计算异常 */
     if (p.charStar != null) p.charStar = Math.min(5, Math.max(0, p.charStar));
-    this.ARRS.forEach((k) => { if (p[k] != null && !Array.isArray(p[k])) p[k] = []; });
-    this.OBJS.forEach((k) => { if (p[k] != null && (typeof p[k] !== 'object' || Array.isArray(p[k]))) p[k] = {}; });
-    ['mat','gems','chips','cleared','codex','evShopBuy','achShopBuy','lgShopBuy','giftBuy'].forEach((k) => {
+    /* BUG修复（旧存档/损坏存档白屏）：
+     * 原写法是 `if (p[k] != null && ...)` —— 只在【字段存在但类型错】时才修正，
+     * 字段【整个缺失】时直接跳过，保持 undefined。
+     * 实测：删除 cleared / build / talents / tasks 任一字段后调用 UI.home()
+     *   全部抛 TypeError（读 undefined 的属性），主界面完全不渲染 → 玩家白屏。
+     * 触发途径：旧版本存档（字段后加的）、后台 GM 清空、存档写入被截断。
+     * 现在改为【缺失即补齐】：数组补 []、对象补 {}，从源头杜绝。
+     * 空集合与"未拥有/未通关"语义等价（如 build 缺失 → 各建筑取默认 1 级）。 */
+    this.ARRS.forEach((k) => { if (!Array.isArray(p[k])) p[k] = []; });
+    this.OBJS.forEach((k) => { if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {}; });
+    /* 只把【值确实是"数量"】的字典做数值收敛。
+     * BUG修复：chips / codex 曾在这个列表里，但它们的值【不是数量】：
+     *   chips = { 槽位: 芯片对象 }   → 实测 {s1:{id:'c1',...}} 被 Number() 成 {s1:0}
+     *   codex = { 类别: 已解锁ID数组 } → 实测 {z:['z1','z2']} 被 Number() 成 {z:0}
+     * 即：玩家每次登录，已装备的芯片与图鉴解锁记录【全部清零】。
+     * 现在移出该列表（保留 mat/gems/cleared 等真正的数量字典）。 */
+    ['mat','gems','cleared','evShopBuy','achShopBuy','lgShopBuy','giftBuy'].forEach((k) => {
       if (!p[k]) return;
       Object.keys(p[k]).forEach((i) => { const n = Number(p[k][i]); p[k][i] = isFinite(n) ? n : 0; });
     });
