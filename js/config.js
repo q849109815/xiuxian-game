@@ -778,14 +778,21 @@ const EX = {
      * 此前 rw 直接写成字符串（如 '活动代币 + 芯片'），
      * 而 grant() 用 Object.keys(give) 遍历 —— 字符串的 keys 是下标 '0','1'…
      * 一旦有代码把 rw 当奖励发放，就会执行 p.mat['0']='活' 之类的脏写入。 */
+    /* per / cond：活动奖励的周期与参与条件。
+     * BUG：此前 actExtraBtn 用 isBuiltin(/^EV\d+$/) 把内置活动全部排除，
+     *   6 个活动配了 rw（代币/芯片/钻石/限定称号）却【没有任何领取入口】，
+     *   页面上 data-actrw 按钮数为 0，奖励永远发不出去。 */
     { id: 'EV01', n: '丧尸围城', type: '限时挑战', time: '每周五~周日', icon: '🏰',
       desc: '生存限时挑战，波次积分', rwDesc: '活动代币 + 芯片', rule: '按积分领奖',
+      per: 'week', cond: { endlessMin: 1 },
       rw: { evToken: 60, chipN: 1 } },
     { id: 'EV02', n: 'BOSS突袭', type: '限时', time: '每月1-3日', icon: '👹',
       desc: '限定 BOSS 战，挑战次数限制', rwDesc: '稀有金属 + 钻石', rule: '每日 3 次',
+      per: 'month', cond: { raidToday: 1 },
       rw: { evToken: 80, M03: 3, diamond: 20 } },
     { id: 'EV03', n: '签到活动', type: '常驻', time: '每自然月', icon: '📅',
       desc: '累计登录领奖', rwDesc: '钻石 + 材料', rule: '连续签到奖励递增',
+      per: 'month', cond: { signToday: 1 },
       rw: { diamond: 30, M01: 20 } },
     { id: 'EV04', n: '首充双倍', type: '付费活动', time: '开服永久', icon: '💰',
       desc: '首次充值钻石翻倍', rwDesc: '钻石', rule: '仅 1 次', rw: {} },
@@ -793,6 +800,7 @@ const EX = {
       desc: '限定皮肤上架', rwDesc: '皮肤', rule: '限时购买', rw: {} },
     { id: 'EV06', n: '无尽冲榜', type: '排行榜', time: '每月15-25日', icon: '🏆',
       desc: '无尽模式存活时长排名', rwDesc: '传说芯片 + 限定称号', rule: '按排名发奖',
+      per: 'month', cond: { endlessMin: 10 },
       rw: { evToken: 120, chipL: 1, title: 'endless_king' } },
   ],
 
