@@ -9,17 +9,29 @@
 
 /* 素材图缓存 */
 const IMG = {
-  cache: {}, fail: {},
+  cache: {}, fail: {}, pend: {},
   get(src) {
     if (!src) return null;
     const v = this.cache[src];
     if (v) return v;                        /* 已加载成功 */
-    if (v === null) {                       /* 曾失败/加载中：4 秒后才重试，避免狂刷请求 */
-      if (Date.now() - (this.fail[src] || 0) < 4000) return null;
+    if (v === null) {
+      /* 关键：正在加载中的 Image 必须保持引用。
+       * 旧写法每次调用都 new 一个局部 Image 后就丢掉引用，对象可能被回收，
+       * onload/onerror 永远不触发 → 该图永远"加载中" → 角色只能走几何兜底，
+       * 美术立绘（抠底立体精灵）实际上一次都没显示过。 */
+      /* 仍在加载中：保留引用等待；超过 6 秒仍未回调则判定卡死，重建一个 */
+      if (this.pend[src] && Date.now() - (this.fail[src] || 0) < 6000) return null;
+      if (!this.pend[src] && Date.now() - (this.fail[src] || 0) < 4000) return null;
     }
     const im = new Image();
-    im.onload = () => { this.cache[src] = im; delete this.fail[src]; };
-    im.onerror = () => { this.cache[src] = null; this.fail[src] = Date.now(); };
+    this.pend[src] = im;
+    const done = (ok) => {
+      if (this.pend[src] === im) delete this.pend[src];
+      if (ok) { this.cache[src] = im; delete this.fail[src]; }
+      else { this.cache[src] = null; this.fail[src] = Date.now(); }
+    };
+    im.onload = () => done(true);
+    im.onerror = () => done(false);
     im.src = src;
     this.cache[src] = null;                 /* 加载中：先用几何图形兜底 */
     this.fail[src] = Date.now();
@@ -165,6 +177,14 @@ const SPR = {
       lg.addColorStop(0.78, 'rgba(0,0,0,0.18)');
       lg.addColorStop(1, 'rgba(0,0,0,0.42)');
       g.fillStyle = lg; g.fillRect(0, 0, W, H);
+      /* 柱面受光：左暗 - 中偏左亮 - 右暗。平面立绘看起来"扁"的根本原因是
+       * 只有平涂色，加上横向明暗后才有圆柱/球体的体积感。 */
+      const lg2 = g.createLinearGradient(0, 0, W, 0);
+      lg2.addColorStop(0, 'rgba(0,0,0,0.46)');
+      lg2.addColorStop(0.28, 'rgba(255,255,255,0.16)');
+      lg2.addColorStop(0.56, 'rgba(255,255,255,0.03)');
+      lg2.addColorStop(1, 'rgba(0,0,0,0.52)');
+      g.fillStyle = lg2; g.fillRect(0, 0, W, H);
       g.globalCompositeOperation = 'source-over';
     } catch (e) {}
 
@@ -183,23 +203,64 @@ const SPR = {
       rg.drawImage(cv, pad, pad);
       rimCv = rim;
     }
-    return { cv, rim: rimCv, w: W, h: H, pad: pad, ratio: best.ratio };
+    /* 真·立体厚度：把主体剪影沿光照反方向（右下）挤出若干层并烘焙成一张
+     * "侧壁图"，每帧只多一次 drawImage。挖掉主体后剩下的月牙就是可见的厚度，
+     * 这是立绘从"平面贴图"变成"实体块"的关键。 */
+    let solid = null;
+    try {
+      const dep = Math.max(4, Math.min(16, Math.round(Math.min(W, H) * 0.15)));
+      const sp2 = dep + 2;
+      const sil = this.canvas(W, H);
+      const sol = this.canvas(W + sp2, H + sp2);
+      if (sil && sol) {
+        const ig = sil.getContext('2d');
+        ig.drawImage(cv, 0, 0);
+        ig.globalCompositeOperation = 'source-in';
+        ig.fillStyle = '#0a1222';
+        ig.fillRect(0, 0, W, H);
+        ig.globalCompositeOperation = 'source-over';
+        const sg = sol.getContext('2d');
+        for (let i = dep; i >= 1; i--) {
+          const k = i / dep;
+          sg.globalAlpha = 0.45 + 0.50 * (1 - k);
+          sg.drawImage(sil, sp2 + k * dep * 0.92, sp2 + k * dep * 1.20);
+        }
+        sg.globalAlpha = 1;
+        sg.globalCompositeOperation = 'destination-out';
+        sg.drawImage(cv, sp2, sp2);
+        sg.globalCompositeOperation = 'source-over';
+        solid = { cv: sol, pad: sp2, depth: dep };
+      }
+    } catch (e) { solid = null; }
+
+    return { cv, rim: rimCv, solid, w: W, h: H, pad: pad, ratio: best.ratio };
   },
+
+
 
   /* 每帧最多处理 2 张，避免开局一次性抠图造成掉帧 */
   budget: 2,
+  /* 抠图失败允许重试若干次：立绘可能在"已声明尺寸但尚未解码完成"时被读取，
+   * 此时整张图是透明的 → 抠图必然失败。旧代码一旦失败就永久缓存 null，
+   * 导致该角色此后永远退回矢量兜底，看不到抠底立体立绘。 */
+  _rt: {},
   get(src) {
     if (!src) return null;
-    if (this.cache[src] !== undefined) return this.cache[src];
+    const c = this.cache[src];
+    if (c) return c;
+    if (c === null && (this._rt[src] || 0) >= 8) return null;
     const im = IMG.get(src);
     if (!im || !(im.naturalWidth || im.width)) return null;   /* 图还没加载好：先用几何兜底 */
+    if (im.complete === false) return null;                   /* 尚未解码完：等下一帧再抠 */
     if (this.budget <= 0) return null;
     this.budget--;
+    this._rt[src] = (this._rt[src] || 0) + 1;
     const r = this.build(im);
     this.cache[src] = r || null;
     return r;
   },
 };
+if (typeof window !== 'undefined') { window.SPR = SPR; window.IMG = IMG; }
 const BT = {
   cv: null, ctx: null, W: 360, H: 640,
   P: null, run: null, on: false, paused: false, raf: null, last: 0,
@@ -1944,6 +2005,14 @@ const BT = {
    * ========================================================= */
 
   /* 柔和椭圆投影：距离越远越小越淡 */
+  /* 立体厚度侧壁：在主体之前绘制，做出实体块的右下暗面 */
+  drawSolid(c, sp, bx, by, w) {
+    if (!sp || !sp.solid) return;
+    const k = w / sp.w;
+    const p = sp.solid.pad * k;
+    c.drawImage(sp.solid.cv, bx - p, by - p,
+      (sp.w + sp.solid.pad * 2) * k, (sp.h + sp.solid.pad * 2) * k);
+  },
   shadow3d(c, x, y, r, sc) {
     /* 防护：非有限值会让 createRadialGradient 抛错并中断整帧绘制 */
     if (!isFinite(x) || !isFinite(y) || !isFinite(r) || r <= 0) return;
@@ -2596,6 +2665,8 @@ const BT = {
         const bx = z.x - w / 2, by = z.y + sz * 0.16 - h + bob;
         /* 接触阴影：越靠近脚底越实，做出"踩在地上"的感觉 */
         this.shadow3d(c, z.x, z.y + sz * 0.18, sz * 0.44, sc);
+        /* 立体厚度侧壁（右下暗面），让立绘成为实体块而不是纸片 */
+        this.drawSolid(c, sp, bx, by, w);
         if (sp.rim) {
           const k = w / sp.w;
           c.drawImage(sp.rim, bx - sp.pad * k, by - sp.pad * k,
@@ -2694,6 +2765,7 @@ const BT = {
       const hh = 62, hw = hh * (hsp.w / hsp.h);
       const bx = r.px - hw / 2, by = r.py + 12 - hh;
       this.shadow3d(c, r.px, r.py + 12, 21, 1);
+      this.drawSolid(c, hsp, bx, by, hw);
       if (hsp.rim) {
         const k = hw / hsp.w;
         c.drawImage(hsp.rim, bx - hsp.pad * k, by - hsp.pad * k,
