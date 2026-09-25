@@ -840,7 +840,7 @@ function onBattleEnd(res, d) {
   if (res === 'win') {
     const def = r.def;
     if (endless) {
-      rw.gold = 100 + r.wave * 20;
+      rw.gold = Math.round((100 + r.wave * 20) * (E.attrs(P).goldMul || 1));
       P.endlessBest = Math.max(P.endlessBest || 0, r.wave);
       /* 表22 EV01 丧尸围城 = 无尽模式，按存活波次发活动代币
        * （此前 evToken 全项目零产出，活动商店 12 项商品一件都买不了） */
@@ -849,7 +849,10 @@ function onBattleEnd(res, d) {
       P.evScore = (P.evScore || 0) + tk;
     } else {
       const lr = def.rw || {};
-      rw.gold = lr.gold || 0;
+      /* 金币加成天赋此前只作用于「击杀金币」（battle.js kill 里直连 talentVal），
+       * 关卡奖励这条占全部金币约 4 成的来源完全不吃加成
+       * （attrs().goldMul 定义后全项目零消费，是死字段）。 */
+      rw.gold = Math.round((lr.gold || 0) * (E.attrs(P).goldMul || 1));
       for (const k in lr) {
         if (k === 'gold') continue;
         if (k === 'chip') { for (let i = 0; i < lr[k]; i++) P.bag.push(E.rollChipById('CH01')); }
