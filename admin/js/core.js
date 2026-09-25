@@ -663,6 +663,12 @@ const APP = {
         acctOk = await DB.set(this.acctPath(uid), u, ban ? '封禁账号' : '解封账号');
       } else { acctMsg = '云端无账号记录（可能离线），仅写入存档'; }
     } catch (e) { acctMsg = e.message; }
+    /* 同步追加指令：玩家在线时存档里的 ban 会在 30 秒内被其自动存档覆盖，
+     * 且登录校验只在登录时跑 —— 在线的作弊者会一直玩到手动退出。
+     * 现在队列里也发一条，游戏端消费后立即置 ban 并退出登录。 */
+    await this.pushOp(uid, ban
+      ? { t: 'ban', until: opt.until || 0, reason: opt.reason || '' }
+      : { t: 'unban' });
     return { savedP: savedP, acctOk: acctOk, acctMsg: acctMsg };
   },
   /* p.skins 正常是 ['sk_c01a'] 数组；历史存档可能被写成 {id:1} 对象，
@@ -678,6 +684,37 @@ const APP = {
       await Net.write(PDIR + p.uid + '.json', p, msg || '后台修改 ' + p.name);
       return true;
     } catch (e) { this.toast('保存失败：' + e.message, 'err'); return false; }
+  },
+
+  /* =========================================================
+   * 玩家「待应用指令队列」（append-only）
+   * 严重 BUG 修复：此前后台补发是【直接改写玩家云端存档】。
+   *   而游戏端每 30 秒无条件把内存里的 P 整份写回同一路径（MAIN.save），
+   *   Net.write 每次重新 GET sha，不会 409 冲突 —— 而是静默覆盖。
+   * 实测链路：后台补发 500 → 云端 gold 1500 → 玩家在线自动存档 → 云端 gold 1000。
+   *   后台界面提示「已补发 ×500」并记入审计日志，玩家永远拿不到，
+   *   且整个过程不报错 —— 典型的静默失效。
+   * 现在改为：发放类操作只往「指令队列」追加一条记录（不碰存档），
+   *   游戏端定期消费，用本地 p.opsDone 记录已处理 id 去重。
+   * 好处：① 在线玩家不会被覆盖，5 分钟内到账；
+   *       ② 离线玩家下次登录时消费，同样到账；
+   *       ③ 追加写 + 本地去重，不会重复发放，也不与游戏端抢写同一文件。
+   * ========================================================= */
+  OPDIR: 'data/zb/ops/',
+  opPath(uid) { return this.OPDIR + uid + '.json'; },
+  async pushOp(uid, op) {
+    if (!uid) return false;
+    op = op || {};
+    op.id = op.id || ('op' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
+    op.at = op.at || Date.now();
+    try {
+      const f = await DB.get(this.opPath(uid), { list: [] });
+      f.list = Array.isArray(f.list) ? f.list : [];
+      if (f.list.some((x) => x && x.id === op.id)) return true;   /* 幂等 */
+      f.list.push(op);
+      if (f.list.length > 200) f.list = f.list.slice(-200);
+      return await DB.set(this.opPath(uid), f, '玩家指令 ' + (op.t || ''));
+    } catch (e) { this.toast('指令队列写入失败：' + e.message, 'err'); return false; }
   },
   /* 默认隐藏已注销玩家：销户后文件因网络原因常删不掉（覆盖成空档），
    * 混在正常玩家列表里会让运营以为"销户了还在"。
