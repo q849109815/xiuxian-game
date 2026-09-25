@@ -603,7 +603,15 @@ APP.pages['stat-retain'] = {
         return c >= base && c < base + 864e5;
       });
       if (!born.length) return { n: 0, r: 0, born: 0 };
-      const back = born.filter((p) => (p.lastSeen || 0) >= (p.created || 0) + days * 864e5);
+      /* 口径修正：回访判定必须用自然日 0 点，不能用「注册时刻 + N×24 小时」。
+       * BUG：此前写的是 lastSeen >= created + days*864e5 —— 把 24 小时的
+       *   小时级偏移也算进去，导致留存率取决于玩家【注册时的钟点】：
+       *   · 23:50 注册的人，次日 10:00 回来 ≠ 次日留存（要熬到 23:50 后）
+       *   · 30 日留存更极端：基准日 20:00 注册的人需要 lastSeen ≥ 今天 20:00，
+       *     而现在才 14:00 —— 他【根本不可能】被统计到，30 日留存永远为 0
+       * 结果：留存率被系统性低估，且随统计时刻漂移，无法用于运营决策。
+       * 现在按标准口径：第 N 日 = 注册日往后第 N 个自然日，当天 0 点起算。 */
+      const back = born.filter((p) => (p.lastSeen || 0) >= dayStart((p.created || 0) + days * 864e5));
       return { n: back.length, r: Math.round(back.length / born.length * 100), born: born.length };
     };
     const r1 = calc(1), r3 = calc(3), r7 = calc(7), r30 = calc(30);
