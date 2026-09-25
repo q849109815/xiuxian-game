@@ -424,14 +424,8 @@ input{font-family:inherit}
 .pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
 
 /* =========================================================
- * 摇杆 / 换弹 / 战斗 HUD（资料 06 操作方案）
+ * 换弹 / 战斗 HUD（自动瞄准，已移除虚拟摇杆）
  * ========================================================= */
-.joy{position:absolute;left:18px;bottom:24px;width:112px;height:112px;border-radius:50%;
-  background:rgba(10,16,28,.42);border:2px solid rgba(120,150,190,.35);
-  touch-action:none;z-index:12;backdrop-filter:blur(2px)}
-.joy i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;
-  border-radius:50%;background:linear-gradient(160deg,rgba(255,215,106,.9),rgba(240,160,32,.75));
-  box-shadow:0 2px 10px rgba(0,0,0,.4);pointer-events:none;transition:transform .05s}
 
 .bt-reload{position:absolute;right:18px;bottom:30px;width:74px;height:74px;border-radius:50%;
   background:rgba(10,16,28,.55);border:2px solid var(--line);z-index:12;
@@ -665,20 +659,11 @@ input{font-family:inherit}
   display:block;margin:0 auto 1px}
 .bt-turret button:disabled{opacity:.4}
 
-/* --- 底部操作区：摇杆 + 武器 --- */
+/* --- 底部操作区：换弹 --- */
 .bt-bottom{position:absolute;left:10px;right:10px;bottom:14px;height:82px;z-index:6;
   display:flex;align-items:center;justify-content:space-between}
-.joy{position:relative;width:82px;height:82px;border-radius:50%;flex:0 0 auto;
-  /* 必须清空定位偏移：本类早期被定义为 absolute 侧边控件(left:18px/bottom:24px)，
-     改为 flex 内 relative 后若不重置，会产生 18px 左移 + 24px 上移，
-     导致摇杆上飘出容器并压住炮台建造栏 */
-  left:auto;right:auto;top:auto;bottom:auto;
-  background:rgba(10,16,28,.72);border:2px solid rgba(255,255,255,.14)}
-.joy i{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;
-  border-radius:50%;background:linear-gradient(180deg,#ffa53c,#ff7a3c);
-  box-shadow:0 2px 8px rgba(0,0,0,.5)}
 .bt-reload{position:relative;flex:0 0 auto;width:82px;height:82px;border-radius:50%;
-  /* 同 .joy：清空早期 absolute 定位遗留的 right:18px/bottom:30px 偏移 */
+  /* 清空早期 absolute 定位遗留的 right:18px/bottom:30px 偏移 */
   left:auto;right:auto;top:auto;bottom:auto;
   background:rgba(10,16,28,.72);border:2px solid rgba(255,215,106,.35);
   display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
@@ -695,7 +680,7 @@ input{font-family:inherit}
   .bt-skills{bottom:134px}
   .bt-turret{bottom:94px}
   .bt-bottom{bottom:8px;height:72px}
-  .joy,.bt-reload{width:72px;height:72px}
+  .bt-reload{width:72px;height:72px}
 }
 
 
