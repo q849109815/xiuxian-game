@@ -27,6 +27,179 @@ const IMG = {
   },
 };
 
+/* =========================================================
+ * 立体精灵 SPR：立绘 → 抠底 + 主体裁剪 + 顶亮底暗 + 轮廓光
+ * 素材是 256×256 纯色底 JPG（有黑底也有白底），直接 drawImage 到战场上
+ * 就是一块"方纸片"，这是画面扁平/有纸质感的主要来源。
+ * 首次使用时离线处理一次并缓存：
+ *   ① 与底色近似的像素判为背景，做连通域，只保留面积最大的几块（主体）
+ *   ② 按主体包围盒裁剪，避免"图大主体小"导致角色在场上显得又小又空
+ *   ③ 顶亮底暗 + 底部 AO，模拟顶光照射的体积感
+ *   ④ 外扩一圈冷色轮廓光（rim light），让主体从场景里"立"出来
+ * 之后每帧只是两次 drawImage，开销可忽略。
+ * ========================================================= */
+const SPR = {
+  cache: {},
+  canvas(w, h) {
+    try {
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      return cv.getContext('2d') ? cv : null;
+    } catch (e) { return null; }
+  },
+
+  /* 抠背景：tol 为与背景色的距离平方阈值，返回 {cv, w, h, ratio} 或 null */
+  cut(im, tol) {
+    const w0 = im.naturalWidth || im.width, h0 = im.naturalHeight || im.height;
+    if (!w0 || !h0) return null;
+    const MAX = 176;                       /* 战斗里显示不超过 176px，缩小以加速 */
+    const s = Math.min(1, MAX / Math.max(w0, h0));
+    const W = Math.max(2, Math.round(w0 * s)), H = Math.max(2, Math.round(h0 * s));
+    const cv = this.canvas(W, H); if (!cv) return null;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    if (!g) return null;
+    g.drawImage(im, 0, 0, W, H);
+    let img;
+    try { img = g.getImageData(0, 0, W, H); } catch (e) { return null; }
+    const d = img.data, N = W * H;
+
+    /* 背景色：四边各采样 8 点取中位，抗噪（黑底/白底都能适应） */
+    const samp = [];
+    const at = (x, y) => { const i = (y * W + x) * 4; return [d[i], d[i + 1], d[i + 2]]; };
+    for (let k = 0; k < 8; k++) {
+      const x = Math.round(k * (W - 1) / 7), y = Math.round(k * (H - 1) / 7);
+      samp.push(at(x, 0), at(x, H - 1), at(0, y), at(W - 1, y));
+    }
+    samp.sort((a, b) => (a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2]));
+    const bg = samp[Math.floor(samp.length / 2)] || [20, 20, 20];
+
+    const ds = new Int32Array(N);
+    for (let i = 0; i < N; i++) {
+      const r = d[i * 4] - bg[0], gg = d[i * 4 + 1] - bg[1], b = d[i * 4 + 2] - bg[2];
+      ds[i] = r * r + gg * gg + b * b;
+    }
+    /* 连通域：只保留面积最大的几块（主体），零散噪点一并去掉 */
+    const comp = new Int32Array(N); comp.fill(-1);
+    const sizes = [], st = [];
+    for (let i = 0; i < N; i++) {
+      if (ds[i] <= tol || comp[i] >= 0) continue;
+      const id = sizes.length; let cnt = 0;
+      comp[i] = id; st.push(i);
+      while (st.length) {
+        const j = st.pop(); cnt++;
+        const x = j % W, y = (j / W) | 0;
+        if (x > 0 && ds[j - 1] > tol && comp[j - 1] < 0) { comp[j - 1] = id; st.push(j - 1); }
+        if (x < W - 1 && ds[j + 1] > tol && comp[j + 1] < 0) { comp[j + 1] = id; st.push(j + 1); }
+        if (y > 0 && ds[j - W] > tol && comp[j - W] < 0) { comp[j - W] = id; st.push(j - W); }
+        if (y < H - 1 && ds[j + W] > tol && comp[j + W] < 0) { comp[j + W] = id; st.push(j + W); }
+      }
+      sizes.push(cnt);
+    }
+    const order = sizes.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]);
+    const keep = new Uint8Array(sizes.length);
+    const minS = Math.max(24, N * 0.012);
+    let kept = 0;
+    for (const o of order) {
+      if (o[0] < minS || kept >= 4) break;
+      keep[o[1]] = 1; kept++;
+    }
+    if (!kept && order.length) keep[order[0][1]] = 1;
+
+    let clear = 0;
+    for (let i = 0; i < N; i++) {
+      const cid = comp[i];
+      if (cid < 0 || !keep[cid]) { d[i * 4 + 3] = 0; clear++; }
+      /* 软边：颜色仍接近底色的外圈像素降透明度，去掉硬锯齿与残留光晕 */
+      else d[i * 4 + 3] = ds[i] > tol * 1.8 ? 255 : 150;
+    }
+    g.putImageData(img, 0, 0);
+    return { cv, w: W, h: H, ratio: clear / N };
+  },
+
+  /* 立体化：剪掉空白 → 顶亮底暗 → 轮廓光 */
+  build(im) {
+    let best = null, bestScore = 1e9;
+    /* 自适应阈值：立绘底色深浅不一，试几档取"抠掉比例最接近一半"的那次 */
+    for (const tol of [2600, 4200, 1500, 6800]) {
+      const t = this.cut(im, tol);
+      if (!t || t.ratio > 0.94) continue;
+      const sc = Math.abs(t.ratio - 0.5);
+      if (sc < bestScore) { bestScore = sc; best = t; }
+      if (sc <= 0.22) break;                 /* 已经够好，不必再试其它档 */
+    }
+    if (!best) return null;
+
+    /* 包围盒裁剪：主体常只占原图中间一小块，不裁剪的话角色会显得又小又空 */
+    const src = best.cv, W0 = best.w, H0 = best.h;
+    const g0 = src.getContext('2d', { willReadFrequently: true });
+    let dd = null;
+    try { dd = g0.getImageData(0, 0, W0, H0).data; } catch (e) { dd = null; }
+    let x0 = 0, y0 = 0, x1 = W0 - 1, y1 = H0 - 1;
+    if (dd) {
+      let fx = -1, fy = -1, lx = -1, ly = -1;
+      for (let y = 0; y < H0; y++) {
+        for (let x = 0; x < W0; x++) {
+          if (dd[(y * W0 + x) * 4 + 3] > 8) {
+            if (fx < 0 || x < fx) fx = x;
+            if (lx < x) lx = x;
+            if (fy < 0) fy = y;
+            ly = y;
+          }
+        }
+      }
+      if (fx < 0) return null;
+      x0 = fx; y0 = fy; x1 = lx; y1 = ly;
+    }
+    const W = Math.max(2, x1 - x0 + 1), H = Math.max(2, y1 - y0 + 1);
+    const cv = this.canvas(W, H);
+    if (!cv) return null;
+    cv.getContext('2d').drawImage(src, x0, y0, W, H, 0, 0, W, H);
+
+    const g = cv.getContext('2d');
+    /* 顶亮底暗（顶光 + 底部环境遮蔽） */
+    try {
+      g.globalCompositeOperation = 'source-atop';
+      const lg = g.createLinearGradient(0, 0, 0, H);
+      lg.addColorStop(0, 'rgba(255,255,255,0.16)');
+      lg.addColorStop(0.42, 'rgba(255,255,255,0)');
+      lg.addColorStop(0.78, 'rgba(0,0,0,0.18)');
+      lg.addColorStop(1, 'rgba(0,0,0,0.42)');
+      g.fillStyle = lg; g.fillRect(0, 0, W, H);
+      g.globalCompositeOperation = 'source-over';
+    } catch (e) {}
+
+    /* 轮廓光：主体外扩一圈冷色，再挖掉主体本身 */
+    const pad = 4, rim = this.canvas(W + pad * 2, H + pad * 2);
+    let rimCv = null;
+    if (rim) {
+      const rg = rim.getContext('2d');
+      for (const o of [[-2, 0], [2, 0], [0, -2], [0, 2], [-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]]) {
+        rg.drawImage(cv, pad + o[0], pad + o[1]);
+      }
+      rg.globalCompositeOperation = 'source-in';
+      rg.fillStyle = 'rgba(150,220,255,0.45)';
+      rg.fillRect(0, 0, W + pad * 2, H + pad * 2);
+      rg.globalCompositeOperation = 'destination-out';
+      rg.drawImage(cv, pad, pad);
+      rimCv = rim;
+    }
+    return { cv, rim: rimCv, w: W, h: H, pad: pad, ratio: best.ratio };
+  },
+
+  /* 每帧最多处理 2 张，避免开局一次性抠图造成掉帧 */
+  budget: 2,
+  get(src) {
+    if (!src) return null;
+    if (this.cache[src] !== undefined) return this.cache[src];
+    const im = IMG.get(src);
+    if (!im || !(im.naturalWidth || im.width)) return null;   /* 图还没加载好：先用几何兜底 */
+    if (this.budget <= 0) return null;
+    this.budget--;
+    const r = this.build(im);
+    this.cache[src] = r || null;
+    return r;
+  },
+};
 const BT = {
   cv: null, ctx: null, W: 360, H: 640,
   P: null, run: null, on: false, paused: false, raf: null, last: 0,
@@ -146,6 +319,7 @@ const BT = {
        * （undefined 经 Math.max 会变成 NaN，护盾系统整体失效） */
       shield: Number(a.shield) || 0, maxShield: Number(a.shield) || 0,
       turrets: [], mercs: [], coin: 0, cd: {},
+      gunId: (p && p.gun) || 'W01',
       atk: a.atk, rate: a.rate, range: a.range, pierce: a.pierce, spread: a.spread,
       pellets: a.pellets || 1, crit: a.crit, critDmg: a.critDmg, moveSpd: a.moveSpd,
       dmgMin: a.dmgMin, dmgMax: a.dmgMax, ls: a.ls, erMul: a.erMul, reloadCut: a.reloadCut,
@@ -367,6 +541,8 @@ const BT = {
     const r = this.run; if (!r || r.over) return;
     r.time += dt;
     if (r.hitFlash > 0) r.hitFlash -= dt;
+    if (r.muzzleT > 0) r.muzzleT = Math.max(0, r.muzzleT - dt);   /* 枪口火光计时 */
+    for (const z of r.zombies) if (z.hitT > 0) z.hitT = Math.max(0, z.hitT - dt);
     this.tickBuffs(dt);            /* 消耗品增益计时（I03 攻击 +30%） */
 
     /* --- 玩家移动（摇杆） --- */
@@ -1124,6 +1300,9 @@ const BT = {
         explode: g.explode || r.mods.explode, er: g.er || r.mods.er || 46,
       });
     }
+    /* 枪口火光 / 后坐力：供绘制层做开火反馈 */
+    r.muzzleT = 0.07;
+    r.aimA = base;
     if (r.mag <= 0) this.reload();
   },
 
@@ -1134,6 +1313,7 @@ const BT = {
   refreshGun() {
     const r = this.run; if (!r || !this.P) return;
     const a = E.attrs(this.P);
+    r.gunId = (p && p.gun) || r.gunId || 'W01';
     r.atk = a.atk; r.rate = a.rate; r.range = a.range; r.pierce = a.pierce;
     r.spread = a.spread; r.pellets = a.pellets || 1; r.crit = a.crit;
     r.critDmg = a.critDmg; r.moveSpd = a.moveSpd;
@@ -1188,6 +1368,7 @@ const BT = {
       r.hp = r.wallHp;
     }
     z.hp -= d;
+    z.hitT = 0.12;                          /* 受击闪白（立体精灵叠加高光用） */
     /* 技能伤害统计（截图51：突击步枪/干冰弹/温压弹/电磁穿刺…） */
     if (r.skillDmg) {
       const k = src || 'gun';
@@ -1710,6 +1891,257 @@ const BT = {
     c.fill();
   },
 
+  /* =========================================================
+   * 3D 立体卡片（战斗内：僵尸 / 主角 / 武器）
+   * 竖立卡牌：厚度侧面 + 品质描边 + 摆动 + 扫光 + 地面投影
+   * 卡面纹理预渲染缓存，避免每帧重建渐变
+   * ========================================================= */
+  cardTex: {},
+
+  cardStyle(kind) {
+    switch (kind) {
+      case 'boss':  return { a: '#54131f', b: '#8d2130', edge: '#ff4d6d', hi: 'rgba(255,140,165,.60)' };
+      case 'elite': return { a: '#281745', b: '#4b2f78', edge: '#c08cff', hi: 'rgba(205,160,255,.55)' };
+      case 'hero':  return { a: '#123043', b: '#1f4d68', edge: '#ffc93c', hi: 'rgba(255,230,160,.60)' };
+      case 'gun':   return { a: '#141d2c', b: '#26374f', edge: '#5cd8ff', hi: 'rgba(160,235,255,.55)' };
+      default:      return { a: '#152619', b: '#27432e', edge: '#5fd07a', hi: 'rgba(150,240,175,.50)' };
+    }
+  },
+
+  getCardTex(kind) {
+    if (this.cardTex[kind]) return this.cardTex[kind];
+    let cv = null;
+    try { cv = document.createElement('canvas'); } catch (e) { return null; }
+    const W = 80, H = 112, R = 9;
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d'); if (!g) return null;
+    const s = this.cardStyle(kind);
+    const lg = g.createLinearGradient(0, 0, W, H);
+    lg.addColorStop(0, s.b); lg.addColorStop(0.45, s.a); lg.addColorStop(1, 'rgba(0,0,0,.62)');
+    g.fillStyle = lg;
+    g.beginPath();
+    if (g.roundRect) g.roundRect(0, 0, W, H, R); else g.rect(0, 0, W, H);
+    g.fill();
+    /* 顶部受光 */
+    const tg = g.createLinearGradient(0, 0, 0, H * 0.38);
+    tg.addColorStop(0, 'rgba(255,255,255,.20)'); tg.addColorStop(1, 'rgba(255,255,255,0)');
+    g.save();
+    g.beginPath(); if (g.roundRect) g.roundRect(0, 0, W, H, R); else g.rect(0, 0, W, H);
+    g.clip(); g.fillStyle = tg; g.fillRect(0, 0, W, H); g.restore();
+    /* 品质描边 */
+    g.strokeStyle = s.edge; g.lineWidth = 5.5;
+    g.beginPath();
+    if (g.roundRect) g.roundRect(1.3, 1.3, W - 2.6, H - 2.6, R - 1); else g.rect(1.3, 1.3, W - 2.6, H - 2.6);
+    g.stroke();
+    /* 四角卡角 */
+    g.strokeStyle = s.hi; g.lineWidth = 1.7; const L = 10;
+    g.beginPath();
+    g.moveTo(5, 5 + L); g.lineTo(5, 5); g.lineTo(5 + L, 5);
+    g.moveTo(W - 5 - L, 5); g.lineTo(W - 5, 5); g.lineTo(W - 5, 5 + L);
+    g.moveTo(5, H - 5 - L); g.lineTo(5, H - 5); g.lineTo(5 + L, H - 5);
+    g.moveTo(W - 5 - L, H - 5); g.lineTo(W - 5, H - 5); g.lineTo(W - 5, H - 5 - L);
+    g.stroke();
+    this.cardTex[kind] = cv;
+    return cv;
+  },
+
+  /* 竖立 3D 卡牌：底边中心锚点 (x, y)，卡面从 y-h 到 y
+     opt: { t 时间, ph 相位, sw 摆动幅度, gloss 扫光 } */
+  drawCard(c, x, y, w, h, kind, opt) {
+    if (!isFinite(x) || !isFinite(y) || !isFinite(w) || !isFinite(h) || w <= 0 || h <= 0) return;
+    opt = opt || {};
+    const t = opt.t || 0, ph = opt.ph || 0;
+    const sw = opt.sw == null ? 1 : opt.sw;
+    if (sw <= 0) ph = 0;
+    const s = this.cardStyle(kind);
+    const rot = Math.sin(t * 1.7 + ph) * 0.055 * sw;
+    const dy = Math.sin(t * 1.7 + ph) * (h * 0.028) * sw;
+    const th = Math.max(1.6, w * 0.075);
+    const R = Math.max(3, w * 0.11);
+
+    c.save();
+    /* 地面投影 */
+    const shw = w * 0.55 * (1 - Math.abs(rot) * 0.35);
+    if (isFinite(shw) && shw > 0) {
+      const sg = c.createRadialGradient(x, y, 0, x, y, shw);
+      sg.addColorStop(0, 'rgba(0,0,0,.42)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = sg;
+      c.beginPath(); c.ellipse(x, y + 1, shw, shw * 0.34, 0, 0, 7); c.fill();
+    }
+
+    c.translate(x, y + dy);
+    c.rotate(rot);
+
+    /* 厚度：右下暗面（制造立体厚度） */
+    const panel = (px, py, pw, phh) => {
+      c.beginPath();
+      if (c.roundRect) c.roundRect(px - pw / 2, py - phh, pw, phh, R);
+      else c.rect(px - pw / 2, py - phh, pw, phh);
+      c.fill();
+    };
+    c.fillStyle = 'rgba(4,8,16,.88)';
+    panel(th * 0.9, th * 0.8, w, h);
+
+    /* 卡面 */
+    const tex = this.getCardTex(kind);
+    if (tex) {
+      try { c.drawImage(tex, -w / 2, -h, w, h); } catch (e) {}
+    } else {
+      const lg = c.createLinearGradient(-w / 2, -h, w / 2, 0);
+      lg.addColorStop(0, s.b); lg.addColorStop(1, 'rgba(0,0,0,.55)');
+      c.fillStyle = lg; panel(0, 0, w, h);
+      c.strokeStyle = s.edge; c.lineWidth = 2;
+      c.beginPath();
+      if (c.roundRect) c.roundRect(-w / 2, -h, w, h, R); else c.rect(-w / 2, -h, w, h);
+      c.stroke();
+    }
+
+    /* 清晰描边：按屏幕尺寸自适应（纹理缩放会让描边被抗锯齿稀释到几乎看不见） */
+    c.save();
+    c.strokeStyle = s.edge;
+    c.lineWidth = Math.max(1.4, w * 0.055);
+    if (opt.glow) { c.shadowColor = s.edge; c.shadowBlur = Math.min(14, w * 0.28); }
+    c.beginPath();
+    if (c.roundRect) c.roundRect(-w / 2, -h, w, h, R); else c.rect(-w / 2, -h, w, h);
+    c.stroke();
+    c.restore();
+
+    /* 扫光：斜向高光条循环掠过卡面 */
+    if (opt.gloss !== false) {
+      const prog = ((t * 0.42 + ph * 0.11) % 1 + 1) % 1;
+      const gx = -w / 2 - w * 0.45 + prog * (w * 1.9);
+      c.save();
+      c.beginPath();
+      if (c.roundRect) c.roundRect(-w / 2, -h, w, h, R); else c.rect(-w / 2, -h, w, h);
+      c.clip();
+      const gg = c.createLinearGradient(gx - w * 0.24, -h, gx + w * 0.24, 0);
+      gg.addColorStop(0, 'rgba(255,255,255,0)');
+      gg.addColorStop(0.5, 'rgba(255,255,255,.20)');
+      gg.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = gg; c.fillRect(-w / 2, -h, w, h);
+      c.restore();
+    }
+    c.restore();
+  },
+
+  /* 手持武器：跟随瞄准方向旋转，开火有后坐力与枪口火光。
+   * 此前武器只在右侧悬浮成一张卡片，跟人物是分开的，
+   * 现在真正握在手上并跟随目标转动。 */
+  drawHeldGun(c, r, aim) {
+    const g = (window.E && this.P) ? E.gun(this.P) : null;
+    if (!g || !isFinite(aim)) return;
+    const kick = r.muzzleT > 0 ? 3.2 : 0;
+    const hx = r.px + Math.cos(aim) * 9 - Math.cos(aim) * kick;
+    const hy = r.py - 10 + Math.sin(aim) * 9 - Math.sin(aim) * kick;
+    c.save();
+    c.translate(hx, hy);
+    c.rotate(aim + Math.PI / 2);            /* 造型默认枪口朝上(-y)，转到瞄准方向 */
+    /* 枪在地面上的一小片投影，避免枪看起来浮在空中 */
+    c.save();
+    c.globalAlpha = 0.25; c.fillStyle = '#000';
+    c.beginPath(); c.ellipse(0, 13, 7, 3, 0, 0, 7); c.fill();
+    c.restore();
+    this.drawGunShape(c, g, 1.05);
+    /* 枪口火光 */
+    if (r.muzzleT > 0) {
+      const bl = 21, a = Math.min(1, r.muzzleT / 0.07);
+      const fg = c.createRadialGradient(0, -bl, 0, 0, -bl, 12);
+      fg.addColorStop(0, 'rgba(255,248,214,' + (0.95 * a).toFixed(3) + ')');
+      fg.addColorStop(0.45, 'rgba(255,176,60,' + (0.62 * a).toFixed(3) + ')');
+      fg.addColorStop(1, 'rgba(255,120,20,0)');
+      c.fillStyle = fg;
+      c.beginPath(); c.arc(0, -bl, 12, 0, 7); c.fill();
+      c.fillStyle = 'rgba(255,242,196,' + (0.9 * a).toFixed(3) + ')';
+      c.beginPath();
+      c.moveTo(-3, -bl + 3); c.lineTo(0, -bl - 10); c.lineTo(3, -bl + 3);
+      c.closePath(); c.fill();
+    }
+    c.restore();
+  },
+
+  /* 武器 3D 卡片：悬浮在主角右上，跟随当前武器变化 */
+  drawWeaponCard(c, px, py, t) {
+    const r = this.run; if (!r) return;
+    const gid = r.gunId || (this.P && this.P.gun) || 'W01';
+    const g = (window.EX && EX.guns ? EX.guns.find((x) => x.id === gid) : null)
+           || (window.EX && EX.guns ? EX.guns[0] : null);
+    if (!g) return;
+    const w = 42, h = 56;
+    const x = px + 40, y = py - 34 + Math.sin(t * 1.5) * 3;
+    this.drawCard(c, x, y, w, h, 'gun', { t: t, ph: 2.2, sw: 0.9, glow: true });
+    /* 卡内：3D 枪械 */
+    c.save();
+    c.translate(x, y - h * 0.52);
+    this.drawGunShape(c, g, 1);
+    c.restore();
+    /* 武器名 */
+    c.save();
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = 'bold 10px sans-serif';
+    c.fillStyle = 'rgba(0,0,0,.65)';
+    const nw = Math.min(w - 4, (g.n || '').length * 10 + 6);
+    c.fillRect(x - nw / 2, y - 13, nw, 12);
+    c.fillStyle = '#dff3ff';
+    c.fillText(g.n || '', x, y - 7);
+    c.restore();
+  },
+
+  /* 3D 枪械造型（按 type 区分外形：步枪/散弹/榴弹/狙击/重机枪/投掷） */
+  drawGunShape(c, g, k) {
+    const ty = g.type || '自动';
+    const body = '#5b6a80', bodyHi = '#9fb0c8', dark = '#2b3340';
+    c.save();
+    c.rotate(-0.30);
+    const gg = c.createLinearGradient(-5 * k, 0, 5 * k, 0);
+    gg.addColorStop(0, dark); gg.addColorStop(0.45, bodyHi); gg.addColorStop(1, body);
+    c.fillStyle = gg;
+    /* 枪身 */
+    c.beginPath();
+    if (c.roundRect) c.roundRect(-3.2 * k, -8 * k, 6.4 * k, 17 * k, 1.6 * k);
+    else c.rect(-3.2 * k, -8 * k, 6.4 * k, 17 * k);
+    c.fill();
+    /* 枪管：狙击最长，散弹/榴弹最粗 */
+    let bl = 15, bw = 2.4;
+    if (ty === '狙击') { bl = 23; bw = 2.0; }
+    else if (ty === '散弹' || ty === '爆炸') { bl = 11; bw = 3.6; }
+    else if (ty === '重机枪') { bl = 17; bw = 2.0; }
+    const bg = c.createLinearGradient(-bw * k, 0, bw * k, 0);
+    bg.addColorStop(0, '#39424f'); bg.addColorStop(0.5, '#b9c6d8'); bg.addColorStop(1, '#2f3742');
+    c.fillStyle = bg;
+    c.fillRect(-bw * k, (-8 - bl) * k, bw * 2 * k, bl * k);
+    /* 重机枪：多管转轮 */
+    if (ty === '重机枪') {
+      c.fillStyle = '#8e9aad';
+      for (let i = -1; i <= 1; i++) c.fillRect((i * 2 - 0.6) * k, (-10 - bl + 4) * k, 1.2 * k, (bl - 5) * k);
+      c.fillStyle = '#ffd76a';
+      c.beginPath(); c.arc(0, (-9 - bl + 5) * k, 2.2 * k, 0, 7); c.fill();
+    }
+    /* 枪口 */
+    c.fillStyle = '#1b2230';
+    c.beginPath(); c.ellipse(0, (-8 - bl) * k, bw * k, 1.4 * k, 0, 0, 7); c.fill();
+    if (ty === '狙击') {
+      /* 瞄准镜（圆柱 + 蓝光） */
+      const sg = c.createLinearGradient(-2.4 * k, 0, 2.4 * k, 0);
+      sg.addColorStop(0, '#2b3340'); sg.addColorStop(0.5, '#8e9aad'); sg.addColorStop(1, '#232a36');
+      c.fillStyle = sg; c.fillRect(-2.4 * k, -13 * k, 4.8 * k, 9 * k);
+      c.fillStyle = '#5cd8ff'; c.beginPath(); c.arc(0, -13.4 * k, 1.3 * k, 0, 7); c.fill();
+    }
+    /* 弹夹 / 弹鼓 */
+    c.fillStyle = '#39424f';
+    if (ty === '重机枪') { c.beginPath(); c.arc(0, 2 * k, 4.2 * k, 0, 7); c.fill(); }
+    else if (ty === '散弹') { c.fillRect(1.6 * k, -1 * k, 3.4 * k, 8 * k); }
+    else { c.beginPath(); if (c.roundRect) c.roundRect(1.8 * k, -1 * k, 3.6 * k, 9 * k, 1.2 * k); else c.rect(1.8 * k, -1 * k, 3.6 * k, 9 * k); c.fill(); }
+    /* 握把 */
+    c.fillStyle = '#2f3742';
+    c.beginPath();
+    c.moveTo(-1.6 * k, 7 * k); c.lineTo(1.6 * k, 7 * k); c.lineTo(0.4 * k, 13 * k); c.lineTo(-3.4 * k, 12.6 * k);
+    c.closePath(); c.fill();
+    /* 高光 */
+    c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 0.9 * k;
+    c.beginPath(); c.moveTo(-1.6 * k, -7 * k); c.lineTo(-1.6 * k, 7 * k); c.stroke();
+    c.restore();
+  },
+
   /* ---------- 3D 僵尸 ---------- */
   drawZombieShape(c, x, y, sz, z) {
     if (!isFinite(x) || !isFinite(y) || !isFinite(sz) || sz <= 0) return;
@@ -1879,6 +2311,7 @@ const BT = {
   },
 
   draw() {
+    SPR.budget = 2;                    /* 本帧最多抠 2 张立绘，防止开局掉帧 */
     const cc = this.ctx || (this.cv && this.cv.getContext('2d'));
     const r = this.run; if (!r) { return; }
     const c = this.ctx; if (!c) return;
@@ -2005,18 +2438,52 @@ const BT = {
     for (const z of zs) {
       const sc = this.depthScale(z.y);
       const sz = (z.isBoss ? 58 : (z.d.elite ? 38 : 32)) * sc;
-      this.shadow(c, z.x, z.y, sz * 0.55, sc);
-      if (z.slowT > 0) { c.fillStyle = 'rgba(92,216,255,0.28)'; c.beginPath(); c.arc(z.x, z.y, sz * 0.62, 0, 7); c.fill(); }
-      const zim = IMG.get(z.img);
-      if (zim) {
-        const w = sz * 1.55, h = sz * 1.55;
-        c.drawImage(zim, z.x - w / 2, z.y - h * 0.62, w, h);
+      this._cardH = 0;
+      if (this.card3d) {
+        const big1 = !!z.isBoss || !!z.d.elite;
+        const cw = sz * 1.14, ch = sz * 1.50;
+        this._cardH = ch;
+        this.drawCard(c, z.x, z.y + sz * 0.30, cw, ch,
+          z.isBoss ? 'boss' : (z.d.elite ? 'elite' : 'zombie'),
+          { t: r.time || 0, ph: ((z.id || z.x || 0) % 17) * 0.37,
+            sw: z.isBoss ? 1 : 0.5, gloss: big1, glow: big1 });
       } else {
+        this.shadow(c, z.x, z.y, sz * 0.55, sc);
+      }
+      if (z.slowT > 0) { c.fillStyle = 'rgba(92,216,255,0.28)'; c.beginPath(); c.arc(z.x, z.y, sz * 0.62, 0, 7); c.fill(); }
+      /* 立体精灵：抠底立绘 + 接触阴影 + 轮廓光 + 走动起伏。
+       * 此前是直接 drawImage 一张 256×256 深色底 JPG —— 贴在战场上就是
+       * 一块方纸片，这是画面"扁平/有纸质感"的主要来源。 */
+      const sp = SPR.get(z.img);
+      const bob = Math.sin(((z.animT || 0) * 7) + ((z.id || z.x || 0) % 7)) * sz * 0.04;
+      if (sp) {
+        const h = sz * 1.72, w = h * (sp.w / sp.h);
+        /* 脚底对齐到接触点（裁剪后主体底边就是脚），不再按整图居中 */
+        const bx = z.x - w / 2, by = z.y + sz * 0.16 - h + bob;
+        /* 接触阴影：越靠近脚底越实，做出"踩在地上"的感觉 */
+        this.shadow3d(c, z.x, z.y + sz * 0.18, sz * 0.44, sc);
+        if (sp.rim) {
+          const k = w / sp.w;
+          c.drawImage(sp.rim, bx - sp.pad * k, by - sp.pad * k,
+            (sp.w + sp.pad * 2) * k, (sp.h + sp.pad * 2) * k);
+        }
+        if (z.hitT > 0) {
+          c.save();
+          c.globalAlpha = Math.min(0.55, z.hitT * 4);
+          c.globalCompositeOperation = 'lighter';
+          c.drawImage(sp.cv, bx, by, w, h);
+          c.restore();
+        }
+        c.drawImage(sp.cv, bx, by, w, h);
+        this._zTop = by;
+      } else {
+        this.shadow(c, z.x, z.y, sz * 0.55, sc);
         this.drawZombieShape(c, z.x, z.y, sz, z);
+        this._zTop = z.y - sz * 0.68;
       }
       if (z.hp < z.maxHp) {
         const bw = sz * 0.95;
-        const by = z.y - sz * 0.68;
+        const by = (this._cardH ? (z.y + sz * 0.30 - this._cardH - 5) : (this._zTop - 6));
         c.fillStyle = 'rgba(0,0,0,0.55)'; c.fillRect(z.x - bw / 2, by, bw, 3.5);
         c.fillStyle = z.isBoss ? '#ff4d6d' : '#5fd07a';
         c.fillRect(z.x - bw / 2, by, bw * Math.max(0, z.hp / z.maxHp), 3.5);
@@ -2047,29 +2514,37 @@ const BT = {
       c.fillRect(0, wy - 6, W, 32);
     }
 
-    /* 玩家 */
-    /* 人物立绘：加载失败时允许 4 秒后重试；始终有几何士兵兜底 */
-    if (this._heroImg === undefined || (this._heroImg === null
-        && Date.now() - (this._heroFail || 0) > 4000)) {
-      this._heroFail = Date.now();
-      const url = this.P && this.P.avatarImg;
-      if (!url) { this._heroImg = null; }
-      else {
-        const im = new Image();
-        im.onload = () => { this._heroImg = im; };
-        im.onerror = () => { this._heroImg = null; };
-        im.src = url;
-        if (this._heroImg === undefined) this._heroImg = null;
-      }
+    /* ===== 玩家：立体立绘 + 手持武器（跟随瞄准） ===== */
+    /* 瞄准角：朝向最近的僵尸，没有则朝上 */
+    let aim = (r.aimA != null ? r.aimA : -Math.PI / 2);
+    let nz = null, nd = 1e9;
+    for (const z of r.zombies) {
+      if (z.dead) continue;
+      const dd = (z.x - r.px) * (z.x - r.px) + (z.y - r.py) * (z.y - r.py);
+      if (dd < nd) { nd = dd; nz = z; }
     }
-    const heroImg = this._heroImg;
+    if (nz) aim = Math.atan2(nz.y - r.py, nz.x - r.px);
+    r.aimA = aim;
+
+    /* 当前外观：优先皮肤立绘 → 角色立绘 → 头像立绘。
+     * 这些都是深色底 JPG，统一走 SPR 抠底 + 轮廓光，避免"方纸片"。 */
+    const skl = (window.EX && EX.skins ? EX.skins : []);
+    const sk = skl.find((s) => s.id === (this.P && this.P.skin));
+    const heroSrc = (sk && sk.img) || this.charImg || (this.P && this.P.avatarImg);
+    const hsp = SPR.get(heroSrc);
     let heroDrawn = false;
-    if (heroImg && heroImg.complete && heroImg.naturalWidth) {
-      try {
-        const hh = 54, hw = hh * heroImg.naturalWidth / heroImg.naturalHeight;
-        c.drawImage(heroImg, r.px - hw / 2, r.py - hh + 14, hw, hh);
-        heroDrawn = true;
-      } catch (e) {}
+    if (this.card3d) this.drawCard(c, r.px, r.py + 20, 60, 76, 'hero', { t: r.time || 0, ph: 0, sw: 0.85, glow: true });
+    if (hsp) {
+      const hh = 62, hw = hh * (hsp.w / hsp.h);
+      const bx = r.px - hw / 2, by = r.py + 12 - hh;
+      this.shadow3d(c, r.px, r.py + 12, 21, 1);
+      if (hsp.rim) {
+        const k = hw / hsp.w;
+        c.drawImage(hsp.rim, bx - hsp.pad * k, by - hsp.pad * k,
+          (hsp.w + hsp.pad * 2) * k, (hsp.h + hsp.pad * 2) * k);
+      }
+      c.drawImage(hsp.cv, bx, by, hw, hh);
+      heroDrawn = true;
     }
     if (!heroDrawn) {
       const cim = IMG.get(this.charImg);
@@ -2082,6 +2557,8 @@ const BT = {
       this.drawHeroShape(c, r.px, r.py);
       c.restore();
     }
+    /* 手持武器：跟随瞄准方向旋转 + 后坐力 + 枪口火光 */
+    this.drawHeldGun(c, r, aim);
     if (r.shield > 0) {
       c.strokeStyle = 'rgba(92,216,255,0.75)'; c.lineWidth = 2.5;
       c.beginPath(); c.arc(r.px, r.py, 26, 0, 7); c.stroke();
@@ -2105,4 +2582,6 @@ const BT = {
 BT.joy = { x: 0, y: 0 };
 BT.speed = 1;
 BT.auto = true;
+/* 战斗内 3D 卡片（僵尸/主角/武器）。关掉则退回原来的扁平+贴地阴影 */
+BT.card3d = (window.EX && EX.CARD3D !== false);
 window.BT = BT;
