@@ -73,6 +73,9 @@ const MAIN = {
     this.syncCloudCfg().then(() => { try { UI.home(); } catch (e) {} }).catch(() => {});
     await this.claimMail();
     this.startSave(); this.loadLeaderboard(); this.startCfgSync();
+    /* 消费运营指令队列（后台补发 / 回档）：登录即消费一次，之后每 5 分钟一次 */
+    this.consumeOps();
+    this.startOpSync();
   },
 
   /* ---------- 后台配置周期性重拉 ----------
@@ -109,6 +112,89 @@ const MAIN = {
       await this.syncCloudCfg();
       try { UI.home(); } catch (e) {}
     } catch (e) {}
+  },
+
+  /* ---------- 运营「待应用指令」队列消费 ----------
+   * 后台补发 / 回档此前是【直接改写玩家云端存档】，而游戏端每 30 秒把内存 P
+   * 整份写回同一路径（Net.write 每次重新 GET sha，不冲突、直接覆盖）。
+   * 实测：后台补发 500 → 云端 1500 → 在线玩家自动存档 → 云端回到 1000，
+   *   后台提示「已补发」并记审计日志，玩家一分拿不到，全程不报错。
+   * 现在后台改为往 data/zb/ops/{uid}.json 追加指令（append-only），
+   * 这里消费并用本地 p.opsDone 记录已处理 id 去重 —— 不重复发放，
+   * 也不与游戏端抢写存档文件。
+   * 频率：5 分钟一次 + 切回前台时（60 秒防抖），约 12~30 次/小时/玩家。 */
+  async consumeOps() {
+    if (!P || !P.uid) return 0;
+    const path = 'data/zb/ops/' + P.uid + '.json';
+    let f = null;
+    try {
+      const r = await window.TMO(Net.read(path), 8000);
+      if (r && r.data) f = r.data;
+    } catch (e) {}
+    if (!f || !Array.isArray(f.list) || !f.list.length) return 0;
+    P.opsDone = Array.isArray(P.opsDone) ? P.opsDone : [];
+    let n = 0;
+    for (const op of f.list) {
+      if (!op || !op.id || P.opsDone.indexOf(op.id) >= 0) continue;
+      try { this.applyOp(op); } catch (e) {}
+      P.opsDone.push(op.id); n++;
+    }
+    if (P.opsDone.length > 300) P.opsDone = P.opsDone.slice(-300);
+    if (n) {
+      try { UI.toast('📦 运营发放已到账（' + n + ' 项）', 'ok'); } catch (e) {}
+      try { UI.home(); } catch (e) {}
+      try { this.save(); } catch (e) {}
+    }
+    return n;
+  },
+  applyOp(op) {
+    if (op.t === 'grant') {
+      const g = {}; g[op.item] = op.n;
+      try { E.grant(P, g); } catch (e) {}
+      if (op.mail) {
+        P.mail = P.mail || [];
+        P.mail.unshift({ id: 'op' + op.id, t: op.mail.t || '补偿发放',
+          b: op.mail.b || '', rw: {}, got: false, at: Date.now() });
+      }
+      if (op.exp) {
+        P.tempItems = P.tempItems || [];
+        P.tempItems.push({ id: op.item, n: op.n, exp: Date.now() + op.exp });
+      }
+    } else if (op.t === 'restore' && op.data) {
+      /* 整体覆盖（回档）：重复应用无害，故后台可双写 */
+      const np = JSON.parse(JSON.stringify(op.data));
+      np.uid = P.uid;
+      np.opsDone = P.opsDone;
+      Object.keys(P).forEach((k) => { delete P[k]; });
+      Object.assign(P, np);
+      P.lastSeen = Date.now();
+    } else if (op.t === 'ban') {
+      /* 在线封禁立即生效：登录校验只在登录时跑，
+       * 光写存档会被在线玩家 30 秒自动存档覆盖 → 作弊者能一直玩到手动退出 */
+      P.ban = true; P.banUntil = op.until || 0; P.banReason = op.reason || '';
+      P.banAt = Date.now();
+      try { UI.toast('🚫 该账号已被封禁：' + (P.banReason || '违规处理'), 'err'); } catch (e) {}
+      try { this.save(); } catch (e) {}
+      setTimeout(() => { try { if (window.UA) UA.logout(); } catch (e) {} }, 1500);
+    } else if (op.t === 'unban') {
+      P.ban = false; P.banUntil = 0; P.banReason = '';
+      try { UI.toast('账号已解封', 'ok'); } catch (e) {}
+    }
+  },
+  startOpSync() {
+    if (this._opT) clearInterval(this._opT);
+    this._opT = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      this.consumeOps();
+    }, 300000);   /* 5 分钟 */
+    if (this._opVis) return;
+    this._opVis = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - (this._opAt || 0) < 60000) return;
+      this._opAt = Date.now();
+      this.consumeOps();
+    });
   },
 
   /* 旧档字段补全 */
