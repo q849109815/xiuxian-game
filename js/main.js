@@ -1,6 +1,6 @@
 /* =========================================================
- * main.js —— 启动 / 登录 / 摇杆输入 / 战斗流程 / 存档
- * 依据资料 06 操作方案（移动端摇杆 + PC 备选）
+ * main.js —— 启动 / 登录 / 战斗流程 / 存档
+ * 依据资料 06 操作方案（自动瞄准 + PC 键盘备选）
  *        08 跳转流程（16 步）
  * ========================================================= */
 
@@ -829,9 +829,6 @@ function battleGo(id, mode) {
     const isBoss = BT.run && (BT.run.def.cond === 'boss' || BT.run.def.cond === 'bossAll');
     SND.bgm(id === 'endless' ? 'endless' : isBoss ? 'boss' : 'battle');
   }
-  BT.joy = { x: 0, y: 0 };
-  const knob = document.getElementById('joyKnob');
-  if (knob) knob.style.transform = 'translate(0,0)';
   BT.attach(document.getElementById('C'));
   BT.start(P, id, { endless: id === 'endless', cb: onBattleEnd });
   /* HUD 初始化失败也不能影响战斗本体 */
@@ -841,8 +838,7 @@ function battleGo(id, mode) {
   hudT = setInterval(() => { if (BT.on || (BT.run && !BT.run.over)) UI.btTick(); }, 100);
 
   /* 引导：移动 / 射击 */
-  if (!P.guide[1]) { P.guide[1] = 1; UI.toast('① 拖动左下摇杆移动角色', 'ok'); }
-  else if (!P.guide[2]) { P.guide[2] = 1; UI.toast('② 自动瞄准射击，怪物来袭', 'ok'); }
+  if (!P.guide[2]) { P.guide[2] = 1; UI.toast('自动瞄准射击，怪物来袭', 'ok'); }
 }
 
 window.battleGo = battleGo;
@@ -951,51 +947,9 @@ function onBattleEnd(res, d) {
 }
 
 /* =========================================================
- * 输入：虚拟摇杆 + 键盘（资料 06）
+ * 输入：键盘（自动瞄准，摇杆已按需求移除）
  * ========================================================= */
-function bindJoystick() {
-  const joy = document.getElementById('joy'), knob = document.getElementById('joyKnob');
-  if (!joy) return;
-  const R = 34;
-  let id = null, cx = 0, cy = 0, movedOnce = false;
-  const setFrom = (tx, ty) => {
-    let dx = tx - cx, dy = ty - cy;
-    const len = Math.hypot(dx, dy);
-    if (len > R) { dx = dx / len * R; dy = dy / len * R; }
-    BT.joy.x = dx / R; BT.joy.y = dy / R;
-    /* moved 引导（射击引导）——此前 guideTrigger('moved') 零调用 */
-    if ((Math.abs(dx) > 4 || Math.abs(dy) > 4) && !movedOnce) {
-      movedOnce = true;
-      if (window.UI && UI.guideTrigger) UI.guideTrigger('moved');
-    }
-    if (knob) knob.style.transform = `translate(${dx}px,${dy}px)`;
-  };
-  const down = (e) => {
-    const t = e.changedTouches ? e.changedTouches[0] : e;
-    const b = joy.getBoundingClientRect();
-    cx = b.left + b.width / 2; cy = b.top + b.height / 2;
-    id = t.identifier; setFrom(t.clientX, t.clientY); e.preventDefault();
-  };
-  const move = (e) => {
-    if (id === null) return;
-    const ts = e.changedTouches ? Array.from(e.changedTouches) : [e];
-    const t = ts.find((x) => x.identifier === id); if (!t) return;
-    setFrom(t.clientX, t.clientY); e.preventDefault();
-  };
-  const up = (e) => {
-    if (id === null) return;
-    const ts = e.changedTouches ? Array.from(e.changedTouches) : [e];
-    if (!ts.some((x) => x.identifier === id)) return;
-    id = null; BT.joy.x = 0; BT.joy.y = 0;
-    if (knob) knob.style.transform = 'translate(0,0)';
-  };
-  joy.addEventListener('touchstart', down, { passive: false });
-  joy.addEventListener('touchmove', move, { passive: false });
-  joy.addEventListener('touchend', up); joy.addEventListener('touchcancel', up);
-  joy.addEventListener('mousedown', down);
-  window.addEventListener('mousemove', move);
-  window.addEventListener('mouseup', up);
-}
+function bindJoystick() { /* 摇杆已移除：自动瞄准射击，无需方向输入 */ }
 
 function bindKeys() {
   const keys = {};
@@ -1006,15 +960,7 @@ function bindKeys() {
     if (k === 'escape') { BT.paused = true; document.getElementById('pause').classList.add('on'); }
   });
   window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = 0; });
-  setInterval(() => {
-    if (!BT.on) return;
-    let x = 0, y = 0;
-    if (keys['a'] || keys['arrowleft']) x -= 1;
-    if (keys['d'] || keys['arrowright']) x += 1;
-    if (keys['w'] || keys['arrowup']) y -= 1;
-    if (keys['s'] || keys['arrowdown']) y += 1;
-    if (x || y) { BT.joy.x = x; BT.joy.y = y; }
-  }, 40);
+  /* 摇杆已移除：WASD 不再驱动移动（角色固定在防线，自动瞄准射击） */
 }
 
 /* =========================================================
