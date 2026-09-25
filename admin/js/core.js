@@ -115,6 +115,40 @@ const U = {
     return `<select id="${id}" data-pk="${id}">${U.itemList().map((i) =>
       `<option value="${i.id}"${i.id === def ? ' selected' : ''}>${i.icon} ${U.esc(i.n)}</option>`).join('')}</select>`;
   },
+  /* ---- 导出工具（CSV / 文本） ----
+   * BUG：此前导出直接用 arr.join(',') 拼 CSV，且 Blob 不带 BOM。
+   *   · 昵称含英文逗号 → 该行多出一列，Excel 里整行错位
+   *     （等级串到昵称列、日期串到等级列……）
+   *   · 昵称含换行     → 一行被劈成两行，行结构彻底坏掉
+   *   · 昵称含双引号   → CSV 引号未转义，解析器报错或吞掉后面内容
+   *   · 无 UTF-8 BOM   → Excel（中文 Windows 默认按 GBK 读）打开全是乱码
+   * 昵称是玩家自由输入，上面四种都能真实出现。
+   * 现在统一走 csvCell 转义 + 带 BOM 的 download。 */
+  csvCell(v) {
+    let s = String(v == null ? '' : v);
+    /* 换行统一成空格，避免把一行劈成多行 */
+    s = s.replace(/\r?\n/g, ' ');
+    /* 含分隔符 / 引号 / 首尾空格 时用双引号包裹，内部引号翻倍 */
+    if (/[",;\t]/.test(s) || /^\s|\s$/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  },
+  csv(headers, rows) {
+    const lines = [headers.map(U.csvCell).join(',')];
+    (rows || []).forEach((r) => lines.push(r.map(U.csvCell).join(',')));
+    return lines.join('\r\n');   /* CRLF：Excel 兼容性更好 */
+  },
+  /* 下载文本文件；utf8 内容自动补 BOM，避免 Excel 中文乱码 */
+  download(name, content, type) {
+    let body = content;
+    if (type === 'text/csv' || type === 'text/plain') {
+      if (!/^\uFEFF/.test(body)) body = '\uFEFF' + body;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([body], { type: (type || 'text/plain') + ';charset=utf-8' }));
+    a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  },
 };
 const D = (s) => document.querySelector(s);
 const DA = (s) => Array.from(document.querySelectorAll(s));
@@ -180,12 +214,11 @@ const AUDIT = {
   },
   export() {
     const l = this.list();
-    const txt = l.map((x) => `${U.dt(x.at)}\t${x.act}\t${x.target}\t${x.detail}`).join('\n');
-    const b = new Blob([txt], { type: 'text/plain' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(b);
-    a.download = '审计日志_' + new Date().toISOString().slice(0, 10) + '.txt';
-    a.click();
+    /* 走 U.download 补 BOM（Excel 打开中文不乱码）；
+     * tab 分隔的文本里若含换行/制表符会把一行劈开，统一替换掉 */
+    const clean = (v) => String(v == null ? '' : v).replace(/[\r\n\t]+/g, ' ');
+    const txt = l.map((x) => [U.dt(x.at), clean(x.act), clean(x.target), clean(x.detail)].join('\t')).join('\r\n');
+    U.download('审计日志_' + new Date().toISOString().slice(0, 10) + '.txt', txt, 'text/plain');
     APP.toast('已导出 ' + l.length + ' 条', 'ok');
   },
   clear() {
