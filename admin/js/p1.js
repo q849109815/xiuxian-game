@@ -277,23 +277,22 @@ APP.pages['acc-compensate'] = {
       /* 数量校验：grant() 内部会把负数/0 钳成 0，但界面仍提示「已补发 ×-100」，
        * 运营看到的是成功、实际一件没发——典型的静默失效。这里提前拦下。 */
       if (!(n > 0)) return this.toast('补发数量必须大于 0', 'err');
-      this.grant(p, id, n);
-      if (type === '临时' && exp > 0) {
-        p.tempItems = p.tempItems || [];
-        p.tempItems.push({ id: id, n: n, exp: Date.now() + exp * 864e5 });
-      }
-      if (D('#cpMail').checked) {
-        p.mail = p.mail || [];
-        p.mail.unshift({ id: 'cp' + Date.now(), t: '补偿发放',
-          b: '管理员为您补发：' + U.itemName(id) + ' ×' + n + '（原因：' + why + '）',
-          rw: {}, got: false, at: Date.now() });
-      }
-      if (await this.save(p)) {
+      /* 不再直接改写玩家存档（会被在线玩家 30 秒自动存档整份覆盖，补发静默丢失），
+       * 改为追加到待应用指令队列，游戏端消费入账。 */
+      const ok = await this.pushOp(p.uid, {
+        t: 'grant', item: id, n: n, why: why, op: op,
+        exp: (type === '临时' && exp > 0) ? exp * 864e5 : 0,
+        mail: D('#cpMail').checked
+          ? { t: '补偿发放', b: '管理员为您补发：' + U.itemName(id) + ' ×' + n + '（原因：' + why + '）' }
+          : null,
+      });
+      if (ok) {
         AUDIT.log('道具补发', p.uid, U.itemName(id) + '×' + n + ' 原因:' + why + ' 操作人:' + op);
-        this.toast('已补发 ' + U.itemName(id) + ' ×' + n, 'ok'); this.render();
+        this.toast('已加入发放队列：' + U.itemName(id) + ' ×' + n
+          + '（在线玩家 5 分钟内到账，离线玩家下次登录到账）', 'ok');
+        this.render();
       } else {
-        /* 写回失败（网络/限流）时此前完全静默，运营以为发成功了 */
-        this.toast('补发失败：存档未写入云端，请重试', 'err');
+        this.toast('补发失败：指令队列未写入云端，请重试', 'err');
       }
     };
     /* 批量 */
@@ -319,9 +318,9 @@ APP.pages['acc-compensate'] = {
       let ok = 0;
       const fail = [];
       for (const p of hit) {
-        this.grant(p, id, n);
-        if (await this.save(p)) ok++;
-        else fail.push(p.uid);   /* 网络失败时记录名单，便于重试 */
+        /* 同上：走指令队列，避免被在线玩家自动存档覆盖 */
+        const done = await this.pushOp(p.uid, { t: 'grant', item: id, n: n, why: why, op: 'admin' });
+        if (done) ok++; else fail.push(p.uid);   /* 网络失败时记录名单，便于重试 */
       }
       AUDIT.log('批量补发', hit.length + '人', U.itemName(id) + '×' + n + ' 原因:' + why
         + (fail.length ? ' 失败:' + fail.length + '人(' + fail.slice(0, 5).join(',') + ')' : ''));
@@ -460,6 +459,10 @@ APP.pages['acc-rollback'] = {
       p.lastSeen = Date.now();
       if (await this.save(p)) {
         AUDIT.log('账号回档', p.uid, '快照 ' + snap.name + ' 时间 ' + U.dt(snap.at));
+        /* 同步追加一条 restore 指令：玩家在线时上面写进存档的旧档会在 30 秒内
+         * 被其自动存档覆盖，回档（反作弊手段）等于失效。
+         * restore 是整体覆盖而非累加，重复应用无害，可以双写。 */
+        await this.pushOp(p.uid, { t: 'restore', data: JSON.parse(JSON.stringify(old)), why: '回档 ' + snap.name });
         this.toast('已回档', 'ok'); this.render();
       }
     }; });
