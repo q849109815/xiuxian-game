@@ -1773,14 +1773,47 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
 
   /* 宝石合成：3 颗同级 → 1 颗高一级（截图「宝石合成」） */
   gemFuse(p, id) {
-    const tiers = ['G_R', 'G_B', 'G_G', 'G_P'];
     const need = 3;
     if (!((p.gems || {})[id] >= need)) return { ok: false, msg: '需要 ' + need + ' 颗同色宝石' };
     p.gems[id] -= need;
-    p.gemLv = (p.gemLv || 0) + 1;
-    const lv = p.gemLv;
+    /* BUG修复：等级此前是全局单一数字 p.gemLv，4 种宝石共享。
+     * 用最便宜的红宝石（200 钻）合成，最贵的紫宝石（300 钻）也跟着升级，
+     * 宝石之间的成本差异形同虚设。改为每种宝石各自记等级。 */
+    const lv = this.gemLvOf(p, id) + 1;
+    this.setGemLv(p, id, lv);
     try { this.logAct(p, 'chip', '宝石合成 ' + id + ' → Lv.' + lv); } catch (e) {}
     return { ok: true, msg: '合成成功！宝石等级提升至 Lv.' + lv };
+  },
+  /* 宝石等级：按种类分别记录（旧档 p.gemLv 是数字，迁移到当前镶嵌的种类上） */
+  gemLvOf(p, id) {
+    const m = p.gemLv;
+    if (m && typeof m === 'object') return m[id] || 0;
+    /* 旧档：单一数字，视为当前镶嵌宝石的等级 */
+    if (typeof m === 'number') return id && id === p.gemOn ? m : 0;
+    return 0;
+  },
+  setGemLv(p, id, v) {
+    if (!p.gemLv || typeof p.gemLv !== 'object') {
+      const old = typeof p.gemLv === 'number' ? p.gemLv : 0;
+      p.gemLv = {};
+      if (old > 0 && p.gemOn) p.gemLv[p.gemOn] = old;
+    }
+    p.gemLv[id] = Math.max(0, Math.min(this.GEM_MAX_LV, v));
+  },
+  /* 镶嵌 / 卸下宝石（统一入口）
+   * 此前两处逻辑不一致：角色页镶嵌【不扣】数量、宝石页镶嵌【扣 1 颗】，
+   * 且两处卸下都不返还 —— 反复镶嵌卸下会让宝石凭空蒸发（实测 10 次蒸发 10 颗）。
+   * 现统一为：镶嵌占用 1 颗（背包 -1），卸下/更换时完整返还。 */
+  setGem(p, id) {
+    const prev = p.gemOn;
+    if (prev) { p.gems = p.gems || {}; p.gems[prev] = (p.gems[prev] || 0) + 1; p.gemOn = null; }
+    if (!id) { E.save && E.save(p); return { ok: true, msg: '已卸下宝石' }; }
+    if (!((p.gems || {})[id] > 0)) return { ok: false, msg: '该宝石数量不足' };
+    p.gems[id] -= 1;
+    p.gemOn = id;
+    const g = (EX.gems || []).find((x) => x.id === id);
+    try { this.logAct(p, 'gem', '镶嵌 ' + (g ? g.n : id)); } catch (e) {}
+    return { ok: true, msg: '已镶嵌 ' + (g ? g.n : id) };
   },
   /* 宝石属性加成
    * BUG修复（两处）：
@@ -1829,7 +1862,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (!id) return zero;
     const base = this.GEM_BASE[id], step = this.GEM_STEP[id];
     if (!base) return zero;
-    const lv = Math.max(1, Math.min(this.GEM_MAX_LV, p.gemLv || 0));
+    const lv = Math.max(1, Math.min(this.GEM_MAX_LV, this.gemLvOf(p, id)));
     const out = {};
     for (const k in zero) {
       const b = base[k] || 0, st = (step && step[k]) || 0;
@@ -1841,7 +1874,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   gemBonusOf(p, id) {
     const base = this.GEM_BASE[id], step = this.GEM_STEP[id];
     if (!base) return '—';
-    const lv = Math.max(1, Math.min(this.GEM_MAX_LV, p.gemLv || 0));
+    const lv = Math.max(1, Math.min(this.GEM_MAX_LV, this.gemLvOf(p, id)));
     const parts = [];
     ['atkPct', 'hpPct', 'critDmg', 'ratePct', 'ls', 'crit'].forEach((k) => {
       const v = (base[k] || 0) + ((step && step[k]) || 0) * (lv - 1);
