@@ -971,12 +971,10 @@ function bindAll() {
   $$('#lgGender .gd').forEach((b) => {
     b.onclick = () => { gender = b.dataset.g; $$('#lgGender .gd').forEach((x) => x.classList.remove('on')); b.classList.add('on'); };
   });
-  const lb = document.getElementById('lgBtn');
-  if (lb) lb.onclick = async () => {
-    const nm = (document.getElementById('lgName').value || '').trim() || '先锋官';
-    if (nm.length < 2) { UI.toast('代号至少 2 个字', 'err'); return; }
-    UI.toast('正在进入战区…'); await MAIN.login(nm, gender);
-  };
+  /* 原此处有一份 lgBtn 绑定，读取页面根本不存在的 #lgName
+   * （登录表单只有 lgUser/lgPwd）→ 一旦执行必然抛 null.value。
+   * 它被下方「---- 登录 ----」处的第二次绑定覆盖，所以从未触发，
+   * 但属于危险死代码（调整绑定顺序会当场崩溃），已移除。 */
 
   const hg = document.getElementById('hmGo');
   if (hg) hg.onclick = () => UI.open('level');
