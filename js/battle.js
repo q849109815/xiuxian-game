@@ -605,6 +605,10 @@ const BT = {
 
     /* --- 子弹 --- */
     for (const b of r.bullets) {
+      /* 防御：坐标/速度非有限值的一律作废。
+       * 此前 bulletSpd 拼错导致 vx=NaN，而所有比较对 NaN 恒为 false，
+       * 子弹既不出界也不被剔除，还会“命中”僵尸 —— 静默且极难排查。 */
+      if (!isFinite(b.x) || !isFinite(b.y) || !isFinite(b.vx) || !isFinite(b.vy)) { b.life = 0; continue; }
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.x < -20 || b.x > this.W + 20 || b.y < -20 || b.y > this.H + 20) b.life = 0;
       if (b.life <= 0) continue;
@@ -1024,8 +1028,15 @@ const BT = {
     for (let i = 0; i < n; i++) {
       const off = n === 1 ? 0 : (i - (n - 1) / 2) * 0.13;
       const a = base + off + (Math.random() - 0.5) * 0.05;
+      /* 子弹速度：武器表字段是 bspd（400~1400），此前写成 g.bulletSpd
+       * —— 该字段在配置里根本不存在，结果 vx/vy 全为 NaN。
+       * NaN 的两重危害：
+       *   ① 画面上看不到子弹（canvas 忽略 NaN 坐标），玩家开枪像没反应；
+       *   ② `Math.hypot(z.x-NaN,…) > 18` 恒为 false → 判定“命中”，
+       *      子弹无视距离直接打到僵尸，武器 range/bspd 的差异化全部失效。 */
+      const bs = (isFinite(g.bspd) && g.bspd > 0) ? g.bspd : 520;
       r.bullets.push({
-        x: r.px, y: r.py - 6, vx: Math.cos(a) * g.bulletSpd, vy: Math.sin(a) * g.bulletSpd,
+        x: r.px, y: r.py - 6, vx: Math.cos(a) * bs, vy: Math.sin(a) * bs,
         dmg, pierce: r.pierce + r.mods.pierce, life: 1.4, hit: [],
         explode: g.explode || r.mods.explode, er: g.er || r.mods.er || 46,
       });
