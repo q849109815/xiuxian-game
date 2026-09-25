@@ -847,7 +847,11 @@ const BT = {
 
   blast(pos, radius, dmg, el) {
     const r = this.run; if (!r) return;
-    this.efx.push({ t: 'boom', x: pos.x, y: pos.y, r: radius, life: 0.36, max: 0.36, el: el || '火' });
+    /* BUG：此处写的是 this.efx，但 BT 上根本没有 efx 属性（特效数组是 run.efx）
+     * → 一旦调用就抛 TypeError: Cannot read properties of undefined (reading 'push')
+     * 实测确认：BT.efx === undefined，BT.blast(...) 直接抛错。
+     * 目前 blast() 无调用者（爆炸走内联实现），但这是颗地雷，改为 r.efx。 */
+    r.efx.push({ t: 'boom', x: pos.x, y: pos.y, r: radius, life: 0.36, max: 0.36, el: el || '火' });
     if (window.SND) SND.play('explode');
     for (const z of r.zombies) {
       if (z.dead) continue;
