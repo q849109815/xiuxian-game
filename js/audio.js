@@ -122,6 +122,19 @@ const SND = {
         this.tone(1046, 0.07, { type: 'triangle', vol: 0.14 });
         setTimeout(() => this.tone(1568, 0.1, { type: 'triangle', vol: 0.12 }), 70);
         break;
+      /* 别名兼容
+       * BUG：全项目 22 处调用写的是 'get'（16 处：购买/领奖/签到/好友/活动）与
+       * 'pickup'（6 处：拾取掉落/开箱/背包使用），但音效表里只有 'coin' / 'pick'。
+       * switch 无匹配 → 走 default → 静默无声。
+       * 玩家买东西、领奖励、捡掉落物时听不到任何反馈音，却不会报错。
+       * 这里补两个别名，比改 22 处调用点更安全（不影响后台热更配置）。 */
+      case 'get':                         // 获得奖励：与 coin 同款上扬双音
+        this.tone(1046, 0.07, { type: 'triangle', vol: 0.14 });
+        setTimeout(() => this.tone(1568, 0.1, { type: 'triangle', vol: 0.12 }), 70);
+        break;
+      case 'pickup':                      // 拾取：与 pick 同款
+        this.tone(880, 0.09, { type: 'sine', to: 1200, vol: 0.14 });
+        break;
       case 'win':                         // 胜利：大调琶音
         [523, 659, 784, 1046].forEach((f, i) =>
           setTimeout(() => this.tone(f, 0.4, { type: 'triangle', vol: 0.22 }), i * 130));
