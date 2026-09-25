@@ -550,7 +550,12 @@ input{font-family:inherit}
 
 /* ===== 真实主界面双排导航 ===== */
 .hm-nav2{display:flex;gap:4px;padding:5px 6px;overflow-x:auto;background:rgba(8,13,22,.9);
-  border-top:1px solid rgba(255,255,255,.07);flex:0 0 auto}
+  border-top:1px solid rgba(255,255,255,.07);flex:0 0 auto;
+  /* 手机端：隐藏横向滚动条、开启 iOS 惯性滑动 */
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;overscroll-behavior-x:contain;
+  /* 右侧渐隐，提示"还能往左滑"（inset 阴影固定在容器视口，不随内容滚动） */
+  box-shadow:inset -18px 0 14px -14px rgba(255,165,60,.5)}
+.hm-nav2::-webkit-scrollbar{display:none}
 .hm-nav2 .hn2{flex:0 0 auto;min-width:46px;padding:4px 5px;border-radius:8px;background:none;border:none;
   color:#7d8ca8;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px}
 .hm-nav2 .hn2 i{font-size:15px;font-style:normal}
