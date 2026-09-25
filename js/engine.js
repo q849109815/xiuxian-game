@@ -1278,7 +1278,19 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const a = this.actOf(id);
     const g = p.actRwGot || (p.actRwGot = {});
     let r = g[id];
-    if (!r || typeof r !== 'object') r = g[id] = { n: (typeof r === 'number' && r) ? 1 : 0 };
+    if (!r || typeof r !== 'object') {
+      /* 旧档：actRwGot[id] 是数字 1（表示已领）。
+       * BUG：此前写成 { n: 1 } 后直接交给 _perReset —— 而新建记录【没有周期 key】，
+       *   _perReset 判定「周期变了」会立刻把 n 清成 0，
+       *   于是老玩家「已领过」的记录在迁移当场就丢了 → 同一活动可以再领一次。
+       *   （实测：{EV01:1} → actRwGot(EV01) 返回 false，应为 true。）
+       * 修法：先让 _perReset 把周期 key 初始化好，再回填旧值。 */
+      const old = (typeof r === 'number' && r) ? 1 : 0;
+      r = g[id] = { n: 0 };
+      this._perReset(r, (a && a.per) || 'once', a && a.n);
+      if (old > 0) r.n = old;
+      return r.n > 0;
+    }
     this._perReset(r, (a && a.per) || 'once', a && a.n);
     return r.n > 0;
   },
