@@ -955,7 +955,22 @@ function bindAll() {
   };
   const swBtn = $('#btSwitch');
   if (swBtn) swBtn.onclick = () => {
-    UI.toast('长按战场可快速射击', 'ok');
+    /* BUG：此前只弹一句「长按战场可快速射击」，不切换任何东西 —— 真正的
+     * 武器切换入口 E.switchGun 只在武器库面板里，战斗中的 🔄 是死按钮。
+     * 现在循环切换到下一把已解锁武器，并同步战斗数值（BT.refreshGun）。 */
+    /* 统一走 window.P：P 是 let 声明的词法变量（不挂 window），
+     * 与 window.P 由 MAIN.login 同步维护，这里只读 window.P 避免读到 null。 */
+    const pp = window.P;
+    if (!pp) { UI.toast('尚未进入战斗', 'err'); return; }
+    const list = (EX.guns || []).filter((g) => E.gunUnlocked(pp, g.id));
+    if (list.length <= 1) { UI.toast('暂无其他可用武器', 'err'); if (window.SND) SND.play('click'); return; }
+    const i = list.findIndex((g) => g.id === pp.gun);
+    const nx = list[(i < 0 ? 0 : i + 1) % list.length];
+    const res = E.switchGun(pp, nx.id);
+    if (res.ok) {
+      if (window.BT && BT.refreshGun) BT.refreshGun();
+      UI.toast('🔄 ' + res.msg, 'ok');
+    } else UI.toast(res.msg, 'err');
     if (window.SND) SND.play('click');
   };
 
