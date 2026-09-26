@@ -77,7 +77,13 @@ const UI = {
     rank: ['排行榜', ['全服'], 'top'],
     set: ['设置', ['账号', '音频', '兑换码', '网络', '数值', '语言', '运营'], 'side'],
     level: ['关卡选择', ['章节'], 'top'],
-    base: ['基地建筑', ['建筑'], 'top'],
+    /* BUG：此前 tab 只有 ['建筑'] 一项，而 r_base 用 tab 去匹配建筑 id，
+     *      匹配不到就永远回退 EX.buildings[0]（医疗站）。
+     *      面板内也没有任何切换按钮 → 玩家进「基地建筑」只能看到医疗站，
+     *      军械库(武器伤害) / 研究所(经验) / 仓库(离线金币) 三个建筑
+     *      既看不到也无法升级，升级入口完全不可达。
+     * 现在四个建筑各占一个 tab。 */
+    base: ['基地建筑', ['医疗站', '军械库', '研究所', '仓库'], 'top'],
     tavern: ['酒馆招募', ['佣兵'], 'top'],
     core: ['核心技能', ['技能'], 'top'],
     legion: ['军团', ['军团', '成员'], 'side'],
@@ -655,6 +661,13 @@ r_tavern(p, tab) {
       }).join('')}`).join('')}</div>`;
     }
     const g = E.gun(p), a = E.attrs(p), c = E.gunUpgradeCost(p);
+    /* 实战换弹时间（与 battle.reload() 完全同口径）
+     * BUG：此前面板直接显示配置裸值 g.reload，
+     *      不含军械库建筑加成（每级 -1%，上限 -40%）、也不含词条 AF08「换弹-0.2秒」。
+     *      玩家面板写着 1.8 秒，实战可能只要 1.5 秒 —— 显示与实际不符。
+     * 这里按同一公式算出实战值，与「面板伤害」一样展示为「基础 → 实战」。 */
+    const _rlBase = Number(g.reload) || 0;
+    const _rlReal = Math.max(0.3, _rlBase * (1 - Math.min(0.4, ((p.build && p.build.armory) || 0) * 0.01)) - (Number(a.reloadCut) || 0));
     const adv = E.advInfo(p.gunLv);
     const nextAdv = EX.gunAdvance[Math.min(EX.gunAdvance.length - 1, E.advOf(p.gunLv) + 1)];
     return `<div class="card"><div class="card-t">当前武器</div>
@@ -671,8 +684,8 @@ r_tavern(p, tab) {
       <div class="kv"><span>面板伤害</span><b>${g.dmg} → <span style="color:var(--gold)">${E.fmt(a.gunBase)}</span></b></div>
       <div class="kv"><span>射速</span><b>${a.rate.toFixed(2)} /秒</b></div>
       <div class="kv"><span>弹夹容量</span><b>${a.mag} 发</b></div>
-      <div class="kv"><span>换弹时间</span><b>${g.reload} 秒</b></div>
-      <div class="kv"><span>弹丸 / 穿透</span><b>${g.pellets || 1} / ${a.pierce}</b></div>
+      <div class="kv"><span>换弹时间</span><b>${_rlBase} → <span style="color:var(--gold)">${_rlReal.toFixed(2)}</span> 秒</b></div>
+      <div class="kv"><span>弹丸 / 穿透</span><b>${a.pellets || 1} / ${a.pierce}</b></div>
       <div class="kv"><span>子弹类型</span><b>${g.bullet}</b></div>
       <button class="btn c blk" id="gunUp" ${p.gold < c ? 'disabled' : ''}>强化 · ${E.fmt(c)} 金币</button>
       <div class="lbl">每级 +${(E.GUN_GROW * 100).toFixed(0)}% 伤害；每 5 级进阶一次（${adv.q}→${nextAdv.q}），进阶解锁词条槽。</div></div>
@@ -1821,7 +1834,8 @@ r_tavern(p, tab) {
 
   /* ---------- 基地建筑 ---------- */
   r_base(p, tab) {
-    const b = EX.buildings.find((x) => x.id === tab) || EX.buildings[0];
+    /* tab 既可能是建筑 id（程序调用）也可能是中文名（界面 tab） */
+    const b = EX.buildings.find((x) => x.id === tab || x.n === tab) || EX.buildings[0];
     const cur = p.build[b.id] || 1;
     const cost = E.buildCost(p, b.id);
     /* 仓库（stat==='gold'）此前显示写死的 offline(120)×等级，与实际产出不符 */
@@ -1840,8 +1854,12 @@ r_tavern(p, tab) {
       <div class="lbl">离线最多累计 8 小时（表34）。</div></div>`;
   },
   b_base(p, tab) {
+    /* 升级必须按建筑 id 调用：
+     * tab 现在是中文名（"军械库"），而 E.upBuild 内部按 id 匹配，
+     * 直接传 tab 会找不到建筑 → 点了升级毫无反应。 */
+    const b = EX.buildings.find((x) => x.id === tab || x.n === tab) || EX.buildings[0];
     const u = $('#buUp'); if (u) u.onclick = () => {
-      const r = E.upBuild(p, tab); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('base', tab); this.home(); }
+      const r = E.upBuild(p, b.id); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('base', tab); this.home(); }
     };
     const c = $('#buClaim'); if (c) c.onclick = () => {
       /* 此前只取 E.offlineIncome（仅金币）然后手动 +=，
