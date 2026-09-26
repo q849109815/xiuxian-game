@@ -545,8 +545,12 @@ APP.pages['mail-single'] = {
       const p = this.SEL; if (!p) return;
       const m = APP.mailPayload('ms');
       p.mail = p.mail || [];
+      /* 生效时间此前没有写入邮件对象：mailPayload 算了 startAt，
+       * 但这里只落了 expireAt/popup，于是后台填的「生效时间(小时)」完全无效，
+       * 定时发送变成立刻可领。补上 startAt。 */
       p.mail.unshift({ id: 'ms' + Date.now(), t: m.title, b: m.body, rw: m.rw,
-        from: m.from, got: false, at: Date.now(), expireAt: m.expireAt, popup: m.popup });
+        from: m.from, got: false, at: Date.now(), startAt: m.startAt,
+        expireAt: m.expireAt, popup: m.popup });
       if (p.mail.length > 40) p.mail.length = 40;
       if (await this.save(p)) {
         AUDIT.log('单发邮件', p.uid, m.title);
