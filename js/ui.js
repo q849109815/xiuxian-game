@@ -1394,6 +1394,9 @@ r_tavern(p, tab) {
 
   /* ---------- 好友（截图：好友列表/申请/聊天 + 僵尸头像 + 添加好友） ---------- */
   r_friends(p, tab) {
+    /* 好友申请 / 聊天此前是全项目「只读不写」的死数据，两个页签永远空白。
+     * 这里在渲染前按每日上限供给内容（见 E.pumpSocial）。 */
+    try { E.pumpSocial(p); } catch (e) {}
     if (tab === '聊天') {
       const msgs = (p.chat || []).slice(-20).reverse();
       /* 聊天昵称和消息文本都是别的玩家随便填的，直接拼进 innerHTML 就是存储型 XSS：
@@ -1420,8 +1423,9 @@ r_tavern(p, tab) {
         ${(function () {
           const today = E.dailyKey();   /* UTC+8 业务日，与签到/礼包限购同一基准（原为本地时区） */
           const sent = (p.sendStDate === today) ? (p.sendStTo || []) : [];
-          const done = sent.indexOf(f.id) >= 0;
-          return `<button class="btn sm ${done ? 'd' : 'g'}" data-sendst="${f.id}" ${done ? 'disabled' : ''}>${done ? '已送' : '送体力'}</button>`;
+          const fid = (f && f.id) || '';
+          const done = fid ? sent.indexOf(fid) >= 0 : false;
+          return `<button class="btn sm ${done ? 'd' : 'g'}" data-sendst="${UI.esc(fid)}" ${done ? 'disabled' : ''}>${done ? '已送' : '送体力'}</button>`;
         })()}
         <span class="st ${f.online ? 'on' : 'off'}">${f.online ? '在线' : '离线'}</span>
       </div>`).join('') : '<div class="lbl">还没有好友，点击下方添加</div>'}
