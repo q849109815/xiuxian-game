@@ -128,14 +128,35 @@ APP.scanDiag = async function () {
 APP.accDetail = function () {
   const p = this.SEL; if (!p) return '';
   const e = p.ext || {};
+  /* 统一统计口径：一律走 E.stats（与游戏端同一真源）。
+   * 此前后台自己算通关进度（关卡数）而游戏端按星级累加，
+   * 图鉴 / 签到更是只在游戏端有、后台不显示，
+   * 玩家来申诉时两边数字对不上，运营无法自证。 */
+  const ST = (window.E && E.stats) ? E.stats(p) : {
+    kills: (p.stats && p.stats.kills) || 0, bossKill: (p.stats && p.stats.bossKill) || 0,
+    runs: (p.stats && p.stats.runs) || 0,
+    titleCount: (Array.isArray(p.titles) ? p.titles : []).length,
+    clearedCount: Object.keys(p.cleared || {}).length, totalStars: 0,
+    endlessBest: p.endlessBest || 0, codexGot: 0, codexAll: 0,
+    skinCount: (p.skins || []).length, skinAll: 0, signDays: p.signDays || 0,
+    evScore: p.evScore || 0,
+  };
   return `<div class="card"><div class="card-t">账号详情 <span class="sub">${U.esc(p.uid)}</span></div>
     <div class="row"><div class="zav">${U.esc((p.avatar || '🧑').slice(0, 2))}</div>
       <div class="rl"><b>${U.esc(p.name)}</b><span>Lv.${p.lv || 1} · 战力 ${U.fmt(U.pw(p))} · ${p.gender === 'f' ? '女' : '男'}</span></div>
       ${p.ban ? '<span class="ban" style="color:var(--red);font-size:11px">封禁中</span>' : ''}</div>
     <div class="kv"><span>注册时间</span><b>${U.dt(p.created)}</b></div>
     <div class="kv"><span>最后登录</span><b>${U.dt(p.lastSeen)}</b></div>
-    <div class="kv"><span>累计击杀</span><b class="y">${(p.stats && p.stats.kills) || 0}</b></div>
-    <div class="kv"><span>通关关卡</span><b>${Object.keys(p.cleared || {}).length}</b></div>
+    <div class="kv"><span>累计击杀</span><b class="y">${ST.kills}</b></div>
+    <div class="kv"><span>BOSS 击杀</span><b class="y">${ST.bossKill}</b></div>
+    <div class="kv"><span>对局数</span><b class="y">${ST.runs}</b></div>
+    <div class="kv"><span>称号拥有</span><b>${ST.titleCount}</b></div>
+    <div class="kv"><span>通关进度</span><b>${ST.clearedCount} 关 / ${ST.totalStars} ★</b></div>
+    <div class="kv"><span>无尽最佳</span><b>${ST.endlessBest} 层</b></div>
+    <div class="kv"><span>图鉴收集</span><b>${ST.codexGot} / ${ST.codexAll}</b></div>
+    <div class="kv"><span>皮肤拥有</span><b>${ST.skinCount} / ${ST.skinAll}</b></div>
+    <div class="kv"><span>连续签到</span><b>${ST.signDays} 天</b></div>
+    <div class="kv"><span>活动积分</span><b>${ST.evScore}</b></div>
     <div class="card-t" style="margin-top:12px">账号资料 <span class="sub">单机架构未采集的字段可手工补录</span></div>
     <div class="f2">
       <div class="fld"><label>手机号</label><input id="exPhone" value="${U.esc(e.phone || '')}"></div>
