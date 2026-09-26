@@ -233,23 +233,38 @@ const Net = {
         if (r.ok) return { data: await r.json(), sha: null, from: 'static' };
       } catch (e) {}
     }
-    let d = await ghReq(path, { method: 'GET', quick });
-    /* 存档在 players 分支；若某些端点丢了 ref 导致读不到，
-     * 再显式用 main 分支试一次（反之亦然）。 */
-    if ((!d || !d.content) && /^data\/zb\//.test(path)) {
-      /* ① 官方端点 + 显式 players 分支（反代丢 ref 的可靠解药） */
+    /* ===============================================================
+     * 严重回档 BUG 修复（玩家进度自己往回跳的元凶）
+     *
+     * 原实现：先用【全端点池】读（含十几个公共反代），读不到才用可信端点兜底。
+     * 而公共反代普遍丢失 ?ref=players 查询参数，静默返回【main 分支】内容。
+     * 实测铁证：
+     *   不带 ref          → sha b25e7c15（main 分支的旧档）
+     *   ?ref=players      → sha 15c1033a（正确分支）
+     *   main 分支上确实残留历史玩家存档 data/zb/players/uoy3fq9.json，
+     *   而 players 分支上同一账号已 destroyed=true「玩家主动申请」注销。
+     * 只要内容非空就原样采纳、不校验分支 → 玩家读到旧档 = 回档；
+     * 30 秒后自动存档又把这份旧档写回 players → 永久回档。
+     *
+     * 现在：存档路径一律【先可信端点 + 显式 players 分支】，
+     * main 分支只作历史存档兜底（老号早期写在 main），
+     * 全端点池降级为最后手段。
+     * =============================================================== */
+    let d = null;
+    const isSave = /^data\/zb\//.test(path);
+    if (isSave) {
       try {
-        const d2 = await ghReq(path, { method: 'GET', quick, onlyOfficial: true }, GH.dataBranch || GH.branch);
-        if (d2 && d2.content) d = d2;
+        d = await ghReq(path, { method: 'GET', quick, onlyOfficial: true }, GH.dataBranch || GH.branch);
       } catch (e) {}
-      /* ② 仍读不到 → 官方端点 + main 分支（历史存档可能写在 main） */
+      /* players 分支没有 → 老号可能写在 main（历史遗留） */
       if ((!d || !d.content) && GH.branch !== (GH.dataBranch || GH.branch)) {
         try {
-          const d3 = await ghReq(path, { method: 'GET', quick, onlyOfficial: true }, GH.branch);
-          if (d3 && d3.content) d = d3;
+          const dm = await ghReq(path, { method: 'GET', quick, onlyOfficial: true }, GH.branch);
+          if (dm && dm.content) d = dm;
         } catch (e) {}
       }
     }
+    if (!d || !d.content) d = await ghReq(path, { method: 'GET', quick });
     if (d && d.content) {
       const txt = unb64(d.content);
       if (txt) {
@@ -272,42 +287,128 @@ const Net = {
   /** 写 JSON：失败进队列，联网自动补传 */
   async write(path, obj, msg) {
     const content = b64(JSON.stringify(obj));
+
+    /* ---------- 存档路径：走专用写入通道 ---------- */
+    if (/^data\/zb\//.test(path)) return this.writeSave(path, obj, msg, content);
+
     let sha = null;
     try {
       const cur = await ghReq(path, { method: 'GET' });
       if (cur && cur.sha) sha = cur.sha;
     } catch (e) {}
-    const br = /^data\/zb\//.test(path) ? (GH.dataBranch || GH.branch) : GH.branch;
+    const br = GH.branch;
     const body = { message: msg || 'update ' + path, content, branch: br };
     if (sha) body.sha = sha;
     const r = await ghReq(path, { method: 'PUT', body });
-    if (r && r.content) {
-      /* 缓存只是加速手段，云端已写入成功就不该让它把整个 write 拖崩。
-       * 此前这行裸写：配额溢出(QuotaExceededError)时会直接抛穿 write()，
-       * 调用方拿到的是异常而非 true，误判"存档失败"，且后面进队列的
-       * 兜底分支根本走不到。现在失败先清掉最旧的缓存腾空间再试一次，
-       * 仍失败则静默放弃缓存，绝不因缓存影响写入结果判定。 */
+    if (r && r.content) { this._cache(path, obj); return true; }
+    if (typeof window !== 'undefined' && window.__zbResetting) return false;
+    QUEUE = QUEUE.filter((x) => x.path !== path);
+    QUEUE.push({ path, obj, msg, at: Date.now() });
+    try { localStorage.setItem(LS.queue, JSON.stringify(QUEUE)); } catch (e) {}
+    return false;
+  },
+
+  /* 仅写缓存，配额溢出时清掉最旧缓存重试一次，绝不抛穿调用方 */
+  _cache(path, obj) {
+    try {
+      localStorage.setItem(LS.cache + path, JSON.stringify(obj));
+    } catch (e) {
       try {
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.indexOf(LS.cache) === 0 && k !== LS.cache + path) keys.push(k);
+        }
+        keys.sort();
+        for (const k of keys.slice(0, Math.ceil(keys.length / 3))) localStorage.removeItem(k);
         localStorage.setItem(LS.cache + path, JSON.stringify(obj));
-      } catch (e) {
-        try {
-          const keys = [];
-          for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            if (k && k.indexOf(LS.cache) === 0 && k !== LS.cache + path) keys.push(k);
-          }
-          keys.sort();
-          for (const k of keys.slice(0, Math.ceil(keys.length / 3))) localStorage.removeItem(k);
-          localStorage.setItem(LS.cache + path, JSON.stringify(obj));
-        } catch (e2) {}
-      }
-      return true;
+      } catch (e2) {}
     }
-    // 进队列
-    /* 重置存档期间禁止入队。
-     * 否则 delete 之后、reload 之前的窗口里，任何一次失败的写入
-     * （定时存档 / 榜单上传 / 配置同步）都会把旧进度重新塞回 ss_queue，
-     * 重载后队列被消费并写回云端 —— 玩家以为清空了，进度却原样回来。 */
+  },
+
+  /* ===============================================================
+   * 存档专用写入：可信端点 + 显式 players 分支 + 409 重取 sha 重试
+   *              + 旧档覆盖新档守卫
+   *
+   * 原实现两大致命缺陷：
+   * ① 拿 sha 用 ghReq(全端点池) —— 反代丢 ref 时拿到的是【main 分支的 sha】，
+   *    再 PUT 到 players 分支 → GitHub 返回 409 Conflict（实测确认）。
+   *    write() 因此返回 false，玩家的进度根本没写进去，
+   *    下次登录读到的仍是云端旧档 —— 表现就是"自己回档"。
+   *    更糟：409 会被 markDead 拉黑端点，越用越糟。
+   * ② 拿到的若是 main 的旧内容，会原样覆盖 players 的新档。
+   * =============================================================== */
+  async writeSave(path, obj, msg, content) {
+    const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
+    const eps = [...GH.extra, 'https://api.github.com'].filter((e, i, a) => e && a.indexOf(e) === i);
+    const br = GH.dataBranch || GH.branch;
+
+    /* 先读一次云端：既拿 sha，也用于旧档守卫 */
+    let sha = null, cloud = null, cloudOk = false;
+    for (const ep of eps) {
+      try {
+        const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/${path}?ref=${br}`, { headers: H }, 12000);
+        if (r.ok) {
+          const j = await r.json();
+          cloudOk = true; sha = j.sha || null;
+          const txt = unb64(j.content || '');
+          if (txt) { try { cloud = JSON.parse(txt); } catch (e) {} }
+          break;
+        }
+        if (r.status === 404) { cloudOk = true; sha = null; break; }   /* 新文件，无需 sha */
+      } catch (e) {}
+    }
+
+    /* 旧档守卫：要写入的数据明显比云端旧 → 拒绝，避免污染云端新档。
+     * 覆盖所有"读到旧档再写回"的路径，无论根因是什么。
+     * 后台主动回档(restore)会刷新 offlineAt，不受此限。 */
+    /* 用【读档基准】_baseAt 而非 offlineAt：
+     * offlineAt 每次保存都会被刷成当前时间，拿它比较永远"更新"，
+     * 守卫会形同虚设。_baseAt 记录"这份数据是从云端哪一版来的"。 */
+    const mine = Number(obj && obj._baseAt) || Number(obj && obj.offlineAt) || 0;
+    const theirs = Number(cloud && cloud.offlineAt) || 0;
+    if (mine && theirs && theirs > mine + 60000) {
+      try { console.log('[存档] 拒绝写入：本地数据比云端旧 ' + Math.round((theirs - mine) / 1000) + ' 秒，保护云端新档'); } catch (e) {}
+      return 'stale';
+    }
+
+    /* 409 = sha 过时（不是端点故障）→ 重取 sha 重试，绝不拉黑端点 */
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const body = { message: msg || 'update ' + path, content, branch: br };
+      if (sha) body.sha = sha;
+      for (const ep of eps) {
+        let st = 0;
+        try {
+          const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
+            method: 'PUT',
+            headers: { ...H, 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          }, 14000);
+          st = r.status;
+          if (r.ok || r.status === 201) {
+            BEST = ep; try { localStorage.setItem(LS.best, ep); } catch (e) {}
+            ONLINE = true; try { localStorage.setItem(LS.net, 'online'); } catch (e) {}
+            this._cache(path, obj);
+            return true;
+          }
+          if (r.status === 409) break;              /* 换 sha 重试，不拉黑 */
+          markDead(ep);
+        } catch (e) { st = 0; markDead(ep); }
+      }
+      /* 重取 sha 后再试一次 */
+      let nsha = null;
+      for (const ep of eps) {
+        try {
+          const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/${path}?ref=${br}`, { headers: H }, 10000);
+          if (r.ok) { const j = await r.json(); nsha = j.sha || null; break; }
+          if (r.status === 404) { nsha = null; break; }
+        } catch (e) {}
+      }
+      if (nsha === sha) break;      /* sha 没变 → 不是 sha 问题，别空转 */
+      sha = nsha;
+    }
+
+    /* 重置存档期间禁止入队（理由同前） */
     if (typeof window !== 'undefined' && window.__zbResetting) return false;
     QUEUE = QUEUE.filter((x) => x.path !== path);
     QUEUE.push({ path, obj, msg, at: Date.now() });
