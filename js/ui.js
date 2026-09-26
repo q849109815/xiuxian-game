@@ -317,7 +317,7 @@ r_tavern(p, tab) {
     const ls = $('#lgShop');
     if (ls) ls.onclick = () => {
       if (!p.legion) return this.toast('请先加入军团', 'err');
-      const today = new Date().toDateString();
+      const today = E.dailyKey();   /* UTC+8 业务日，与签到/礼包限购同一基准（原为本地时区） */
       if (p.lgShopDate !== today) { p.lgShopDate = today; p.lgShopBuy = {}; }
       p.lgShopBuy = p.lgShopBuy || {};
       this.sheet('军团商店', `
@@ -1397,7 +1397,7 @@ r_tavern(p, tab) {
         ${this.zAvatarHTML(f.id || f)}
         <div class="zi"><b>${this.esc((f && f.n) || f.id || '未知')}</b><span>战力 ${E.fmt((f && f.pw) || 0)} · 可发送体力</span></div>
         ${(function () {
-          const today = new Date().toDateString();
+          const today = E.dailyKey();   /* UTC+8 业务日，与签到/礼包限购同一基准（原为本地时区） */
           const sent = (p.sendStDate === today) ? (p.sendStTo || []) : [];
           const done = sent.indexOf(f.id) >= 0;
           return `<button class="btn sm ${done ? 'd' : 'g'}" data-sendst="${f.id}" ${done ? 'disabled' : ''}>${done ? '已送' : '送体力'}</button>`;
@@ -1422,7 +1422,7 @@ r_tavern(p, tab) {
      *       送出后自己获得好友回赠金币（单机架构无法真送到对方，但行为真实）。 */
     $$('#pnBody [data-sendst]').forEach((b) => { b.onclick = () => {
       const fid = b.dataset.sendst;
-      const today = new Date().toDateString();
+      const today = E.dailyKey();   /* UTC+8 业务日，与签到/礼包限购同一基准（原为本地时区） */
       if (p.sendStDate !== today) { p.sendStDate = today; p.sendStTo = []; }
       p.sendStTo = p.sendStTo || [];
       if (p.sendStTo.indexOf(fid) >= 0) return this.toast('今天已给该好友送过', 'err');
