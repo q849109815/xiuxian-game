@@ -878,8 +878,22 @@ function battleGo(id, mode) {
   if (hudT) clearInterval(hudT);
   hudT = setInterval(() => { if (BT.on || (BT.run && !BT.run.over)) UI.btTick(); }, 100);
 
-  /* 引导：移动 / 射击 */
-  if (!P.guide[2]) { P.guide[2] = 1; UI.toast('自动瞄准射击，怪物来袭', 'ok'); }
+  /* 引导：移动 / 射击
+   * BUG：这里直接 `P.guide[2] = 1` 并只弹一句 toast，绕过了 showGuide 正式弹窗。
+   *   → 引导 2「射击引导」是 6 个 must=true 节点里
+   *     【唯一一个永远不会以正式弹窗出现】的（moved 事件全项目零调用）；
+   *   → 设置页「引导进度」会显示已完成（因为被直接标记了），
+   *     但玩家其实只看到一句一闪而过的 toast，等于这条引导没做；
+   *   → 而且它在 BT.start 之后立即执行，比引导 1（延迟 420ms 弹窗）还早，
+   *     玩家先看到「自动瞄准射击」的 toast，之后才看到「移动引导」弹窗，顺序颠倒。
+   * 现在改为延迟走正式弹窗，排在引导 1 之后；战斗已结束则不再弹。 */
+  setTimeout(() => {
+    try {
+      if (!P || (P.guide && P.guide[2])) return;
+      if (!(BT.on || (BT.run && !BT.run.over))) return;
+      if (window.UI && UI.guideTrigger) UI.guideTrigger('moved');
+    } catch (e) {}
+  }, 2600);
 }
 
 window.battleGo = battleGo;
