@@ -684,7 +684,7 @@ r_tavern(p, tab) {
         return `<div class="kv"><span style="color:${qc}">${d ? d.n : st.k}${st.q ? ' <span class="tag" style="background:' + qc + '22;color:' + qc + '">' + st.q + '</span>' : ''}</span>
           <b style="color:var(--green)">+${d && d.unit === '%' ? (st.v * 100).toFixed(1) + '%' : st.v.toFixed(2)}</b></div>`;
       }).join('') : '<div class="lbl">尚未进阶，暂无词条</div>'}
-      <button class="btn o blk" id="gunReroll" ${E.gunAffixSlots(p, p.gun) <= 0 ? 'disabled' : ''}>🔄 洗练词条（💎${EX.REROLL_GUN_COST}）</button>
+      <button class="btn o blk" id="gunReroll" ${Object.keys(p.gunStats || {}).filter((k) => p.gunStats[k]).length <= 0 ? 'disabled' : ''}>🔄 洗练词条（💎${EX.REROLL_GUN_COST}）</button>
       <div class="lbl">洗练将重随机全部已解锁词条，按品质加权：蓝60% / 紫30% / 红10%。</div></div>
 
       <div class="card"><div class="card-t">武器词条 <span class="sub">表30 · ${g.slots || 2} 槽位</span></div>
@@ -1046,7 +1046,7 @@ r_tavern(p, tab) {
             <div class="zi"><b>${q}色芯片</b><span>背包 ×${n} · 单价 ${rate} 金币</span></div>
             <button class="btn sm ${n ? '' : 'd'}" data-decq="${q}" ${n ? '' : 'disabled'}>分解</button></div>`;
         }).join('')}
-        <button class="btn o blk" id="bagDecAll">一键分解全部碎片</button>
+        <button class="btn o blk" id="bagDecAll">一键分解（碎片 + 芯片）</button>
       </div>
       <div class="card"><div class="card-t">宝箱 <span class="sub">表31 DR11</span></div>
         <div class="kv"><span>持有宝箱</span><b>${(p.mat || {}).I04 || 0}</b></div>
@@ -1113,6 +1113,15 @@ r_tavern(p, tab) {
     }; });
     const da = $('#bagDecAll');
     if (da) da.onclick = () => {
+      /* 一键分解不可逆，且实际范围含【普通/精英/传说芯片】（不只是碎片）。
+       * 面板的芯片区显示的是 p.bag 的另一套存储（实测 chipCountByQ 为 0、按钮 disabled），
+       * 玩家看到「芯片 ×0」，一点却把 p.mat 里的传说芯片全清了，且无任何提示。
+       * 先预演并弹出明细供玩家确认。 */
+      const pv = E.dismantlePreview(p);
+      if (!pv.cnt) { this.toast('没有可分解的物品', 'err'); return; }
+      const tip = '将分解以下物品（共 ' + pv.cnt + ' 个 → 金币 +' + E.fmt(pv.gold) + '）：\n'
+        + pv.lines.join('\n') + '\n\n注意：芯片类（含传说芯片）也会一并分解，此操作不可撤销。确定继续？';
+      if (!window.confirm(tip)) { this.toast('已取消', 'err'); return; }
       const r = E.dismantleAll(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
       if (r.ok) { if (window.SND) SND.play('coin'); this.open('bag', '材料'); this.home(); }
     };
@@ -1185,6 +1194,13 @@ r_tavern(p, tab) {
       /* 套利守卫：拦截「花 X 买回 > X 的同种货币且无限购」的商品。
        * 否则玩家可无限循环刷取，几分钟内经济崩坏（见 E.isArbitrage 注释）。 */
       try { if (E.isArbitrage && E.isArbitrage(g)) return this.toast('该商品暂不可购买', 'err'); } catch (e) {}
+      /* 体力类商品满体力拦截（D2「体力包」50 钻 → 60 体力）
+       * 与活动商店 ES11 同一类问题：体力已达 STAMINA_MAX 时买体力，
+       * 钱照扣、体力一点不加，却提示购买成功。
+       * 这里在扣款【之前】拦截，货币不会被白白扣掉。 */
+      if (g.give && g.give.stamina && E.staminaFull && E.staminaFull(p)) {
+        return this.toast('体力已满（' + EX.STAMINA_MAX + '），无需购买', 'err');
+      }
       if ((p[cur] || 0) < g.price) return this.toast('货币不足', 'err');
       p[cur] -= g.price;
       if (g.give) for (const k in g.give) {
@@ -1199,7 +1215,10 @@ r_tavern(p, tab) {
           }
           p.diamond = (p.diamond || 0) + amt;
         }
-        else if (k === 'stamina') p.stamina = (p.stamina || 0) + g.give[k];
+        /* 走 E.addStamina（带 STAMINA_MAX 钳制）而不是直接相加。
+         * BUG：直接 `p.stamina + 60` 会突破上限（实测体力 50 买体力包 → 110/100），
+         *      而其它所有体力来源都被钳在 100，界面上会出现「110/100」这种越界显示。 */
+        else if (k === 'stamina') { try { E.addStamina(p, g.give[k]); } catch (e) { p.stamina = Math.min(EX.STAMINA_MAX || 100, (p.stamina || 0) + g.give[k]); } }
         else if (k === 'gem') {
           /* 可镶嵌宝石：give: { gem: 'G_R' }
            * 修复：此前没有该分支，宝石类商品会落到 p.mat['gem']，
@@ -2174,9 +2193,31 @@ r_tavern(p, tab) {
       if (window.OPS) OPS.clearTrack(); this.toast('埋点数据已清空', 'ok'); this.open('set', '运营');
     };
     const sv = $('#setSave'); if (sv) sv.onclick = async () => { await MAIN.save(); this.toast('存档已上传', 'ok'); };
-    const rs = $('#setReset'); if (rs) rs.onclick = () => {
-      if (!confirm('确定清空全部进度？此操作不可恢复！')) return;
-      localStorage.removeItem('zb_uid'); location.reload();
+    const rs = $('#setReset'); if (rs) rs.onclick = async () => {
+      if (!confirm('确定清空全部进度？\n云端存档与本地缓存将一并删除，账号保留但进度归零，此操作不可恢复！')) return;
+      rs.disabled = true; rs.textContent = '重置中…';
+      /* 置位「重置中」：阻止 beforeunload/pagehide 的同步快照、
+       * 30 秒定时存档、以及离线队列把刚删掉的进度重新写回去 */
+      window.__zbResetting = true;
+      const uid = (window.P && P.uid) || localStorage.getItem('zb_uid') || '';
+      /* ① 真删云端存档。
+       * 此前只 removeItem('zb_uid') + reload，云端 players/<uid>.json 原封不动，
+       * 玩家重载后重新登录同一账号，进度原样回来 —— 「清空全部进度」从未生效过。 */
+      if (uid && window.Net) { try { await Net.del('data/zb/players/' + uid + '.json'); } catch (e) {} }
+      /* ② 清本地残留。账号名保留以便重新登录，其余全部清除。
+       *    必须清 ss_queue（离线待写队列）—— 里面若存着旧存档，
+       *    重置后会被重新消费并写回云端，等于白重置。
+       *    也要清 ss_cache_* / zb_snap_*，否则会被当成"云端读取失败"的兜底档恢复。 */
+      try {
+        const keep = ['zb_name', 'zb_uname', 'zb_gender'];
+        Object.keys(localStorage).forEach((k) => {
+          if (keep.indexOf(k) >= 0) return;
+          if (k === 'zb_uid' || k === 'zb_auto' || k === 'zb_ucache' || k === 'ss_queue' ||
+              k.indexOf('zb_snap_') === 0 || k.indexOf('zb_idxat_') === 0 ||
+              k.indexOf('ss_cache_') === 0) localStorage.removeItem(k);
+        });
+      } catch (e) {}
+      location.reload();
     };
     const ad = $('#setAdmin'); if (ad) ad.onclick = () => { location.href = 'admin/'; };
     const st = $('#setAdStam'); if (st) st.onclick = () => {
