@@ -1231,10 +1231,15 @@ const BT = {
     const slot = EX.turretSlots.find((s) => s.k === slotKey); if (!slot) return { ok: false, msg: '槽位不存在' };
     const exist = r.turrets.find((t) => t.k === slotKey);
     if (exist) {
-      const cost = Math.round(def.upCost * (1 + exist.lv * 0.6));
+      /* BUG：升级费用此前按「本次点击的炮台」def.upCost 计算，
+       * 但等级加在槽位里已有的那座炮台上 —— 两者不是同一座时，
+       * 玩家点火焰炮台，扣的是火焰的价钱，升的却是寒冰的等级。
+       * 现在统一按【实际被升级的那座】计价。 */
+      const upDef = exist.def || def;
+      const cost = Math.round((upDef.upCost != null ? upDef.upCost : def.upCost) * (1 + exist.lv * 0.6));
       if (r.coin < cost) return { ok: false, msg: EX.tip('popup.noCoin', { v: cost }) };
       r.coin -= cost; exist.lv++;
-      return { ok: true, msg: '⬆ ' + def.n + ' 升至 Lv.' + exist.lv };
+      return { ok: true, msg: '⬆ ' + (upDef.n || def.n) + ' 升至 Lv.' + exist.lv };
     }
     if (r.coin < def.cost) return { ok: false, msg: EX.tip('popup.noCoin', { v: def.cost }) };
     r.coin -= def.cost;
