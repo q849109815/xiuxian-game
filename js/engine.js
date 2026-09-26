@@ -243,6 +243,16 @@ const E = {
     }
     return p.stamina;
   },
+  /* 只检查体力是否够，【不扣除】
+   * BUG：此前 startBattle 一开始就扣体力，而章节 CG 分支随后 return，
+   *      玩家若关掉 CG 弹窗而不点「进入战区」，战斗根本没开始，体力却已被扣 —— 白扣。
+   *      现在检查与扣除分离：startBattle 只检查，battleGo 真正进战斗时才扣。 */
+  checkStamina(p, id) {
+    this.tickStamina(p);
+    const c = this.staminaCost(id);
+    if ((p.stamina || 0) < c) return { ok: false, msg: EX.tip('popup.noStaminaCur', { v: c, n: Math.floor(p.stamina) }) };
+    return { ok: true, cost: c };
+  },
   spendStamina(p, id) {
     this.tickStamina(p);
     const c = this.staminaCost(id);
