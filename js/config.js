@@ -485,14 +485,20 @@ const EX = {
       { id: 'M02', n: '通关1-2', cond: { t: 'clearLv', v: '1-2' }, rw: { gold: 300 }, desc: '通关关卡 1-2' },
       { id: 'M03', n: '击杀100僵尸', cond: { t: 'kills', v: 100 }, rw: { P01: 3 }, desc: '累计击杀 100 只僵尸' },
     ],
+    /* 成就点持续来源（配合 AS11 定价修复）
+     * 原设计里成就点【只能靠一次性来源】（成就任务 500 + 图鉴 325 = 825），
+     *   花完即枯竭，成就商店后期变成一块死面板，AS11 更是绝对买不起。
+     * 这里给日常任务补发少量成就点：每日 3×3=9/天、每周 2×10=20/周，
+     *   合计约 83 点/周（约 360 点/月），量小不足以冲击经济，
+     *   但足以让长期玩家持续兑换，且第一个月靠 825 点就能拿下 AS11。 */
     daily: [
-      { id: 'D01', n: '每日登录', cond: { t: 'login', v: 1 }, rw: { gold: 200 }, desc: '登录游戏' },
-      { id: 'D02', n: '通关1次关卡', cond: { t: 'dailyClear', v: 1 }, rw: { M01: 5 }, desc: '任意关卡通关 1 次' },
-      { id: 'D03', n: '击杀50僵尸', cond: { t: 'dailyKill', v: 50 }, rw: { gold: 150 }, desc: '今日累计击杀 50 只' },
+      { id: 'D01', n: '每日登录', cond: { t: 'login', v: 1 }, rw: { gold: 200, ach: 3 }, desc: '登录游戏' },
+      { id: 'D02', n: '通关1次关卡', cond: { t: 'dailyClear', v: 1 }, rw: { M01: 5, ach: 3 }, desc: '任意关卡通关 1 次' },
+      { id: 'D03', n: '击杀50僵尸', cond: { t: 'dailyKill', v: 50 }, rw: { gold: 150, ach: 3 }, desc: '今日累计击杀 50 只' },
     ],
     weekly: [
-      { id: 'W01', n: '每周通关10关', cond: { t: 'weekClear', v: 10 }, rw: { diamond: 50 }, desc: '本周通关 10 个关卡' },
-      { id: 'W02', n: '每周击杀1000僵尸', cond: { t: 'weekKill', v: 1000 }, rw: { M03: 2 }, desc: '本周击杀 1000 只' },
+      { id: 'W01', n: '每周通关10关', cond: { t: 'weekClear', v: 10 }, rw: { diamond: 50, ach: 10 }, desc: '本周通关 10 个关卡' },
+      { id: 'W02', n: '每周击杀1000僵尸', cond: { t: 'weekKill', v: 1000 }, rw: { M03: 2, ach: 10 }, desc: '本周击杀 1000 只' },
     ],
     achieve: [
       { id: 'A01', n: '百人斩', cond: { t: 'kills', v: 1000 }, rw: { ach: 100 }, desc: '累计击杀 1000 只僵尸' },
@@ -508,17 +514,17 @@ const EX = {
    * =================================================== */
   HOT_UPDATE: {
     enabled: true,
-    version: '20260926a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20260926b',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/style.css', ver: '20260926a', size: 0 },
-      { p: 'js/net.js', ver: '20260926a', size: 0 },
-      { p: 'js/config.js', ver: '20260926a', size: 0 },
-      { p: 'js/engine.js', ver: '20260926a', size: 0 },
-      { p: 'js/battle.js', ver: '20260926a', size: 0 },
-      { p: 'js/ui.js', ver: '20260926a', size: 0 },
-      { p: 'js/main.js', ver: '20260926a', size: 0 },
-      { p: 'js/audio.js', ver: '20260926a', size: 0 },
+      { p: 'css/style.css', ver: '20260926b', size: 0 },
+      { p: 'js/net.js', ver: '20260926b', size: 0 },
+      { p: 'js/config.js', ver: '20260926b', size: 0 },
+      { p: 'js/engine.js', ver: '20260926b', size: 0 },
+      { p: 'js/battle.js', ver: '20260926b', size: 0 },
+      { p: 'js/ui.js', ver: '20260926b', size: 0 },
+      { p: 'js/main.js', ver: '20260926b', size: 0 },
+      { p: 'js/audio.js', ver: '20260926b', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -680,7 +686,18 @@ const EX = {
     { id: 'AS08', n: '角色碎片x2', t: '碎片', cost: 200, limit: 3, per: 'week', need: 0, give: { P02: 2 } },
     { id: 'AS09', n: '普通芯片x1', t: '芯片', cost: 180, limit: 1, per: 'day', need: 0, give: { C01: 1 } },
     { id: 'AS10', n: '精英芯片x1', t: '芯片', cost: 400, limit: 2, per: 'week', need: 0, give: { C02: 1 } },
-    { id: 'AS11', n: '传说芯片x1', t: '芯片', cost: 900, limit: 1, per: 'month', need: 0, give: { C03: 1 } },
+    /* AS11「传说芯片」
+     * BUG（商品永远买不起）：成就点全项目只有两个来源——
+     *   ① 成就任务 A01~A04：100+50+150+200 = 500（per:once，终身只发一次）
+     *   ② 图鉴解锁：僵尸12×5 + 武器10×10 + 皮肤11×15 = 325（终身只发一次）
+     *   合计【理论上限 825 点】，实测全成就+全图鉴满号 p.ach 恰为 825。
+     * 而 AS11 定价 900 > 825 —— 即使玩家一分钱不花、把所有成就和图鉴全部打满，
+     *   也永远差 75 点，这块传说芯片是商店里唯一一件【绝对不可达】的商品。
+     *   （更现实的处境：买过 AS12 称号(500) 之后只剩 325，连半数都不到。）
+     * 修法：① 定价降到 780（低于 825 上限，留出余量，满收集玩家买得起）；
+     *       ② 每日/每周任务补发少量成就点（见下方 tasks），让商店有长期来源，
+     *          否则 825 花完商店就彻底变死面板。 */
+    { id: 'AS11', n: '传说芯片x1', t: '芯片', cost: 780, limit: 1, per: 'month', need: 0, give: { C03: 1 } },
     { id: 'AS12', n: '限定称号-百人斩', t: '称号', cost: 500, limit: 1, per: 'once', need: 0, give: { title: 'ach_100' } },
   ],
 
