@@ -674,6 +674,9 @@ const APP = {
   /* p.skins 正常是 ['sk_c01a'] 数组；历史存档可能被写成 {id:1} 对象，
    * 直接 .map 会抛 "(p.skins||[]).map is not a function" 让整页白屏。 */
   skinArr(p) {
+    /* 统一口径：优先走 E.skinArr（游戏端同一真源），
+     * 后台未加载 engine.js 时退回本地等价实现，行为一致。 */
+    if (window.E && E.skinArr) return E.skinArr(p);
     const v = p && p.skins;
     if (Array.isArray(v)) return v;
     if (v && typeof v === 'object') return Object.keys(v).filter((k) => v[k]);
