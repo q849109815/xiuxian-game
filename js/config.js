@@ -519,17 +519,17 @@ const EX = {
    * =================================================== */
   HOT_UPDATE: {
     enabled: true,
-    version: '20260926e',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20260926f',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/style.css', ver: '20260926e', size: 0 },
-      { p: 'js/net.js', ver: '20260926e', size: 0 },
-      { p: 'js/config.js', ver: '20260926e', size: 0 },
-      { p: 'js/engine.js', ver: '20260926e', size: 0 },
-      { p: 'js/battle.js', ver: '20260926e', size: 0 },
-      { p: 'js/ui.js', ver: '20260926e', size: 0 },
-      { p: 'js/main.js', ver: '20260926e', size: 0 },
-      { p: 'js/audio.js', ver: '20260926e', size: 0 },
+      { p: 'css/style.css', ver: '20260926f', size: 0 },
+      { p: 'js/net.js', ver: '20260926f', size: 0 },
+      { p: 'js/config.js', ver: '20260926f', size: 0 },
+      { p: 'js/engine.js', ver: '20260926f', size: 0 },
+      { p: 'js/battle.js', ver: '20260926f', size: 0 },
+      { p: 'js/ui.js', ver: '20260926f', size: 0 },
+      { p: 'js/main.js', ver: '20260926f', size: 0 },
+      { p: 'js/audio.js', ver: '20260926f', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
