@@ -53,6 +53,19 @@
       /* 最多留 500 条，防止无限增长 */
       if (buf.length > 500) buf = buf.slice(-500);
       try { localStorage.setItem(KEY_TRACK, JSON.stringify(buf)); } catch (e) {}
+      /* 同时写入玩家存档（随存档上传云端）
+       * 数据链路 BUG 修复：此前埋点只存在【玩家自己浏览器的 localStorage】里，
+       * 后台「数据埋点」页读的是运营自己电脑的缓冲 —— 全服玩家的埋点
+       * 从来没有上报过一次，运营报表看到的永远是 0 条或只有自己的数据。
+       * 现在附在存档上（最多 30 条，控制存档体积），后台汇总即可看到全服数据。 */
+      try {
+        const p = window.P;
+        if (p && p.uid) {
+          if (!Array.isArray(p._bi)) p._bi = [];
+          p._bi.push({ ev: ev, n: def ? def.n : ev, t: Date.now(), pr: def ? def.pr : 'P2' });
+          if (p._bi.length > 30) p._bi = p._bi.slice(-30);
+        }
+      } catch (e) {}
     },
     trackBuf() {
       try { return JSON.parse(localStorage.getItem(KEY_TRACK) || '[]'); } catch (e) { return []; }
