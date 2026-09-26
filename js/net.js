@@ -388,14 +388,34 @@ const Net = {
      * 守卫会形同虚设。_baseAt 记录"这份数据是从云端哪一版来的"。 */
     const mine = Number(obj && obj._baseAt) || Number(obj && obj.offlineAt) || 0;
     const theirs = Number(cloud && cloud.offlineAt) || 0;
-    if (mine && theirs && theirs > mine + 60000) {
+
+    /* ---------- 版本号守卫（首选，不受设备时钟偏差影响）----------
+     * _rev 由云端单调递增：每次成功写入都写成 cloud._rev + 1。
+     * 任何设备拿着更低版本号来写，必然是旧版派生，直接拒绝。
+     * 实测 BUG：旧实现只有时间守卫且容差 60 秒 —— 云端在 60 秒内被别的
+     *   设备推进时，旧档会【静默覆盖】新档（离线队列补传场景已复现）。 */
+    const myRev = Number(obj && obj._rev) || 0;
+    const cloudRev = Number(cloud && cloud._rev) || 0;
+    if (myRev && cloudRev && myRev < cloudRev) {
+      try { console.log('[存档] 拒绝写入：本地 v' + myRev + ' 落后云端 v' + cloudRev + '，保护云端新档'); } catch (e) {}
+      return 'stale';
+    }
+    /* 时间守卫（老档无 _rev 时兜底）：容差 60s → 5s。
+     * 原 60s 容差 = 60 秒的回档窗口，任何跨设备推进都落在这个窗口里。 */
+    if (mine && theirs && theirs > mine + 5000) {
       try { console.log('[存档] 拒绝写入：本地数据比云端旧 ' + Math.round((theirs - mine) / 1000) + ' 秒，保护云端新档'); } catch (e) {}
       return 'stale';
     }
 
+    /* 写入内容里带上推进后的版本号，但【只有 PUT 成功才写回 obj】——
+     * 否则写入失败时本地版本号已被抬高，重试时版本号守卫会失效。 */
+    let payload = content;
+    const nextRev = (cloudRev || 0) + 1;
+    try { payload = b64(JSON.stringify({ ...obj, _rev: nextRev })); } catch (e) {}
+
     /* 409 = sha 过时（不是端点故障）→ 重取 sha 重试，绝不拉黑端点 */
     for (let attempt = 0; attempt < 3; attempt++) {
-      const body = { message: msg || 'update ' + path, content, branch: br };
+      const body = { message: msg || 'update ' + path, content: payload, branch: br };
       if (sha) body.sha = sha;
       for (const ep of eps) {
         let st = 0;
@@ -409,6 +429,7 @@ const Net = {
           if (r.ok || r.status === 201) {
             BEST = ep; try { localStorage.setItem(LS.best, ep); } catch (e) {}
             ONLINE = true; try { localStorage.setItem(LS.net, 'online'); } catch (e) {}
+            try { obj._rev = nextRev; } catch (e) {}
             this._cache(path, obj);
             return true;
           }
@@ -466,14 +487,18 @@ const Net = {
     try {
       const o = it.obj;
       if (!o || typeof o !== 'object') return false;
-      const mine = Number(o.offlineAt || o.lastSeen || o.updated || 0) || 0;
-      if (!mine) return false;
+      const myRev = Number(o._rev) || 0;
+      const mine = Number(o._baseAt) || Number(o.offlineAt) || Number(o.lastSeen) || Number(o.updated) || 0;
+      if (!myRev && !mine) return false;
       const r = await Net.read(it.path);
       const d = r && r.data;
       if (!d || typeof d !== 'object') return false;      /* 云端没有 → 照常补传 */
+      /* 版本号优先：不受设备时钟偏差影响（实测 60s 时间容差会漏放旧档） */
+      const cloudRev = Number(d._rev) || 0;
+      if (myRev && cloudRev) return myRev < cloudRev;
       const theirs = Number(d.offlineAt || d.lastSeen || d.updated || 0) || 0;
-      /* 云端比队列数据新 1 分钟以上 → 队列这份已过期 */
-      return theirs > mine + 60000;
+      /* 云端比队列数据新 5 秒以上 → 队列这份已过期 */
+      return mine > 0 && theirs > mine + 5000;
     } catch (e) { return false; }
   },
 
