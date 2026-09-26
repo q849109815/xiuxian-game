@@ -125,6 +125,18 @@ const E = {
     for (const l of EX.levels) if (!p.cleared[l.id]) return l.id;
     return EX.levels[EX.levels.length - 1].id;
   },
+  /* 真实进度章节：已通关最大章 与 p.curLevel 所在章 取较大者
+   * 用途：巡逻收益档位、无尽模式掉落档位等一切"按章节取档"的地方都必须用它，
+   *       不能直接用 chapterOf(p.curLevel) —— 后者会被"回头重打旧关卡"打回低章节。
+   * （详见 clearLevel 里的进度回退 BUG 注释） */
+  progressChapter(p) {
+    let ch = this.chapterOf(p.curLevel || '1-1') || 1;
+    for (const id in (p.cleared || {})) {
+      const c = Number(String(id).split('-')[0]) || 1;
+      if (c > ch) ch = c;
+    }
+    return Math.max(1, ch);
+  },
   levelName(id) {
     const d = this.levelDef(id);
     return d.id + ' ' + d.n;
@@ -598,8 +610,11 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    *          表 patrolRateByCh（16→250）形同废纸 */
   patrolRateOf(p) {
     const arr = (EX.patrolRateByCh || [16]);
-    /* chapterOf 收的是关卡 id，不是玩家对象 */
-    const ch = Math.max(1, Math.min(arr.length, this.chapterOf(p.curLevel || '1-1') || 1));
+    /* chapterOf 收的是关卡 id，不是玩家对象
+     * 【进度回退保护】原直接用 chapterOf(p.curLevel)，一旦玩家回头重打旧关卡
+     * 档位就会掉回第 1 章（16/小时）。改用 progressChapter 取真实进度章节，
+     * 与配置表「按已解锁章节取档位」的语义一致。 */
+    const ch = Math.max(1, Math.min(arr.length, this.progressChapter(p)));
     return arr[ch - 1];
   },
   syncPatrol(p) {
@@ -737,7 +752,12 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const gunBase = g.dmg * Math.pow(this.GUN_GROW_RATE || 1.078, _gLv - 1);
     /* 攻击强化%（天赋 + 军械库 + 芯片 + 武器词条） */
     const atkUp = this.talentVal(p, 'atk') + this.buildVal(p, 'atk')
-      + this.chipVal(p, 'atk');   /* 进阶词条的 dmg 已并入 affixBonus().dmg，勿在此重复相加 */
+      + this.chipVal(p, 'atk')
+      /* 皮肤攻击加成（表：sk_c01c 沙漠突击 880 钻「攻击 +8%」）
+       * BUG：sk.bonus 里 hp / armor / crit 三处都有接入，唯独 atk 漏了 ——
+       *      花 880 钻买的「攻击 +8%」实际属性纹丝不动，战力也不涨。
+       *      现在补上（进阶词条的 dmg 已并入 affixBonus().dmg，勿在此重复相加）。 */
+      + ((sk && sk.bonus && sk.bonus.atk) || 0);
     const atk = gunBase * (1 + atkUp);
     /* 生命：角色基础 + 天赋 + 医疗站 + 芯片 + 皮肤 */
     const hpUp = this.talentVal(p, 'hp') + this.buildVal(p, 'hp') + this.chipVal(p, 'hp')
@@ -751,7 +771,19 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 0 × (1+20×3%) = 0 —— 点满 20 级花掉数十万金币，护甲纹丝不动。
      * 加每级 +3 点固定护甲，基础为 0 的角色也能真正受益。 */
     const armorFlat = (p.talents.t_armor || 0) * 3;
-    const armor = c.armor * (1 + armorUp) + armorFlat;
+    /* 【百分比护甲必须有非零基数】默认角色 C01 的基础护甲就是 0，
+     * 纯百分比加成一律得到 0 × (1+x) = 0。上一轮只给天赋补了固定值部分，
+     * 芯片和皮肤这两条仍然无效 —— 实测：
+     *   CH03 护甲芯片（活动/充值产出）+5%  → 装在 C01 上护甲 0 → 0
+     *   sk_c03b 装甲骑士（680 钻）+20%    → 装在 C01 上护甲 0 → 0
+     *   sk_c02c 防化服（880 钻）+12%      → 同上
+     * 玩家花钻石/代币买的东西在面板上完全看不出变化。
+     * 而且护甲数值本身很小（角色基础只有 0/3/5/15），5% 的增益
+     * 经 Math.round 会被直接吃掉（C02：5×1.05=5.25→5，C04：3.15→3）。
+     * 现在按参考基数把百分比【同时】折算成一份固定值，
+     * 保证任何角色、任何量级的护甲加成都能在面板上真实体现。
+     * （减伤公式本身有收益递减且封顶 50%，不会因此失衡。） */
+    const armor = c.armor * (1 + armorUp) + armorFlat + armorUp * (this.ARMOR_REF || 20);
     /* 暴击 */
     /* 武器词条加成（表30） */
     const af = this.affixBonus(p);
@@ -883,9 +915,18 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* 首次通关判定必须在写入 p.cleared 之前取快照 */
     const firstEver = Object.keys(p.cleared || {}).length === 0;
     p.cleared[id] = Math.max(p.cleared[id] || 0, st);
-    /* 解锁下一关（关卡表 unlock 链自动生效） */
+    /* 解锁下一关（关卡表 unlock 链自动生效）
+     * BUG：此处原为无条件 `p.curLevel = nx`，会把进度【打回过去】——
+     *   玩家回头重打低章节关卡（刷材料 / 补星级，非常常见的行为）时，
+     *   nextLevel('1-1') = '1-2'，于是 p.curLevel 从第 10 章被打回 1-2。
+     *   而 p.curLevel 是巡逻收益档位（patrolRateOf）和无尽模式掉落档位
+     *   （battle.js levelDef）的取值依据，实测后果：
+     *     巡逻收益 250/小时 → 16/小时（暴跌 15.6 倍）
+     *     无尽掉落档从第 10 章 → 第 1 章，稀有金属/碎片全部掉不出来
+     *   且 p.ch 因有 max 保护仍显示「第 10 章」，界面显示与实际收益自相矛盾。
+     * 现在只在真正前进时推进。 */
     const nx = this.nextLevel(id);
-    if (nx) p.curLevel = nx;
+    if (nx && this.levelIdx(nx) > this.levelIdx(p.curLevel || '1-1')) p.curLevel = nx;
     /* 通关后同步巡逻收益档位（进入新章节时提升） */
     try { this.syncPatrol(p); } catch (e) {}
     /* 称号「初出茅庐」（first_clear）
