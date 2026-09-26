@@ -409,21 +409,23 @@ const MAIN = {
       P.endlessBest || 0, P.evScore || 0].join('|');
   },
   /* 两条榜单记录合并：只增字段取大值，展示字段取较新的一份 */
-  mergeRow(old, row) {
-    if (!old || typeof old !== 'object') return row;
-    const oAt = Number(old.at || 0), nAt = Number(row.at || 0);
-    const newer = nAt >= oAt ? row : old;
-    const mx = (a, b) => Math.max(Number(a || 0), Number(b || 0));
-    return {
-      uid: row.uid || old.uid, u: row.uid || old.uid,
-      name: newer.name != null ? newer.name : old.name,
-      n: newer.n != null ? newer.n : old.n,
-      lv: newer.lv != null ? newer.lv : old.lv,
-      pw: newer.pw != null ? newer.pw : old.pw,
-      eb: mx(old.eb, row.eb), t: mx(old.t, row.t),
-      ev: mx(old.ev, row.ev),
-      at: Math.max(oAt, nAt),
-    };
+  /* 统一口径：合并逻辑收敛到 E.mergeRankRow，后台重建榜单用的是同一份实现 */
+  mergeRow(old, row) { return E.mergeRankRow(old, row); },
+  /* 榜单保留集：各维度 Top100 的并集，上限 200 条。
+   * 只按单一维度（如 eb）截断会让其他维度的高手整体落榜，
+   * 三个榜共用一份 leaderboard.json，必须都留人。 */
+  topUnion(list) {
+    const lim = 200, top = 100;
+    const keep = (key) => list.slice()
+      .sort((a, b) => (b[key] || 0) - (a[key] || 0)).slice(0, top);
+    const m = new Map();
+    ['eb', 'pw', 'ev'].forEach((k) => keep(k).forEach((r) => {
+      const id = r.uid || r.u; if (id) m.set(id, r);
+    }));
+    /* 兜底：若玩家数超过并集容量，至少保证各维度第一在榜 */
+    const out = [...m.values()];
+    out.sort((a, b) => (b.eb || 0) - (a.eb || 0) || (b.pw || 0) - (a.pw || 0));
+    return out.slice(0, lim);
   },
   async uploadRank(force) {
     if (!P || !Net.online) return;
@@ -441,10 +443,10 @@ const MAIN = {
        * 且游戏把无尽成绩也写进 leaderboard.json，而后台无尽榜读的是
        * endless.json → 后台无尽榜恒为空，只能靠手动重建。
        * 现在一条记录同时带两套键，并同步写 endless.json。 */
-      const row = { uid: P.uid, u: P.uid, name: P.name, n: P.name,
-        lv: E.curLevel(P), pw: E.power(P),
-        eb: P.endlessBest || 0, t: P.endlessBest || 0,
-        ev: P.evScore || 0, at: Date.now() };
+      /* 统一口径：改由 E.rankRow 产出（游戏端与后台共用同一份行结构）。
+       * 此前这里是就地手写 10 个键，后台"重建榜单"另写 4~5 个键，
+       * 两边字段集不一致 → 重建后游戏端读不到 eb/pw，全服层数显示 0。 */
+      const row = E.rankRow(P);
       /* 合并而非覆盖
        * BUG：此前是 `lb[i] = row` 整行替换，而 lb 来自本次读到的快照。
        *   玩家 A 读快照 → B 上传了新纪录 → A 写入 A 的旧快照
@@ -459,16 +461,24 @@ const MAIN = {
       const i = lb.findIndex((x) => (x.uid || x.u) === P.uid);
       if (i >= 0) lb[i] = this.mergeRow(lb[i], row); else lb.push(row);
       lb.sort((a, b) => (b.eb || 0) - (a.eb || 0) || b.pw - a.pw);
-      await Net.write('data/zb/leaderboard.json', { list: lb.slice(0, 50), updated: Date.now() });
+      /* 保留各榜 Top100 的并集（上限 200）。
+       * 此前只按 eb 排序截断 50 条，于是「战力很高但无尽层数低」的玩家
+       * 永远挤不进 leaderboard.json —— 游戏端切到战力榜时压根没有他，
+       * 名次算不出来，表33 战力榜奖励也领不到。 */
+      await Net.write('data/zb/leaderboard.json',
+        { list: MAIN.topUnion(lb), updated: Date.now() });
       /* 同步无尽榜：后台 DBP.endless 读的就是这个文件 */
       const er = await Net.read('data/zb/endless.json');
       const el = (er && er.data && er.data.list) ? er.data.list : [];
-      const erow = { uid: P.uid, name: P.name, t: P.endlessBest || 0, lv: E.curLevel(P), at: Date.now() };
+      /* 同上：无尽榜也用统一行结构，避免只写半套键 */
+      const erow = E.rankRow(P);
       /* 同上：无尽榜也按 uid 合并，层数取较大值 */
       const j = el.findIndex((x) => (x.uid || x.u) === P.uid);
       if (j >= 0) el[j] = this.mergeRow(el[j], erow); else el.push(erow);
       el.sort((a, b) => (b.t || 0) - (a.t || 0));
-      await Net.write('data/zb/endless.json', { list: el.slice(0, 50), updated: Date.now() });
+      /* 同上：无尽榜也按并集保留，避免只留单一维度的人 */
+      await Net.write('data/zb/endless.json',
+        { list: MAIN.topUnion(el), updated: Date.now() });
       /* 回写「我的排名」
        * BUG：UI 读 p.rankEndless / p.rankPower / p.rankEv，
        * 但全项目从未给这三个字段赋过值 → 排行榜面板永远显示「未上榜」，
@@ -880,6 +890,11 @@ function onBattleEnd(res, d) {
   const r = BT.run;
   const kills = d.kills || 0;
   const endless = r.endless;
+  /* 统一口径：p.stats.runs 此前在 newPlayer 里初始化后就再没人写过，
+   * 全项目零读取 —— 后台想看留存/活跃度拿不到"打了几局"这个最基本的数。
+   * 现在在唯一的结算入口累加，并由 E.stats 对外暴露。 */
+  P.stats = P.stats || {};
+  P.stats.runs = (P.stats.runs || 0) + 1;
   /* 资料奖励表 */
   let rw = { gold: 0, diamond: 0 };
   if (res === 'win') {
