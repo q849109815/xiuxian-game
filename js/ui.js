@@ -1163,6 +1163,9 @@ r_tavern(p, tab) {
         let lm = null; try { lm = E.giftCan(p, g); } catch (e) { lm = null; }
         if (lm && !lm.ok) return this.toast(lm.msg, 'err');
       }
+      /* 套利守卫：拦截「花 X 买回 > X 的同种货币且无限购」的商品。
+       * 否则玩家可无限循环刷取，几分钟内经济崩坏（见 E.isArbitrage 注释）。 */
+      try { if (E.isArbitrage && E.isArbitrage(g)) return this.toast('该商品暂不可购买', 'err'); } catch (e) {}
       if ((p[cur] || 0) < g.price) return this.toast('货币不足', 'err');
       p[cur] -= g.price;
       if (g.give) for (const k in g.give) {
