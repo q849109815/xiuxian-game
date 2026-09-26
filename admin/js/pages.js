@@ -1776,7 +1776,7 @@ const PAGES = {
       render() {
         return `<div class="card">
           <h3>广告位配置<span class="tag">每日次数 / 奖励</span></h3>
-          <div class="hint" style="margin:8px 0;color:#ff8fa4">⚠ 游戏端尚未接入本模块的云端配置（不在 CFG_FILES 列表内）—— 这里配的内容<b>不会在游戏中生效</b>，仅存档备查。</div> 
+          <div class="hint" style="margin:8px 0;color:#7ee08a">✅ 已接入游戏端（ad.json 在 CFG_FILES 内）——「每日上限」会覆盖玩家每日可看广告次数，玩家下次登录生效。</div>
           <div class="fr"><label class="wide">广告位</label><select id="ad_id">
             ${(EX.ads || [{ id: 'AD01', n: '复活' }, { id: 'AD02', n: '双倍收益' }, { id: 'AD03', n: '体力' }])
               .map((a) => `<option value="${U.esc(a.id)}">${U.esc(a.n || a.id)}</option>`).join('')}
