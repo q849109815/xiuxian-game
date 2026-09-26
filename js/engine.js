@@ -1698,6 +1698,96 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   },
 
   /* =========================================================
+   * 统一统计口径（游戏端与后台的唯一真源）
+   *
+   * 此前两端各算各的，同一名玩家在两边看到的数字对不上：
+   *   · 通关进度：游戏端按星级累加（E.totalStars），
+   *     后台按 Object.keys(p.cleared).length（关卡数）→ 完全两个数
+   *   · 皮肤数：游戏端 (p.skins||[]).length，历史存档被写成 {id:1} 对象时
+   *     直接抛 ".map is not a function" 让后台整页白屏
+   *   · 图鉴完成度 / 连续签到天数：游戏端有，后台压根不显示
+   *   · 榜单行：游戏端上传 10 个键，后台"重建榜单"只写 4~5 个键，
+   *     重建后游戏端读不到 eb / pw → 全服无尽层数显示 0（严重）
+   *
+   * 现在统一由 E.stats() / E.rankRow() 产出，两端一律调用这两个方法，
+   * 任何一端再加"自己算一遍"的分支都会重新引入口径分裂。
+   * ========================================================= */
+
+  /* p.skins 兼容三种形态：正常数组 / 历史脏档对象 {id:1} / 缺失 */
+  skinArr(p) {
+    const v = p && p.skins;
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') return Object.keys(v).filter((k) => v[k]);
+    return [];
+  },
+
+  stats(p) {
+    p = p || {};
+    const st = p.stats || {};
+    const cc = this.codexCount(p);
+    return {
+      power: this.power(p),
+      lv: this.curLevel(p),
+      endlessBest: Number(p.endlessBest || 0),
+      /* 通关进度：关卡数与星级是两个口径，同时给出，任一端不得自行换算 */
+      clearedCount: Object.keys(p.cleared || {}).length,
+      totalStars: this.totalStars(p),
+      skinCount: this.skinArr(p).length,
+      skinAll: (EX.skins || []).length,
+      codexGot: cc.got, codexAll: cc.all,
+      signDays: Number(p.signDays || 0),
+      signDay: Number(p.signDay || 0),
+      kills: Number(st.kills || 0),
+      bossKill: Number(st.bossKill || 0),
+      runs: Number(st.runs || 0),
+      titleCount: (Array.isArray(p.titles) ? p.titles : []).length,
+      evScore: Number(p.evScore || 0),
+      gunLv: Number(p.gunLv || 1),
+      gunAdv: Number(p.gunAdv || 0),
+      chipCount: Object.keys(p.chips || {}).length,
+      gold: Number(p.gold || 0),
+      diamond: Number(p.diamond || 0),
+      ach: Number(p.ach || 0),
+    };
+  },
+
+  /* 榜单行合并：只增字段取大值（历史最佳），展示字段取较新的一份。
+   * 两端共用：游戏端上传用它做"旧快照不回退别人成绩"，
+   * 后台重建榜单用它做"读不到存档的玩家不被除名"。 */
+  mergeRankRow(old, row) {
+    if (!old || typeof old !== 'object') return row;
+    const oAt = Number(old.at || 0), nAt = Number(row.at || 0);
+    const newer = nAt >= oAt ? row : old;
+    const mx = (a, b) => Math.max(Number(a || 0), Number(b || 0));
+    return {
+      uid: row.uid || old.uid, u: row.uid || old.uid,
+      name: newer.name != null ? newer.name : old.name,
+      n: newer.n != null ? newer.n : old.n,
+      lv: newer.lv != null ? newer.lv : old.lv,
+      pw: newer.pw != null ? newer.pw : old.pw,
+      eb: mx(old.eb, row.eb), t: mx(old.t, row.t),
+      ev: mx(old.ev, row.ev),
+      at: Math.max(oAt, nAt),
+    };
+  },
+
+  /* 榜单行：一次写全套键，兼容两端各自的读取习惯。
+   * 游戏端面板读 u / n / eb / pw / ev / lv，后台读 uid / name / t / pw。
+   * 只写半套键的后果是"重建榜单后另一端读到 undefined 显示为 0"。 */
+  rankRow(p) {
+    p = p || {};
+    const pwv = this.power(p), ebv = Number(p.endlessBest || 0), evv = Number(p.evScore || 0);
+    const lvv = this.curLevel(p), at = Date.now();
+    return {
+      uid: p.uid, u: p.uid,
+      name: p.name, n: p.name,
+      lv: lvv, pw: pwv,
+      eb: ebv, t: ebv,
+      ev: evv, at: at,
+    };
+  },
+
+  /* =========================================================
    * 武器词条（表30 武器词条池 AF01~AF12）
    * 进阶解锁词条槽，可消耗钻石洗练
    * ======================================================== */
