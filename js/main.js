@@ -891,18 +891,16 @@ function startBattle(mode, levelId) {
   battleMode = mode;
   let id = levelId;
   if (mode === 'endless') {
-    if (!E.endlessUnlocked(P)) { UI.toast('无尽模式需通关 3-3 解锁', 'err'); return; }
+    if (!E.endlessUnlocked(P)) { UI.toast('无尽模式需通关 ' + (EX.ENDLESS_UNLOCK || '10-10') + ' 解锁', 'err'); return; }
     id = 'endless';
   } else {
     id = levelId || E.curLevel(P);
     if (!E.levelUnlocked(P, id)) { UI.toast('该关卡尚未解锁', 'err'); return; }
   }
-  /* 每日挑战次数（截图51：「今日剩余次数：3/3」）
-   * 无尽模式不占用该次数 */
-  if (mode !== 'endless') {
-    const rn = E.useRun ? E.useRun(P) : { ok: true };
-    if (!rn.ok) { UI.toast(rn.msg, 'err'); return; }
-  }
+  /* 挑战次数：改为纯体力判断，不再有「每日 3 次」上限。
+   * 此前在体力之外还叠了一道每日次数闸门（E.useRun），玩家体力明明是满的，
+   * 打完 3 关就被「今日挑战次数已用完（每日 3 次）」拦住 —— 与关卡面板
+   * 标注的「体力 1」完全对不上。现在只由 spendStamina 决定能不能打。 */
   /* 体力检查 */
   const sp = E.spendStamina(P, id);
   if (!sp.ok) { UI.toast(sp.msg, 'err'); return; }
