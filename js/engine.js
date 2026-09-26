@@ -100,6 +100,10 @@ const E = {
       adUsed: {}, adDate: '',
       guide: {},               // 引导完成标记
       offlineAt: Date.now(),
+      /* 离线收益【结算基准】：只由 offlineClaim 推进，绝不被自动存档刷新。
+       * offlineAt 另作「最后活跃时间」供回档守卫使用（见 main.js syncSnap/save），
+       * 两个语义此前共用同一字段 → 离线收益被 30 秒定时存档清零。 */
+      offBase: Date.now(),
       mail: [], created: Date.now(), lastSeen: Date.now(),
     };
   },
@@ -190,6 +194,7 @@ const E = {
    * 且已领记录清空意味着【邮件、兑换码可以无限重复领取】（可刷奖励）。
    * 现在归入 ARRS。 */
   ARRS: ['bag','skins','titles','frames','mercs','chars','gunOwn','friends',
+         'friendReq','chat',
          'sendStTo','tempBuff','logs','mailGot','cdkGot'],
   OBJS: ['mat','chips','cleared','codex','equip','gems','build','talents',
          'tasks','stats','giftBuy','evShopBuy','achShopBuy','lgShopBuy',
@@ -655,7 +660,12 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const b = EX.buildings.find((x) => x.id === 'warehouse');
     const lv = p.build.warehouse || 1;
     const t = this.offlineTier(p);
-    const hrsRaw = (Date.now() - (p.offlineAt || Date.now())) / 3600000;
+    /* 基准必须用独立的 offBase，不能用 offlineAt：
+     * offlineAt 每次自动存档（30 秒定时）/切后台/关页面都会被刷成当前时间，
+     * 用它算离线时长 → 玩家打开游戏几十秒后收益就被清零，永远领不到。
+     * 旧档无 offBase 时回退 offlineAt；并钳到当前时刻（防改系统时间导致负数）。 */
+    const base = Math.min(Number(p.offBase) || Number(p.offlineAt) || Date.now(), Date.now());
+    const hrsRaw = (Date.now() - base) / 3600000;
     const hrs = Math.min(8, Math.max(0, hrsRaw));           /* 表34：上限 8 小时 */
     if (hrs < 0.05) return { hrs: 0, gold: 0, metal: 0, xp: 0, tier: t };
     const mul = lv;                                          /* 仓库等级放大金币 */
@@ -686,12 +696,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   offlineClaim(p) {
     const c = this.offlineCalc(p);
     if (c.gold <= 0 && c.metal <= 0 && c.xp <= 0) {
-      p.offlineAt = Date.now();
+      p.offBase = Date.now();
       return { ok: false, msg: '离线时间太短，暂无可领收益' };
     }
     p.gold = (p.gold || 0) + c.gold;
     p.mat.M01 = (p.mat.M01 || 0) + c.metal;
-    p.offlineAt = Date.now();
+    /* 推进【结算基准】，不动 offlineAt（后者是回档守卫用的最后活跃时间，
+     * 由 syncSnap/save 负责刷新，两者必须解耦） */
+    p.offBase = Date.now();
     /* BUG：方法名写错（addExp vs 实际的 addXp），且被 try/catch 静默吞掉
      * → 提示写着「经验 +544」，实际 p.xp 纹丝不动，离线经验从来没发过。
      * 现在用正确方法名，并去掉会掩盖问题的空 catch。 */
@@ -870,6 +882,57 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   friendBonus(p) {
     const n = Math.min(20, (p.friends || []).length);
     return n * 0.005;
+  },
+
+  /* =========================================================
+   * 社交（好友申请 / 聊天）内容供给
+   * BUG：p.friendReq 与 p.chat 全项目【只读不写】——
+   *   friendReq 只在 ui.js 三处读取（渲染申请列表、接受、移除），
+   *   chat 只有一处读取（渲染聊天）；没有任何代码往里写数据。
+   * 后果：好友面板 3 个页签里「申请」和「聊天」从上线起永远显示
+   *   「暂无申请」「暂无消息」，两个功能是死的；玩家点进去什么都没有，
+   *   只会以为游戏没做完。
+   * 单机架构下没有真实玩家对端（送体力那条注释已承认这点），
+   * 因此这里按"模拟在线玩家"供给内容，并受每日上限约束，避免刷屏。
+   * ========================================================= */
+  SOCIAL_REQ_MAX: 3,     /* 每日最多新增申请 */
+  SOCIAL_CHAT_MAX: 4,    /* 每日最多新增聊天 */
+  SOCIAL_REQ_KEEP: 6,    /* 待处理申请堆积上限 */
+  SOCIAL_CHAT_KEEP: 20,  /* 聊天记录保留条数 */
+  pumpSocial(p) {
+    if (!p) return;
+    const today = this.dailyKey();
+    if (p.socialDate !== today) { p.socialDate = today; p.socialReqN = 0; p.socialChatN = 0; }
+    p.friendReq = Array.isArray(p.friendReq) ? p.friendReq : [];
+    p.chat = Array.isArray(p.chat) ? p.chat : [];
+    /* 好友申请：待处理的没消化完就不再堆 */
+    if (p.friendReq.length < this.SOCIAL_REQ_KEEP && (p.socialReqN || 0) < this.SOCIAL_REQ_MAX) {
+      const n = Math.min(2, this.SOCIAL_REQ_MAX - (p.socialReqN || 0));
+      for (let i = 0; i < n; i++) {
+        p.friendReq.push({
+          id: 'fr' + Date.now().toString(36) + Math.floor(Math.random() * 900 + 100),
+          n: '僵友' + Math.floor(Math.random() * 9000 + 1000),
+          pw: Math.floor(Math.random() * 80000 + 3000),
+        });
+        p.socialReqN = (p.socialReqN || 0) + 1;
+      }
+    }
+    /* 聊天：只有已有好友才会发消息 */
+    const fs = (p.friends || []).filter((f) => f && f.n);
+    if (fs.length && (p.socialChatN || 0) < this.SOCIAL_CHAT_MAX) {
+      const LINES = ['今天打到第 %d 章了，太难了', '刚抽到传说芯片，爽', '组队打 BOSS 吗？',
+        '你战力涨得好快', '无尽模式我到 %d 层', '这关怎么过啊', '送你体力了，记得回',
+        '新皮肤真好看', '军团还招人吗', '晚上一起冲榜'];
+      const n = Math.min(2, this.SOCIAL_CHAT_MAX - (p.socialChatN || 0));
+      for (let i = 0; i < n; i++) {
+        const f = fs[Math.floor(Math.random() * fs.length)];
+        let t = LINES[Math.floor(Math.random() * LINES.length)];
+        t = t.replace('%d', String(Math.floor(Math.random() * 9 + 1)));
+        p.chat.push({ n: f.n, t: t, at: Date.now() });
+        p.socialChatN = (p.socialChatN || 0) + 1;
+      }
+      if (p.chat.length > this.SOCIAL_CHAT_KEEP) p.chat = p.chat.slice(-this.SOCIAL_CHAT_KEEP);
+    }
   },
 
   /* 军团属性加成
