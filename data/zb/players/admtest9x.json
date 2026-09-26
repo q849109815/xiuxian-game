@@ -1,1 +1,1 @@
-{"uid":"admtest9x","name":"ADM测试号","lv":5,"gold":1000,"diamond":10,"stamina":50,"ach":0,"mat":{},"cleared":{},"gunOwn":["W01"],"gun":"W01","created":1790431894720,"lastSeen":1790431894720,"_rev":1}
+{"uid":"admtest9x","name":"ADM测试号","lv":5,"gold":1000,"diamond":10,"stamina":50,"ach":0,"mat":{},"cleared":{},"gunOwn":[],"gun":"W01","ban":true,"banUntil":0,"banReason":"测试封禁","banType":"永久","banAt":1790431903698,"_rev":2}
