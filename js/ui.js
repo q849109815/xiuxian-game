@@ -474,21 +474,29 @@ r_tavern(p, tab) {
        *      玩家买/领了多套皮肤后永远换不回去，皮肤加成
        *      （攻击+5%、生命+8% 等）永远卡在最后一次自动穿戴的那套。 */
       const owned = p.skins || [];
+      /* BUG：11 款皮肤里 7 款付费（680~980 钻），但除了
+       *      sk_c01b（直购 SH08）/ sk_c03c（活动商店 ES09）/ sk_c04b（排行榜 RK08），
+       *      其余 4 款全项目没有任何购买入口 —— 玩家在外观页看到它们标着
+       *      「未拥有」，点上去只会提示"尚未拥有"，却根本没地方买。
+       *      现在给未拥有的付费皮肤补上「💎购买」按钮（走 E.buySkin）。 */
       return `<div class="card"><div class="card-t">外观
         <span class="sub">已拥有 ${owned.length} / ${(EX.skins || []).length}</span></div>
         <div class="lbl" style="text-align:left;margin-bottom:6px">点击已拥有的皮肤即可穿戴</div>
         <div class="grid3">${(EX.skins || []).map((sk) => {
           const own = sk.price === 0 || owned.indexOf(sk.id) >= 0;
           const on = (p.skin || '') === sk.id;
+          const price = Number(sk.price) || 0;
           const bo = sk.bonus || {};
           const bt = Object.keys(bo).map((k) => ({
             atk: '攻击', hp: '生命', crit: '暴击', spd: '移速', xp: '经验', armor: '护甲'
           }[k] || k) + '+' + Math.round(bo[k] * 100) + '%').join(' ');
           return `<div class="gcell ${on ? '' : 'sel'}" data-skb="${sk.id}"
-            style="${own ? '' : 'opacity:.45'}">${sk.img
+            style="${own ? '' : 'opacity:.7'}">${sk.img
             ? `<img src="${sk.img}">` : `<div class="gi">${sk.icon}</div>`}
             <div class="gn">${sk.n}${on ? '<span class="tag y" style="font-size:8px">穿戴中</span>' : ''}</div>
-            <div class="lbl" style="font-size:8px;line-height:1.3">${bt || '无加成'}${own ? '' : ' · 未拥有'}</div></div>`;
+            <div class="lbl" style="font-size:8px;line-height:1.3">${bt || '无加成'}${own ? '' : ' · 未拥有'}</div>
+            ${(!own && price > 0) ? `<button class="btn sm" data-skby="${sk.id}"
+              style="font-size:9px;padding:3px 6px;margin-top:3px">💎 ${price} 购买</button>` : ''}</div>`;
         }).join('') || '<div class="lbl">暂无外观</div>'}</div>
       </div>`;
     }
@@ -594,6 +602,13 @@ r_tavern(p, tab) {
       const r = E.forgeEquip(p, b.dataset.forge);
       this.toast(r.msg, r.ok ? 'ok' : 'err');
       if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('role', '宝石'); this.home(); }
+    }; });
+    /* 皮肤购买：4 款付费皮肤此前没有任何购买入口，这里补上 */
+    $$('#pnBody [data-skby]').forEach((el) => { el.onclick = (ev) => {
+      ev.stopPropagation();
+      const r = E.buySkin(p, el.dataset.skby);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.save(p); this.open('role', '皮肤'); this.home(); }
     }; });
     /* 皮肤穿戴：点击已拥有的皮肤切换（此前死图库，点了没反应） */
     $$('#pnBody [data-skb]').forEach((el) => { el.onclick = () => {
@@ -1255,6 +1270,17 @@ r_tavern(p, tab) {
         p.skins = p.skins || [];
         if (p.skins.indexOf(g.give.skin) < 0) p.skins.push(g.give.skin);
         this.toast('已获得皮肤：' + g.n, 'ok');
+      }
+      /* 武器解锁：商店「武器」页签三件商品（突击步枪/霰弹枪/狙击枪）
+       * BUG：此前只有材料 give，没有 gun 字段 → 花 8000 金买「狙击枪」，
+       *      到手 10 个稀有金属，gunOwn 纹丝不动，武器列表一把没多。
+       *      现在 g.gun 指向真实武器 ID，购买即解锁并装备。
+       *      后台热更若没写 g.gun，这里再按商品名兜底匹配一次。 */
+      if (g.gun) {
+        try { E.unlockGun(p, g.gun); } catch (e) {}
+      } else if (tab === '武器' && g.n) {
+        const byName = (EX.guns || []).find((x) => x.n === g.n || g.n.indexOf(x.n) >= 0);
+        if (byName) { try { E.unlockGun(p, byName.id); } catch (e) {} }
       }
       if (g.limit) { try { E.giftMark(p, g); } catch (e) {} }
       E.save(p); if (!g.monthly && !g.pass) this.toast('购买成功', 'ok');
