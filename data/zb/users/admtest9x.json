@@ -1,1 +1,1 @@
-{"id":"admtest9x","name":"ADM测试号","pw":"x","_rev":2,"banned":true,"banUntil":0,"banReason":"测试封禁","banAt":1790431906310,"banOp":"admin"}
+{"id":"admtest9x","name":"ADM测试号","pw":"x","_rev":3,"banned":false,"banUntil":0,"banReason":"测试封禁","banAt":1790431906310,"banOp":"admin","unbanAt":1790431916242,"unbanOp":"admin"}
