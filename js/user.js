@@ -169,7 +169,9 @@ const UA = {
     e = this.chkNick(nick); if (e) return { ok: false, msg: e };
     const id = this.acctId(name);
     const exist = await this.readUser(id);
-    if (exist) return { ok: false, msg: '该账号已被注册' };
+    /* 已注销的账号名允许重新注册：注销时为了阻止登录会保留账号记录，
+     * 若一律当作「已注册」，玩家销户后同名永远开不了新号（真 BUG） */
+    if (exist && !exist.destroyed) return { ok: false, msg: '该账号已被注册' };
     if (await this.nickTaken(nick, id)) {
       return { ok: false, msg: (window.EX && EX.tip && EX.tip('err.dupName')) || '该代号已被占用' };
     }
@@ -193,6 +195,54 @@ const UA = {
   },
 
   /* =========================================================
+   * 封禁状态统一判定（智能化）
+   * ---------------------------------------------------------
+   * 为什么要单独抽出来：封禁信息分散在三处且字段名不一致 ——
+   *   账号文件用 banned / 存档用 ban（main.js 登录兜底读它）
+   * 以前只判断布尔值，导致两个问题：
+   *   ① 玩家只看到「该账号已被封禁」，不知道封多久、什么时候解封，
+   *      被封 7 天和被封一辈子界面上完全一样，投诉量极高；
+   *   ② 时限封禁到期后 banned 仍是 true，账号文件永远不清理 →
+   *      7 天封禁实际等同于永久封禁（真正的 BUG）。
+   * 现在：到期视为已解封（并可回写清理），且提示里带剩余时间与解封时刻。
+   * ========================================================= */
+  banInfo(o) {
+    o = o || {};
+    const flag = !!(o.banned || o.ban);
+    const reason = o.banReason || o.banType || '';
+    if (!flag) return { on: false, until: 0, reason: '', left: '', text: '' };
+    /* 已注销 ≠ 封禁：注销时账号被标记为 banned 以免被登录，
+     * 但玩家看到「永久封禁」会以为被处罚，实际是自己销户了 */
+    if (o.destroyed) {
+      return { on: true, destroyed: true, until: 0, reason: '', left: '',
+        text: '该账号已注销，无法登录\n如需重新游玩请重新注册' };
+    }
+    const until = Number(o.banUntil) || 0;
+    const now = Date.now();
+    /* 有时限且已到期 → 视为解封 */
+    if (until && until <= now) {
+      return { on: false, until, reason, expired: true, left: '', text: '' };
+    }
+    let left = '';
+    if (until) {
+      const s = Math.floor((until - now) / 1000);
+      const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), mi = Math.floor((s % 3600) / 60);
+      left = d > 0 ? `剩余 ${d} 天 ${h} 小时`
+        : h > 0 ? `剩余 ${h} 小时 ${mi} 分`
+          : `剩余 ${Math.max(mi, 1)} 分钟`;
+    }
+    const fd = (t) => {
+      const x = new Date(t), p2 = (n) => String(n).padStart(2, '0');
+      return `${x.getFullYear()}-${p2(x.getMonth() + 1)}-${p2(x.getDate())} ${p2(x.getHours())}:${p2(x.getMinutes())}`;
+    };
+    const why = reason ? `\n理由：${reason}` : '';
+    const text = until
+      ? `🚫 该账号已被封禁\n${left} · ${fd(until)} 自动解封${why}`
+      : `🚫 该账号已被永久封禁${why}`;
+    return { on: true, until, reason, left, text, at: fd(until) || '', perm: !until };
+  },
+
+  /* =========================================================
    * 登录
    * ========================================================= */
   async login(name, pwd) {
@@ -203,7 +253,14 @@ const UA = {
     const u = await this.readUser(id);
 
     if (u) {
-      if (u.banned) return { ok: false, msg: '该账号已被封禁' };
+      /* 封禁判定走统一函数：带剩余时长提示 + 到期自动解封 */
+      const bi = this.banInfo(u);
+      if (bi.on) return { ok: false, msg: bi.text || '该账号已被封禁' };
+      if (bi.expired) {
+        /* 时限已过：清理账号文件上的封禁标记，避免下次仍被拦（原逻辑会永久封死） */
+        u.banned = false; u.unbanAt = Date.now(); u.unbanOp = 'auto-expire';
+        try { await this.writeUser(u, '封禁到期自动解封'); } catch (e) {}
+      }
       if (u.hash && u.hash !== h) return { ok: false, msg: '密码错误' };
       /* 老账号无 hash 字段 → 首次登录补写 */
       if (!u.hash) { u.hash = h; await this.writeUser(u, '补写密码'); }
@@ -271,6 +328,45 @@ const UA = {
     this.dropCache(id);
     ['zb_name', 'zb_gender', 'zb_uid', 'zb_auto'].forEach((k) => localStorage.removeItem(k));
     return { ok: true, msg: '账号已注销，存档已删除' };
+  },
+
+  /* ---------------------------------------------------------
+   * 永久删除：账号 / 存档 / 索引 / 榜单条目 全部物理删除
+   * 与 destroy（注销）的区别：
+   *   注销 = 只停用并打标记，账号记录仍保留，后台「显示已注销」里还能找到；
+   *   永久删除 = 连账号文件一起删，删除后所有界面都不再显示，不可恢复。
+   * 榜单删除是「读-过滤-写」的尽力而为操作：失败不影响账号删除本身，
+   * 后台「永久删除」也会再清一次榜单，两端互补。
+   * --------------------------------------------------------- */
+  async purge(name, pwd) {
+    const lg = await this.login(name, pwd);
+    if (!lg.ok) return lg;
+    const id = this.acctId(name);
+    let acct = false, save = false, lb = 0;
+    try { acct = !!(await Net.del(this.path(id))); } catch (e) { acct = false; }
+    try { save = !!(await Net.del('data/zb/players/' + id + '.json')); } catch (e) { save = false; }
+    this.idxDel(id);
+    this.dropCache(id);
+    /* 三个榜共用 leaderboard.json，无尽榜另有 endless.json */
+    for (const f of ['data/zb/leaderboard.json', 'data/zb/endless.json']) {
+      try {
+        const r = await Net.read(f);
+        const d = (r && r.data && Array.isArray(r.data.list)) ? r.data : null;
+        if (!d) continue;
+        const before = d.list.length;
+        d.list = d.list.filter((x) => (x.uid || x.u) !== id);
+        if (d.list.length !== before) {
+          d.updated = Date.now();
+          await Net.write(f, d, '永久删除移除榜单 ' + id);
+          lb += before - d.list.length;
+        }
+      } catch (e) {}
+    }
+    ['zb_name', 'zb_gender', 'zb_uid', 'zb_auto', 'zb_nick'].forEach((k) => localStorage.removeItem(k));
+    return {
+      ok: true, acct, save, lb,
+      msg: '账号已永久删除（账号' + (acct ? '✓' : '✗') + ' 存档' + (save ? '✓' : '✗') + ' 榜单' + lb + '条）',
+    };
   },
 };
 
