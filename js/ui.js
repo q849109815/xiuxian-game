@@ -1029,7 +1029,7 @@ r_tavern(p, tab) {
         const n = (p.mat || {})[it.id] || 0;
         return `<div class="gcell ${n ? '' : 'sel'}">${it.img
           ? `<img src="${it.img}">` : `<div class="gi">${it.icon}</div>`}
-          <div class="gn">${it.n}</div>${n ? `<span class="gq">${n > 9999 ? (n / 1000).toFixed(1) + 'k' : n}</span>` : ''}</div>`;
+          <div class="gn">${it.n}</div>${n ? `<span class="gq">${n > 9999 ? (n / 1000).toFixed(1) + 'k' : n}</span>` : ''}${this.tempTag(p, it.id)}</div>`;
       }).join('')}</div></div>
       <div class="card"><div class="card-t">分解 <span class="sub">碎片/芯片 → 金币</span></div>
         ${['P01', 'P02'].map((id) => {
@@ -1470,17 +1470,65 @@ r_tavern(p, tab) {
   },
 
   /* ---------- 邮件（截图：列表 + 绿色一键领取） ---------- */
+  /* 限时道具角标：运营补发的道具若带有效期，这里显示剩余时间，
+   * 到期由 MAIN.tickTempItems 回收。此前完全没有提示，玩家只会觉得物品凭空消失。 */
+  tempTag(p, id) {
+    const e = (window.MAIN && MAIN.tempExpOf) ? MAIN.tempExpOf(p, id) : 0;
+    if (!e) return '';
+    const ms = e - Date.now();
+    if (ms <= 0) return '';
+    const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5);
+    const t = d > 0 ? '剩' + d + '天' : (h > 0 ? '剩' + h + '时' : '即将到期');
+    return `<span class="gq" style="color:#ffb84d;background:rgba(255,184,77,.18)">⏳${t}</span>`;
+  },
+  /* 奖励字典 → 中文文本（用于 toast），如 {gold:100,M01:5} → 「金币×100 合金×5」 */
+  rwText(rw) {
+    const ks = Object.keys(rw || {}).filter((k) => (rw[k] || 0) > 0);
+    if (!ks.length) return '无';
+    return ks.map((k) => E.itemName(k) + '×' + E.fmt(rw[k])).join(' ');
+  },
+  /* 邮件奖励文案
+   * BUG：后台「单发邮件」把附件写在 rw（如 {gold:100}、{M01:5}），
+   * 而面板此前只读 m.gold / m.dia —— 这两个字段后台从不写入，
+   * 于是每一封邮件都显示「🪙0 💎0」，玩家根本看不出里面有什么，
+   * 只能靠盲点领取（实际领取时走 E.grant(m.rw) 是能到账的）。
+   * 现在统一按 rw 渲染物品名，并兼容旧档的 gold/dia 字段。 */
+  mailRwText(m) {
+    const rw = Object.assign({}, m.rw || {});
+    if (m.gold) rw.gold = (rw.gold || 0) + m.gold;
+    if (m.dia) rw.diamond = (rw.diamond || 0) + m.dia;
+    const ks = Object.keys(rw).filter((k) => (rw[k] || 0) > 0);
+    if (!ks.length) return '<span class="sub">无附件</span>';
+    return ks.map((k) => `<span class="tag y">${this.esc(E.itemName(k))}×${E.fmt(rw[k])}</span>`).join(' ');
+  },
+  /* 邮件是否可领（未到生效时间 / 已过期 都不可领）
+   * BUG：后台支持设「生效时间」和「有效期」，但面板此前完全不看这两个字段，
+   * 过期邮件照样显示「领取」按钮、照样能领走附件里的 9999 金币。 */
+  mailActive(m) {
+    const now = Date.now();
+    if (m.startAt && m.startAt > now) return false;
+    if (m.expireAt && m.expireAt < now) return false;
+    return true;
+  },
   r_mail(p, tab) {
-    const ms = p.mail || [];
-    const un = ms.filter((m) => !m.got).length;
+    /* 排序：两个写入点（后台单发、运营指令）都是 unshift，新邮件在前。
+     * 而面板此前又做了一次 reverse —— 于是最新发的邮件被排到最后，
+     * 玩家打开邮件箱第一眼看到的是最旧的一封。这里去掉多余的反转。 */
+    const ms = (p.mail || []).slice();
+    const un = ms.filter((m) => !m.got && this.mailActive(m)).length;
     return `<div class="card"><div class="card-t">邮件 <span class="sub">${un} 封未读</span></div>
-      ${ms.length ? ms.slice().reverse().map((m) => `<div class="zrow">
+      ${ms.length ? ms.map((m) => {
+        const act = this.mailActive(m);
+        const exp = m.expireAt && m.expireAt < Date.now();
+        const wait = m.startAt && m.startAt > Date.now();
+        return `<div class="zrow">
         ${this.zAvatarHTML(m.t)}
         <div class="zi"><b>${this.esc(m.t || '邮件')}</b><span>${this.esc(m.b || '')}</span>
-          <span>🪙${m.gold || 0} 💎${m.dia || 0}</span></div>
+          <span>${this.mailRwText(m)}${exp ? '<span class="st off">已过期</span>' : wait ? '<span class="st off">待生效</span>' : ''}</span></div>
         ${m.got ? '<span class="st off">已领</span>'
-          : `<button class="btn sm g" data-ml="${m.id || ''}">领取</button><i class="gdot"></i>`}
-      </div>`).join('') : '<div class="lbl">暂无邮件</div>'}
+          : (act ? `<button class="btn sm g" data-ml="${m.id || ''}">领取</button><i class="gdot"></i>`
+                 : '<span class="st off">不可领</span>')}
+      </div>`; }).join('') : '<div class="lbl">暂无邮件</div>'}
       <button class="btn g" id="mailAll" style="width:100%;margin-top:8px">一键领取</button>
     </div>`;
   },
@@ -1560,6 +1608,10 @@ r_tavern(p, tab) {
         const m = (p.mail || []).find((x) => String(x.id || '') === mid) || null;
         if (!m) { this.toast('邮件不存在', 'err'); return; }
         if (m.got) { this.toast('已领取过', 'err'); return; }
+        if (!this.mailActive(m)) {
+          this.toast(m.expireAt && m.expireAt < Date.now() ? '该邮件已过期' : '该邮件尚未生效', 'err');
+          return;
+        }
         m.got = true;
         const g = m.gold || 0, d = m.dia || 0;
         p.gold = (p.gold || 0) + g;
@@ -1567,24 +1619,30 @@ r_tavern(p, tab) {
         if (m.rw && Object.keys(m.rw).length) E.grant(p, m.rw);
         E.save(p);
         if (window.SND) SND.play('get');
-        this.toast('领取成功：🪙' + E.fmt(g) + ' 💎' + d, 'ok');
+        this.toast('领取成功：' + this.rwText(Object.assign({}, m.rw || {}, g ? { gold: g } : {}, d ? { diamond: d } : {})), 'ok');
         this.open('mail'); this.home();
       };
     });
     const ab = $('#mailAll');
     if (ab) ab.onclick = () => {
-      const ms = (p.mail || []).filter((m) => !m.got);
+      /* 一键领取此前也不看生效/过期时间，过期邮件照样能领走附件。 */
+      const ms = (p.mail || []).filter((m) => !m.got && this.mailActive(m));
       if (!ms.length) return this.toast('没有可领取的邮件', 'err');
-      let g = 0, d = 0;
+      let g = 0, d = 0; const all = {};
       ms.forEach((m) => {
         m.got = true; g += m.gold || 0; d += m.dia || 0;
         /* 后端/后台邮件常把奖励放在 rw（物品）而非 gold/dia，
          * 此前一键领取只算 gold/dia，rw 里的材料、芯片、皮肤全部漏发。 */
-        if (m.rw && Object.keys(m.rw).length) E.grant(p, m.rw);
+        if (m.rw && Object.keys(m.rw).length) {
+          E.grant(p, m.rw);
+          Object.keys(m.rw).forEach((k) => { all[k] = (all[k] || 0) + (m.rw[k] || 0); });
+        }
       });
+      if (g) all.gold = (all.gold || 0) + g;
+      if (d) all.diamond = (all.diamond || 0) + d;
       p.gold += g; p.diamond += d; E.save(p);
       if (window.SND) SND.play('get');
-      this.toast('领取成功：🪙' + E.fmt(g) + ' 💎' + E.fmt(d), 'ok');
+      this.toast('领取成功：' + this.rwText(all), 'ok');
       this.open('mail'); this.home();
     };
   },
