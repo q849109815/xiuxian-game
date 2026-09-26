@@ -31,7 +31,14 @@ const MAIN = {
     await CFG.load();
     await Net.init().catch(() => {});
     const n = document.getElementById('lgNet');
-    if (n) n.textContent = Net.online ? '● 已连接' : '○ 离线（可单机游玩）';
+    /* 凭据失效必须显式提示：此时读写存档全部失败，
+     * 玩家会读到本机旧缓存（表现为"自己回档"）却毫无察觉。
+     * 实测事故：线上 net.js 令牌被截断为 32 字符 → 全站 401 → 全站回档。 */
+    if (n) {
+      n.textContent = Net.authFail ? '⚠ 存档服务异常（进度仅存本机）'
+        : (Net.online ? '● 已连接' : '○ 离线（可单机游玩）');
+      if (Net.authFail) n.style.color = '#ff6b6b';
+    }
     /* 需求：每次打开都必须输入账号密码。
      * 清掉上一次留下的登录态（zb_uid），否则残留 UID 会让 MAIN.login 的
      * 「无账号不得进入」守卫失效 —— 拿着旧 UID 一样能直接读存档。
@@ -69,11 +76,34 @@ const MAIN = {
     if (rr && rr.data) p = rr.data;
     /* 关页面快照兜底：上次直接关标签页 / 手机切走时，异步上传来不及完成，
      * 当时已在 pagehide 里同步存了一份到 localStorage。这里如果本地比云端新
-     * （云端那次写入根本没成功），就用本地这份，否则整局进度白丢。 */
+     * （云端那次写入根本没成功），就用本地这份，否则整局进度白丢。
+     *
+     * ⚠️ 严重回档 BUG 修复：原判据只看 offlineAt 谁大，而 syncSnap() 在
+     *   Net.write 【之前】无条件把 offlineAt 刷成 Date.now()，且不关心写入
+     *   是否成功。于是产生「旧内容 + 最新时间戳」的快照：
+     *     设备A 页面停在进度 X（金币1万），自动存档每 30 秒跑一次，
+     *       syncSnap 持续刷新快照时间戳，而 Net.write 被 stale 守卫拒绝；
+     *     玩家在设备B 玩到进度 Y（金币5万）并成功写入云端；
+     *     回到设备A 刷新 → 快照时间戳比云端新 → 采纳 X → 金币 5万变1万。
+     *   实测确认（见 t_rollback）：多设备场景下必然回档，玩家什么都没做。
+     *
+     * 正确判据：先比【派生基准】_baseAt（这份数据是从云端哪一版来的）。
+     *   快照的基准早于云端当前时间 → 说明云端已被别的设备推进，
+     *   这份快照是【基于旧版】继续玩的，绝不能覆盖云端新档。
+     *   只有在基准不低于云端时，才继续比较内容时间决定用谁。 */
     const snap = this.loadSnap(UID);
-    if (snap && (!p || (Number(snap.offlineAt) || 0) > (Number(p.offlineAt) || 0))) {
-      p = snap;
-      try { UI.toast('已恢复上次未保存的进度', 'ok'); } catch (e) {}
+    if (snap) {
+      const sBase = Number(snap._baseAt) || Number(snap.offlineAt) || 0;
+      const cAt = Number(p && p.offlineAt) || 0;
+      const staleBase = cAt > 0 && sBase > 0 && sBase < cAt;
+      if (staleBase) {
+        /* 云端已被别处推进，本地这份是旧版派生 → 丢弃，保住云端新进度 */
+        try { this.dropSnap(UID); } catch (e) {}
+        try { console.log('[存档] 本地快照基于旧版，已丢弃，采用云端新进度'); } catch (e) {}
+      } else if (!p || (Number(snap.offlineAt) || 0) > cAt) {
+        p = snap;
+        try { UI.toast('已恢复上次未保存的进度', 'ok'); } catch (e) {}
+      }
     }
     if (!p) {
       p = E.newPlayer(UID, name, gender);
@@ -97,6 +127,11 @@ const MAIN = {
     this.savePath = path;
     this.migrate(p);
     UI.home(); UI.show('home');
+    /* 凭据失效：读到的多半是本机旧缓存，必须让玩家知道"这不是回档，是读不到云端"，
+     * 否则他会以为进度丢了、反复重玩，越玩越乱。 */
+    if (Net.authFail) {
+      try { UI.toast('⚠️ 存档服务凭据失效，当前显示的是本机存档，进度无法上传', 'err'); } catch (e) {}
+    }
     /* 拉取后台配置（活动 / 成就商店 / 活动商店 / 排行奖励 / 数值配置）。
      * 与邮件领取并行：claimMail 内部有 TMO 超时（邮件 5s + 维护 4s），
      * 若排在它后面，配置要等近 10 秒才到位，界面会先渲染成旧数据。 */
@@ -374,6 +409,11 @@ const MAIN = {
   /* 关页面时的同步快照：localStorage 写入是同步的，一定赶得及。
    * 异步的 Net.write 在页面卸载时会被浏览器掐断，进度就丢了。 */
   snapKey(uid) { return 'zb_snap_' + (uid || UID || ''); },
+  /* 丢弃本地快照：云端已被别处推进、或玩家主动重置时使用。
+   * 不删的话下次登录它可能再次"以新时间戳赢过云端"，造成反复回档。 */
+  dropSnap(uid) {
+    try { localStorage.removeItem(this.snapKey(uid)); } catch (e) {}
+  },
   syncSnap() {
     /* 重置存档期间禁止写快照：否则清理之后、reload 之前的窗口里
      * 任何一次 save()（含其内部调用）都会把刚删掉的进度重新写回本地快照，
@@ -405,12 +445,15 @@ const MAIN = {
       P._baseAt = P.offlineAt;      /* 已成功落云端，基准前移 */
     } else if (ok === 'stale') {
       /* 云端已有更新的进度（别的设备 / 读到了旧分支的档）。
-       * 拒绝覆盖，保留本地快照，避免把新进度抹掉。
+       * 拒绝覆盖，并且【必须丢弃本地快照】—— 快照里是落后的旧内容，
+       * 而 syncSnap() 刚给它刷了最新时间戳，留着它下次登录就会
+       * 「以新时间戳赢过云端」把新进度整份顶掉 = 回档（已实测确认）。
        * save() 每 30 秒跑一次，提示必须节流，否则会一直弹。 */
+      this.dropSnap(P.uid);
       const now = Date.now();
       if (now - (this._staleAt || 0) > 300000) {
         this._staleAt = now;
-        try { UI.toast('⚠️ 云端存在更新的进度，已保护未覆盖', 'err'); } catch (e) {}
+        try { UI.toast('⚠️ 检测到其他设备有更新的进度，已保留最新的一份', 'err'); } catch (e) {}
       }
     }
     this.uploadRank();
