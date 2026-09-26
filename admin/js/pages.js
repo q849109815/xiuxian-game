@@ -717,6 +717,18 @@ const PAGES = {
           this.toast('已删除', 'ok');
           this.acts.listRw.call(this);
         },
+        /* 结算批次 key：同一周期内重复点「结算发奖」要能识别出来。
+         * 「活动结束」用固定 key（整期只发一次），每日/每周按 UTC+8 自然周期切分。 */
+        settleKey(b, list) {
+          const st = (list[0] && list[0].settle) || '活动结束';
+          if (st !== '每日' && st !== '每周') return b + '|' + st;
+          const dt = new Date(Date.now() + 8 * 36e5);
+          const y = dt.getUTCFullYear(), m = dt.getUTCMonth() + 1, dd = dt.getUTCDate();
+          if (st === '每日') return b + '|每日|' + y + '-' + m + '-' + dd;
+          const jan1 = Date.UTC(y, 0, 1);
+          const wk = Math.floor((Date.UTC(y, m - 1, dd) - jan1) / 604800000) + 1;
+          return b + '|每周|' + y + '-W' + wk;
+        },
         async settle() {
           const b = this.val('#st_b'), topN = this.num('#st_top');
           const rw = await DB.reload(DBP.rankrw);
@@ -725,23 +737,43 @@ const PAGES = {
           const d = await DB.reload(board);
           const rows = ((d && d.list) || []).slice(0, topN);
           if (!rows.length) { this.toast('榜单为空，先重建', 'err'); return; }
-          let cnt = 0;
+          /* 结算去重 BUG 修复：此前没有任何去重记录 ——
+           * 运营点两次「结算发奖」（或两人各点一次），同一批玩家会收到双倍奖励；
+           * pushOp 每次生成新的 op.id，游戏端靠 opsDone 的去重也拦不住。
+           * 现在按「结算周期 + 玩家 + 奖励物品」记账，本期已发过的直接跳过。
+           * 之后新增的奖励配置（物品不同）仍会正常发放，不受影响。 */
+          const bk = this.settleKey(b, list);
+          const log = Array.isArray(rw.settledLog) ? rw.settledLog : [];
+          const has = {};
+          log.forEach((x) => { if (x && x.bk === bk) has[x.uid + '|' + x.item] = 1; });
+          let cnt = 0, skip = 0;
+          const add = [];
           for (let i = 0; i < rows.length; i++) {
             const rank = i + 1;
             const hits = list.filter((x) => x.board === b
               && rank >= Number(x.a || x.from || 1) && rank <= Number(x.b || x.to || 1));
             for (const h of hits) {
+              const k = rows[i].uid + '|' + h.item;
+              if (has[k]) { skip++; continue; }
               await this.pushOp(rows[i].uid, {
                 t: 'grant', item: h.item, n: h.n,
                 mail: { t: '排行榜奖励', b: '你在「' + b + '」榜第 ' + rank + ' 名' },
               });
+              add.push({ bk: bk, uid: rows[i].uid, item: h.item, at: Date.now() });
               cnt++;
             }
           }
-          AUDIT.log('排名发奖', b, '前' + topN + '名，共' + cnt + '条');
+          if (cnt) {
+            rw.settledLog = log.concat(add).slice(-2000);
+            await DB.set(DBP.rankrw, rw, '排名发奖记录');
+          }
+          AUDIT.log('排名发奖', b, '前' + topN + '名，新发' + cnt + '条，跳过已发' + skip + '条');
           const box = D('#stBox');
-          if (box) box.innerHTML = '<div class="pill">已下发 ' + cnt + ' 条奖励指令</div>';
-          this.toast('已下发 ' + cnt + ' 条', 'ok');
+          if (box) {
+            box.innerHTML = '<div class="pill">本期新发 ' + cnt + ' 条'
+              + (skip ? ' · 已发过跳过 ' + skip + ' 条' : '') + '</div>';
+          }
+          this.toast(cnt ? '已下发 ' + cnt + ' 条' : '本期已全部发放过，未重复下发', cnt ? 'ok' : 'warn');
         },
       },
       bind() { if (APP.T.rank === 'rw') this.acts.listRw.call(this); },
