@@ -46,7 +46,27 @@ const E = {
   },
   qi(q) { return EX.qualities.indexOf(q); },
   item(id) { return EX.items.find((x) => x.id === id); },
-  itemName(id) { const t = this.item(id); return t ? t.n : (id === 'gold' ? '金币' : id === 'diamond' ? '钻石' : id); },
+  /* 物品名。
+   * BUG（奖励文本看不懂）：物品表里只有 R01/R02 与 M/P/C/I 系列，
+   *   而 grant / 任务奖励 / 活动奖励里的键还有 gold、diamond、ach、evToken、
+   *   stamina、xp、skin、title、frame、gem、gun、char、chipN/E/L 等。
+   *   这些键走 fallback 直接【原样返回英文键名】——
+   *   于是成就任务面板一直显示「ach+100」、活动面板显示「evToken+60」，
+   *   玩家根本不知道拿到的是什么。
+   *   现在补上完整别名映射（成就点读 EX.ACH_POINT，运营改名会自动跟随）。 */
+  itemName(id) {
+    const t = this.item(id);
+    if (t) return t.n;
+    const ALIAS = {
+      gold: '金币', diamond: '钻石', ach: EX.ACH_POINT || '成就点',
+      evToken: '活动代币', ev: '活动代币', evScore: '活动积分',
+      stamina: '体力', xp: '经验', tp: '天赋点',
+      skin: '皮肤', title: '称号', frame: '头像框', gem: '宝石',
+      gun: '武器', char: '角色', chip: '芯片',
+      chipN: '普通芯片', chipE: '精英芯片', chipL: '传说芯片', chipRed: '传说芯片',
+    };
+    return ALIAS[id] || id;
+  },
 
   /* =================================================
    * 新玩家
@@ -1723,6 +1743,15 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   eventShopBuy(p, id) {
     const it = (EX.eventShop || []).find((x) => x.id === id);
     if (!it) return { ok: false, msg: '商品不存在' };
+    /* 体力类商品满体力拦截（ES11「体力x30」60 代币）
+     * BUG：grant() 里体力走 addStamina，被 STAMINA_MAX(100) 钳制。
+     *   实测体力 100/100 时兑换 ES11：代币 999→939 照扣，
+     *   体力 100→100 一点没加，还弹「兑换成功：体力x30」。
+     *   玩家花 60 代币换来一句假成功 —— 与「战斗外用急救包」同一类白扣。
+     *   修法：兑换前先判满，满了直接拒绝并说明原因（代币不扣）。 */
+    if (it.give && it.give.stamina && this.staminaFull(p)) {
+      return { ok: false, msg: '体力已满（' + EX.STAMINA_MAX + '），无需兑换' };
+    }
     const b = p.evShopBuy || (p.evShopBuy = {});
     const k = 'es_' + id;
     if (!b[k]) b[k] = { n: 0, t: Date.now() };
@@ -2048,6 +2077,25 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     p.gold = (p.gold || 0) + rate;
     return { ok: true, msg: '分解' + q + '色芯片 → 金币 +' + this.fmt(rate), gold: rate };
   },
+  /* 分解预演：一键分解前先把「将要分解什么、得多少金币」算出来给玩家看。
+   * 为什么要加这个：dismantleAll 遍历 DISMANTLE_RATE = {P01,P02,C01,C02,C03}，
+   * 其中 C01/C02/C03 是【普通/精英/传说芯片】，并不是「碎片」。
+   * 面板的芯片区显示的是 p.bag 的另一套存储（实测 chipCountByQ 为 0、按钮 disabled），
+   * 于是玩家看到「芯片 ×0」，一点「一键分解全部碎片」却把 p.mat 里的
+   * 传说芯片（C03，1200 金币/个）全部清空换成金币，且没有任何确认 —— 不可逆。 */
+  dismantlePreview(p) {
+    const lines = [];
+    let gold = 0, cnt = 0;
+    Object.keys(this.DISMANTLE_RATE).forEach((id) => {
+      const have = (p.mat || {})[id] || 0;
+      if (have > 0) {
+        const g = this.DISMANTLE_RATE[id] * have;
+        gold += g; cnt += have;
+        lines.push('· ' + this.itemName(id) + ' ×' + have + ' → ' + this.fmt(g) + ' 金币');
+      }
+    });
+    return { cnt: cnt, gold: gold, lines: lines };
+  },
   dismantleAll(p) {
     let gold = 0, cnt = 0;
     Object.keys(this.DISMANTLE_RATE).forEach((id) => {
@@ -2371,20 +2419,19 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 广告（资料广告位：每日上限）
    * ================================================ */
   /* =========================================================
-   * 每日关卡挑战次数（截图51：「今日剩余次数：3/3」）
-   * 此前结算页把「广告剩余次数(AD02=10次)」当成挑战次数显示，
-   * 出现「10/3」这种分子大于分母的错误数据
+   * 挑战次数：纯体力制，不再有「每日 3 次」上限
+   * 此前体力之外还叠了一道每日次数闸门，与关卡面板标注的「体力 1」
+   * 自相矛盾：玩家体力满格却被「今日挑战次数已用完（每日 3 次）」拦住。
+   * 现在能否挑战只由体力决定（普通 1 / BOSS 3 / 无尽 2）。
    * ========================================================= */
-  RUN_DAILY: 3,
+  RUN_DAILY: 0, /* 0 = 不限每日次数，保留字段以兼容旧存档与后台读取 */
   runLeft(p) {
-    if (p.runDate !== this.dailyKey()) { p.runDate = this.dailyKey(); p.runUsed = 0; }
-    return Math.max(0, this.RUN_DAILY - (p.runUsed || 0));
+    this.tickStamina(p);
+    return Math.max(0, Math.floor(p.stamina || 0));
   },
-  useRun(p) {
-    if (this.runLeft(p) <= 0) return { ok: false, msg: '今日挑战次数已用完（每日 ' + this.RUN_DAILY + ' 次）' };
-    p.runUsed = (p.runUsed || 0) + 1;
-    return { ok: true, msg: 'ok' };
-  },
+  /* 体力已在 spendStamina 中扣除，这里不再重复计数；
+   * 保留方法以兼容可能的历史调用点。 */
+  useRun(p) { return { ok: true, msg: 'ok' }; },
 
   adLeft(p, adId) {
     this.resetTasks(p);
