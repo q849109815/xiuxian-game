@@ -1288,7 +1288,36 @@ const PAGES = {
           });
           const extra = Object.keys(agg).filter((k) => !defs.find((d) => d.id === k))
             .map((k) => [U.esc(agg[k].n), '<span class="bd n">自定义</span>', String(agg[k].c), U.dt(agg[k].last)].map((x) => x).slice(0, 4));
-          box.innerHTML = `<div class="hint">本地缓冲 ${local.length} 条（最多 500），事件定义 ${defs.length} 个</div>` +
+          /* 全服埋点：来自玩家存档里上报的 _bi
+           * 数据链路 BUG 修复：此前埋点只存在玩家自己的 localStorage，
+           * 后台这里读的是运营自己电脑的缓冲 —— 全服玩家的埋点从没上报过，
+           * 运营看到的永远是 0 条。现在游戏端把最近 30 条附在存档上，
+           * 后台按 uid|事件|时间 去重后汇总，才是真实的全服数据。 */
+          const plist = this.PLIST || [];
+          const g = {}, seen = {}; let total = 0;
+          plist.forEach((p) => {
+            (p._bi || []).forEach((x) => {
+              const k = (p.uid || '?') + '|' + (x.ev || '') + '|' + (x.t || 0);
+              if (seen[k]) return; seen[k] = 1;
+              const e = x.ev || '?';
+              if (!g[e]) g[e] = { n: x.n || e, c: 0, last: 0, u: {} };
+              g[e].c++; g[e].u[p.uid || '?'] = 1;
+              g[e].last = Math.max(g[e].last, x.t || 0);
+              total++;
+            });
+          });
+          const grows = defs.map((d) => {
+            const a = g[d.id] || { c: 0, last: 0, u: {} };
+            return [U.esc(d.n || d.id), '<span class="bd ' + (d.pr === 'P0' ? 'r' : d.pr === 'P1' ? 'y' : 'n') + '">' + (d.pr || 'P2') + '</span>',
+              String(a.c), String(Object.keys(a.u || {}).length), a.last ? U.dt(a.last) : '—'];
+          }).concat(Object.keys(g).filter((k) => !defs.find((d) => d.id === k))
+            .map((k) => [U.esc(g[k].n), '<span class="bd n">自定义</span>', String(g[k].c), String(Object.keys(g[k].u).length), U.dt(g[k].last)]));
+          const withBi = plist.filter((p) => (p._bi || []).length).length;
+          box.innerHTML = `<div class="hint">本地缓冲 ${local.length} 条（最多 500）· 事件定义 ${defs.length} 个
+            · 全服上报 ${total} 条（${withBi}/${plist.length} 名玩家存档中带有埋点）</div>` +
+            '<h3 style="font-size:12px;margin:10px 0 6px">全服埋点（玩家存档上报，去重后）</h3>' +
+            this.table(['事件', '优先级', '次数', '覆盖人数', '最近'], grows) +
+            '<h3 style="font-size:12px;margin:14px 0 6px">本机本地缓冲（仅运营自己打开游戏产生）</h3>' +
             this.table(['事件', '优先级', '次数', '最近'], rows.concat(extra));
         },
         async biUpload() {
@@ -1378,21 +1407,33 @@ const PAGES = {
             </div>
             <pre class="json" style="margin-top:10px">${U.esc(JSON.stringify(H, null, 2))}</pre>`;
         } else if (t === 'ver') {
+          /* 排期表的周期字段是 wk（如「第1-2周」），此前读 v.date ——
+           * 表里根本没有 date 字段，日期列永远显示「—」，等于白占一列。
+           * 现在改读 wk，并把内容/验收标准也显示出来。 */
           body = `<div id="vsBox">${(OPS.versions ? OPS.versions() : []).length
-            ? this.table(['版本', '名称', '状态', '日期'],
+            ? this.table(['版本', '名称', '周期', '内容', '状态'],
               OPS.versions().map((v) => [U.esc(v.v || v.id || ''), U.esc(v.n || ''),
-                v.done ? '<span class="bd g">已发布</span>' : '<span class="bd y">排期中</span>', U.esc(v.date || '—')]))
+                U.esc(v.wk || '—'), U.esc((v.c || '—') + (v.ok ? ' ｜ 验收：' + v.ok : '')),
+                v.done ? '<span class="bd g">已发布</span>' : '<span class="bd y">排期中</span>']))
             : this.empty('配置表 VERSIONS 为空')}</div>
             <div class="hint">版本排期读取 EX.VERSIONS（config.js）</div>`;
         } else {
           const L = (EX && EX.LANGS) || [{ k: 'zh', n: '中文' }];
           const cur = (window.OPS && OPS.getLang) ? OPS.getLang() : 'zh';
+          /* 真文案表是 EX.I18N，结构是 { TXT_001: { zh,en,zhTW,ja,ru } }
+           * 此前读的是 EX.TXT —— 这个键根本不存在（EX 上只有 txt() 方法），
+           * 于是「文案表」永远渲染成一张空表，运营进来什么都看不到。 */
+          const I18N = (EX && EX.I18N) || {};
+          const keys = Object.keys(I18N);
           body = `<div class="fr"><label class="wide">当前语言</label><select id="lg_s">
               ${L.map((x) => `<option value="${U.esc(x.k)}"${x.k === cur ? ' selected' : ''}>${U.esc(x.n || x.k)}</option>`).join('')}
             </select></div>
             <div class="btns"><button class="btn pri" data-a="lgSave">💾 保存语言设置</button></div>
-            <h3 style="font-size:13px;margin:16px 0 8px">文案表</h3>
-            ${this.table(['ID', '中文'], Object.keys(((EX && EX.TXT) || {})).slice(0, 60).map((k) => [U.esc(k), U.esc(String(EX.TXT[k]))]))}`;
+            <h3 style="font-size:13px;margin:16px 0 8px">文案表<span class="tag">${keys.length} 条 · 改完点「下发」实时生效</span></h3>
+            ${keys.length ? this.table(['ID'].concat(L.map((x) => x.n || x.k)).concat(['操作']),
+              keys.map((k) => [U.esc(k)].concat(L.map((x) => U.esc(String((I18N[k] || {})[x.k] || ''))))
+                .concat([`<button class="btn sm" data-a="txEdit" data-id="${U.esc(k)}">编辑</button>`])))
+              : this.empty('EX.I18N 文案表为空')}`;
         }
         return `<div class="card">
           <h3>热更新 / 版本 / 多语言</h3>
@@ -1422,6 +1463,33 @@ const PAGES = {
           AUDIT.log('切换语言', k, '');
           this.toast('已保存（游戏端语言切换仍在开发中）', 'warn');
         },
+        txEdit(t) {
+          const id = t.dataset.id;
+          const I18N = (EX && EX.I18N) || {};
+          const L = (EX && EX.LANGS) || [{ k: 'zh', n: '中文' }];
+          const e = I18N[id] || {};
+          this.openModal(`<h3>编辑文案 · ${U.esc(id)}</h3>
+            ${L.map((x) => `<div class="fr"><label>${U.esc(x.n || x.k)}</label>
+              <input id="tx_${U.esc(x.k)}" value="${U.esc(String(e[x.k] || ''))}"></div>`).join('')}
+            <div class="btns"><button class="btn pri" data-m="ok">保存并下发</button><button class="btn" data-m="close">取消</button></div>`, {
+            ok: async () => {
+              const nv = {};
+              L.forEach((x) => { nv[x.k] = this.str('#tx_' + x.k); });
+              /* 写进 cfg.json 的 I18N —— 游戏端 applyCloudCfg 的 cfg 分支
+               * 会覆盖 EX.I18N（该键已存在），于是后台改的文案真能在游戏里生效。
+               * 此前后台「多语言文案管理」只是展示，改了也无处下发。 */
+              const c = await DB.reload(DBP.cfg);
+              c.I18N = Object.assign({}, I18N, { [id]: nv });
+              if (await DB.set(DBP.cfg, c, '文案 ' + id)) {
+                try { if (window.EX) { EX.I18N = c.I18N; } } catch (err) {}
+                AUDIT.log('改文案', id, JSON.stringify(nv));
+                this.toast('已下发（玩家下次登录生效）', 'ok');
+                this.closeModal();
+                this.render();
+              }
+            },
+          });
+        },
       },
     };
 
@@ -1432,7 +1500,8 @@ const PAGES = {
       n: '商城 / 支付', i: '🛒', g: '运营', perm: 'shop.view',
       render() {
         const t = tab('shop', 'goods');
-        const NOT_READ = '<div class="hint" style="margin:8px 0;color:#ff8fa4">⚠ 游戏端尚未接入本模块的云端配置（不在 CFG_FILES 列表内）—— 这里配的内容<b>不会在游戏中生效</b>，仅存档备查。</div>';
+        /* 已接入：游戏端 CFG_FILES 已包含 shop / ad / social，这里配的内容会真正生效 */
+        const NOT_READ = '<div class="hint" style="margin:8px 0;color:#7ee08a">✅ 已接入游戏端（CFG_FILES）—— 这里保存的配置会在玩家下次登录时生效。</div>';
         const seg = (k, n) => `<button class="${t === k ? 'on' : ''}" data-a="tab" data-k="${k}">${n}</button>`;
         const body = t === 'goods'
           ? `<div class="btns"><button class="btn" data-a="shpReload">⟳ 刷新商品</button></div>
@@ -1461,17 +1530,25 @@ const PAGES = {
           /* 商城主配置在游戏端 config.js 的 EX.shop，后台可热更覆盖 */
           const d = await DB.reload(DBP.shop);
           const ov = (d && d.list) || [];
-          const base = (EX.shop || EX.shopItems || []);
-          const rows = base.map((s) => {
+          /* 玩家在游戏里看到的商城商品是 EX.shopGoods（按「每日/武器/…」分组），
+           * 此前这里只列 EX.shop（人民币充值档位 SH01~）——
+           * 运营想改「霰弹枪 5000 金」却在列表里找不到它。现在两者都列。 */
+          const flat = [];
+          const SG = (EX && EX.shopGoods) || {};
+          Object.keys(SG).forEach((g) => {
+            (Array.isArray(SG[g]) ? SG[g] : []).forEach((s) => flat.push(Object.assign({ _g: g }, s)));
+          });
+          (EX.shop || []).forEach((s) => flat.push(Object.assign({ _g: '充值' }, s)));
+          const rows = flat.map((s) => {
             const o = ov.find((x) => x.id === s.id);
-            return [U.esc(s.n || s.id), U.esc(s.id),
+            return [U.esc(s._g || ''), U.esc(s.n || s.id), U.esc(s.id),
               o ? '<span class="bd y">' + o.price + '（已覆盖）</span>' : String(s.price || '—'),
               o && o.per ? U.esc(o.per) : U.esc(s.per || '不限'),
               `<button class="btn sm" data-a="spEdit" data-id="${U.esc(s.id)}">改价</button>`];
           });
           box.innerHTML = rows.length
-            ? this.table(['商品', 'ID', '价格', '限购', '操作'], rows)
-            : this.empty('配置表 EX.shop 为空');
+            ? this.table(['分组', '商品', 'ID', '价格', '限购', '操作'], rows)
+            : this.empty('配置表 EX.shopGoods / EX.shop 为空');
         },
         spEdit(t) {
           this.openModal(`<h3>改价 · ${U.esc(t.dataset.id)}</h3>
@@ -1573,10 +1650,14 @@ const PAGES = {
       acts: {
         async adSave() {
           const d = await DB.reload(DBP.ad);
-          d.cfg = d.cfg || {};
-          d.cfg[this.val('#ad_id')] = {
-            max: this.num('#ad_max'), item: this.val('#ad_i'), n: this.num('#ad_n'), at: Date.now(),
-          };
+          /* 游戏端读 db.list（数组，按 id 合并）—— 此前后台写的是 d.cfg 对象，
+           * 两边结构不一致，后台配的每日上限玩家端根本读不到。 */
+          d.list = Array.isArray(d.list) ? d.list : [];
+          const id = this.val('#ad_id');
+          let x = d.list.find((y) => y.id === id);
+          if (!x) { x = { id }; d.list.push(x); }
+          x.max = this.num('#ad_max'); x.item = this.val('#ad_i');
+          x.n = this.num('#ad_n'); x.at = Date.now();
           if (await DB.set(DBP.ad, d, '配置广告位')) {
             AUDIT.log('配置广告位', this.val('#ad_id'), '上限' + this.num('#ad_max'));
             this.toast('已保存', 'ok');
@@ -1586,9 +1667,11 @@ const PAGES = {
         async adReload() {
           const box = D('#adBox'); if (!box) return;
           const d = await DB.reload(DBP.ad);
-          const c = (d && d.cfg) || {};
-          box.innerHTML = Object.keys(c).length
-            ? this.table(['广告位', '每日上限', '奖励'], Object.keys(c).map((k) => [U.esc(k), c[k].max, U.itemName(c[k].item) + '×' + c[k].n]))
+          let l = Array.isArray(d && d.list) ? d.list : [];
+          /* 兼容旧结构 d.cfg（对象） */
+          if (!l.length && d && d.cfg) l = Object.keys(d.cfg).map((k) => Object.assign({ id: k }, d.cfg[k]));
+          box.innerHTML = l.length
+            ? this.table(['广告位', '每日上限', '奖励'], l.map((x) => [U.esc(x.id), x.max, U.itemName(x.item) + '×' + x.n]))
             : this.empty('还没有配置');
         },
         adStat() {
@@ -1622,12 +1705,20 @@ const PAGES = {
       n: '社交', i: '👥', g: '运营', perm: 'social.view',
       render() {
         const t = tab('social', 'friend');
-        const NOT_READ = '<div class="hint" style="margin:8px 0;color:#ff8fa4">⚠ 游戏端尚未接入本模块的云端配置（不在 CFG_FILES 列表内）—— 这里配的内容<b>不会在游戏中生效</b>，仅存档备查。</div>';
+        /* 已接入：游戏端 CFG_FILES 已包含 shop / ad / social，这里配的内容会真正生效 */
+        const NOT_READ = '<div class="hint" style="margin:8px 0;color:#7ee08a">✅ 已接入游戏端（CFG_FILES）—— 这里保存的配置会在玩家下次登录时生效。</div>';
         const seg = (k, n) => `<button class="${t === k ? 'on' : ''}" data-a="tab" data-k="${k}">${n}</button>`;
         const body = t === 'friend'
           ? `<div class="btns"><button class="btn" data-a="scStat">📈 在线状态统计</button></div>
              <div id="scBox" style="margin-top:10px"></div>`
-          : `<div class="btns"><button class="btn" data-a="lgReload">⟳ 刷新军团</button></div>
+          : `<div class="fr"><label class="wide">捐献花费(金币)</label><input id="sc_cost" type="number" value="5000"></div>
+             <div class="fr"><label class="wide">捐献得贡献</label><input id="sc_ctb" type="number" value="100"></div>
+             <div class="fr"><label class="wide">好友上限</label><input id="sc_fmax" type="number" value="0" placeholder="0=不限"></div>
+             <h3 style="font-size:12px;margin:12px 0 6px">军团副本战力门槛（0=不限）</h3>
+             ${(EX.legionActs || []).map((a) => `<div class="fr"><label class="wide">${U.esc(a.n)}（${U.esc(a.id)}）</label>
+                <input id="sc_need_${U.esc(a.id)}" type="number" value="${a.need || 0}"></div>`).join('')}
+             <div class="btns"><button class="btn pri" data-a="scSave">💾 保存军团配置</button>
+               <button class="btn" data-a="lgReload">⟳ 刷新军团成员</button></div>
              <div id="lgBox" style="margin-top:10px"></div>`;
         return `${NOT_READ}<div class="card">
           <h3>社交<span class="tag">好友 / 聊天 / 军团</span></h3>
@@ -1657,6 +1748,20 @@ const PAGES = {
             ${this.table(['昵称', 'UID', '等级', '活跃'],
               P.slice().sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0)).slice(0, 20)
                 .map((p) => [U.esc(p.name || '—'), U.esc(p.uid), p.lv || 1, U.ago(p.lastSeen)]))}`;
+        },
+        async scSave() {
+          const d = await DB.reload(DBP.social);
+          const acts = {};
+          (EX.legionActs || []).forEach((a) => { acts[a.id] = this.num('#sc_need_' + a.id); });
+          /* 写 social.json：游戏端 CFG_FILES 已包含它，
+           * 捐献汇率 / 副本门槛 会在玩家下次登录时真正生效 */
+          d.legion = { donateCost: this.num('#sc_cost'), donateContrib: this.num('#sc_ctb'), actNeed: acts };
+          d.friendMax = this.num('#sc_fmax');
+          d.at = Date.now();
+          if (await DB.set(DBP.social, d, '军团配置')) {
+            AUDIT.log('军团配置', JSON.stringify(d.legion), '好友上限' + d.friendMax);
+            this.toast('已保存（玩家下次登录生效）', 'ok');
+          }
         },
         async lgReload() {
           const box = D('#lgBox'); if (!box) return;
