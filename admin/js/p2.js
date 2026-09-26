@@ -623,7 +623,15 @@ APP.pages['stat-retain'] = {
      *   ① 分母 = 注册时间落在 [N+1 天前, N 天前) 这同一天的人
      *   ② 分子 = 其中最后登录时间晚于「注册时间 + N 天」的人
      * 这样 1/3/7/30 日留存才会呈现正常的递减曲线。 */
-    const dayStart = (ts) => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
+    /* 【时区口径统一】
+     * 原用 new Date(ts).setHours(0,0,0,0) —— 取的是【运行后台这台机器的本地时区】0 点。
+     * 而游戏端（签到/限购/每日任务）全部按 UTC+8 业务日算。
+     * 若后台机器时区不是 UTC+8（服务器常见 UTC，或运营在海外），
+     * 「注册日」分组就会与玩家实际感知的自然日差一天：
+     *   玩家 9/26 早上 6 点注册（UTC 9/25 22:00）→ 被算进 9/25 的同期群
+     *   → 留存分子/分母分组错位，曲线失真。
+     * 现在统一为 UTC+8 自然日 0 点，与游戏端同一基准。 */
+    const dayStart = (ts) => { const d = new Date(ts + 8 * 36e5); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); };
     const calc = (days) => {
       /* 观察基准：days 天前的那个自然日 0 点 */
       const base = dayStart(now - days * 864e5);
