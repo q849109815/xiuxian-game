@@ -2456,17 +2456,36 @@ r_tavern(p, tab) {
         const el = EX.elements.find((x) => x.k === t.el) || { c: '#ffd76a' };
         return `<button data-turret="${t.id}" style="border-color:${el.c}55">${t.img
           ? `<img src="${t.img}" style="width:24px;height:24px;border-radius:5px;object-fit:cover;display:block;margin:0 auto 2px">`
-          : t.icon + ' '}${t.n}<br>${t.cost}金</button>`;
+          : t.icon + ' '}${t.n}<br><span class="tp" data-tp="${t.id}">${t.cost}金</span></button>`;
       }).join('');
       $$('#btTurret [data-turret]').forEach((b) => {
         b.onclick = () => {
-          const slot = this.pickFreeSlot();
-          if (!slot) return this.toast('炮台槽位已满', 'err');
+          const r = BT.run; if (!r) return;
+          /* BUG：此前一律 pickFreeSlot()，槽位全满时返回【第一个】已建炮台的槽位，
+           * 于是点任意炮台按钮都会去升第一座 —— 你点火焰，升的却是寒冰，
+           * 而且按钮上写死的「${t.cost}金」是建造价，实际扣的是升级价，二者完全不同。
+           * 现在：有空槽 → 建造；槽位满 → 优先升同类型，其次升第一座并明确告知。 */
+          let slot = null;
+          for (const s of (EX.turretSlots || [])) {
+            if (!r.turrets.find((t) => t.k === s.k)) { slot = s.k; break; }
+          }
+          if (!slot) {
+            const same = r.turrets.find((t) => t.def && t.def.id === b.dataset.turret);
+            const tgt = same || r.turrets[0];
+            if (!tgt) return this.toast('炮台槽位已满', 'err');
+            slot = tgt.k;
+            if (!same) {
+              const nm = (tgt.def && tgt.def.n) || '炮台';
+              this.toast('槽位已满，改为升级已有的「' + nm + '」', 'err');
+            }
+          }
           const res = BT.buildTurret(slot, b.dataset.turret);
           this.toast(res.msg, res.ok ? 'ok' : 'err');
           if (res.ok && window.SND) SND.play('equip');
+          this.turretPrice();
         };
       });
+      this.turretPrice();
     }
   },
 
@@ -2658,6 +2677,26 @@ r_tavern(p, tab) {
       };
     }
     $('#result').classList.add('on');
+  },
+  /* 炮台按钮标价：建造价 / 升级价随槽位状态实时更新
+   * 此前按钮写死建造价，槽位满后点下去扣的却是升级价，玩家看到的和花的不一致。 */
+  turretPrice() {
+    const r = BT.run; if (!r) return;
+    const bar = $('#btTurret'); if (!bar) return;
+    let free = null;
+    for (const s of (EX.turretSlots || [])) { if (!r.turrets.find((t) => t.k === s.k)) { free = s.k; break; } }
+    $$('#btTurret [data-tp]').forEach((sp) => {
+      const id = sp.dataset.tp;
+      const def = (EX.turrets || []).find((t) => t.id === id);
+      if (!def) return;
+      if (free) { sp.textContent = (def.cost || 0) + '金'; return; }
+      const same = r.turrets.find((t) => t.def && t.def.id === id);
+      const tgt = same || r.turrets[0];
+      if (!tgt) { sp.textContent = (def.cost || 0) + '金'; return; }
+      const ud = tgt.def || def;
+      const cost = Math.round((ud.upCost != null ? ud.upCost : def.upCost || 0) * (1 + (tgt.lv || 1) * 0.6));
+      sp.textContent = cost + '金⬆';
+    });
   },
   pickFreeSlot() {
     const r = BT.run; if (!r) return null;
