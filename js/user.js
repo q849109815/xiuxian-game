@@ -324,6 +324,9 @@ const UA = {
     const u = await this.readUser(id);
     if (u) { u.banned = true; u.destroyed = true; u.destroyAt = Date.now(); await this.writeUser(u, '账号注销'); }
     try { await Net.del('data/zb/players/' + id + '.json'); } catch (e) {}
+    /* 指令队列一并删：注销后用同名重新注册会拿到同一个 uid，
+     * 残留的历史补发指令会在新档上被全部重发一遍。 */
+    try { await Net.del('data/zb/ops/' + id + '.json'); } catch (e) {}
     this.idxDel(id);
     this.dropCache(id);
     ['zb_name', 'zb_gender', 'zb_uid', 'zb_auto'].forEach((k) => localStorage.removeItem(k));
