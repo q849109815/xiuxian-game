@@ -1182,6 +1182,23 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     p.bossRaidUsed = (p.bossRaidUsed || 0) + 1;
     return { ok: true, msg: 'BOSS突袭开始！剩余 ' + this.bossRaidLeft(p) + ' 次' };
   },
+  /* BOSS突袭要打的关卡
+   * BUG：调用处写的是 startBattle('boss', null)，而 startBattle 在 mode !== 'endless'
+   *      分支里执行 `id = levelId || E.curLevel(P)` —— levelId 为 null 时退化成
+   *      「当前进度关卡」，也就是玩家下一个该打的普通关（实测 1-5 这类）。
+   *      结果：点「BOSS突袭 → 挑战」进去打的是普通关，一场 BOSS 都不会出，
+   *      每日 3 次额度照样扣掉，活动名不副实。
+   * 现在显式挑 BOSS 关：优先当前进度章节的 BOSS 关，未解锁则退回已解锁的最后一个。 */
+  bossRaidLevel(p) {
+    const list = EX.levels || [];
+    const isBoss = (l) => l.cond === 'boss' || l.cond === 'bossAll' || !!l.boss;
+    const ch = this.progressChapter ? this.progressChapter(p) : this.chapterOf(this.curLevel(p));
+    const cur = String(ch) + '-10';
+    if (list.some((l) => l.id === cur) && this.levelUnlocked(p, cur) && isBoss(list.find((l) => l.id === cur))) return cur;
+    let last = null;
+    for (const l of list) { if (isBoss(l) && this.levelUnlocked(p, l.id)) last = l.id; }
+    return last;
+  },
 
   /* =========================================================
    * 表16 消耗品使用（I01 急救包 / I02 护盾发生器 / I03 攻击增幅药剂 / I04 宝箱）
