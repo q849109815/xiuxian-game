@@ -319,7 +319,8 @@ const BT = {
        *   ② dropFor(src, 0) 把章节当成 1 → 精英僵尸只掉最低档材料，
        *      后期该有的稀有金属/碎片全部掉不出来
        * 现在按玩家当前进度章节取值，无尽打越深掉落档越高。 */
-      const ch = p ? Math.max(1, (E.chapterOf ? E.chapterOf(p.curLevel || '1-1') : 1)) : 1;
+      /* 无尽模式章节：用真实进度章节（回头重打旧关卡不会把档位打回第 1 章） */
+      const ch = p ? Math.max(1, (E.progressChapter ? E.progressChapter(p) : (E.chapterOf ? E.chapterOf(p.curLevel || '1-1') : 1))) : 1;
       /* 严重BUG：无尽模式此前【没有 rwMul 字段】
        *   run.rwMul = def.rwMul → undefined
        *   mkZ(): z.gold = Math.round((d.gold||3) * undefined) = NaN
@@ -373,7 +374,7 @@ const BT = {
     this.scene = (def.scene && this.SCENES[def.scene]) ? def.scene : this.sceneFor(def.ch);
     this.img(this.scene);
     /* 无尽模式：按玩家进度章节取关（见 levelDef 注释） */
-    if (def.endless && p) def.ch = Math.max(1, (E.chapterOf ? E.chapterOf(p.curLevel || '1-1') : 1));
+    if (def.endless && p) def.ch = Math.max(1, (E.progressChapter ? E.progressChapter(p) : (E.chapterOf ? E.chapterOf(p.curLevel || '1-1') : 1)));
 
     const maxHp = a.hp;
     this.run = {
