@@ -1911,13 +1911,32 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   /* 洗练：消耗钻石重随机全部词条 */
   /* 旧入口：此前写入 p.gunStats，而属性计算 gunAffixBonus 读的是
    *          p.gunAffix[gid] —— 两套存储导致洗练后属性完全不变。
-   * 统一转发到 rerollAffix（写 p.gunAffix，属性即时生效） */
+  /* 【BUG修复三连】此前本函数转发到 rerollAffix(p,false)，造成三个错位：
+   *   ① 按钮标「💎20（钻石）」，实际扣的是 EX.AFFIX_REROLL_GOLD = 5000 金币
+   *   ② 本按钮位于【进阶词条】卡片内、操作对象应是 p.gunStats，
+   *      实际改写的却是 p.gunAffix（普通词条）→ 玩家看到那一栏纹丝不动
+   *   ③ 面板说明「按品质加权 蓝60%/紫30%/红10%」，而 rollAffixOne(false)
+   *      直接排除红品质（实测 蓝38%/紫62%/红0%）→ 永远洗不出红
+   * 现改为：洗【已解锁的进阶词条槽】，扣钻石 REROLL_GUN_COST，
+   * 品质加权走 rollGunAffix（真正的 60/30/10）。 */
   rerollGun(p, gunId) {
-    const slots = this.gunAffixSlots(p, gunId);
-    if (slots <= 0) return { ok: false, msg: '需先进阶武器才解锁词条槽' };
-    const r = this.rerollAffix(p, false);
-    if (r.ok) r.msg = '洗练完成！';
-    return r;
+    const gid = gunId || p.gun || 'W01';
+    /* 只重随机【已解锁】的槽位；未进阶时 gunStats 为空，直接拒绝，
+     * 避免花掉资源却什么都没洗出来（此前 slots 恒 ≥2 使按钮永不禁用）。 */
+    const unlocked = Object.keys(p.gunStats || {}).filter((k) => p.gunStats[k]);
+    if (!unlocked.length) return { ok: false, msg: '需先进阶武器才解锁词条槽' };
+    const cost = EX.REROLL_GUN_COST || 20;
+    if ((p.diamond || 0) < cost) return { ok: false, msg: EX.tip('popup.noDiamond', { v: cost }) };
+    p.diamond -= cost;
+    const adv = this.advOf(p.gunLv);
+    const names = [];
+    unlocked.forEach((k) => {
+      const st = this.rollGunAffix(p, gid);
+      p.gunStats[k] = { id: st.id, k: st.k, n: st.n, q: st.q, v: +(st.v * (1 + adv * 0.5)).toFixed(4) };
+      names.push(st.n);
+    });
+    try { this.logAct(p, 'gun', '洗练进阶词条：' + names.join('、')); } catch (e) {}
+    return { ok: true, msg: '洗练完成！' + names.join('、') };
   },
   rerollGunOld(p, gunId) {
     const gid = gunId || p.gun || 'W01';
