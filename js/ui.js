@@ -288,9 +288,14 @@ r_tavern(p, tab) {
     };
     const db = $('#lgDonate');
     if (db) db.onclick = () => {
-      if (p.gold < 5000) return this.toast('金币不足', 'err');
-      p.gold -= 5000; p.legionExp = (p.legionExp || 0) + 100;
-      E.save(p); this.toast('捐献成功 +100 贡献', 'ok'); this.open('legion'); this.home();
+      /* 捐献汇率改为读云端军团配置（后台「社交 → 军团管理」可改）
+       * 此前写死 5000 金 / 100 贡献 —— 后台配的汇率玩家端完全无感。 */
+      const LC = (window.EX && EX.legionCfg) || {};
+      const cost = Number(LC.donateCost) || 5000;
+      const ctb = Number(LC.donateContrib) || 100;
+      if (p.gold < cost) return this.toast('金币不足（需 ' + E.fmt(cost) + '）', 'err');
+      p.gold -= cost; p.legionExp = (p.legionExp || 0) + ctb;
+      E.save(p); this.toast('捐献成功 +' + ctb + ' 贡献', 'ok'); this.open('legion'); this.home();
     };
     /* 军团活动：此前写死「开发中」，点了没反应。
      * 现在按 legionActs 挑战，消耗体力 → 产出贡献+金币+材料。 */
@@ -2432,11 +2437,28 @@ r_tavern(p, tab) {
         '<div class="mt-ico">🖥️</div>' +
         '<div class="mt-t">服务器维护中</div>' +
         '<div class="mt-s">' + ((d && d.msg) || '服务器正在维护，请稍后再来') + '</div>' +
-        ((d && d.until) ? '<div class="mt-u">预计维护时长：' + d.until + ' 分钟</div>' : '') +
+        /* 后台「预计时长」是自由文本，写入字段为 eta（此前 UI 只读 until，
+         * 后台填的「预计 2 小时」永远显示不出来） */
+        ((d && (d.eta || d.until)) ? '<div class="mt-u">预计维护时长：' + (d.eta || (d.until + ' 分钟')) + '</div>' : '') +
         '<button class="mt-btn" onclick="location.reload()">重新检测</button>' +
         '</div>';
       box.style.display = 'flex';
     }
+  },
+  /* 云端推送了新版本：提示玩家刷新拿新代码
+   * 此前版本号只写死在 index.html 的 ?v= —— 后台「推送到云端」后
+   * 玩家不强制刷新就拿不到新代码，反复出现"修好了但你看不到"。 */
+  showUpdate(ver) {
+    const box = document.getElementById('maintMask');
+    if (!box) return;
+    box.innerHTML = '<div class="mt-box">' +
+      '<div class="mt-ico">🔄</div>' +
+      '<div class="mt-t">发现新版本</div>' +
+      '<div class="mt-s">已发布 ' + String(ver) + '，刷新后即可体验最新内容</div>' +
+      '<button class="mt-btn" onclick="try{var u=location.href.split(\'#\')[0].split(\'?\')[0];location.replace(u+\'?v=' + String(ver) + '\')}catch(e){location.reload()}">立即刷新</button>' +
+      '<button class="mt-btn" style="margin-top:8px;background:rgba(255,255,255,.1)" onclick="document.getElementById(\'maintMask\').style.display=\'none\'">稍后再说</button>' +
+      '</div>';
+    box.style.display = 'flex';
   },
   /* 统一的战斗入口守卫：维护中一律不放行 */
   guardBattle() {
