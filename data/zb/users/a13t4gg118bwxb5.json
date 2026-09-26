@@ -1,1 +1,1 @@
-{"id":"a13t4gg118bwxb5","name":"q849109815","nick":"西瓜哥","gender":"m","hash":"a8ee8bfc346ec996fa24b8209f42837b","created":1790183200614,"last":1790183200614,"banned":false,"unbanAt":1790435678995,"unbanOp":"admin","_rev":1}
+{"id":"a13t4gg118bwxb5","name":"q849109815","nick":"西瓜哥","gender":"m","hash":"a8ee8bfc346ec996fa24b8209f42837b","created":1790183200614,"last":1790183200614,"banned":true,"unbanAt":1790435678995,"unbanOp":"admin","_rev":2,"banUntil":1791040484101,"banReason":"违规","banAt":1790435686699,"banOp":"admin"}
