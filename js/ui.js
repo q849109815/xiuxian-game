@@ -2699,7 +2699,9 @@ r_tavern(p, tab) {
     const b = $('#lvup');
     if (!b) return;
     $('#lvupNum').textContent = lv;
-    $('#lvupRw').innerHTML = '获得 <b style="color:var(--yel)">' + (rw || 200) + '</b> R币';
+    /* 「R币」是早期套用参考截图时的残留叫法，全项目其余地方（商店/军团/提示/关卡面板）
+     * 一律称「金币」，玩家在结算页看到「R币」会以为是另一种货币。统一为「金币」。 */
+    $('#lvupRw').innerHTML = '获得 <b style="color:var(--yel)">' + (rw || 200) + '</b> 金币';
     b.classList.add('on');
     if (window.SND) SND.play('upgrade');
     clearTimeout(this._lvT);
@@ -2729,20 +2731,30 @@ r_tavern(p, tab) {
     const mk = Object.keys(rw.mat || {}).filter((k) => (rw.mat[k] || 0) > 0);
     const cell = (v, l) => `<div class="rs-i"><div class="v">${v}</div><div class="l">${l}</div></div>`;
     $('#rsGrid').innerHTML = cell(E.fmt(rw.exp || 15), 'EXP')
-      + cell(E.fmt(rw.gold), 'R币')
+      + cell(E.fmt(rw.gold), '金币')   /* 原为「R币」，与全项目「金币」叫法不一致，已统一 */
       + cell(d.kills, '击杀')
       + cell(win ? (d.stars || 0) : 0, '星级')
       + (rw.chip ? cell(rw.chip, '芯片') : '')
       + mk.map((k) => cell(rw.mat[k], E.itemName ? E.itemName(k) : k)).join('');
-    /* 技能伤害统计（截图51） */
+    /* 伤害来源统计
+     * BUG：hurt() 记录的是【伤害来源/元素】（'物' '火' '电' '冰' 'barrel'），
+     *      而这里拿它去 EX.skills 里按 id 查名字 —— 来源键不是技能 id，
+     *      恒查不到，于是直接把原始键显示出来：
+     *        实测结算面板出现「物 147 11/s」「barrel 260 20/s」
+     *      英文键与单字混在中文界面里，玩家完全看不懂。
+     * 现在按来源键映射中文名，标题也改为与实际内容相符的「伤害来源」，
+     * 并按伤害量从高到低排序（原来是对象插入序，杂乱）。 */
     const dm = $('#rsDmg');
     if (dm) {
+      const SRC_NAME = { 物: '子弹', 火: '火焰', 冰: '冰霜', 电: '电磁', 风: '风暴',
+        barrel: '油桶爆炸', gun: '子弹', poison: '中毒' };
       const st = (r.skillDmg || {});
-      const ks = Object.keys(st);
-      dm.innerHTML = ks.length ? `<div class="rsd-t">技能伤害</div>` + ks.map((k) => {
-        const sk = (EX.skills || []).find((x) => x.id === k);
-        const sec = Math.max(1, Math.floor(r.time || 1));
-        return `<div class="rsd-r"><span>${sk ? sk.n : k}</span>
+      const ks = Object.keys(st).filter((k) => (st[k] || 0) > 0)
+        .sort((a, b) => st[b] - st[a]);
+      const sec = Math.max(1, Math.floor(r.time || 1));
+      dm.innerHTML = ks.length ? `<div class="rsd-t">伤害来源</div>` + ks.map((k) => {
+        const nm = SRC_NAME[k] || k;
+        return `<div class="rsd-r"><span>${nm}</span>
           <b>${E.fmt(st[k])}</b><i>${E.fmt(Math.round(st[k] / sec))}/s</i></div>`;
       }).join('') : '';
     }
