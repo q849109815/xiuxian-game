@@ -369,7 +369,10 @@ const MAIN = {
    * 异步的 Net.write 在页面卸载时会被浏览器掐断，进度就丢了。 */
   snapKey(uid) { return 'zb_snap_' + (uid || UID || ''); },
   syncSnap() {
-    if (!P) return;
+    /* 重置存档期间禁止写快照：否则清理之后、reload 之前的窗口里
+     * 任何一次 save()（含其内部调用）都会把刚删掉的进度重新写回本地快照，
+     * 下次登录云端读取失败时会用它恢复 —— 玩家以为清空了，进度却原样回来。 */
+    if (!P || window.__zbResetting) return;
     try {
       P.offlineAt = Date.now(); P.lastSeen = Date.now();
       localStorage.setItem(this.snapKey(P.uid), JSON.stringify(P));
@@ -385,7 +388,7 @@ const MAIN = {
   },
 
   async save() {
-    if (!P || !this.savePath) return;
+    if (!P || !this.savePath || window.__zbResetting) return;
     P.lastSeen = Date.now(); P.offlineAt = Date.now();
     /* 每次都同步留一份快照，写成功后再清掉 —— 关页面时它就能顶上 */
     this.syncSnap();
@@ -394,7 +397,7 @@ const MAIN = {
     if (ok) { try { localStorage.removeItem(this.snapKey(P.uid)); } catch (e) {} }
     this.uploadRank();
   },
-  startSave() { if (saveT) clearInterval(saveT); saveT = setInterval(() => { if (P) this.save(); }, 30000); },
+  startSave() { if (saveT) clearInterval(saveT); saveT = setInterval(() => { if (P && !window.__zbResetting) this.save(); }, 30000); },
   /* 榜单上传节流键：记录上次成功上传时自己的成绩指纹 + 时间戳。
    * BUG：save() 每 30 秒触发一次，uploadRank() 无条件执行，
    *   每次都是「读 leaderboard + 写 leaderboard + 读 endless + 写 endless」= 4 次 API。
@@ -1291,7 +1294,14 @@ function bindAll() {
    *   ① 浏览器不等待 Promise，页面一关 fetch 就被掐断，那一局的进度全丢；
    *   ② iOS Safari / 手机切 App 根本不触发 beforeunload。
    * 现在三个事件都挂，且先同步写 localStorage 快照（一定成功），再试异步上传。 */
-  const byeNow = () => { if (!P) return; MAIN.syncSnap(); try { MAIN.save(); } catch (e) {} };
+  /* 重置存档期间禁止回写。
+   * 否则 location.reload() 会触发 beforeunload/pagehide，
+   * 把刚删掉的进度又同步写进 zb_snap_ 快照和 ss_queue 队列，
+   * 下次登录云端读取失败时会用它恢复 —— 等于白重置。 */
+  const byeNow = () => {
+    if (!P || window.__zbResetting) return;
+    MAIN.syncSnap(); try { MAIN.save(); } catch (e) {}
+  };
   window.addEventListener('beforeunload', byeNow);
   window.addEventListener('pagehide', byeNow);
   document.addEventListener('visibilitychange', () => { if (document.hidden) byeNow(); });
