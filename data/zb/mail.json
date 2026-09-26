@@ -1,1 +1,1 @@
-{"list":[{"id":"mmuifwh54","type":"all","title":"补偿","body":"补偿","rw":{"gold":100000000},"startAt":0,"expireAt":1791034980808,"claimed":[],"at":1790430180808,"by":"admin"}],"_rev":2}
+{"list":[{"id":"mmuigyqq0","type":"all","title":"ADM自动化验证邮件","body":"这是一条后台验证邮件","rw":{"gold":1234},"startAt":0,"expireAt":1791036766152,"claimed":[],"at":1790431966152,"by":"admin"},{"id":"mmuifwh54","type":"all","title":"补偿","body":"补偿","rw":{"gold":100000000},"startAt":0,"expireAt":1791034980808,"claimed":[],"at":1790430180808,"by":"admin"}],"_rev":3}
