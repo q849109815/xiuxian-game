@@ -1037,12 +1037,11 @@ function bindAll() {
     spBtn.textContent = 'X' + BT.speed;
     if (window.SND) SND.play('click');
   };
-  const psBtn = $('#btPause');
-  if (psBtn) psBtn.onclick = () => {
-    BT.paused = !BT.paused;
-    psBtn.textContent = BT.paused ? '▶' : '⏸';
-    if (window.SND) SND.play('click');
-  };
+  /* 暂停按钮：绑定放在下方「if (bp)」处（打开暂停面板 + 继续/放弃），
+   * 这里原本还有一份 `BT.paused = !BT.paused` 的 toggle 绑定，会被下方覆盖成为死代码。
+   * 它更危险的地方在于：那份 toggle 只置暂停标志、不弹面板，
+   * 一旦将来调整绑定顺序让它生效，玩家点 ⏸ 就会得到一次【无提示的静默冻结】。
+   * 已移除，只保留下方那一份。 */
   const auBtn = $('#btAuto');
   if (auBtn) auBtn.onclick = () => {
     BT.auto = !BT.auto;
@@ -1220,7 +1219,24 @@ function bindAll() {
   const rb = document.getElementById('rsBack');
   if (rb) rb.onclick = () => { UI.hideResult(); UI.home(); UI.show('home'); if (window.SND) SND.bgm('base'); };
 
-  document.addEventListener('visibilitychange', () => { if (document.hidden && BT.on) BT.paused = true; });
+  /* 切到后台自动暂停。
+   * BUG：此处原本只写 `BT.paused = true` 就结束了 ——
+   *   ① 没有任何代码在切回前台时把它改回 false，战斗【永久冻结】；
+   *   ② 也不会弹出暂停面板，玩家切回来看到的是一帧完全静止的画面，
+   *      既没有提示也不知道该怎么恢复，只会以为游戏卡死、直接杀掉重开，
+   *      这一局打下来的进度就白费了（手机上来个电话/切个微信就会中招）。
+   * 现在：切走时暂停并弹出暂停面板，玩家切回来一眼看到「已暂停」，
+   * 点「继续战斗」即可恢复；技能三选一已经全屏遮挡时不再重复叠一层。 */
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden || !BT.on) return;
+    const r = BT.run;
+    if (!r || r.over) return;
+    const chOpen = document.getElementById('choice');
+    if (chOpen && chOpen.classList.contains('on')) return;
+    BT.paused = true;
+    const pp = document.getElementById('pause');
+    if (pp) pp.classList.add('on');
+  });
   /* 关页面/切走时保存进度。
    * 原来只挂 beforeunload 且只调异步 save()：
    *   ① 浏览器不等待 Promise，页面一关 fetch 就被掐断，那一局的进度全丢；
