@@ -2346,6 +2346,10 @@ r_tavern(p, tab) {
        * 此前只 removeItem('zb_uid') + reload，云端 players/<uid>.json 原封不动，
        * 玩家重载后重新登录同一账号，进度原样回来 —— 「清空全部进度」从未生效过。 */
       if (uid && window.Net) { try { await Net.del('data/zb/players/' + uid + '.json'); } catch (e) {} }
+      /* 指令队列也要删：它和存档是分开的两份文件，只删存档的话
+       * 历史补发指令仍留在云端，重置后新档 opsDone 为空会把它们全部重发一遍。
+       * （main.js 的 seedOpsDone 是第二道兜底，删除失败时仍能挡住。） */
+      if (uid && window.Net) { try { await Net.del('data/zb/ops/' + uid + '.json'); } catch (e) {} }
       /* ② 清本地残留。账号名保留以便重新登录，其余全部清除。
        *    必须清 ss_queue（离线待写队列）—— 里面若存着旧存档，
        *    重置后会被重新消费并写回云端，等于白重置。
