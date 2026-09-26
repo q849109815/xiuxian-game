@@ -31,7 +31,9 @@ const EX = {
     { id: 'C01', n: '幸存者-杰克', icon: '🧑‍🚀', img: 'assets/char/c01_jack.jpg', hp: 1000, spd: 6.0, armor: 0, crit: 0.05,
       unlockLv: 0, unlockTxt: '初始解锁', desc: '均衡型先锋官，无短板' },
     { id: 'C02', n: '医疗兵-艾拉', icon: '👩‍⚕️', img: 'assets/char/c02_aila.jpg', hp: 900, spd: 6.5, armor: 5, crit: 0.05,
-      unlockLv: '1-3', unlockTxt: '通关 1-3 解锁', desc: '高移速轻护甲，灵活游走' },
+      /* desc 原写「高移速轻护甲，灵活游走」—— 移速是死属性（战斗中角色不移动），
+         改成与实际生效属性一致的描述 */
+      unlockLv: '1-3', unlockTxt: '通关 1-3 解锁', desc: '轻装上阵，自带护甲与治疗天赋' },
     { id: 'C03', n: '重装兵-雷', icon: '🧑‍🏭', img: 'assets/char/c03_lei.jpg', hp: 1200, spd: 5.0, armor: 15, crit: 0.03,
       unlockLv: '2-3', unlockTxt: '通关 2-3 解锁', desc: '厚血高护甲，正面硬扛' },
     { id: 'C04', n: '狙击手-妮可', icon: '🕵️‍♀️', img: 'assets/char/c04_nike.jpg', hp: 850, spd: 6.0, armor: 3, crit: 0.08,
@@ -42,7 +44,10 @@ const EX = {
     { id: 'sk_c01a', char: 'C01', n: '默认', icon: '🧑‍🚀', img: 'assets/skin/sk_c01a.jpg', price: 0, bonus: null, desc: '初始外观' },
     { id: 'sk_c01b', char: 'C01', n: '废土战甲', icon: '🥼', img: 'assets/skin/sk_c01b.jpg', price: 680, bonus: { hp: 0.10 }, desc: '生命 +10%' },
     { id: 'sk_c02a', char: 'C02', n: '默认', icon: '👩‍⚕️', img: 'assets/skin/sk_c02a.jpg', price: 0, bonus: null, desc: '初始外观' },
-    { id: 'sk_c02b', char: 'C02', n: '战术套装', icon: '🥻', img: 'assets/skin/sk_c02b.jpg', price: 680, bonus: { spd: 0.10 }, desc: '移速 +10%' },
+    /* BUG：原为 bonus:{spd:0.10}「移速 +10%」。但角色在战斗中固定站位射击
+     *      （摇杆已移除），moveSpd 全项目【只赋值、零消费】—— 花 680 钻买的
+     *      属性既不加属性也不涨战力，等于白花。改为实际生效的生命加成。 */
+    { id: 'sk_c02b', char: 'C02', n: '战术套装', icon: '🥻', img: 'assets/skin/sk_c02b.jpg', price: 680, bonus: { hp: 0.10 }, desc: '战术护具，生命 +10%' },
     { id: 'sk_c03a', char: 'C03', n: '默认', icon: '🧑‍🏭', img: 'assets/skin/sk_c03a.jpg', price: 0, bonus: null, desc: '初始外观' },
     { id: 'sk_c03b', char: 'C03', n: '装甲骑士', icon: '🦺', img: 'assets/skin/sk_c03b.jpg', price: 680, bonus: { armor: 0.20 }, desc: '护甲 +20%' },
     { id: 'sk_c04a', char: 'C04', n: '默认', icon: '🕵️‍♀️', img: 'assets/skin/sk_c04a.jpg', price: 0, bonus: null, desc: '初始外观' },
