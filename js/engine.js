@@ -188,6 +188,15 @@ const E = {
   },
   tickStamina(p) {
     const now = Date.now();
+    /* 【时间回拨 BUG 修复】
+     * 若 p.staminaAt 被写成【未来时间】（玩家改过系统时间、或设备时钟同步跳变），
+     * 则 now - staminaAt 恒为负数 → add 恒 <= 0 → 体力【永远不恢复】，
+     * 一直要等到真实时间追上那个未来时刻为止。
+     * 实测（恢复间隔 300 秒 / 点）：把时间调前 1 天再改回，
+     *   改回当时 0 点、3 小时后 0 点、12 小时后仍是 0 点，
+     *   整整停摆 24 小时 —— 玩家只会以为「体力系统坏了」。
+     * 修法：基准点落在未来时先钳回当前时刻，恢复立刻正常。 */
+    if (!(p.staminaAt > 0) || p.staminaAt > now) p.staminaAt = now;
     const add = Math.floor((now - (p.staminaAt || now)) / EX.STAMINA_MS);
     if (add > 0) {
       p.stamina = Math.min(EX.STAMINA_MAX, (p.stamina || 0) + add);
@@ -858,14 +867,22 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (!a || !b) return 999;
     return Math.round((this.ymdToTs(b) - this.ymdToTs(a)) / 864e5);
   },
-  dailyKey() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); },
+  /* 【时区口径统一】
+   * 原 dailyKey / weekKey 用【本地时区】取日历日，
+   * 而 giftKey（礼包限购）、signDay（签到）、bossRaidDate、_perReset 用的是【UTC+8 业务日】。
+   * 同一个项目里两套日历基准：对 UTC+8 玩家无感，
+   * 但海外玩家（如 UTC-5）本地日与 UTC+8 日会错开一天，
+   * 出现「每日任务已刷新、但每日礼包限购还没刷新」的错位窗口
+   * → 在错开的几个小时内，每日限购礼包可以再买一次。
+   * 统一为 UTC+8 业务日（与签到/礼包/BOSS突袭同一基准）。 */
+  dailyKey() { const d = new Date(Date.now() + 8 * 36e5); return d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate(); },
   /* 快速巡逻每日次数上限 */
   PATROL_FAST_MAX: 3,
   weekKey() {
-    const d = new Date();
-    const day = (d.getDay() + 6) % 7;              // 周一为 0
-    d.setDate(d.getDate() - day);
-    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    const d = new Date(Date.now() + 8 * 36e5);     /* UTC+8 业务日 */
+    const day = (d.getUTCDay() + 6) % 7;           /* 周一为 0 */
+    const mon = new Date(d.getTime() - day * 864e5);
+    return mon.getUTCFullYear() + '-' + (mon.getUTCMonth() + 1) + '-' + mon.getUTCDate();
   },
   resetTasks(p) {
     const dk = this.dailyKey(), wk = this.weekKey();
@@ -1410,18 +1427,29 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 周 / 月同理，改为按自然周、自然月（周一为周起点）。 */
   _perReset(rec, per, evName) {
     const now = Date.now();
+    /* 【时区严重 BUG 修复】
+     * 原代码：先 new Date(now + 8h) 构造「UTC+8 业务日」，
+     *         却用 getFullYear()/getMonth()/getDate()【本地时区方法】读取。
+     *         → 在 UTC+8 机器上等于又加了 8 小时，实际按 UTC+16 算。
+     * 后果（北京时间，覆盖全部中国玩家）：
+     *   每天 16:00 之后，day key 就翻到【第二天】
+     *   → 限购被提前重置，同一天能买满【两次】；
+     *   → 而真正的第二天，key 已经是「明天」不再变化 → 【反而买不了】。
+     *   实测（限购 2）：9/26 15:00 买 2、9/26 16:30 又买 2、9/27 10:00 买 0。
+     * 月末同理：9/30 16:00 之后 month key 变成 202610 → 每月限购一个月能买两次。
+     * 修法：既然已经 +8h 构造，就必须用 getUTC* 系列读取，才是真正的 UTC+8 业务日。 */
     const d = new Date(now + 8 * 36e5);          /* UTC+8 业务日 */
     if (per === 'day') {
-      const key = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+      const key = d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
       if (rec.dk !== key) { rec.n = 0; rec.dk = key; rec.t = now; }
     } else if (per === 'week') {
       /* 自然周：以周一为起点 */
-      const day = (d.getDay() + 6) % 7;           /* 周一=0 */
+      const day = (d.getUTCDay() + 6) % 7;        /* 周一=0 */
       const mon = new Date(d.getTime() - day * 864e5);
-      const key = mon.getFullYear() * 10000 + (mon.getMonth() + 1) * 100 + mon.getDate();
+      const key = mon.getUTCFullYear() * 10000 + (mon.getUTCMonth() + 1) * 100 + mon.getUTCDate();
       if (rec.wk !== key) { rec.n = 0; rec.wk = key; rec.t = now; }
     } else if (per === 'month') {
-      const key = d.getFullYear() * 100 + (d.getMonth() + 1);
+      const key = d.getUTCFullYear() * 100 + (d.getUTCMonth() + 1);
       if (rec.mk !== key) { rec.n = 0; rec.mk = key; rec.t = now; }
     } else if (per === 'once') { /* 终身 */ }
     /* per: 'ev'（活动期间限购）
@@ -1436,7 +1464,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 注：单机架构拿不到服务端「活动期数」，只能用这两个信号近似，
      *     若运营改为每周重开同名活动，需把下面改成按自然周。 */
     else if (per === 'ev') {
-      const mk2 = d.getFullYear() * 100 + (d.getMonth() + 1);
+      const mk2 = d.getUTCFullYear() * 100 + (d.getUTCMonth() + 1);
       if (rec.ev != null && rec.ev !== (evName || '')) { rec.n = 0; rec.t = now; }
       if (rec.mk !== mk2) { rec.n = 0; rec.mk = mk2; rec.t = now; }
       rec.ev = evName || '';
