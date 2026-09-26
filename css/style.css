@@ -573,7 +573,9 @@ input{font-family:inherit}
  * 战斗界面（真实《向僵尸开炮》布局 · 9:16 竖屏）
  * 顶部状态栏 / 中部战场 / 右侧功能栏 / 底部防线+技能+武器
  * ========================================================= */
-#battle{position:relative;width:100%;height:100%;min-height:100%}
+#battle{position:relative;width:100%;height:100%;min-height:100%;
+  /* iPhone 底部 Home 指示条高度（横条区域约 34px），无安全区机型为 0 */
+  --sab:env(safe-area-inset-bottom,0px)}
 #battle canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
 
 /* --- 顶部状态栏 --- */
@@ -625,7 +627,7 @@ input{font-family:inherit}
 .bts.on{border-color:#5fd07a;color:#5fd07a;background:rgba(95,208,122,.14)}
 
 /* --- 底部：防线生命 --- */
-.bt-wall{position:absolute;left:10px;right:10px;bottom:196px;z-index:6;
+.bt-wall{position:absolute;left:10px;right:10px;bottom:calc(196px + var(--sab,0px));z-index:6;
   display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:10px;
   background:rgba(6,10,18,.85);border:1px solid rgba(255,165,60,.32)}
 .bw-lb{font-size:10px;color:#ffa53c;font-weight:800;flex:0 0 auto}
@@ -635,7 +637,7 @@ input{font-family:inherit}
 .bw-tx{font-size:10px;color:#ffd8a8;min-width:58px;text-align:right}
 
 /* --- 底部：技能栏 --- */
-.bt-skills{position:absolute;left:8px;right:8px;bottom:150px;z-index:6;
+.bt-skills{position:absolute;left:8px;right:8px;bottom:calc(150px + var(--sab,0px));z-index:6;
   /* 必须显式声明 row + top:auto：本类在上方(445行)被定义为纵向侧边栏，
      后续规则未声明 flex-direction/top 时会沿用旧值，导致技能按钮竖排、
      容器被 top+bottom 拉成整屏高度，从而盖住右侧「自动/切换」按钮 */
@@ -651,7 +653,7 @@ input{font-family:inherit}
 .bt-skills .bs.cd{filter:grayscale(.7) brightness(.72)}
 
 /* --- 底部：炮台建造 --- */
-.bt-turret{position:absolute;left:8px;right:8px;bottom:106px;z-index:6;
+.bt-turret{position:absolute;left:8px;right:8px;bottom:calc(106px + var(--sab,0px));z-index:6;
   display:flex;gap:5px;justify-content:center}
 .bt-turret button{flex:0 0 auto;padding:4px 6px;border-radius:8px;font-size:9px;
   background:rgba(10,16,28,.92);border:1px solid rgba(255,255,255,.14);color:#cfd8e8}
@@ -660,7 +662,7 @@ input{font-family:inherit}
 .bt-turret button:disabled{opacity:.4}
 
 /* --- 底部操作区：换弹 --- */
-.bt-bottom{position:absolute;left:10px;right:10px;bottom:14px;height:82px;z-index:6;
+.bt-bottom{position:absolute;left:10px;right:10px;bottom:calc(14px + var(--sab,0px));height:82px;z-index:6;
   display:flex;align-items:center;justify-content:space-between}
 .bt-reload{position:relative;flex:0 0 auto;width:82px;height:82px;border-radius:50%;
   /* 清空早期 absolute 定位遗留的 right:18px/bottom:30px 偏移 */
@@ -671,15 +673,15 @@ input{font-family:inherit}
 .bt-reload span{font-size:10px;color:#ffd76a;margin-top:2px;font-weight:700}
 .bt-reload em{position:absolute;left:0;bottom:0;height:100%;width:0;
   background:rgba(0,0,0,.55);pointer-events:none}
-.bt-tip{position:absolute;left:0;right:0;bottom:2px;text-align:center;
+.bt-tip{position:absolute;left:0;right:0;bottom:calc(2px + var(--sab,0px));text-align:center;
   font-size:9px;color:rgba(160,180,210,.5);z-index:5;pointer-events:none}
 
 /* 窄屏微调 */
 @media(max-height:640px){
-  .bt-wall{bottom:176px}
-  .bt-skills{bottom:134px}
-  .bt-turret{bottom:94px}
-  .bt-bottom{bottom:8px;height:72px}
+  .bt-wall{bottom:calc(176px + var(--sab,0px))}
+  .bt-skills{bottom:calc(134px + var(--sab,0px))}
+  .bt-turret{bottom:calc(94px + var(--sab,0px))}
+  .bt-bottom{bottom:calc(8px + var(--sab,0px));height:72px}
   .bt-reload{width:72px;height:72px}
 }
 
