@@ -30,8 +30,10 @@
 
     <!-- 账号密码登录 -->
     <div class="lg-form" id="lgLoginForm">
-      <input id="lgUser" maxlength="16" placeholder="账号（2-16 位）" autocomplete="username">
-      <input id="lgPwd" type="password" maxlength="32" placeholder="密码（至少 6 位）" autocomplete="current-password">
+      <input id="lgUser" maxlength="16" placeholder="账号（2-16 位）" autocomplete="username"
+             enterkeyhint="next" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text">
+      <input id="lgPwd" type="password" maxlength="32" placeholder="密码（至少 6 位）" autocomplete="current-password"
+             enterkeyhint="go" autocapitalize="none" autocorrect="off" spellcheck="false">
       <div class="lg-row">
         <label class="lg-keep"><input type="checkbox" id="lgKeep" checked><span>记住账号名</span></label>
         <a href="javascript:;" id="lgFind">忘记密码？</a>
@@ -44,10 +46,14 @@
 
     <!-- 注册 -->
     <div class="lg-form" id="lgRegForm" style="display:none">
-      <input id="rgUser" maxlength="16" placeholder="账号（2-16 位）" autocomplete="username">
-      <input id="rgPwd" type="password" maxlength="32" placeholder="密码（至少 6 位）" autocomplete="new-password">
-      <input id="rgPwd2" type="password" maxlength="32" placeholder="确认密码" autocomplete="new-password">
-      <input id="rgNick" maxlength="8" placeholder="游戏昵称（2-8 字，可留空）" autocomplete="nickname">
+      <input id="rgUser" maxlength="16" placeholder="账号（2-16 位）" autocomplete="username"
+             enterkeyhint="next" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text">
+      <input id="rgPwd" type="password" maxlength="32" placeholder="密码（至少 6 位）" autocomplete="new-password"
+             enterkeyhint="next" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <input id="rgPwd2" type="password" maxlength="32" placeholder="确认密码" autocomplete="new-password"
+             enterkeyhint="next" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <input id="rgNick" maxlength="8" placeholder="游戏昵称（2-8 字，可留空）" autocomplete="nickname"
+             enterkeyhint="done" autocorrect="off" spellcheck="false">
       <div class="lg-gender" id="rgGender">
         <button class="gd on" data-g="m">👨‍🚀 男</button>
         <button class="gd" data-g="f">👩‍🚀 女</button>
