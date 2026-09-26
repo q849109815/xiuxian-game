@@ -2168,6 +2168,11 @@ r_tavern(p, tab) {
       <div class="lbl" style="text-align:left;color:#ff8fa4">注销会删除云端存档并封禁该账号，无法恢复</div>
       <div class="fld"><label>输入密码确认</label><input id="spDel" type="password" placeholder="当前密码"></div>
       <button class="btn d blk" id="spDelGo">🗑 确认注销</button></div>
+    <div class="card"><div class="card-t" style="color:#ff6b6b">永久删除账号 <span class="sub">物理删除 · 不可恢复</span></div>
+      <div class="lbl" style="text-align:left;color:#ff8fa4">与「注销」不同：<b>注销</b>只是停用并保留账号记录（可在后台找回）；<b>永久删除</b>会把账号、存档、索引、榜单条目全部物理删除，删除后任何界面都不再显示，且无法恢复。仅在你确定不再需要该账号时使用。</div>
+      <div class="fld"><label>输入密码确认</label><input id="spPurge" type="password" placeholder="当前密码"></div>
+      <button class="btn d blk" id="spPurgeGo">🔥 永久删除</button>
+      <div class="lbl" id="spPurgeTip"></div></div>
     <div class="card">
       <button class="btn n blk" id="setSwitchAcct">🔁 退出登录 / 切换账号</button></div>
     <div class="card"><div class="card-t">账号信息</div>
@@ -2282,6 +2287,22 @@ r_tavern(p, tab) {
       const r = await UA.destroy(ac.name, w);
       this.toast(r.msg || (r.ok ? '已注销' : '注销失败'), r.ok ? 'ok' : 'err');
       if (r.ok) setTimeout(() => { if (window.UA) UA.logout(); }, 800);
+    };
+    /* 永久删除账号：与注销不同，物理删除账号文件本身，不可恢复 */
+    const spg = $('#spPurgeGo');
+    if (spg) spg.onclick = async () => {
+      const ac = UA.remembered();
+      const w = ($('#spPurge') || {}).value || '';
+      const tip = $('#spPurgeTip');
+      if (!w) { if (tip) tip.textContent = '请输入密码确认'; this.toast('请输入密码确认', 'err'); return; }
+      if (!confirm('⚠️ 永久删除账号「' + (ac.name || '') + '」？\n账号 / 存档 / 索引 / 榜单将全部物理删除，删除后不再显示且无法恢复！')) return;
+      if (!confirm('最后确认：此操作不可撤销，确定继续？')) return;
+      spg.disabled = true; spg.textContent = '删除中…';
+      const r = await UA.purge(ac.name, w);
+      spg.disabled = false; spg.textContent = '🔥 永久删除';
+      if (tip) tip.textContent = r.msg || '';
+      this.toast(r.msg || (r.ok ? '已永久删除' : '删除失败'), r.ok ? 'ok' : 'err');
+      if (r.ok) setTimeout(() => { if (window.UA) UA.logout(); }, 1200);
     };
     /* 退出登录 / 切换账号 */
     const sw = $('#setSwitchAcct');
