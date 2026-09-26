@@ -65,7 +65,13 @@ const UI = {
   PANELS: {
     role: ['角色', ['装备', '宝石', '皮肤'], 'side'],
     gun: ['武器', ['强化', '武器库'], 'side'],
-    chip: ['芯片系统', ['芯片'], 'right'],
+    /* BUG：tab 原先只有 ['芯片']，而 r_chip() 里「背包」页签（芯片背包，
+     *      含【合成 / 洗练 / 拆解】三个按钮）是一个独立分支 if (tab === '背包')。
+     *      由于 '背包' 不在 tab 列表里，该分支永远进不去 ——
+     *      芯片的合成（3 合 1 升品，红品芯片的主要来源）、洗练（钻石重 roll
+     *      副词条）、拆解（清理背包）【三个功能玩家完全没有入口】，
+     *      芯片只进不出，背包会一路膨胀（实测 1000 颗时存档 127KB）。 */
+    chip: ['芯片系统', ['芯片', '背包'], 'right'],
     talent: ['天赋', ['天赋'], 'top'],
     task: ['任务', ['主线', '日常', '周常', '成就'], 'side'],
     bag: ['我的背包', ['宝石', '装备', '材料', '芯片', '消耗'], 'bottom'],
@@ -823,17 +829,29 @@ r_tavern(p, tab) {
       };
     });
     $$('#pnBody [data-dec]').forEach((b) => {
-      b.onclick = () => { const r = E.dismantleChip(p, b.dataset.dec); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('chip', tab); this.home(); } };
+      /* 传的是【芯片 id】，必须走 dismantleChipById。
+       * 此前调 E.dismantleChip(p, id)，而该方法被下方「按品质分解」的同名
+       * 版本覆盖（重复键后定义生效）→ 恒返回「未知芯片品质」，点了分解不掉。 */
+      b.onclick = () => {
+        const r = E.dismantleChipById(p, b.dataset.dec);
+        this.toast(r.msg, r.ok ? 'ok' : 'err');
+        if (r.ok) { if (window.SND) SND.play('coin'); E.save(p); this.open('chip', tab); this.home(); }
+      };
     });
     $$('#pnBody [data-rr]').forEach((b) => {
-      b.onclick = () => { const r = E.rerollChip(p, b.dataset.rr); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) this.open('chip', tab); };
+      b.onclick = () => {
+        const r = E.rerollChip(p, b.dataset.rr);
+        this.toast(r.msg, r.ok ? 'ok' : 'err');
+        if (r.ok) { E.save(p); this.open('chip', tab); this.home(); }
+      };
     });
     $$('#pnBody [data-fuse]').forEach((b) => {
       b.onclick = () => {
         const c = (p.bag || []).find((x) => x.id === b.dataset.fuse); if (!c) return;
         const same = (p.bag || []).filter((x) => x.q === c.q).slice(0, 3).map((x) => x.id);
         if (same.length < 3) return this.toast('需要 3 块同品质芯片', 'err');
-        const r = E.fuseChip(p, same); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('chip', tab); this.home(); }
+        const r = E.fuseChip(p, same); this.toast(r.msg, r.ok ? 'ok' : 'err');
+        if (r.ok) { if (window.SND) SND.play('upgrade'); E.save(p); this.open('chip', tab); this.home(); }
       };
     });
   },
