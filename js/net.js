@@ -304,6 +304,11 @@ const Net = {
       return true;
     }
     // 进队列
+    /* 重置存档期间禁止入队。
+     * 否则 delete 之后、reload 之前的窗口里，任何一次失败的写入
+     * （定时存档 / 榜单上传 / 配置同步）都会把旧进度重新塞回 ss_queue，
+     * 重载后队列被消费并写回云端 —— 玩家以为清空了，进度却原样回来。 */
+    if (typeof window !== 'undefined' && window.__zbResetting) return false;
     QUEUE = QUEUE.filter((x) => x.path !== path);
     QUEUE.push({ path, obj, msg, at: Date.now() });
     try { localStorage.setItem(LS.queue, JSON.stringify(QUEUE)); } catch (e) {}
