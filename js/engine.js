@@ -807,13 +807,20 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* 移速 */
     const spdUp = this.chipVal(p, 'spd') + ((sk && sk.bonus && sk.bonus.spd) || 0);
     const moveSpd = c.spd * this.SPD_MUL * (1 + spdUp);
+    /* 军团加成：军团面板明确宣传「军团可提供属性加成」，
+     * 但 legionBonus() 写好后从未接入 attrs() —— 全项目零调用。
+     * 实测：加入军团并捐到 10000 贡献（= 花 5 万金币），
+     *   atk 26.25 → 26.25、hp 1060 → 1060、战力 1236 → 1236，纹丝不动。
+     * 对照组（好友 +0.13、装备 +1.44）正常生效，证明就是这条没接。
+     * 现在按 legionBonus 的返回值接入（每 1000 贡献 +1%，上限 10%）。 */
+    const lb = this.legionBonus(p);
     return {
       /* 表25 #1：角色等级成长（每级 +攻击6 / +生命80） */
       /* 好友加成：面板写「每个 +0.5% 攻击」，但 attrs 从不读 p.friends
        * → 实测加 10 个好友攻击纹丝不动（26.25 → 26.25）。
        * 现在接入，并设 20 人上限（否则无限加好友可无限堆攻击）。 */
-      atk: ((atk + (p.lvBonusAtk || 0)) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct + this.equipBonus(p).atkPct + this.friendBonus(p))) * (1 + EX.starBonus(p.charStar)),
-      hp: ((Math.round(hp) + (p.lvBonusHp || 0)) * (1 + this.gemBonus(p).hpPct + this.equipBonus(p).hpPct)) * (1 + EX.starBonus(p.charStar)),
+      atk: ((atk + (p.lvBonusAtk || 0)) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct + this.equipBonus(p).atkPct + this.friendBonus(p) + lb.atkPct)) * (1 + EX.starBonus(p.charStar)),
+      hp: ((Math.round(hp) + (p.lvBonusHp || 0)) * (1 + this.gemBonus(p).hpPct + this.equipBonus(p).hpPct + lb.hpPct)) * (1 + EX.starBonus(p.charStar)),
       gunBase, armor: Math.round(armor),
       /* 护盾（常驻值）
        * 严重BUG：attrs() 此前从不返回 shield，而 battle.js 用
