@@ -710,7 +710,10 @@ const EX = {
     { id: 'RK02', board: '无尽生存榜', rank: '第2-5名', lo: 2, hi: 5, rw: { C02: 2, diamond: 200 }, cyc: '每小时' },
     { id: 'RK03', board: '无尽生存榜', rank: '第6-20名', lo: 6, hi: 20, rw: { C01: 2, diamond: 100 }, cyc: '每小时' },
     { id: 'RK04', board: '无尽生存榜', rank: '第21-100名', lo: 21, hi: 100, rw: { gold: 2000, M01: 20 }, cyc: '每小时' },
-    { id: 'RK05', board: '战力榜', rank: '第1名', lo: 1, hi: 1, rw: { C03: 1, M03: 5 }, cyc: '每日' },
+    /* 头像框「榜首金框」rank_frame
+     * BUG：头像框表配了它，但 rankRewards 里没有任何一条带 frame，
+     *      全项目零发放 —— 玩家永远拿不到。这里挂到战力榜第1名。 */
+    { id: 'RK05', board: '战力榜', rank: '第1名', lo: 1, hi: 1, rw: { C03: 1, M03: 5, frame: 'rank_frame' }, cyc: '每日' },
     { id: 'RK06', board: '战力榜', rank: '第2-10名', lo: 2, hi: 10, rw: { C02: 1, M03: 3 }, cyc: '每日' },
     { id: 'RK07', board: '战力榜', rank: '第11-50名', lo: 11, hi: 50, rw: { C01: 1, M02: 10 }, cyc: '每日' },
     { id: 'RK08', board: '活动冲榜', rank: '第1名', lo: 1, hi: 1, rw: { skin: 'sk_c04b', C03: 2 }, cyc: '活动结束' },
@@ -1019,9 +1022,15 @@ const EX = {
       { id: 'D6', n: '招募令', icon: '📜', price: 150, cur: 'diamond', give: { M04: 10 } },
     ],
     '武器': [
-      { id: 'W1', n: '突击步枪', icon: '🔫', img: 'assets/icon/w1_rifle.jpg', price: 3000, cur: 'gold', give: { M01: 20 } },
-      { id: 'W2', n: '霰弹枪', icon: '💥', img: 'assets/icon/w2_shotgun.jpg', price: 5000, cur: 'gold', give: { M02: 15 } },
-      { id: 'W3', n: '狙击枪', icon: '🎯', img: 'assets/icon/w3_sniper.jpg', price: 8000, cur: 'gold', give: { M03: 10 } },
+      /* BUG：这三件商品名叫「突击步枪 / 霰弹枪 / 狙击枪」，价格 3000~8000 金币，
+       *      但 give 里只有材料（金属/合金/稀有金属），没有任何 gun 字段，
+       *      购买后 gunOwn 纹丝不动 —— 玩家花 8000 金买「狙击枪」，
+       *      到手的是 10 个稀有金属，武器列表一把都没多。
+       *      现在补上 gun 字段，购买即真正解锁并装备该武器（材料奖励保留）。
+       *      注意：商店是后台可热更的配置，购买逻辑里也做了同名兜底。 */
+      { id: 'W1', n: '突击步枪', icon: '🔫', img: 'assets/icon/w1_rifle.jpg', price: 3000, cur: 'gold', gun: 'W01', give: { M01: 20 } },
+      { id: 'W2', n: '霰弹枪', icon: '💥', img: 'assets/icon/w2_shotgun.jpg', price: 5000, cur: 'gold', gun: 'W02', give: { M02: 15 } },
+      { id: 'W3', n: '狙击枪', icon: '🎯', img: 'assets/icon/w3_sniper.jpg', price: 8000, cur: 'gold', gun: 'W04', give: { M03: 10 } },
     ],
     '宝石': [
       { id: 'GB1', n: '红宝石', icon: '🔴', price: 200, cur: 'diamond', give: { gem: 'G_R' } },
