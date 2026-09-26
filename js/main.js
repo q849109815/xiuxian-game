@@ -901,8 +901,11 @@ function startBattle(mode, levelId) {
    * 此前在体力之外还叠了一道每日次数闸门（E.useRun），玩家体力明明是满的，
    * 打完 3 关就被「今日挑战次数已用完（每日 3 次）」拦住 —— 与关卡面板
    * 标注的「体力 1」完全对不上。现在只由 spendStamina 决定能不能打。 */
-  /* 体力检查 */
-  const sp = E.spendStamina(P, id);
+  /* 体力检查（只检查不扣除）
+   * BUG：此前此处直接 spendStamina 扣费，而章节 CG 分支随后 return，
+   *      玩家关掉 CG 弹窗（不点「进入战区」）时战斗根本没开始，体力却已扣掉。
+   *      现在扣费下沉到 battleGo（真正进入战斗时），CG 取消不再白扣。 */
+  const sp = E.checkStamina(P, id);
   if (!sp.ok) { UI.toast(sp.msg, 'err'); return; }
   battleLevel = id;
 
@@ -926,6 +929,9 @@ function startBattle(mode, levelId) {
 /* 实际进入战斗（CG 播放完 / 无需 CG 时调用） */
 function battleGo(id, mode) {
   if (!P) return;
+  /* 真正进入战斗时才扣体力（CG 取消不扣，避免白扣） */
+  const sp = E.spendStamina(P, id);
+  if (!sp.ok) { UI.toast(sp.msg, 'err'); UI.show('home'); return; }
   UI.show('battle');
   /* 音频：战斗 BGM */
   if (window.SND) {
