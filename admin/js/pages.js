@@ -274,15 +274,15 @@ const PAGES = {
         let body = '';
         if (t === 'edit') {
           body = this.SEL ? `
-            <div class="fr"><label class="wide">金币</label><input id="e_gold" type="number" value="${this.SEL.gold || 0}"></div>
-            <div class="fr"><label class="wide">钻石</label><input id="e_dia" type="number" value="${this.SEL.diamond || 0}"></div>
-            <div class="fr"><label class="wide">体力</label><input id="e_stam" type="number" value="${this.SEL.stamina || 0}"></div>
-            <div class="fr"><label class="wide">成就点</label><input id="e_ach" type="number" value="${this.SEL.ach || 0}"></div>
-            <div class="fr"><label class="wide">等级</label><input id="e_lv" type="number" value="${this.SEL.lv || 1}"></div>
-            <div class="fr"><label class="wide">武器等级</label><input id="e_gunlv" type="number" value="${this.SEL.gunLv || 1}"></div>
-            <div class="fr"><label class="wide">无尽最佳</label><input id="e_eb" type="number" value="${this.SEL.endlessBest || 0}"></div>
-            <div class="fr"><label class="wide">当前关卡</label><input id="e_cur" value="${U.esc(this.SEL.curLevel || '')}"></div>
-            <div class="fr"><label class="wide">已解锁枪械</label><input id="e_gunown" value="${U.esc((this.SEL.gunOwn || []).join(','))}"></div>
+            <div class="fr"><label class="wide">金币</label><input id="e_gold" type="number" value="${this.SEL.gold || 0}" data-o="${this.SEL.gold || 0}"></div>
+            <div class="fr"><label class="wide">钻石</label><input id="e_dia" type="number" value="${this.SEL.diamond || 0}" data-o="${this.SEL.diamond || 0}"></div>
+            <div class="fr"><label class="wide">体力</label><input id="e_stam" type="number" value="${this.SEL.stamina || 0}" data-o="${this.SEL.stamina || 0}"></div>
+            <div class="fr"><label class="wide">成就点</label><input id="e_ach" type="number" value="${this.SEL.ach || 0}" data-o="${this.SEL.ach || 0}"></div>
+            <div class="fr"><label class="wide">等级</label><input id="e_lv" type="number" value="${this.SEL.lv || 1}" data-o="${this.SEL.lv || 1}"></div>
+            <div class="fr"><label class="wide">武器等级</label><input id="e_gunlv" type="number" value="${this.SEL.gunLv || 1}" data-o="${this.SEL.gunLv || 1}"></div>
+            <div class="fr"><label class="wide">无尽最佳</label><input id="e_eb" type="number" value="${this.SEL.endlessBest || 0}" data-o="${this.SEL.endlessBest || 0}"></div>
+            <div class="fr"><label class="wide">当前关卡</label><input id="e_cur" value="${U.esc(this.SEL.curLevel || '')}" data-o="${U.esc(this.SEL.curLevel || '')}"></div>
+            <div class="fr"><label class="wide">已解锁枪械</label><input id="e_gunown" value="${U.esc((this.SEL.gunOwn || []).join(','))}" data-o="${U.esc((this.SEL.gunOwn || []).join(','))}"></div>
             <div class="hint">多项用英文逗号分隔，如 W01,W02</div>
             <div class="btns">
               <button class="btn pri" data-a="saveEdit">💾 保存修改</button>
@@ -340,26 +340,41 @@ const PAGES = {
             if (!isFinite(v)) return def;
             return Math.min(Math.max(Math.floor(v), min), max);
           };
-          p.gold = cl('#e_gold', 0, 1e15, p.gold || 0);
-          p.diamond = cl('#e_dia', 0, 1e15, p.diamond || 0);
-          p.stamina = cl('#e_stam', 0, 9999, p.stamina || 0);
-          p.ach = cl('#e_ach', 0, 1e12, p.ach || 0);
-          p.lv = cl('#e_lv', 1, 999, p.lv || 1);
-          p.gunLv = cl('#e_gunlv', 1, 999, p.gunLv || 1);
-          p.endlessBest = cl('#e_eb', 0, 1e9, p.endlessBest || 0);
-          p.curLevel = this.str('#e_cur') || p.curLevel;
-          const go = this.str('#e_gunown');
-          if (go) p.gunOwn = go.split(',').map((s) => s.trim()).filter(Boolean);
+          /* 只收集【运营实际改动过的字段】，不整份覆盖存档 ——
+           * 后台快照可能是几十分钟前的：表单里其余字段仍是旧值，
+           * 若一并写回，玩家这几十分钟打到的金币 / 无尽层数照样被抹掉。
+           * 判断依据：输入框当前值 ≠ 打开表单时的原值（data-o）。 */
+          const changed = (id) => {
+            const e = D(id); if (!e) return false;
+            return String(e.value == null ? '' : e.value) !== String(e.dataset.o == null ? '' : e.dataset.o);
+          };
+          const patch = {};
+          if (changed('#e_gold')) patch.gold = cl('#e_gold', 0, 1e15, p.gold || 0);
+          if (changed('#e_dia')) patch.diamond = cl('#e_dia', 0, 1e15, p.diamond || 0);
+          if (changed('#e_stam')) patch.stamina = cl('#e_stam', 0, 9999, p.stamina || 0);
+          if (changed('#e_ach')) patch.ach = cl('#e_ach', 0, 1e12, p.ach || 0);
+          if (changed('#e_lv')) patch.lv = cl('#e_lv', 1, 999, p.lv || 1);
+          if (changed('#e_gunlv')) patch.gunLv = cl('#e_gunlv', 1, 999, p.gunLv || 1);
+          if (changed('#e_eb')) patch.endlessBest = cl('#e_eb', 0, 1e9, p.endlessBest || 0);
+          if (changed('#e_cur') && this.str('#e_cur')) patch.curLevel = this.str('#e_cur');
+          if (changed('#e_gunown')) {
+            const go = this.str('#e_gunown');
+            if (go) patch.gunOwn = go.split(',').map((s) => s.trim()).filter(Boolean);
+          }
+          if (!Object.keys(patch).length) { this.toast('没有改动任何字段', 'warn'); return; }
           /* 危险 BUG 修复：此前只 save() 直接改写云端存档。
            * 游戏端每 30 秒把内存 P 整份写回同一路径，【在线玩家的自动存档
            * 会把后台改动静默覆盖】—— 后台提示「已保存」，玩家数据纹丝不动。
            * 现在双写：写存档（离线玩家下次登录即生效）
            *          + 下发 restore 指令（在线玩家 5 分钟内覆盖内存）。
            * restore 是幂等的整体覆盖，重复应用无害。 */
-          if (await this.save(p, 'GM 改属性')) {
-            await this.pushOp(p.uid, { t: 'restore', data: JSON.parse(JSON.stringify(p)) });
-            AUDIT.log('GM改属性', p.uid, '金币' + p.gold + ' 钻石' + p.diamond);
-            this.toast('已保存（并已下发在线指令）', 'ok');
+          const out = await this.mergeSave(p, patch, 'GM 改属性');
+          if (out) {
+            /* 在线玩家同样只改这几个字段（restore 是整份覆盖，会把他在
+             * 后台读取之后推进的进度一起抹掉） */
+            await this.pushOp(p.uid, { t: 'patch', data: JSON.parse(JSON.stringify(patch)) });
+            AUDIT.log('GM改属性', p.uid, Object.keys(patch).join(',') + ' → ' + JSON.stringify(patch).slice(0, 200));
+            this.toast('已保存 ' + Object.keys(patch).length + ' 项（' + (out._fresh ? '已保留玩家最新进度' : '含在线指令') + '）', 'ok');
           }
         },
         async backup() {
@@ -957,8 +972,14 @@ const PAGES = {
           const d = await DB.reload(DBP.cdkey);
           const tpl = ((d && (d.templates || d.tpls)) || []).find((x) => x.id === tplId);
           if (!tpl) { this.toast('请先选择有效模板', 'err'); return; }
-          const n = this.num('#gk_n') || 1;
+          let n = Math.floor(this.num('#gk_n') || 1);
+          /* 生成数量无上限：填 100000 会同步生成 10 万条并整份写回，
+           * 浏览器卡死 + cdkey.json 变成几十 MB，之后所有玩家兑换都读不动 */
+          if (n <= 0) { this.toast('生成数量需大于 0', 'err'); return; }
+          if (n > 500) { n = 500; this.toast('单次最多 500 个，已按 500 生成', 'warn'); }
           const exp = this.num('#gk_exp');
+          const have = {};
+          (d.codes || []).forEach((x) => { if (x && x.code) have[x.code] = 1; });
           const bind = this.val('#gk_bind') === '1' ? this.str('#gk_uid') : '';
           /* 契约修复：游戏端读 db.codes[]{code,tpl,maxUse,used,usedBy,bindUid,status,exp}
            * （旧后台写 keys[]{max,users,bind,void}），不改则后台生成的码玩家 100% 兑不了。 */
@@ -966,7 +987,11 @@ const PAGES = {
           delete d.keys;
           const made = [];
           for (let i = 0; i < n; i++) {
-            const k = U.code(12);
+            /* 查重：U.code 是随机串，重复码会让两个玩家抢同一份奖励，
+             * 且后台「作废」时误伤另一个人 */
+            let k = U.code(12), guard = 0;
+            while (have[k] && guard++ < 50) k = U.code(12);
+            have[k] = 1;
             d.codes.unshift({
               code: k, tpl: tpl.id, tplName: (tpl.name || tpl.n), rw: (tpl.items || tpl.rw),
               use: this.num('#gk_use') || 1,
@@ -987,9 +1012,11 @@ const PAGES = {
         },
         async exKey() {
           const d = await DB.reload(DBP.cdkey);
+          /* 次数上限留空时游戏端按 1 次算（c.maxUse || 1），
+           * 此前后台把它当「无限」，已用完的码不会被过滤、还显示 ∞ */
           const rows = ((d && (d.codes || d.keys)) || []).filter((x) => !x.void && x.status !== '作废'
-              && (!(x.maxUse || x.max) || x.used < (x.maxUse || x.max)))
-            .map((x) => [x.code, x.tplName, x.used + '/' + ((x.maxUse || x.max) || '∞'), x.exp ? U.d(x.exp) : '永久']);
+              && (x.used || 0) < ((x.maxUse || x.max) || 1))
+            .map((x) => [x.code, x.tplName, x.used + '/' + ((x.maxUse || x.max) || 1), x.exp ? U.d(x.exp) : '永久']);
           U.download('兑换码_' + U.d(Date.now()) + '.csv',
             U.csv(['兑换码', '礼包', '已用', '过期'], rows), 'text/csv');
           this.toast('已导出', 'ok');
@@ -1003,7 +1030,7 @@ const PAGES = {
             || (x.bindUid || x.bind || '').toLowerCase().indexOf(q) >= 0);
           box.innerHTML = l.length ? this.table(['兑换码', '礼包', '已用', '绑定', '状态', '操作'],
             l.slice(0, 100).map((x) => [U.esc(x.code), U.esc(x.tplName || ''),
-              x.used + '/' + ((x.maxUse || x.max) || '∞'), U.esc(x.bindUid || x.bind || '—'),
+              x.used + '/' + ((x.maxUse || x.max) || 1), U.esc(x.bindUid || x.bind || '—'),
               (x.void || x.status === '作废') ? '<span class="bd r">已作废</span>' : (x.exp && x.exp < Date.now()) ? '<span class="bd n">已过期</span>' : '<span class="bd g">有效</span>',
               `<button class="btn sm err" data-a="voidOne" data-c2="${U.esc(x.code)}">作废</button>`]))
             : this.empty('暂无兑换码');
