@@ -276,6 +276,15 @@ const MAIN = {
     } else if (op.t === 'unban') {
       P.ban = false; P.banUntil = 0; P.banReason = '';
       try { UI.toast('账号已解封', 'ok'); } catch (e) {}
+    } else if (op.t === 'patch' && op.data) {
+      /* 后台「只改指定字段」：GM 改属性 / 封禁等运营操作。
+       * 不用 restore 整份覆盖 —— 那样会把玩家在后台读取之后
+       * 推进的进度（金币、通关记录）一起抹掉，表现为
+       * 「运营一动存档我就回档」。这里只合并后台明确改的那几个字段。 */
+      Object.keys(op.data).forEach((k) => { P[k] = op.data[k]; });
+      try { UI.toast('⚙ 运营调整已生效', 'ok'); } catch (e) {}
+      try { UI.home(); } catch (e) {}
+      try { this.save(); } catch (e) {}
     }
   },
   startOpSync() {
@@ -1077,14 +1086,21 @@ const MAIN = {
     if ((c.used || 0) >= (c.maxUse || 1)) return { ok: false, msg: '该兑换码已被使用' };
     if (c.exp && c.exp < Date.now()) return { ok: false, msg: '该兑换码已过期' };
     if (c.bindUid && c.bindUid !== P.uid) return { ok: false, msg: '该兑换码已绑定其他账号' };
-    if ((c.usedBy || []).indexOf(P.uid) >= 0) return { ok: false, msg: '您已兑换过该码' };
+    /* 每人可兑次数：后台表单「每人次数」写的是 c.use，此前游戏端只判断
+     * 「usedBy 里有没有我」—— 一律按 1 次封顶，运营填 3 次也只给 1 次。
+     * 现在按该 uid 在 usedBy 中出现的次数计。 */
+    const perLimit = (c.use && c.use > 0) ? c.use : 1;
+    const mineCnt = (c.usedBy || []).filter((u) => u === P.uid).length;
+    if (mineCnt >= perLimit) return { ok: false, msg: '您已兑换过该码' };
     /* 本地防重复（与全服邮件同理）：
      * 原逻辑先 giveRw 发奖、最后才 Net.write 写回 used/usedBy。
      * 写回失败（弱网很常见）时奖励已入背包但云端未记账，
      * 下次兑换同一个码还能再领一次 —— 可无限刷。
      * 现在先在本地登记，再发奖。 */
     P.cdkGot = P.cdkGot || [];
-    if (P.cdkGot.indexOf(code) >= 0) return { ok: false, msg: '您已兑换过该码' };
+    /* 本地去重只在「每人 1 次」时生效：多次码的权威计数在云端 usedBy，
+     * 本地若也按 code 拦死，第二次就领不到了 */
+    if (perLimit <= 1 && P.cdkGot.indexOf(code) >= 0) return { ok: false, msg: '您已兑换过该码' };
     const tpl = (db.templates || []).find((t) => t.id === c.tpl);
     if (!tpl) return { ok: false, msg: '礼包模板缺失' };
     if (tpl.once && (c.usedBy || []).indexOf(P.uid) >= 0) return { ok: false, msg: '每人限领 1 次' };
