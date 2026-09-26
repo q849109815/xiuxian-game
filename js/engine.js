@@ -1133,6 +1133,28 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   },
 
   /* 记录一次购买 */
+  /* =========================================================
+   * 套利守卫（经济安全）
+   * 病根：商城/礼包是后台可热更的配置，改数值时不校验，
+   *       一旦出现「花 X 买回 > X 的同种货币」且无限购，玩家可无限循环刷取，
+   *       几分钟内经济彻底崩坏（金币/钻石不再稀缺，所有养成与付费失去意义）。
+   *       已出现过三例：D1 金币袋（1000金→5000金，实测 12 次刷到 49000）、
+   *       SH03/SH04 钻石包（300→330、980→1150，实测 10 次刷到 2680）。
+   * 这里在购买/兑换路径做统一拦截：只拦「净赚 + 无限购」，
+   * 有限购的（如 GP05 月度超值 680→800，每月 1 次）放行，不影响正常数值设计。
+   * ========================================================= */
+  isArbitrage(g) {
+    if (!g || typeof g !== 'object') return false;
+    const give = g.give || g.rw || {};
+    if (typeof give !== 'object') return false;
+    const cur = g.cur || 'gold';
+    const price = Number(g.price != null ? g.price : g.cost) || 0;
+    const back = Number(cur === 'diamond' ? (give.diamond || 0) : cur === 'gold' ? (give.gold || 0) : 0) || 0;
+    if (back <= price) return false;   /* 不赚 → 正常商品 */
+    if (g.limit) return false;         /* 有限购 → 套利量可控，放行 */
+    return true;
+  },
+
   giftMark(p, g) {
     const rec = (p.giftBuy || (p.giftBuy = {}))[g.id] || { n: 0, k: '' };
     const k = this.giftKey(g);
