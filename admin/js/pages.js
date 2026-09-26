@@ -331,10 +331,23 @@ const PAGES = {
         tab(t) { APP.T.psave = t.dataset.k; this.render(); },
         async saveEdit() {
           const p = this.SEL; if (!p) return;
-          p.gold = this.num('#e_gold'); p.diamond = this.num('#e_dia');
-          p.stamina = this.num('#e_stam'); p.ach = this.num('#e_ach');
-          p.lv = this.num('#e_lv'); p.gunLv = this.num('#e_gunlv');
-          p.endlessBest = this.num('#e_eb'); p.curLevel = this.str('#e_cur') || p.curLevel;
+          /* 边界钳制：后台是自由输入，而 num() 不做任何范围检查 ——
+           * 填 -1 会把负数直接写进存档（玩家金币 / 体力显示为负、买东西失败），
+           * 填 99999 会让游戏端属性计算溢出（游戏端登录清洗虽会钳到 999，
+           * 但存档里留下的仍是脏值）。这里按各字段合法区间统一钳制。 */
+          const cl = (id, min, max, def) => {
+            const v = this.num(id);
+            if (!isFinite(v)) return def;
+            return Math.min(Math.max(Math.floor(v), min), max);
+          };
+          p.gold = cl('#e_gold', 0, 1e15, p.gold || 0);
+          p.diamond = cl('#e_dia', 0, 1e15, p.diamond || 0);
+          p.stamina = cl('#e_stam', 0, 9999, p.stamina || 0);
+          p.ach = cl('#e_ach', 0, 1e12, p.ach || 0);
+          p.lv = cl('#e_lv', 1, 999, p.lv || 1);
+          p.gunLv = cl('#e_gunlv', 1, 999, p.gunLv || 1);
+          p.endlessBest = cl('#e_eb', 0, 1e9, p.endlessBest || 0);
+          p.curLevel = this.str('#e_cur') || p.curLevel;
           const go = this.str('#e_gunown');
           if (go) p.gunOwn = go.split(',').map((s) => s.trim()).filter(Boolean);
           /* 危险 BUG 修复：此前只 save() 直接改写云端存档。
@@ -457,8 +470,11 @@ const PAGES = {
         sel(t) { this.SEL = this.PLIST.find((p) => p.uid === t.dataset.uid) || null; this.render(); },
         async grant() {
           const p = this.SEL; if (!p) return;
-          const item = this.val('#op_item'), n = this.num('#op_n');
-          if (!item || !n) { this.toast('物品与数量必填', 'err'); return; }
+          const item = this.val('#op_item');
+          if (!item) { this.toast('请先选择要补发的物品', 'err'); return; }
+          /* 数量必须为正：负数会变成「扣除玩家资产」的指令 */
+          const n = this.qty('#op_n');
+          if (!n) { this.toast('数量必须是大于 0 的数字（不能填 0 或负数）', 'err'); return; }
           const op = { t: 'grant', item, n };
           const exp = this.num('#op_exp');
           if (exp > 0) op.exp = exp * 36e5;
@@ -772,7 +788,13 @@ const PAGES = {
           if (!t) { this.toast('标题必填', 'err'); return; }
           const rw = {};
           const item = this.val('#m_i');
-          if (item && this.num('#m_n') > 0) rw[item] = this.num('#m_n');
+          /* 负数会被静默丢弃 → 运营以为带了附件，玩家收到的是空邮件；
+           * 超大值会让游戏端数值溢出。统一走 qty 校验。 */
+          if (item && this.num('#m_n') !== 0) {
+            const n = this.qty('#m_n');
+            if (!n) { this.toast('附件数量必须是大于 0 的数字（不能填负数）', 'err'); return; }
+            rw[item] = n;
+          }
           const start = this.num('#m_start'), exp = this.num('#m_exp');
           const m = {
             id: 'm' + Date.now().toString(36), type: type === 'single' ? 'target' : type,
