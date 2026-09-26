@@ -1723,7 +1723,14 @@ r_tavern(p, tab) {
     $$('#pnBody [data-raid]').forEach((b) => { b.onclick = () => {
       const r = E.bossRaidStart(p);
       this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { E.save(p); this.close(); startBattle('boss', null); }
+      /* BUG：此处原为 startBattle('boss', null)，levelId 为 null 会退化成
+       *      「当前进度关卡」（普通关），点 BOSS 突袭却一个 BOSS 都遇不到。
+       *      现在显式取 BOSS 关；一个都没解锁时退回当前进度关卡。 */
+      if (r.ok) {
+        E.save(p);
+        const bId = E.bossRaidLevel ? E.bossRaidLevel(p) : null;
+        this.close(); startBattle('normal', bId || null);
+      }
       else this.open('act');
     }; });
     /* 表22 EV01 丧尸围城 → 无尽模式 */
@@ -1786,7 +1793,18 @@ r_tavern(p, tab) {
   },
   b_level(p) {
     $$('#pnBody [data-ch]').forEach((b) => { b.onclick = () => { this.curChapter = +b.dataset.ch; this.open('level'); }; });
-    $$('#pnBody [data-lv]').forEach((b) => { b.onclick = () => { this.close(); startBattle('normal', b.dataset.lv); }; });
+    /* BUG：无尽入口也挂在 [data-lv] 上（data-lv="endless"），此前一律
+     *      按普通关调 startBattle('normal', 'endless')，mode 不是 'endless' 带来两处偏差：
+     *      ① startBattle 里「无尽模式不播章节 CG」的分支失效 → 进无尽前会先弹
+     *         第 1 章 CG 过场（无尽无章节归属，不该播）；
+     *      ② 解锁校验走 E.levelUnlocked(P,'endless')，而它内部 levelDef('endless')
+     *         找不到会回退到 1-1（unlock=null）→ 恒为 true，校验形同虚设。
+     *      现在按入口区分 mode。 */
+    $$('#pnBody [data-lv]').forEach((b) => { b.onclick = () => {
+      this.close();
+      if (b.dataset.lv === 'endless') startBattle('endless');
+      else startBattle('normal', b.dataset.lv);
+    }; });
     $$('#pnBody [data-sw]').forEach((b) => { b.onclick = () => this.sweepBox(b.dataset.sw); });
   },
 
