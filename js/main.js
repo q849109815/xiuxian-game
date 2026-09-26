@@ -405,10 +405,13 @@ const MAIN = {
       P._baseAt = P.offlineAt;      /* 已成功落云端，基准前移 */
     } else if (ok === 'stale') {
       /* 云端已有更新的进度（别的设备 / 读到了旧分支的档）。
-       * 拒绝覆盖，保留本地快照，避免把新进度抹掉。 */
-      try {
-        UI.toast('⚠️ 云端存在更新的进度，已保护未覆盖', 'err');
-      } catch (e) {}
+       * 拒绝覆盖，保留本地快照，避免把新进度抹掉。
+       * save() 每 30 秒跑一次，提示必须节流，否则会一直弹。 */
+      const now = Date.now();
+      if (now - (this._staleAt || 0) > 300000) {
+        this._staleAt = now;
+        try { UI.toast('⚠️ 云端存在更新的进度，已保护未覆盖', 'err'); } catch (e) {}
+      }
     }
     this.uploadRank();
   },
