@@ -36,7 +36,7 @@ const EPS = [
   'https://raw.gitmirror.com',
 ];
 
-const LS = { best: 'ss_best', dead: 'ss_dead', cache: 'ss_cache_', queue: 'ss_queue', net: 'ss_net' };
+const LS = { best: 'ss_best', dead: 'ss_dead', cache: 'ss_cache_', queue: 'ss_queue', net: 'ss_net', authfail: 'ss_authfail' };
 
 let BEST = localStorage.getItem(LS.best) || '';
 // 恢复自定义加速地址（后台/设置里保存的）
@@ -49,6 +49,9 @@ try { DEAD = JSON.parse(localStorage.getItem(LS.dead) || '{}'); } catch (e) { DE
 let QUEUE = [];
 try { QUEUE = JSON.parse(localStorage.getItem(LS.queue) || '[]'); } catch (e) { QUEUE = []; }
 let ONLINE = localStorage.getItem(LS.net) !== 'offline';
+/* 凭据失效标记：网络通但令牌被拒（401/403）。
+ * 此时读写必然失败，若不明确提示，玩家只会读到本机旧缓存并以为"自己回档"。 */
+let AUTHFAIL = localStorage.getItem(LS.authfail) === '1';
 let probing = null;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -89,8 +92,15 @@ async function probe() {
       const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/data/config/core.json`,
         { headers: H }, ms).catch(() => null);
       if (!r) throw new Error('no-response');
-      // 200 = 通；401/403 = 网络通但凭据问题（也算通）；404 = 通但路径不在
-      if (r.ok || [401, 403, 404].includes(r.status)) return { ep, ms: performance.now() - t0, st: r.status };
+      // 401/403 = 凭据失效：网络通，但令牌无效/被吊销。
+      // 一旦发生，read() 拿不到云端档会静默回退本机旧缓存（玩家看到旧进度＝回档），
+      // write() 全部失败进队列永远传不上去，而界面仍显示「● 已连接」，无从自查。
+      // 现在单独标记，让上层能明确告警。
+      if (r.status === 401 || r.status === 403) {
+        return { ep, ms: performance.now() - t0, st: r.status, auth: true };
+      }
+      // 200 = 通；404 = 通但路径不在
+      if (r.ok || r.status === 404) return { ep, ms: performance.now() - t0, st: r.status };
       throw new Error('status ' + r.status);
     };
     // 分两轮：第一轮 3.5s 快速筛（官方 + 已缓存最优 + 自定义），第二轮 7s 全量兜底
@@ -102,7 +112,17 @@ async function probe() {
       if (!list.length) continue;
       const res = await Promise.allSettled(list.map((ep) => test(ep, ms)));
       const ok = res.filter((x) => x.status === 'fulfilled').map((x) => x.value).sort((a, b) => a.ms - b.ms);
+      const good = ok.filter((x) => !x.auth);
+      if (good.length) {
+        AUTHFAIL = false;
+        try { localStorage.removeItem(LS.authfail); } catch (e) {}
+        BEST = good[0].ep; ONLINE = true;
+        try { localStorage.setItem(LS.best, BEST); localStorage.setItem(LS.net, 'online'); } catch (e) {}
+        return BEST;
+      }
       if (ok.length) {
+        AUTHFAIL = true;
+        try { localStorage.setItem(LS.authfail, '1'); } catch (e) {}
         BEST = ok[0].ep; ONLINE = true;
         try { localStorage.setItem(LS.best, BEST); localStorage.setItem(LS.net, 'online'); } catch (e) {}
         return BEST;
@@ -199,6 +219,7 @@ function unb64(s) {
 /* ---------------- 对外 API ---------------- */
 const Net = {
   get online() { return ONLINE; },
+  get authFail() { return AUTHFAIL; },
   get endpoint() { return BEST || EPS[0]; },
   get queueLen() { return QUEUE.length; },
 
