@@ -649,6 +649,44 @@ const MAIN = {
     actshop: 'data/zb/actshop.json',
     rankrw: 'data/zb/rankrw.json',
     cfg: 'data/zb/cfg.json',
+    /* 以下四个此前不在列表内 —— 后台配了但游戏端从不读取，
+     * 商城改价 / 广告每日次数 / 军团配置 全部形同虚设。 */
+    hotfix: 'data/zb/hotfix.json',
+    shop: 'data/zb/shop.json',
+    ad: 'data/zb/ad.json',
+    social: 'data/zb/social.json',
+  },
+  /* ============ 热更新：版本提示 + 定时计划 ============ */
+  applyHotfix(db) {
+    if (!db) return;
+    try {
+      /* ① 定时计划：后台「生效时间」写入 plan[]，此前游戏端从不读
+       *    hotfix.json —— 填「2 小时后生效」的配置实际是【立即生效】的。
+       *    现在到点才写入 EX，未到点保持内置值。 */
+      const plan = db.plan || [];
+      const now = Date.now();
+      plan.forEach((x) => {
+        if (!x || !x.k) return;
+        if (x.at && now < Number(x.at)) return;      /* 未到生效时间 */
+        if (EX[x.k] === undefined) return;            /* 键不存在，避免污染 */
+        let v = x.v;
+        try { v = JSON.parse(v); } catch (e) {}
+        if (v !== null) EX[x.k] = v;
+      });
+      /* ② 版本提示：后台「推送到云端」写 ver，此前游戏端版本号写死在
+       *    index.html 的 ?v= —— 玩家 Ctrl+F5 也未必拿到新代码。
+       *    现在与本地记录比对，不一致就提示刷新（点击后带新版本号重载）。 */
+      const cv = String(db.ver || '');
+      if (!cv) return;
+      const local = String((EX.HOT_UPDATE && EX.HOT_UPDATE.version) || '');
+      if (cv === local) return;
+      const KEY = 'z_hot_seen';
+      let seen = '';
+      try { seen = localStorage.getItem(KEY) || ''; } catch (e) {}
+      if (seen === cv) return;
+      try { localStorage.setItem(KEY, cv); } catch (e) {}
+      if (window.UI && UI.showUpdate) UI.showUpdate(cv);
+    } catch (e) { console.error('applyHotfix', e); }
   },
   async syncCloudCfg() {
     if (typeof Net === 'undefined' || typeof EX === 'undefined') return;
@@ -818,6 +856,70 @@ const MAIN = {
           if (k === '_hotfix' || k === 'data') return;
           if (EX[k] !== undefined && src[k] !== null) EX[k] = src[k];
         });
+      } else if (key === 'hotfix') {
+        this.applyHotfix(db);
+      } else if (key === 'shop' && Array.isArray(db.list)) {
+        /* 后台「商城商品配置」→ 覆盖商品价格 / 限购
+         * 此前 shop.json 不在 CFG_FILES 内 —— 后台改价玩家端完全无感，
+         * 运营以为改了价，玩家看到的还是旧价。
+         * 注意：玩家真正看到的商城商品在 EX.shopGoods（按「每日/武器/…」分组），
+         * EX.shop 只是人民币充值档位（SH01~）。两者都要覆盖，
+         * 只改 EX.shop 的话运营改的「霰弹枪 5000 金」根本不会变。 */
+        const ov = db.list.filter((x) => x && x.id);
+        const patch = (s) => {
+          const o = ov.find((x) => x.id === s.id);
+          if (!o) return s;
+          const c = Object.assign({}, s);
+          if (o.price != null) c.price = Number(o.price) || 0;
+          if (o.per) c.per = o.per;
+          if (o.limit != null) c.limit = Number(o.limit) || 0;
+          return c;
+        };
+        if (ov.length) {
+          if (Array.isArray(EX.shop)) EX.shop = EX.shop.map(patch);
+          if (EX.shopGoods && typeof EX.shopGoods === 'object') {
+            const g = {};
+            Object.keys(EX.shopGoods).forEach((k) => {
+              g[k] = Array.isArray(EX.shopGoods[k]) ? EX.shopGoods[k].map(patch) : EX.shopGoods[k];
+            });
+            EX.shopGoods = g;
+          }
+          console.log('[cfg] 商城云端覆盖 ' + ov.length + ' 件商品');
+        }
+      } else if (key === 'ad' && Array.isArray(db.list)) {
+        /* 后台「广告位配置」→ 覆盖 EX.ads 的每日上限与奖励
+         * 此前 ad.json 不在 CFG_FILES 内 —— 后台配的每日次数完全无效，
+         * 玩家可以无限看广告领奖励（后台改了上限也拦不住）。 */
+        const ov = db.list.filter((x) => x && x.id);
+        if (ov.length && Array.isArray(EX.ads)) {
+          EX.ads = EX.ads.map((a) => {
+            const o = ov.find((x) => x.id === a.id);
+            if (!o) return a;
+            const c = Object.assign({}, a);
+            if (o.max != null) c.max = Number(o.max) || 0;
+            if (o.daily != null) c.daily = Number(o.daily) || 0;
+            if (o.item) { c.rw = {}; c.rw[o.item] = Number(o.n) || 1; }
+            return c;
+          });
+          console.log('[cfg] 广告位云端覆盖 ' + ov.length + ' 个');
+        }
+      } else if (key === 'social') {
+        /* 后台「社交」→ 军团与好友的云端配置
+         * 此前 social.json 不在 CFG_FILES 内 —— 后台在社交页配的军团
+         * 副本门槛 / 捐献汇率 / 好友上限全部无效，玩家端照用内置值。 */
+        if (Array.isArray(db.legion) && db.legion.length) {
+          EX.legionCfg = Object.assign({}, EX.legionCfg || {}, db.legion[0]);
+        } else if (db.legion && typeof db.legion === 'object') {
+          EX.legionCfg = Object.assign({}, EX.legionCfg || {}, db.legion);
+        }
+        /* 副本战力门槛也可由后台覆盖（legionCfg.actNeed = { LA01: 8000, ... }） */
+        if (EX.legionCfg && Array.isArray(EX.legionActs)) {
+          const ov = EX.legionCfg.actNeed || {};
+          EX.legionActs = EX.legionActs.map((a) =>
+            (ov[a.id] != null) ? Object.assign({}, a, { need: Number(ov[a.id]) || 0 }) : a);
+        }
+        if (db.friendMax != null) EX.FRIEND_MAX = Number(db.friendMax) || EX.FRIEND_MAX;
+        console.log('[cfg] 社交云端配置已应用');
       }
     } catch (e) { console.error('applyCloudCfg ' + key, e); }
   },
