@@ -259,9 +259,16 @@ const PAGES = {
           p.endlessBest = this.num('#e_eb'); p.curLevel = this.str('#e_cur') || p.curLevel;
           const go = this.str('#e_gunown');
           if (go) p.gunOwn = go.split(',').map((s) => s.trim()).filter(Boolean);
+          /* 危险 BUG 修复：此前只 save() 直接改写云端存档。
+           * 游戏端每 30 秒把内存 P 整份写回同一路径，【在线玩家的自动存档
+           * 会把后台改动静默覆盖】—— 后台提示「已保存」，玩家数据纹丝不动。
+           * 现在双写：写存档（离线玩家下次登录即生效）
+           *          + 下发 restore 指令（在线玩家 5 分钟内覆盖内存）。
+           * restore 是幂等的整体覆盖，重复应用无害。 */
           if (await this.save(p, 'GM 改属性')) {
+            await this.pushOp(p.uid, { t: 'restore', data: JSON.parse(JSON.stringify(p)) });
             AUDIT.log('GM改属性', p.uid, '金币' + p.gold + ' 钻石' + p.diamond);
-            this.toast('已保存', 'ok');
+            this.toast('已保存（并已下发在线指令）', 'ok');
           }
         },
         async backup() {
@@ -298,9 +305,12 @@ const PAGES = {
           if (!this.confirm('确定重置「' + (p.name || p.uid) + '」的全部进度？')) return;
           const np = E.newPlayer(p.uid, p.name || '玩家', p.gender);
           np.created = p.created || Date.now();
+          /* 同上：只写存档会被在线玩家自动存档覆盖，重置后进度原样回来。
+           * 双写 restore 指令，在线玩家即时归零。 */
           if (await this.save(np, '重置存档')) {
+            await this.pushOp(p.uid, { t: 'restore', data: JSON.parse(JSON.stringify(np)) });
             AUDIT.log('重置存档', p.uid, '');
-            this.toast('已重置', 'ok');
+            this.toast('已重置（并已下发在线指令）', 'ok');
             await this.loadPlayers({ force: true });
           }
         },
@@ -454,26 +464,64 @@ const PAGES = {
           if (!this.confirm('重建榜单？会按当前玩家存档重算名次（并入旧榜，不清空）。')) return;
           const box = D('#rkBox'); if (box) box.innerHTML = '<div class="empty">重建中…</div>';
           /* 各维度取前 100 名并集，避免战力高手被无尽高手挤掉 */
-          const rows = this.PLIST.filter((p) => !p.destroyed && !p._noSave).map((p) => ({
-            uid: p.uid, name: p.name, lv: p.lv || 1, pw: U.pw(p), eb: p.endlessBest || 0,
-          }));
-          const top = (key, n) => rows.slice().sort((a, b) => b[key] - a[key]).slice(0, n);
+          /* 契约修复：此前只写 {uid,name,lv,v,at}，把 u/n/pw/eb/t/ev 六个字段
+           * 全部抹掉。游戏端算名次用 b.eb / b.pw 排序，重建后这些字段变 undefined
+           * → 排序恒等、名次全乱，排行榜奖励也领不到。
+           * 现在统一走 E.rankRow()（与游戏端 save 时上传的行结构完全一致）。 */
+          const rowOf = (p) => {
+            try { if (window.E && E.rankRow) return E.rankRow(p); } catch (e) {}
+            return { uid: p.uid, u: p.uid, name: p.name, n: p.name, lv: p.lv || 1,
+              pw: U.pw(p), eb: Number(p.endlessBest || 0), t: Number(p.endlessBest || 0),
+              ev: Number(p.evScore || 0), at: Date.now() };
+          };
+          const rows = this.PLIST.filter((p) => !p.destroyed && !p._noSave).map(rowOf);
+          const top = (key, n) => rows.slice().sort((a, b) => (Number(b[key]) || 0) - (Number(a[key]) || 0)).slice(0, n);
           const eSet = top('eb', 100), pSet = top('pw', 100);
           const seen = {};
           const merged = [];
           eSet.concat(pSet).forEach((x) => { if (!seen[x.uid]) { seen[x.uid] = 1; merged.push(x); } });
           const eOld = (await DB.reload(DBP.endless)) || {};
           const pOld = (await DB.reload(DBP.rank)) || {};
+          /* key: 'eb'→无尽榜, 'pw'→战力榜。旧榜只有 v（单一数值），
+           * 按所属榜单把它还原到对应字段，绝不回退。 */
           const mergeOld = (old, arr, key) => {
-            const m = {}; (old.list || []).forEach((x) => { if (x && x.uid) m[x.uid] = x; });
-            arr.forEach((x) => {
-              const o = m[x.uid];
-              m[x.uid] = {
-                uid: x.uid, name: x.name || (o && o.name) || '', lv: x.lv,
-                v: Math.max(x[key], (o && o.v) || 0), at: Date.now(),
+            /* 规范化一行：把历史遗留的 v（单一数值）还原到本榜对应的字段。
+             * 必须在【旧榜每一行】上也跑一遍 —— 只在本次名单上跑的话，
+             * 旧榜里有、本次没拉到的玩家（离线很久 / 超出 200 上限）会原样保留，
+             * 仍然没有 eb/pw → 名次照样算错。 */
+            const norm = (x) => {
+              if (!x || !x.uid) return null;
+              const legacy = Math.max(Number(x[key]) || 0, Number(x.v) || 0);
+              const o = {
+                uid: x.uid, u: x.uid,
+                name: x.name || '', n: x.n || x.name || '',
+                lv: x.lv, pw: Number(x.pw) || 0, eb: Number(x.eb) || 0,
+                t: Number(x.t) || 0, ev: Number(x.ev) || 0, at: Date.now(),
               };
+              if (key === 'eb') { o.eb = Math.max(o.eb, legacy); o.t = Math.max(o.t, legacy); }
+              else o.pw = Math.max(o.pw, legacy);
+              o.v = o[key];
+              return o;
+            };
+            const m = {};
+            (old.list || []).forEach((x) => { const n = norm(x); if (n) m[n.uid] = n; });
+            arr.forEach((x) => {
+              const nx = norm(x); if (!nx) return;
+              const o = m[nx.uid];
+              if (!o) { m[nx.uid] = nx; return; }
+              m[nx.uid] = {
+                uid: nx.uid, u: nx.uid,
+                name: nx.name || o.name, n: nx.n || o.n,
+                lv: nx.lv,
+                pw: Math.max(o.pw, nx.pw), eb: Math.max(o.eb, nx.eb),
+                t: Math.max(o.t, nx.t), ev: Math.max(o.ev, nx.ev),
+                at: Date.now(),
+              };
+              m[nx.uid].v = m[nx.uid][key];
             });
-            return { list: Object.keys(m).map((k) => m[k]).sort((a, b) => b.v - a.v).slice(0, 200), updAt: Date.now() };
+            return { list: Object.keys(m).map((k) => m[k])
+              .sort((a, b) => (Number(b[key]) || 0) - (Number(a[key]) || 0)).slice(0, 200),
+            updAt: Date.now(), updated: Date.now() };
           };
           await DB.set(DBP.endless, mergeOld(eOld, merged, 'eb'), '重建无尽榜');
           await DB.set(DBP.rank, mergeOld(pOld, merged, 'pw'), '重建战力榜');
@@ -1002,7 +1050,11 @@ const PAGES = {
                 `<button class="btn sm err" data-a="rrDel" data-id="${U.esc(x.id)}">删除</button>`]))
             : this.empty('还没配置排名奖励')}
             <h3 style="margin:16px 0 8px;font-size:13px">数值热更（cfg.json）</h3>
-            <div class="fr"><label class="wide">键</label><input id="cf_k" placeholder="如 goldMul"></div>
+            <div class="hint" style="margin-bottom:6px">只能改游戏配置里【已存在】的数值键，填错键名会静默不生效（保存时会提示）</div>
+            <div class="fr"><label class="wide">键</label><input id="cf_k" list="cfKeys" placeholder="如 STAMINA_MAX">
+              <datalist id="cfKeys">${(window.EX ? Object.keys(EX).filter((k) => {
+                const v = EX[k]; return typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean';
+              }).slice(0, 120) : []).map((k) => `<option value="${U.esc(k)}">`).join('')}</datalist></div>
             <div class="fr"><label class="wide">值</label><input id="cf_v" placeholder="如 1.2"></div>
             <div class="btns">
               <button class="btn pri" data-a="cfSet">保存键值</button>
@@ -1039,13 +1091,19 @@ const PAGES = {
         async cfSet() {
           const k = this.str('#cf_k');
           if (!k) { this.toast('键名必填', 'err'); return; }
+          /* 契约提示：游戏端 applyCloudCfg 只覆盖【EX 里已存在】的键，
+           * 填一个不存在的键（typo / 自己编的名字）会静默无效、不报错，
+           * 运营点完「已保存」以为改了，实际游戏里一点没变。
+           * 这里保存前先校验，命中未知键就明确警告。 */
+          const known = (window.EX && Object.prototype.hasOwnProperty.call(EX, k));
           let v = this.str('#cf_v');
           try { v = JSON.parse(v); } catch (e) { /* 保持字符串 */ }
           const d = await DB.reload(DBP.cfg);
           d[k] = v;
           if (await DB.set(DBP.cfg, d, '数值热更 ' + k)) {
             AUDIT.log('数值热更', k, String(v));
-            this.toast('已保存：' + k + ' = ' + v, 'ok');
+            if (known) this.toast('已保存：' + k + ' = ' + v, 'ok');
+            else this.toast('已写入云端，但游戏配置里没有「' + k + '」这个键 → 不会生效', 'warn');
             this.acts.loadRrw.call(this);
           }
         },
@@ -1374,6 +1432,7 @@ const PAGES = {
       n: '商城 / 支付', i: '🛒', g: '运营', perm: 'shop.view',
       render() {
         const t = tab('shop', 'goods');
+        const NOT_READ = '<div class="hint" style="margin:8px 0;color:#ff8fa4">⚠ 游戏端尚未接入本模块的云端配置（不在 CFG_FILES 列表内）—— 这里配的内容<b>不会在游戏中生效</b>，仅存档备查。</div>';
         const seg = (k, n) => `<button class="${t === k ? 'on' : ''}" data-a="tab" data-k="${k}">${n}</button>`;
         const body = t === 'goods'
           ? `<div class="btns"><button class="btn" data-a="shpReload">⟳ 刷新商品</button></div>
@@ -1390,7 +1449,7 @@ const PAGES = {
                <button class="btn" data-a="odReload">⟳ 刷新订单</button>
              </div>
              <div id="odBox" style="margin-top:10px"></div>`;
-        return `<div class="card">
+        return `${NOT_READ}<div class="card">
           <h3>商城 / 支付<span class="tag">商品配置 / 支付回调</span></h3>
           <div class="seg" style="margin-bottom:10px">${seg('goods', '商品配置')}${seg('pay', '支付回调')}</div>
           ${body}</div>`;
@@ -1492,6 +1551,7 @@ const PAGES = {
       render() {
         return `<div class="card">
           <h3>广告位配置<span class="tag">每日次数 / 奖励</span></h3>
+          <div class="hint" style="margin:8px 0;color:#ff8fa4">⚠ 游戏端尚未接入本模块的云端配置（不在 CFG_FILES 列表内）—— 这里配的内容<b>不会在游戏中生效</b>，仅存档备查。</div> 
           <div class="fr"><label class="wide">广告位</label><select id="ad_id">
             ${(EX.ads || [{ id: 'AD01', n: '复活' }, { id: 'AD02', n: '双倍收益' }, { id: 'AD03', n: '体力' }])
               .map((a) => `<option value="${U.esc(a.id)}">${U.esc(a.n || a.id)}</option>`).join('')}
@@ -1562,13 +1622,14 @@ const PAGES = {
       n: '社交', i: '👥', g: '运营', perm: 'social.view',
       render() {
         const t = tab('social', 'friend');
+        const NOT_READ = '<div class="hint" style="margin:8px 0;color:#ff8fa4">⚠ 游戏端尚未接入本模块的云端配置（不在 CFG_FILES 列表内）—— 这里配的内容<b>不会在游戏中生效</b>，仅存档备查。</div>';
         const seg = (k, n) => `<button class="${t === k ? 'on' : ''}" data-a="tab" data-k="${k}">${n}</button>`;
         const body = t === 'friend'
           ? `<div class="btns"><button class="btn" data-a="scStat">📈 在线状态统计</button></div>
              <div id="scBox" style="margin-top:10px"></div>`
           : `<div class="btns"><button class="btn" data-a="lgReload">⟳ 刷新军团</button></div>
              <div id="lgBox" style="margin-top:10px"></div>`;
-        return `<div class="card">
+        return `${NOT_READ}<div class="card">
           <h3>社交<span class="tag">好友 / 聊天 / 军团</span></h3>
           <div class="seg" style="margin-bottom:10px">${seg('friend', '好友 / 在线')}${seg('legion', '军团管理')}</div>
           ${body}</div>`;
