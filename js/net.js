@@ -282,7 +282,25 @@ const Net = {
     if (sha) body.sha = sha;
     const r = await ghReq(path, { method: 'PUT', body });
     if (r && r.content) {
-      localStorage.setItem(LS.cache + path, JSON.stringify(obj));
+      /* 缓存只是加速手段，云端已写入成功就不该让它把整个 write 拖崩。
+       * 此前这行裸写：配额溢出(QuotaExceededError)时会直接抛穿 write()，
+       * 调用方拿到的是异常而非 true，误判"存档失败"，且后面进队列的
+       * 兜底分支根本走不到。现在失败先清掉最旧的缓存腾空间再试一次，
+       * 仍失败则静默放弃缓存，绝不因缓存影响写入结果判定。 */
+      try {
+        localStorage.setItem(LS.cache + path, JSON.stringify(obj));
+      } catch (e) {
+        try {
+          const keys = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.indexOf(LS.cache) === 0 && k !== LS.cache + path) keys.push(k);
+          }
+          keys.sort();
+          for (const k of keys.slice(0, Math.ceil(keys.length / 3))) localStorage.removeItem(k);
+          localStorage.setItem(LS.cache + path, JSON.stringify(obj));
+        } catch (e2) {}
+      }
       return true;
     }
     // 进队列
