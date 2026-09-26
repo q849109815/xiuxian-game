@@ -837,6 +837,26 @@ const PAGES = {
             /* 等级区间同时写进 filter，前端也认 */
             m.filter = { lvMin: lvmin || null, lvMax: lvmax || null, regAfter: regAfter || null };
           }
+          /* 全服邮件影响面极大：发给所有现有玩家，且【此后注册的玩家也会领到】。
+           * 教训（实测）：一封「补偿 1 亿金币」的测试邮件留在云端且未设过期，
+           *   结果此后【每一个新注册玩家登录即白得 1 亿金币】，经济直接崩坏，
+           *   且只能靠手动清 mail.json 补救、已发出的金币收不回。
+           * 现在对「大额附件」与「未设过期时间」强制二次确认，
+           * 并在确认文案里写明"对未来注册的玩家同样生效"。 */
+          if (type === 'all') {
+            const bg = Number(rw.gold || 0), bd = Number(rw.diamond || 0);
+            const warn = [];
+            if (bg >= 100000) warn.push('· 金币 ' + bg + '（数额较大）');
+            if (bd >= 1000) warn.push('· 钻石 ' + bd + '（数额较大）');
+            if (exp <= 0) warn.push('· 未设过期时间 → 该邮件永久有效');
+            if (warn.length) {
+              const ok = this.confirm(
+                '确认发送【全服邮件】？\n\n' + warn.join('\n') +
+                '\n\n全服邮件对所有现有玩家生效，此后新注册的玩家登录时也会领到。' +
+                '\n发错只能手动删除，已发放的奖励无法收回。');
+              if (!ok) return;
+            }
+          }
           const d = await DB.reload(DBP.mail);
           d.list = d.list || [];
           d.list.unshift(m);
