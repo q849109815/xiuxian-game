@@ -90,6 +90,10 @@ const MAIN = {
       }
     }
     P = p; window.P = p; UI.P = p;
+    /* 读档基准：记录"内存里这份数据来自云端哪一版"。
+     * 存档写入时用它判断本地是否已被云端超越（多设备 / 读到旧分支），
+     * 防止把旧档写回去覆盖别人的新进度（回档）。 */
+    p._baseAt = Number(p.offlineAt) || 0;
     this.savePath = path;
     this.migrate(p);
     UI.home(); UI.show('home');
@@ -193,7 +197,9 @@ const MAIN = {
       np.opsDone = P.opsDone;
       Object.keys(P).forEach((k) => { delete P[k]; });
       Object.assign(P, np);
-      P.lastSeen = Date.now();
+      P.lastSeen = Date.now(); P.offlineAt = Date.now();
+      /* 后台主动回档：这份数据即为当前最新状态，刷新基准避免被守卫拦截 */
+      P._baseAt = Date.now();
     } else if (op.t === 'ban') {
       /* 在线封禁立即生效：登录校验只在登录时跑，
        * 光写存档会被在线玩家 30 秒自动存档覆盖 → 作弊者能一直玩到手动退出 */
@@ -394,7 +400,16 @@ const MAIN = {
     this.syncSnap();
     let ok = false;
     try { ok = await Net.write(this.savePath, P); } catch (e) {}
-    if (ok) { try { localStorage.removeItem(this.snapKey(P.uid)); } catch (e) {} }
+    if (ok === true) {
+      try { localStorage.removeItem(this.snapKey(P.uid)); } catch (e) {}
+      P._baseAt = P.offlineAt;      /* 已成功落云端，基准前移 */
+    } else if (ok === 'stale') {
+      /* 云端已有更新的进度（别的设备 / 读到了旧分支的档）。
+       * 拒绝覆盖，保留本地快照，避免把新进度抹掉。 */
+      try {
+        UI.toast('⚠️ 云端存在更新的进度，已保护未覆盖', 'err');
+      } catch (e) {}
+    }
     this.uploadRank();
   },
   startSave() { if (saveT) clearInterval(saveT); saveT = setInterval(() => { if (P && !window.__zbResetting) this.save(); }, 30000); },
