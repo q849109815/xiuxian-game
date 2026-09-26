@@ -322,15 +322,9 @@ const E = {
     p.skin = s ? s.id : this.skinOf(id)[0].id;
     return { ok: true, msg: '已切换为 ' + this.char(p).n };
   },
-  buySkin(p, skinId) {
-    const s = EX.skins.find((x) => x.id === skinId); if (!s) return { ok: false, msg: '皮肤不存在' };
-    if ((p.skins || []).indexOf(skinId) >= 0) return { ok: false, msg: '已拥有' };
-    if (!this.charUnlocked(p, s.char)) return { ok: false, msg: '角色未解锁' };
-    if ((p.diamond || 0) < s.price) return { ok: false, msg: EX.tip('popup.noDiamond', { v: s.price }) };
-    p.diamond -= s.price; p.skins.push(skinId); p.skin = skinId;
-    try { this.codexUnlock(p, 'skin', skinId); } catch (e) {}
-    return { ok: true, msg: '已解锁 ' + s.n };
-  },
+  /* 皮肤购买统一走下方那个 buySkin（带 Array.isArray 守卫 / 价格校验 /
+   * 角色归属校验）。此处原先还有一个同名 buySkin，被后定义覆盖后成为
+   * 永远不生效的死代码 —— 留着会让「改了没反应」，故删除。 */
 
   /* =================================================
    * 武器（资料武器表 10 把 + 进阶）
@@ -478,13 +472,21 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     p.bag.push(c); delete p.chips[slot];
     return { ok: true, msg: '已卸下芯片' };
   },
-  /* 拆解 → 按品质给材料碎片 */
-  dismantleChip(p, chipId) {
+  /* 拆解单颗芯片 → 按品质给枪械碎片
+   * BUG（同名覆盖）：本方法原先也叫 dismantleChip，而下方 2204 行
+   *   还有一个「按品质批量分解、给金币」的同名方法。
+   *   JS 对象字面量里重复键【后定义覆盖前定义】，于是本方法被彻底顶掉，
+   *   芯片面板每颗芯片上的「分解」按钮（ui.js data-dec，传的是芯片 id）
+   *   落到按品质版本 → {白/蓝/红}[芯片id] = undefined → 恒返回
+   *   「未知芯片品质」，玩家点了永远分解不掉，背包只增不减。
+   * 现改名为 dismantleChipById，两个入口各走各的语义，互不覆盖。 */
+  dismantleChipById(p, chipId) {
     const i = (p.bag || []).findIndex((c) => c.id === chipId);
     if (i < 0) return { ok: false, msg: '未找到该芯片' };
     const c = p.bag[i];
     const gain = { '白': 1, '蓝': 3, '红': 9 }[c.q] || 1;
     p.bag.splice(i, 1);
+    p.mat = p.mat || {};
     p.mat.P01 = (p.mat.P01 || 0) + gain;
     return { ok: true, msg: '拆解获得 枪械碎片 ×' + gain };
   },
@@ -1770,6 +1772,17 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (!sk) return { ok: false, msg: '皮肤不存在' };
     p.skins = Array.isArray(p.skins) ? p.skins : [];
     if (p.skins.indexOf(id) >= 0) return { ok: false, msg: '已拥有该皮肤' };
+    /* 角色归属检查（同名覆盖丢失的逻辑）
+     * BUG：本方法与上方 325 行的 buySkin 同名，重复键【后定义生效】，
+     *      而本版本漏了 charUnlocked 检查 —— 结果新号（只解锁 C01）
+     *      能直接买走 C03 的「装甲骑士」680 钻，买完 p.char 仍是 C01、
+     *      p.skin 却是 sk_c03b：外观穿错角色，而皮肤加成却照常生效
+     *      （实测护甲 0 → 4），等于花一份钱拿到不属于本角色的属性。
+     * 现在补回归属检查并给出明确提示。 */
+    if (sk.char && !this.charUnlocked(p, sk.char)) {
+      const c = EX.chars.find((x) => x.id === sk.char);
+      return { ok: false, msg: '需先解锁角色「' + (c ? c.n : sk.char) + '」' };
+    }
     const price = Number(sk.price) || 0;
     if (price <= 0) return { ok: false, msg: '该皮肤无法购买' };
     if ((p.diamond || 0) < price) return { ok: false, msg: '钻石不足（需 ' + price + '）' };
