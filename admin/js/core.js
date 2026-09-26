@@ -233,6 +233,53 @@ const PERM = {
     if ((def.p || []).indexOf('all') >= 0) return true;
     return (def.p || []).some((x) => x === p || (x.endsWith('.*') && p.indexOf(x.slice(0, -1)) === 0));
   },
+  /* =============================================================
+   * 按钮级权限（此前完全缺失）
+   * BUG：ROLES 定义了 6 种角色、账号页 perm 只是 account.query，
+   *   但页面内所有 data-a 动作都没有校验权限 ——
+   *   GM 角色定义里明确只给 account.query/ban/resetpwd（不含注销、永久删除），
+   *   实际却能点「🔥 永久删除」把玩家账号物理删除，属于越权。
+   * 这里只映射「写/危险」动作，未列出的动作保持放行，避免误伤只读操作。
+   * ============================================================= */
+  ACT: {
+    /* 账号 */
+    new: 'account.create', resetpwd: 'account.resetpwd',
+    ban: 'account.ban', unban: 'account.ban',
+    destroy: 'account.destroy', purge: 'account.purge', purgeDead: 'account.purge',
+    /* 存档 */
+    saveEdit: 'save.edit', backup: 'save.edit', restore: 'save.rollback', resetSave: 'save.reset',
+    /* 运营指令 */
+    grant: 'ops.grant', odAdd: 'ops.grant', odFix: 'ops.grant',
+    banNow: 'ops.ban', unbanNow: 'ops.ban',
+    /* 邮件 */
+    sendMail: 'mail.send', mDel: 'mail.send',
+    /* 礼包码 */
+    genKey: 'cdkey.gen', addTpl: 'cdkey.gen', delTpl: 'cdkey.gen', voidOne: 'cdkey.void', ckVoid: 'cdkey.void',
+    exKey: 'cdkey.gen',
+    /* 排行榜 */
+    rebuild: 'rank.rebuild', settle: 'rank.settle', rrAdd: 'rank.rw', rrDel: 'rank.rw',
+    /* 运营配置 */
+    actAdd: 'config.edit', actDel: 'config.edit', actToggle: 'config.edit',
+    addRw: 'config.edit', delRw: 'config.edit',
+    shopAdd: 'config.edit', shopDel: 'config.edit',
+    cfSet: 'config.edit', cfAt: 'config.edit',
+    adSave: 'config.edit', lgSave: 'config.edit', scSave: 'config.edit', spEdit: 'config.edit',
+    /* 热更 / 版本 */
+    hvSave: 'hotfix.push', hvPush: 'hotfix.push',
+    /* 服务器运维 */
+    svSave: 'server.maint',
+    /* 公告 */
+    ntAdd: 'notice.edit', ntDel: 'notice.edit',
+    /* 埋点 */
+    biClear: 'bi.clear',
+  },
+  /* 该动作当前角色是否可做（未映射的动作放行） */
+  canAct(a) {
+    const need = this.ACT[a];
+    if (!need) return true;
+    return this.has(need);
+  },
+  needOf(a) { return this.ACT[a] || ''; },
 };
 
 /* =====================================================================
@@ -386,7 +433,15 @@ const APP = {
     b.onclick = (e) => {
       const t = e.target.closest('[data-a]');
       if (!t || !p.acts) return;
-      const fn = p.acts[t.dataset.a];
+      const a = t.dataset.a;
+      /* 按钮级权限：低权限角色不得越权执行危险操作（如 GM 永久删号） */
+      if (!PERM.canAct(a)) {
+        this.toast('🔒 当前角色（' + ((PERM.ROLES[PERM.curRole()] || PERM.ROLES.admin).n)
+          + '）无此操作权限，需要 ' + PERM.needOf(a), 'err');
+        AUDIT.log('越权被拦截', '', a + ' 需要 ' + PERM.needOf(a));
+        return;
+      }
+      const fn = p.acts[a];
       if (fn) { try { fn.call(this, t, e); } catch (er) { console.error(er); this.toast('操作失败：' + er.message, 'err'); } }
     };
     b.onchange = (e) => {
@@ -402,6 +457,16 @@ const APP = {
       if (fn) { try { fn.call(this, t, e); } catch (er) { console.error(er); } }
     };
     if (p.bind) { try { p.bind.call(this); } catch (e) { console.error(e); } }
+    /* 无权限按钮置灰：让低权限角色一眼看出哪些操作做不了 */
+    try {
+      DA('#body [data-a]').forEach((el) => {
+        const a = el.dataset.a;
+        if (!PERM.canAct(a)) {
+          el.classList.add('dis');
+          el.setAttribute('title', '🔒 当前角色无此权限（需要 ' + PERM.needOf(a) + '）');
+        }
+      });
+    } catch (e) {}
     const m = D('.main'); if (m) m.scrollTop = 0;
     this.net();
   },
@@ -804,6 +869,17 @@ const APP = {
 
   /* 表单取值 */
   num(id) { const e = D(id); return e ? (parseFloat(e.value) || 0) : 0; },
+  /* 数量校验（补发 / 邮件附件 / 礼包码等发给玩家的数量）
+   * 后台是自由输入，而 num() 只挡 0 不挡负数 ——
+   * 填 -100000 会生成「扣除玩家资产」的指令，玩家金币钻石被直接扣光；
+   * 填 1e20 会让游戏端数值溢出，存档与面板显示失控。
+   * 这里统一拦在后台侧：必须是 > 0 的有限数并封顶，非法返回 0 由调用方拒绝。 */
+  qty(id, max) {
+    const e = D(id); if (!e) return 0;
+    const v = parseFloat(e.value);
+    if (!isFinite(v) || v <= 0) return 0;
+    return Math.min(Math.floor(v), max || 1e12);
+  },
   val(id) { const e = D(id); return e ? (e.value || '') : ''; },
   str(id) { const e = D(id); return e ? String(e.value || '').trim() : ''; },
   chk(id) { const e = D(id); return !!(e && e.checked); },
