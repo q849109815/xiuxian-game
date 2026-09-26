@@ -1359,6 +1359,26 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if ((p.stamina || 0) < EX.SWEEP_STAMINA) return { ok: false, msg: EX.tip('popup.noStamina', { v: EX.SWEEP_STAMINA }) };
     return { ok: true };
   },
+  /* 扫荡预览：必须与 sweep() 走同一套算法，否则「弹窗显示」与「实际到账」对不上。
+   * BUG：UI 此前直接用 EX.sweepRw（旧独立公式）显示单次产出，而 sweep() 已改为
+   *   按关卡真实奖励发放 —— 弹窗恒显示「金币180 / 金属(M01)5」，实际发的却是
+   *   关卡配置（如 1-1 金币500 + M02×5，后期关卡差几十倍），材料种类也显示错。 */
+  sweepPreview(p, lvId, times) {
+    const t = Math.max(1, Math.min(EX.SWEEP_MAX, times || 1));
+    const lvNum = parseInt(String(lvId).split('-')[1] || '1', 10);
+    const ld = (EX.levels || []).find((x) => x.id === lvId) || null;
+    const fb = EX.sweepRw(lvNum, t);
+    const gold = Math.floor(((ld && ld.rw && ld.rw.gold) || fb.gold) * t);
+    const mat = {};
+    const src = (ld && ld.rw) ? ld.rw : { M01: fb.M01 };
+    Object.keys(src).forEach((k) => {
+      if (k === 'gold' || k === 'diamond') return;
+      mat[k] = (Number(src[k]) || 0) * t;
+    });
+    return { times: t, gold: gold, mat: mat,
+      diamond: (ld && ld.rw && ld.rw.diamond) ? ld.rw.diamond * t : 0,
+      xp: fb.xp, stamina: EX.SWEEP_STAMINA * t };
+  },
   sweep(p, lvId, times) {
     const lvNum = parseInt(String(lvId).split('-')[1] || '1', 10);
     const ck = this.canSweep(p, lvId);
