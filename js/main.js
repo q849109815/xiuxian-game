@@ -771,9 +771,23 @@ const MAIN = {
          *     现在改成「按榜单合并」：后台配的榜单替换，没配的保留默认。
          *  ③ settle 后台单位是「天」，此前被当成「小时」显示，改为 天。 */
         const BOARDS = ['无尽生存榜', '战力榜', '活动冲榜'];
+        /* 后台「榜单」下拉存的是英文 key（endless / power / event），
+         * 而游戏端 UI 与默认配置一律用中文榜名。此前直接 indexOf 中文表，
+         * 英文 key 永远匹配不上 → 无条件回退成「无尽生存榜」。
+         * 于是后台配的【战力榜 / 活动冲榜】奖励全被塞进无尽榜：
+         *   玩家在战力榜拿了第一却领不到奖励（判定 board 不符），
+         *   无尽榜反而多出一堆不属于它的重复奖励。
+         * 现在先做英文→中文归一化，再校验。 */
+        const BOARD_KEY = { endless: '无尽生存榜', power: '战力榜', event: '活动冲榜' };
+        const normBoard = (b) => {
+          const s = String(b || '').trim();
+          if (BOARD_KEY[s]) return BOARD_KEY[s];
+          if (BOARDS.indexOf(s) >= 0) return s;
+          return '';
+        };
         const incoming = db.list.filter((x) => x && x.item).map((x, i) => ({
           id: x.id || ('RW' + i),
-          board: BOARDS.indexOf(x.board) >= 0 ? x.board : '无尽生存榜',
+          board: normBoard(x.board) || '无尽生存榜',
           rank: '第' + (x.a || 1) + '-' + (x.b || 1) + '名',
           lo: Number(x.a) || 1, hi: Number(x.b) || 1,
           rw: { [x.item]: Number(x.n) || 1 },
