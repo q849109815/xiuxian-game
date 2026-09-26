@@ -1210,6 +1210,31 @@ function bindAll() {
     await MAIN.login(r.nick, r.gender);
   };
 
+  /* ---- 手机软键盘「前往 / 完成」提交 ----
+   * BUG：登录/注册表单完全没有 keydown 处理。手机输完密码后，软键盘右下角
+   *   显示的「前往」按钮点了毫无反应（实测：密码框按 Enter 触发登录 0 次、
+   *   提示区为空；账号框按 Enter 焦点仍停在账号框，不会跳到密码框），
+   *   玩家必须手动收起键盘再去点登录按钮，每次登录都多一步。
+   * 现在：登录表单 账号→密码→登录；注册表单 账号→密码→确认→昵称→注册。
+   *   （index.html 已同步补 enterkeyhint，让键盘按钮直接显示「下一项/前往/完成」，
+   *     并关闭 iOS 的首字母自动大写与自动更正，避免密码被悄悄改掉。） */
+  const kbChain = (ids, submitId) => {
+    ids.forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.keyCode !== 13) return;
+        e.preventDefault();
+        const next = document.getElementById(ids[i + 1]);
+        if (next) { next.focus(); return; }
+        const btn = document.getElementById(submitId);
+        if (btn) btn.click();
+      });
+    });
+  };
+  kbChain(['lgUser', 'lgPwd'], 'lgBtn');
+  kbChain(['rgUser', 'rgPwd', 'rgPwd2', 'rgNick'], 'rgBtn');
+
   /* 忘记密码 */
   const lgFind = document.getElementById('lgFind');
   if (lgFind) lgFind.onclick = () => {
