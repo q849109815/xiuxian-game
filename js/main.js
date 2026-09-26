@@ -933,9 +933,17 @@ function battleGo(id, mode) {
   const sp = E.spendStamina(P, id);
   if (!sp.ok) { UI.toast(sp.msg, 'err'); UI.show('home'); return; }
   UI.show('battle');
-  /* 音频：战斗 BGM */
+  /* 音频：战斗 BGM
+   * BUG：此处此前读的是 BT.run.def（上一局残留的 run，首次进入时为 undefined），
+   *      而 BT.start 在下面才执行 —— 于是 BOSS 关判定的是【上一局】的类型：
+   *      · 首次进游戏就打 BOSS → BT.run 为空 → 按普通关播 'battle'，BOSS 音乐永远不出；
+   *      · 刚打完 BOSS 再打普通关 → BT.run 还是上一局的 BOSS → 普通关播 BOSS 音乐。
+   *      而 SND.bgm 内部有 `curBgm === name 则直接 return` 的短路，
+   *      连续两局同为 'battle' 时连切换都不会发生，BOSS 音乐彻底播不出来。
+   * 现在改为按【本关】的关卡定义判定，与 BT.start 的先后顺序无关。 */
   if (window.SND) {
-    const isBoss = BT.run && (BT.run.def.cond === 'boss' || BT.run.def.cond === 'bossAll');
+    const def = (EX.levels || []).find((l) => l.id === id) || {};
+    const isBoss = def.cond === 'boss' || def.cond === 'bossAll' || !!(def.boss);
     SND.bgm(id === 'endless' ? 'endless' : isBoss ? 'boss' : 'battle');
   }
   BT.attach(document.getElementById('C'));
