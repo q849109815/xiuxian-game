@@ -1,33 +1,56 @@
-/* =========================================================
- * core.js —— 运营后台核心：工具 / 数据层 / 审计 / 路由
- * ========================================================= */
+/* =====================================================================
+ * core.js —— 运营后台内核
+ *   工具 U / 超时 TMO / 数据层 DB / 审计 AUDIT / 权限 PERM / 主体 APP
+ * =================================================================== */
+'use strict';
 
+/* 管理口令（沿用原后台，不可随意改动） */
 const PWD = 'fj19941224';
 const AKEY = 'zb_admin_ok';
-const PDIR = 'data/zb/players/';
+const PDIR = 'data/zb/players/';   /* 玩家存档目录 */
+const UDIR = 'data/zb/users/';     /* 账号目录   */
+const OPDIR = 'data/zb/ops/';      /* 指令队列   */
 
 /* ---------------- 云端数据路径 ---------------- */
 const DBP = {
-  mail: 'data/zb/mail.json',           // 邮件（广播+定向）
-  cdkey: 'data/zb/cdkey.json',         // 礼包码 + 模板
-  activity: 'data/zb/activity.json',   // 活动
-  actshop: 'data/zb/actshop.json',     // 活动商店
-  achshop: 'data/zb/achshop.json',     // 成就商店
-  rankrw: 'data/zb/rankrw.json',       // 排行榜奖励
-  rank: 'data/zb/leaderboard.json',    // 战力榜
-  endless: 'data/zb/endless.json',     // 无尽榜
-  cfg: 'data/zb/cfg.json',             // 数值配置
-  hotfix: 'data/zb/hotfix.json',       // 热更历史
-  server: 'data/zb/server.json',       // 服务器状态
-  accounts: 'data/zb/accounts.json',   // 后台账号
-  roles: 'data/zb/roles.json',         // 角色权限
-  risk: 'data/zb/risk.json',           // 风控（封禁日志/黑名单/预警）
-  order: 'data/zb/order.json',         // 充值订单
-  gmlog: 'data/zb/gmlog.json',         // GM 操作日志
-  stats: 'data/zb/stats.json',         // 统计大盘
+  mail: 'data/zb/mail.json',
+  cdkey: 'data/zb/cdkey.json',
+  activity: 'data/zb/activity.json',
+  actshop: 'data/zb/actshop.json',
+  achshop: 'data/zb/achshop.json',
+  rankrw: 'data/zb/rankrw.json',
+  rank: 'data/zb/leaderboard.json',
+  endless: 'data/zb/endless.json',
+  cfg: 'data/zb/cfg.json',
+  hotfix: 'data/zb/hotfix.json',
+  server: 'data/zb/server.json',
+  gmlog: 'data/zb/gmlog.json',
+  stats: 'data/zb/stats.json',
+  index: 'data/zb/index.json',
+  ops: 'data/zb/ops.json',
+  notice: 'data/zb/notice.json',
+  shop: 'data/zb/shop.json',
+  ad: 'data/zb/ad.json',
+  social: 'data/zb/social.json',
+  bi: 'data/zb/bi.json',
 };
 
-/* ---------------- 工具 ---------------- */
+/* =====================================================================
+ * 超时包装：后台不加载 main.js，window.TMO 可能不存在，这里兜底定义
+ * =================================================================== */
+window.TMO = window.TMO || function (p, ms, def) {
+  return new Promise((res) => {
+    let done = false;
+    const t = setTimeout(() => { if (!done) { done = true; res(def); } }, ms || 10000);
+    Promise.resolve(p).then((v) => {
+      if (!done) { done = true; clearTimeout(t); res(v); }
+    }).catch(() => { if (!done) { done = true; clearTimeout(t); res(def); } });
+  });
+};
+
+/* =====================================================================
+ * 工具集
+ * =================================================================== */
 const U = {
   esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, (c) =>
@@ -35,8 +58,11 @@ const U = {
   },
   fmt(n) {
     n = Number(n) || 0;
-    if (n >= 1e8) return (n / 1e8).toFixed(2) + '亿';
-    if (n >= 1e4) return (n / 1e4).toFixed(1) + '万';
+    if (!isFinite(n)) return '0';
+    const a = Math.abs(n);
+    if (a >= 1e12) return (n / 1e12).toFixed(2) + '兆';
+    if (a >= 1e8) return (n / 1e8).toFixed(2) + '亿';
+    if (a >= 1e4) return (n / 1e4).toFixed(1) + '万';
     return String(Math.floor(n));
   },
   ago(t) {
@@ -50,12 +76,11 @@ const U = {
   },
   dt(t) {
     if (!t) return '—';
-    const d = new Date(t);
-    const p = (x) => String(x).padStart(2, '0');
+    const d = new Date(t), p = (x) => String(x).padStart(2, '0');
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
       + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
   },
-  /* 生成随机码 */
+  d(t) { return U.dt(t).split(' ')[0]; },
   code(n) {
     const s = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let r = '';
@@ -64,85 +89,47 @@ const U = {
   },
   uid() { return 'u' + Math.random().toString(36).slice(2, 10); },
   pw(p) { try { return E.power(p) || 0; } catch (e) { return 0; } },
-  itemName(id) {
-    try { return E.itemName(id) || id; } catch (e) { return id; }
-  },
+  itemName(id) { try { return E.itemName(id) || id; } catch (e) { return id; } },
+
+  /* 全部可发放物品：货币 + 物品表 + 皮肤 + 宝石 + 称号 + 头像框
+   * （旧版只列货币与物品表，皮肤/宝石/称号/头像框选不到，无法补发） */
   itemList() {
-    /* 全部可发放物品：物品表 + 货币 */
-    const out = [{ id: 'gold', n: '金币', icon: '🪙' }, { id: 'diamond', n: '钻石', icon: '💎' },
+    const out = [
+      { id: 'gold', n: '金币', icon: '🪙' }, { id: 'diamond', n: '钻石', icon: '💎' },
       { id: 'ach', n: '成就点', icon: '🏅' }, { id: 'stamina', n: '体力', icon: '⚡' },
-      { id: 'evToken', n: '活动代币', icon: '🎟️' }];
+      { id: 'evToken', n: '活动代币', icon: '🎟️' },
+    ];
     (EX.items || []).forEach((it) => out.push({ id: it.id, n: it.n, icon: it.icon || '📦' }));
-    /* 补齐此前缺失的四类可发放物品
-     * BUG：itemList() 只由「5 种货币 + EX.items(16 项)」构成，
-     *   而皮肤(11)、宝石(4)、称号(4)、头像框(2) 全都不在里面。
-     *   物品表 EX.items 里也没有这几类（只有 C01~C03 芯片在）。
-     * 后果：运营想补发【皮肤 / 宝石 / 称号 / 头像框】时，下拉框里根本选不到
-     *   —— 近几轮修的正是"皮肤买了拿不到""宝石发成 M05""称号是死数据"
-     *      这类问题，而后台恰恰没有办法给玩家补回这些东西。
-     * 现在按 EX 真实表补全，id 与 APP.grant 的分支一一对应。 */
-    (EX.skins || []).forEach((sk) => {
-      if (!sk || !sk.id) return;
-      out.push({ id: sk.id, n: '皮肤·' + (sk.n || sk.id), icon: sk.icon || '🥼' });
-    });
-    (EX.gems || []).forEach((g) => {
-      if (!g || !g.id) return;
-      out.push({ id: g.id, n: '宝石·' + (g.n || g.id), icon: g.icon || '💎' });
-    });
-    (EX.titles || []).forEach((t) => {
-      if (!t || !t.id) return;
-      out.push({ id: t.id, n: '称号·' + (t.n || t.id), icon: '🏅' });
-    });
-    (EX.frames || []).forEach((f) => {
-      if (!f || !f.id) return;
-      out.push({ id: f.id, n: '头像框·' + (f.n || f.id), icon: f.icon || '🖼️' });
-    });
+    (EX.skins || []).forEach((s) => s && s.id && out.push({ id: s.id, n: '皮肤·' + (s.n || s.id), icon: s.icon || '🥼' }));
+    (EX.gems || []).forEach((g) => g && g.id && out.push({ id: g.id, n: '宝石·' + (g.n || g.id), icon: g.icon || '💎' }));
+    (EX.titles || []).forEach((t) => t && t.id && out.push({ id: t.id, n: '称号·' + (t.n || t.id), icon: '🏅' }));
+    (EX.frames || []).forEach((f) => f && f.id && out.push({ id: f.id, n: '头像框·' + (f.n || f.id), icon: '🖼️' }));
     return out;
   },
-  /* 物品选择器 HTML */
-  /* 物品下拉选择器
-   * 致命 BUG 修复：此前只生成 data-pk="xxx"，没有 id="xxx"。
-   * 而全后台 10 处调用都用 U.val('#xxx') 取值 ——
-   * document.querySelector('#xxx') 找不到元素返回 null，val() 返回空串。
-   * 后果（全部无声失效，界面还提示成功）：
-   *   · 礼包模板：三个物品全读空 →「至少配置一个物品」，永远建不了模板
-   *   · 邮件附件：单发 / 全服 / 定向 三类邮件的物品全空 → 玩家收到空邮件
-   *   · 道具补发：单人 + 批量 → 实际什么都没发
-   *   · 成就商店 / 活动商店 / 排行榜奖励 / 合服奖励 → 配的道具全部丢失
-   * 现在补上 id，与 val('#xxx') / num('#xxx') 的读取方式对齐。 */
-  picker(name, def) {
+  /* 物品下拉（必须带 id，取值统一走 U.val('#id')） */
+  picker(name, def, ph) {
     const id = String(name).replace(/[^\w-]/g, '');
-    return `<select id="${id}" data-pk="${id}">${U.itemList().map((i) =>
-      `<option value="${i.id}"${i.id === def ? ' selected' : ''}>${i.icon} ${U.esc(i.n)}</option>`).join('')}</select>`;
+    let h = `<select id="${id}">`;
+    if (ph) h += `<option value="">${U.esc(ph)}</option>`;
+    h += U.itemList().map((i) =>
+      `<option value="${i.id}"${i.id === def ? ' selected' : ''}>${i.icon} ${U.esc(i.n)}</option>`).join('');
+    return h + '</select>';
   },
-  /* ---- 导出工具（CSV / 文本） ----
-   * BUG：此前导出直接用 arr.join(',') 拼 CSV，且 Blob 不带 BOM。
-   *   · 昵称含英文逗号 → 该行多出一列，Excel 里整行错位
-   *     （等级串到昵称列、日期串到等级列……）
-   *   · 昵称含换行     → 一行被劈成两行，行结构彻底坏掉
-   *   · 昵称含双引号   → CSV 引号未转义，解析器报错或吞掉后面内容
-   *   · 无 UTF-8 BOM   → Excel（中文 Windows 默认按 GBK 读）打开全是乱码
-   * 昵称是玩家自由输入，上面四种都能真实出现。
-   * 现在统一走 csvCell 转义 + 带 BOM 的 download。 */
+  /* CSV 转义：昵称含逗号/引号/换行会把行结构搞坏 */
   csvCell(v) {
-    let s = String(v == null ? '' : v);
-    /* 换行统一成空格，避免把一行劈成多行 */
-    s = s.replace(/\r?\n/g, ' ');
-    /* 含分隔符 / 引号 / 首尾空格 时用双引号包裹，内部引号翻倍 */
+    let s = String(v == null ? '' : v).replace(/\r?\n/g, ' ');
     if (/[",;\t]/.test(s) || /^\s|\s$/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
     return s;
   },
   csv(headers, rows) {
-    const lines = [headers.map(U.csvCell).join(',')];
-    (rows || []).forEach((r) => lines.push(r.map(U.csvCell).join(',')));
-    return lines.join('\r\n');   /* CRLF：Excel 兼容性更好 */
+    const L = [headers.map(U.csvCell).join(',')];
+    (rows || []).forEach((r) => L.push(r.map(U.csvCell).join(',')));
+    return L.join('\r\n');
   },
-  /* 下载文本文件；utf8 内容自动补 BOM，避免 Excel 中文乱码 */
+  /* 下载（补 BOM，Excel 打开中文不乱码） */
   download(name, content, type) {
     let body = content;
-    if (type === 'text/csv' || type === 'text/plain') {
-      if (!/^\uFEFF/.test(body)) body = '\uFEFF' + body;
-    }
+    if (!/^\uFEFF/.test(body)) body = '\uFEFF' + body;
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([body], { type: (type || 'text/plain') + ';charset=utf-8' }));
     a.download = name;
@@ -150,16 +137,19 @@ const U = {
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
   },
 };
+
 const D = (s) => document.querySelector(s);
 const DA = (s) => Array.from(document.querySelectorAll(s));
 
-/* ---------------- 数据层 ---------------- */
+/* =====================================================================
+ * 数据层（带缓存 + 超时）
+ * =================================================================== */
 const DB = {
   cache: {},
   async get(path, def) {
-    if (this.cache[path]) return this.cache[path];
+    if (this.cache[path] !== undefined) return this.cache[path];
     try {
-      const r = await Net.read(path);
+      const r = await TMO(Net.read(path), 12000, null);
       if (r && r.data) { this.cache[path] = r.data; return r.data; }
     } catch (e) {}
     const d = typeof def === 'function' ? def() : (def || {});
@@ -169,55 +159,49 @@ const DB = {
   async set(path, obj, msg) {
     this.cache[path] = obj;
     try {
-      await Net.write(path, obj, msg || '后台更新');
+      await TMO(Net.write(path, obj, msg || '后台更新'), 15000, null);
       return true;
-    } catch (e) { APP.toast('保存失败：' + e.message, 'err'); return false; }
+    } catch (e) { APP.toast('保存失败：' + (e && e.message ? e.message : e), 'err'); return false; }
   },
-  /* 强制重读 */
   async reload(path) { delete this.cache[path]; return this.get(path); },
+  drop(path) { delete this.cache[path]; },
   clear() { this.cache = {}; },
 };
 
-/* ---------------- 审计（本地留痕 + 可导出/上传） ---------------- */
+/* =====================================================================
+ * 审计日志（本地留痕 + 云端 GM 日志）
+ * =================================================================== */
 const AUDIT = {
-  KEY: 'zb_audit_log',
-  list() {
-    try { return JSON.parse(localStorage.getItem(this.KEY) || '[]'); } catch (e) { return []; }
-  },
+  KEY: 'zb_audit_log', BUF: 'zb_gm_buf',
+  list() { try { return JSON.parse(localStorage.getItem(this.KEY) || '[]'); } catch (e) { return []; } },
   log(act, target, detail) {
     const l = this.list();
-    l.unshift({ at: Date.now(), act: act, target: target || '', detail: detail || '', who: 'admin' });
+    l.unshift({ at: Date.now(), act, target: target || '', detail: detail || '', who: PERM.curRole() });
     if (l.length > 1000) l.length = 1000;
     try { localStorage.setItem(this.KEY, JSON.stringify(l)); } catch (e) {}
-    /* 同步写入 GM 日志（云端缓冲） */
-    this.pushCloud({ at: Date.now(), act: act, target: target, detail: detail });
-  },
-  pushCloud(item) {
-    /* 云端 GM 日志：合并写入，避免高频 */
+    /* 同步进云端缓冲，避免后台换机器后日志全丢 */
     try {
-      let buf = []; try { buf = JSON.parse(localStorage.getItem('zb_gm_buf') || '[]'); } catch (e) { buf = []; }
-      buf.unshift(item);
-      if (buf.length > 300) buf.length = 300;
-      localStorage.setItem('zb_gm_buf', JSON.stringify(buf));
+      let b = []; try { b = JSON.parse(localStorage.getItem(this.BUF) || '[]'); } catch (e) { b = []; }
+      b.unshift(l[0]);
+      if (b.length > 300) b.length = 300;
+      localStorage.setItem(this.BUF, JSON.stringify(b));
     } catch (e) {}
   },
-  async syncCloud() {
-    let buf = []; try { buf = JSON.parse(localStorage.getItem('zb_gm_buf') || '[]'); } catch (e) { buf = []; }
-    if (!buf.length) { APP.toast('没有待上传的日志', 'err'); return; }
+  async upload() {
+    let b = []; try { b = JSON.parse(localStorage.getItem(this.BUF) || '[]'); } catch (e) { b = []; }
+    if (!b.length) { APP.toast('没有待上传的日志', 'warn'); return; }
     const cur = await DB.get(DBP.gmlog, { list: [] });
-    cur.list = buf.concat(cur.list || []).slice(0, 2000);
+    cur.list = b.concat(cur.list || []).slice(0, 2000);
     cur.updated = Date.now();
     if (await DB.set(DBP.gmlog, cur, '上传 GM 日志')) {
-      localStorage.setItem('zb_gm_buf', '[]');
-      APP.toast('已上传 ' + buf.length + ' 条日志', 'ok');
+      localStorage.setItem(this.BUF, '[]');
+      APP.toast('已上传 ' + b.length + ' 条', 'ok');
     }
   },
   export() {
     const l = this.list();
-    /* 走 U.download 补 BOM（Excel 打开中文不乱码）；
-     * tab 分隔的文本里若含换行/制表符会把一行劈开，统一替换掉 */
-    const clean = (v) => String(v == null ? '' : v).replace(/[\r\n\t]+/g, ' ');
-    const txt = l.map((x) => [U.dt(x.at), clean(x.act), clean(x.target), clean(x.detail)].join('\t')).join('\r\n');
+    const c = (v) => String(v == null ? '' : v).replace(/[\r\n\t]+/g, ' ');
+    const txt = l.map((x) => [U.dt(x.at), c(x.act), c(x.target), c(x.detail)].join('\t')).join('\r\n');
     U.download('审计日志_' + new Date().toISOString().slice(0, 10) + '.txt', txt, 'text/plain');
     APP.toast('已导出 ' + l.length + ' 条', 'ok');
   },
@@ -227,51 +211,69 @@ const AUDIT = {
   },
 };
 
-/* ---------------- 后台账号与权限 ---------------- */
+/* =====================================================================
+ * 角色权限
+ * =================================================================== */
 const PERM = {
   ROLES: {
     admin: { n: '超级管理员', p: ['all'] },
-    ops: { n: '运营', p: ['account.query', 'account.asset', 'account.ban', 'account.resetpwd', 'account.destroy', 'mail.*', 'cdkey.*', 'activity.*', 'rank.*', 'stat.*', 'log.view'] },
-    plan: { n: '策划', p: ['cfg.*', 'hotfix.*', 'activity.*', 'achshop.*', 'gm.unlock', 'stat.*'] },
-    gm: { n: 'GM', p: ['account.query', 'account.asset', 'account.compensate', 'account.resetpwd', 'gm.*', 'mail.single'] },
-    devops: { n: '运维', p: ['server.*', 'log.*', 'backup.*', 'perm.view'] },
-    audit: { n: '只读审计', p: ['log.view', 'stat.view', 'account.query'] },
+    ops: {
+      n: '运营', p: ['account.*', 'save.view', 'save.log', 'ops.*', 'rank.*',
+        'mail.*', 'cdkey.*', 'config.*', 'bi.view', 'shop.*', 'ad.*', 'social.*', 'notice.*'],
+    },
+    gm: { n: 'GM', p: ['account.query', 'account.ban', 'account.resetpwd', 'save.*', 'ops.*', 'mail.single'] },
+    plan: { n: '策划', p: ['config.*', 'hotfix.*', 'rank.rw', 'shop.*', 'ad.cfg', 'bi.view'] },
+    devops: { n: '运维', p: ['server.*', 'hotfix.*', 'bi.view', 'log.*'] },
+    audit: { n: '只读审计', p: ['account.query', 'save.view', 'bi.view', 'log.view'] },
   },
-  curRole() {
-    try { return localStorage.getItem('zb_role') || 'admin'; } catch (e) { return 'admin'; }
-  },
+  curRole() { try { return localStorage.getItem('zb_role') || 'admin'; } catch (e) { return 'admin'; } },
   setRole(r) { try { localStorage.setItem('zb_role', r); } catch (e) {} },
   has(p) {
-    const r = this.curRole();
-    const def = this.ROLES[r] || this.ROLES.admin;
+    const def = this.ROLES[this.curRole()] || this.ROLES.admin;
     if ((def.p || []).indexOf('all') >= 0) return true;
     return (def.p || []).some((x) => x === p || (x.endsWith('.*') && p.indexOf(x.slice(0, -1)) === 0));
   },
 };
 
-/* ---------------- 应用主体 ---------------- */
+/* =====================================================================
+ * 主体
+ * =================================================================== */
 const APP = {
-  pages: {},          // 各模块挂载
+  pages: {},
   cur: '',
   PLIST: [],
   SEL: null,
   FILTER: '',
+  SHOW_DEAD: false,
+  SRC_NOTE: '',
+  PLIST_AT: 0,
+  SNAP_KEY: 'zb_plist_snap',
 
   toast(m, c) {
     const b = D('#toasts'); if (!b) return;
     const d = document.createElement('div');
     d.className = 'toast ' + (c || ''); d.textContent = m; b.appendChild(d);
-    setTimeout(() => d.remove(), 2500);
+    setTimeout(() => d.remove(), 2600);
     while (b.children.length > 4 && b.firstElementChild) b.firstElementChild.remove();
   },
   modal(html) {
     const m = D('#modal'), b = D('#mbox');
     if (!m || !b) return;
     b.innerHTML = html; m.classList.add('on');
+    /* 弹窗内统一委托 */
+    b.onclick = (e) => {
+      const t = e.target.closest('[data-m]');
+      if (!t) return;
+      if (t.dataset.m === 'close') { this.closeModal(); return; }
+      const fn = this._mfn && this._mfn[t.dataset.m];
+      if (fn) fn(t);
+    };
   },
+  /* 打开弹窗：html + 动作表 */
+  openModal(html, acts) { this._mfn = acts || {}; this.modal(html); },
   closeModal() { const m = D('#modal'); if (m) m.classList.remove('on'); },
 
-  /* ---- 启动 ---- */
+  /* ---------- 启动 ---------- */
   async init() {
     if (sessionStorage.getItem(AKEY) === '1') { this.enter(); return; }
     const btn = D('#gtBtn'), inp = D('#gtPwd');
@@ -280,62 +282,74 @@ const APP = {
       sessionStorage.setItem(AKEY, '1'); this.enter();
     };
     if (inp) inp.onkeydown = (e) => { if (e.key === 'Enter') btn && btn.click(); };
+  },
+
+  async enter() {
+    D('#gate').classList.remove('on');
+    D('#wrap').classList.add('on');
+    try { if (window.CFG && CFG.load) await CFG.load(); } catch (e) {}
+    try { await Net.init(); } catch (e) {}
+    PAGES.register();
+    this.buildNav();
+    this.net();
+    const rf = D('#hdRefresh');
+    if (rf) rf.onclick = () => this.loadPlayers({ force: true });
     const mk = D('#mask'); if (mk) mk.onclick = () => this.closeNav();
     const md = D('#modal'); if (md) md.onclick = (e) => { if (e.target === md) this.closeModal(); };
+    /* 先渲染界面再拉玩家：网络慢时（端点探测可能十几秒）后台不至于一片空白 */
+    this.go(Object.keys(this.pages)[0]);
+    this.loadPlayers({ force: true, auto: true }).then(() => {
+      if (this.cur) this.render();
+    }).catch(() => {});
+    AUDIT.log('登录后台', '', '角色 ' + PERM.curRole());
   },
+
+  net() {
+    const n = D('#hdSt'); if (!n) return;
+    const bad = (typeof Net !== 'undefined') && Net.authFail;
+    const on = (typeof Net !== 'undefined') && Net.online && !bad;
+    n.innerHTML = on
+      ? `<span class="on">● 已连接</span><br>玩家 ${this.PLIST.length} · 队列 ${Net.queueLen || 0}`
+      : `<span class="off">○ ${bad ? '凭据异常' : '离线'}</span><br>玩家 ${this.PLIST.length}`;
+  },
+
   closeNav() {
     const n = D('#nav'), m = D('#mask');
     if (n) n.classList.remove('on'); if (m) m.classList.remove('on');
   },
-  async enter() {
-    D('#gate').classList.remove('on'); D('#wrap').classList.add('on');
-    try { await CFG.load(); } catch (e) {}
-    try { await Net.init(); } catch (e) {}
-    this.net(); this.buildNav();
-    /* 进入即全自动拉取：确保网络 → 四路合并 → 失败自动重试 → 自动补索引
-     * 运营不需要点任何按钮 */
-    await this.loadPlayers({ force: true, auto: true });
-    /* 自动执行到期的后台任务：计划合服 / 自动备份周期检查
-     * （单机架构无 cron，改为每次进入后台时按时间补做） */
-    try { if (this.runDueMerge) await this.runDueMerge(); } catch (e) {}
-    try { if (this.autoBackupIfDue) await this.autoBackupIfDue(); } catch (e) {}
-    const first = Object.keys(this.pages)[0];
-    this.go(first);
-    AUDIT.log('登录后台', '', '角色 ' + PERM.curRole());
-  },
-  net() {
-    const n = D('#hdNet'); if (!n) return;
-    n.textContent = Net.online ? '● 在线' : '○ 离线';
-    n.classList.toggle('off', !Net.online);
-  },
+
   buildNav() {
     const nav = D('#nav'); if (!nav) return;
-    const groups = {};
+    const g = {};
     Object.keys(this.pages).forEach((k) => {
       const p = this.pages[k];
-      (groups[p.g] = groups[p.g] || []).push({ k: k, n: p.n, i: p.i });
+      (g[p.g] = g[p.g] || []).push({ k, n: p.n, i: p.i });
     });
-    let h = `<div class="nav-t">角 色</div>
-      <div style="padding:4px 8px 10px">
-      <select id="roleSel" style="width:100%;font-size:12px">
+    let h = `<div class="nav-t">角 色</div><div style="padding:2px 10px 8px">
+      <select id="roleSel" style="width:100%;padding:5px;font-size:12px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px">
       ${Object.keys(PERM.ROLES).map((r) => `<option value="${r}"${PERM.curRole() === r ? ' selected' : ''}>${PERM.ROLES[r].n}</option>`).join('')}
       </select></div>`;
-    Object.keys(groups).forEach((g) => {
-      h += `<div class="nav-t">${U.esc(g)}</div>`;
-      groups[g].forEach((it) => {
+    Object.keys(g).forEach((gn) => {
+      h += `<div class="nav-t">${U.esc(gn)}</div>`;
+      g[gn].forEach((it) => {
         h += `<button class="nv" data-pg="${it.k}"><i>${it.i}</i><span>${U.esc(it.n)}</span></button>`;
       });
     });
     nav.innerHTML = h;
     DA('#nav .nv').forEach((b) => { b.onclick = () => this.go(b.dataset.pg); });
     const rs = D('#roleSel');
-    if (rs) rs.onchange = () => { PERM.setRole(rs.value); this.toast('已切换角色：' + PERM.ROLES[rs.value].n, 'ok'); };
+    if (rs) rs.onchange = () => {
+      PERM.setRole(rs.value);
+      this.toast('已切换：' + PERM.ROLES[rs.value].n, 'ok');
+      this.render();
+    };
     const mn = D('#hdMenu');
     if (mn) mn.onclick = () => {
       const n = D('#nav'), m = D('#mask');
       if (n) n.classList.toggle('on'); if (m) m.classList.toggle('on');
     };
   },
+
   go(id) {
     if (!this.pages[id]) return;
     this.cur = id;
@@ -343,236 +357,162 @@ const APP = {
     this.closeNav();
     this.render();
   },
+
   render() {
     const b = D('#body'); if (!b) return;
     const p = this.pages[this.cur];
     if (!p) { b.innerHTML = '<div class="lbl">页面不存在</div>'; return; }
     if (!PERM.has(p.perm || 'all')) {
       b.innerHTML = `<div class="ph"><h2>${U.esc(p.n)}</h2></div>
-        <div class="card"><div class="lbl">🔒 当前角色（${(PERM.ROLES[PERM.curRole()] || PERM.ROLES.admin).n}）无此权限</div></div>`;
+        <div class="card"><div class="lbl">🔒 当前角色（${(PERM.ROLES[PERM.curRole()] || PERM.ROLES.admin).n}）无此页面权限</div></div>`;
       return;
     }
-    b.innerHTML = p.render.call(this);
+    /* 把当前页的动作表挂到 APP 上：
+     * bind / acts 内部回调的 this 都是 APP，而 acts 定义在页面对象里，
+     * 不挂上去的话 this.acts 恒为 undefined（页内互相调用会全部抛错） */
+    this.acts = p.acts || {};
+    try {
+      b.innerHTML = '<div class="ph"><h2>' + U.esc(p.n) + '</h2></div>' + p.render.call(this);
+    } catch (e) {
+      b.innerHTML = `<div class="card"><div class="lbl">页面渲染出错：${U.esc(e.message)}</div></div>`;
+      console.error(e); return;
+    }
+    /* 统一事件委托：data-a="动作名" */
+    b.onclick = (e) => {
+      const t = e.target.closest('[data-a]');
+      if (!t || !p.acts) return;
+      const fn = p.acts[t.dataset.a];
+      if (fn) { try { fn.call(this, t, e); } catch (er) { console.error(er); this.toast('操作失败：' + er.message, 'err'); } }
+    };
+    b.onchange = (e) => {
+      const t = e.target.closest('[data-c]');
+      if (!t || !p.changes) return;
+      const fn = p.changes[t.dataset.c];
+      if (fn) { try { fn.call(this, t, e); } catch (er) { console.error(er); } }
+    };
+    b.oninput = (e) => {
+      const t = e.target.closest('[data-i]');
+      if (!t || !p.inputs) return;
+      const fn = p.inputs[t.dataset.i];
+      if (fn) { try { fn.call(this, t, e); } catch (er) { console.error(er); } }
+    };
     if (p.bind) { try { p.bind.call(this); } catch (e) { console.error(e); } }
     const m = D('.main'); if (m) m.scrollTop = 0;
+    this.net();
   },
-  /* 重绘当前页 */
   again() { this.render(); },
 
-  /* ---- 玩家数据 ---- */
-  /* ---------- 玩家列表 ----------
-   * 性能修复（后台卡顿主因）：
-   *   原实现是「串行 for 循环」逐个 Net.read，N 个玩家 = N 次 GitHub API 请求。
-   *   而每次 Net.read 内部还会轮播多个代理端点重试，实测 100 个玩家 3.1 秒
-   *   （真实网络下每个请求 1~14 秒 → 100 玩家要等一分多钟，界面完全卡死）。
-   * 改法：
-   *   ① 并发窗口读取（一次 8 个并发，而非 1 个）
-   *   ② localStorage 快照缓存：进后台先秒开显示旧数据，后台再异步刷新
-   *   ③ 单次读取套 TMO 超时（8 秒），避免个别请求拖垮整批
-   */
-  PLIST_CACHE_KEY: 'zb_plist_snap',
-  loadSnapshot() {
-    try {
-      const raw = localStorage.getItem(this.PLIST_CACHE_KEY);
-      if (!raw) return null;
-      const o = JSON.parse(raw);
-      if (!o || !Array.isArray(o.list)) return null;
-      return o;
-    } catch (e) { return null; }
-  },
-  saveSnapshot(list) {
-    try {
-      localStorage.setItem(this.PLIST_CACHE_KEY, JSON.stringify({ at: Date.now(), list: list }));
-    } catch (e) {}
-  },
-  /* =========================================================
-   * 网络就绪等待
-   * ---------------------------------------------------------
-   * 致命时序 BUG：后台一进页面就立刻 loadPlayers，而此时 Net 的端点探测
-   * 往往还没跑完，Net.online 仍是 false。ghReq 在离线状态下会「快速放弃」
-   * （只试一批端点就 break），于是四路全部返回空 → 列表停在旧快照。
-   * 等用户手动点「刷新」时网络早已恢复，同一份 scanDiag 却能扫到 2 项 ——
-   * 这正是用户截图里「存档目录 2 项 / 当前列表 1 人 / 收集UID 0 个」的原因。
-   * 现在：拉取前先确保探测完成。
-   * ========================================================= */
+  /* =================================================================
+   * 玩家数据
+   * ================================================================= */
   sleep(ms) { return new Promise((r) => setTimeout(r, ms)); },
-
-  /* 自动维护玩家索引（静默、失败不影响主流程） */
-  async autoIndex(uids, metaMap) {
-    if (!uids || !uids.length) return;
-    try {
-      const ri = await window.TMO(Net.read('data/zb/index.json'), 8000, null);
-      const cur = (ri && ri.data && Array.isArray(ri.data.list)) ? ri.data.list : [];
-      const have = {};
-      cur.forEach((x) => { if (x && x.uid) have[x.uid] = x; });
-      /* 缺哪些 */
-      const miss = uids.filter((u) => !have[u]);
-      /* 已注销的从索引剔除 */
-      const deadSet = {};
-      (this.PLIST || []).forEach((p) => { if (p.destroyed) deadSet[p.uid] = 1; });
-      const keep = cur.filter((x) => !deadSet[x.uid]);
-      if (!miss.length && keep.length === cur.length) return;
-      const list = keep.slice();
-      miss.forEach((u) => {
-        const m = (metaMap || {})[u] || {};
-        const p = (this.PLIST || []).find((x) => x.uid === u);
-        list.push({
-          uid: u,
-          name: m.name || (p && p.name) || '',
-          nick: m.nick || (p && p.name) || '',
-          lv: (p && p.lv) || m.lv || 0,
-          at: Date.now(),
-        });
-      });
-      if (list.length > 2000) list.splice(0, list.length - 2000);
-      await Net.write('data/zb/index.json', { list: list, updAt: Date.now() },
-        '自动维护玩家索引 ' + list.length + ' 人');
-    } catch (e) {}
-  },
 
   async ensureNet() {
     if (typeof Net === 'undefined') return false;
     if (Net.online === true && Net.endpoint) return true;
-    try {
-      if (Net.init) await window.TMO(Net.init(), 20000, null);
-      else if (Net.probe) await window.TMO(Net.probe(), 20000, null);
-    } catch (e) {}
+    try { await TMO(Net.init(), 20000, null); } catch (e) {}
     return Net.online === true;
   },
 
-  async loadPlayers(opt = {}) {
-    /* ⓪ 拉取前先确保网络探测完成（关键：否则离线态下 ghReq 会快速放弃） */
+  snapshot() {
+    try {
+      const o = JSON.parse(localStorage.getItem(this.SNAP_KEY) || 'null');
+      if (o && Array.isArray(o.list)) return o;
+    } catch (e) {}
+    return null;
+  },
+  saveSnapshot(list) {
+    try { localStorage.setItem(this.SNAP_KEY, JSON.stringify({ at: Date.now(), list })); } catch (e) {}
+  },
+
+  /* 四路合并拉取（索引 / 存档目录 / 榜单 / 账号目录）
+   * 任一路通都能看见玩家，避免只认单一来源导致列表长期只有一个人 */
+  async loadPlayers(opt) {
+    opt = opt || {};
     await this.ensureNet();
-    /* ① 先用快照秒开（除非强制刷新） */
-    const snap = this.loadSnapshot();
+
+    const snap = this.snapshot();
     if (snap && !opt.force) {
-      this.PLIST = snap.list;
-      this.PLIST_AT = snap.at;
+      this.PLIST = snap.list; this.PLIST_AT = snap.at;
       this.sortPlayers();
       if (!opt.silent) this.render();
     }
-    /* ② 离线短路
-     * BUG 修复：此前只要 Net.online === false 且有快照就直接 return，
-     * 连 force 强制刷新也被一并挡掉 —— 一旦某次判定离线，
-     * 此后玩家列表永远停留在那份旧快照（用户实测：明明有多个存档，
-     * 列表里始终只有最早缓存的那一个 UID，销户后重新刷新又"复活"）。
-     * 现在：强制刷新时不短路；普通进入时，仅当快照较新（<5 分钟）才短路。 */
-    const snapFresh = snap && (Date.now() - (snap.at || 0)) < 5 * 60e3;
-    if (typeof Net !== 'undefined' && Net.online === false && snapFresh && !opt.force) {
-      return;
-    }
-    /* ③ 多来源合并拉取
-     * =========================================================
-     * 严重 BUG 修复：此前只认「目录 list」一条路，list 一失败就退回战力榜，
-     * 而战力榜通常只有极少数上榜玩家 —— 于是后台永远只显示那一个 UID，
-     * 运营明明有多个玩家却看不到（用户实测：始终只有 uoy3fq9）。
-     *
-     * 现在四个来源全部收集后【合并去重】，任一路通都能看见玩家：
-     *   ① 玩家索引 data/zb/index.json（最可靠，注册/登录即写入）
-     *   ② 账号目录 data/zb/users/（每个注册账号都有，比存档更全）
-     *   ③ 玩家存档目录 data/zb/players/
-     *   ④ 战力榜 + 无尽榜（兜底）
-     * ========================================================= */
-    /* 分两组收集：
-     *   core = 确定有存档（存档目录 / 索引 / 榜单）→ 逐个读取详情
-     *   acc  = 仅有账号、可能没建存档 → 不逐个读（否则上百次超时请求会拖死界面），
-     *          直接构造「未创建存档」占位条目，运营仍能看到该账号存在。 */
-    const core = [];
-    const acc = [];
-    const srcs = [];
-    const addCore = (u) => { if (u && core.indexOf(u) < 0) core.push(u); };
-    const addAcc = (u) => { if (u && acc.indexOf(u) < 0 && core.indexOf(u) < 0) acc.push(u); };
+    const fresh = snap && (Date.now() - (snap.at || 0)) < 5 * 60e3;
+    if (typeof Net !== 'undefined' && Net.online === false && fresh && !opt.force) return;
 
-    /* ① 索引 */
+    const core = [], acc = [], srcs = [];
+    const addC = (u) => { if (u && core.indexOf(u) < 0) core.push(u); };
+    const addA = (u) => { if (u && acc.indexOf(u) < 0 && core.indexOf(u) < 0) acc.push(u); };
+
     try {
-      const r = await window.TMO(Net.read('data/zb/index.json'), 10000, null);
+      const r = await TMO(Net.read(DBP.index), 10000, null);
       if (r && r.data && Array.isArray(r.data.list) && r.data.list.length) {
-        r.data.list.forEach((x) => addCore(x.uid));
-        srcs.push('索引' + r.data.list.length);
+        r.data.list.forEach((x) => addC(x.uid)); srcs.push('索引' + r.data.list.length);
       }
     } catch (e) {}
-    /* ② 存档目录（最权威：真的有存档文件） */
     try {
-      const ns = await window.TMO(Net.list(PDIR), 15000, []);
+      const ns = await TMO(Net.list(PDIR), 15000, []);
       const hit = (ns || []).filter((x) => x.endsWith('.json') && x !== '.gitkeep');
-      if (hit.length) { hit.forEach((f) => addCore(f.replace(/\.json$/, ''))); srcs.push('存档目录' + hit.length); }
+      if (hit.length) { hit.forEach((f) => addC(f.replace(/\.json$/, ''))); srcs.push('存档' + hit.length); }
     } catch (e) {}
-    /* ③ 榜单兜底 */
+    [DBP.rank, DBP.endless].forEach(async () => {});
     try {
-      const r = await window.TMO(Net.read(DBP.rank), 10000, null);
+      const r = await TMO(Net.read(DBP.rank), 10000, null);
       if (r && r.data && r.data.list && r.data.list.length) {
-        r.data.list.forEach((x) => addCore(x.uid)); srcs.push('战力榜' + r.data.list.length);
+        r.data.list.forEach((x) => addC(x.uid)); srcs.push('战力榜' + r.data.list.length);
       }
     } catch (e) {}
     try {
-      const r = await window.TMO(Net.read(DBP.endless), 10000, null);
+      const r = await TMO(Net.read(DBP.endless), 10000, null);
       if (r && r.data && r.data.list && r.data.list.length) {
-        r.data.list.forEach((x) => addCore(x.uid)); srcs.push('无尽榜' + r.data.list.length);
+        r.data.list.forEach((x) => addC(x.uid)); srcs.push('无尽榜' + r.data.list.length);
       }
     } catch (e) {}
-    /* ④ 账号目录（只作补充，不逐个读存档） */
     try {
-      const ns = await window.TMO(Net.list('data/zb/users/'), 15000, []);
+      const ns = await TMO(Net.list(UDIR), 15000, []);
       const hit = (ns || []).filter((x) => x.endsWith('.json'));
-      if (hit.length) { hit.forEach((f) => addAcc(f.replace(/\.json$/, ''))); srcs.push('账号目录' + hit.length); }
+      if (hit.length) { hit.forEach((f) => addA(f.replace(/\.json$/, ''))); srcs.push('账号' + hit.length); }
     } catch (e) {}
-    const uids = core.concat(acc);
 
+    const uids = core.concat(acc);
     if (uids.length) {
       this.SRC_NOTE = srcs.join(' + ');
     } else if ((opt._retry || 0) < 2) {
-      /* 四路全空 → 自动重探网络并重试（最多额外 2 轮，逐轮拉长等待）。
-       * 自动化：运营无需手动点任何按钮。 */
       try { if (Net && Net.reset) Net.reset(); } catch (e) {}
       await this.ensureNet();
       await this.sleep(1200 + (opt._retry || 0) * 1800);
-      return this.loadPlayers(Object.assign({}, opt, { _retry: (opt._retry || 0) + 1, silent: false }));
+      return this.loadPlayers(Object.assign({}, opt, { _retry: (opt._retry || 0) + 1 }));
     } else if (snap) {
-      /* 重试仍失败 —— 保留快照但标明来源，不再假装是最新 */
       this.PLIST = snap.list; this.PLIST_AT = snap.at;
-      this.SRC_NOTE = '本地快照（云端四路均不可达，已重试）';
+      this.SRC_NOTE = '本地快照（云端不可达，已重试）';
       if (!opt.silent) this.render();
       return;
     } else {
       if (!this.PLIST) this.PLIST = [];
-      this.SRC_NOTE = '无数据（云端不可达，已重试）';
+      this.SRC_NOTE = '无数据（云端不可达）';
       if (!opt.silent) this.render();
       return;
     }
-    /* 索引里的昵称/等级，用于兜底显示读不到存档的玩家 */
-    const metaMap = {};
+
+    /* 索引元数据用于兜底展示 */
+    const meta = {};
     try {
-      const ri = await window.TMO(Net.read('data/zb/index.json'), 10000, null);
+      const ri = await TMO(Net.read(DBP.index), 10000, null);
       if (ri && ri.data && Array.isArray(ri.data.list)) {
-        ri.data.list.forEach((x) => { if (x && x.uid) metaMap[x.uid] = x; });
+        ri.data.list.forEach((x) => { if (x && x.uid) meta[x.uid] = x; });
       }
     } catch (e) {}
 
-    /* =========================================================
-     * 致命 BUG 修复：读取失败静默丢弃
-     * 原写法 if (r && r.data && r.data.uid) return r.data; → null，
-     * 然后 if (x) out.push(x) 直接跳过 —— 没有 uid 字段、或读取超时的
-     * 玩家就这样凭空消失，界面连个提示都没有。
-     * 运营侧现象：诊断明明显示索引 2 项 / 存档目录 2 项，
-     * 「当前列表」却只有 1 人（用户实测截图正是如此）。
-     *
-     * 现在：读到的尽量修好 uid；读不到的用索引信息构造占位条目，
-     * 标记 _broken 并显示「读取失败」，绝不静默消失。
-     * ========================================================= */
-    const files = core.slice(0, 200).map((u) => u + '.json');
-    if (!files.length && !acc.length) { if (!this.PLIST) this.PLIST = []; return; }
-    const out = [];
-    const fail = [];
-    const WIN = 12;   /* 并发窗口（原 8，玩家多了会明显变慢） */
+    const out = [], files = core.slice(0, 200).map((u) => u + '.json');
+    const WIN = 12;
     for (let i = 0; i < files.length; i += WIN) {
       const batch = files.slice(i, i + WIN);
       const rs = await Promise.all(batch.map(async (f) => {
         const uid = f.replace(/\.json$/, '');
         try {
-          const r = await window.TMO(Net.read(PDIR + f), 12000, null);
+          const r = await TMO(Net.read(PDIR + f), 12000, null);
           if (r && r.data && typeof r.data === 'object') {
-            /* 存档可能缺 uid（老格式/被覆盖过），用文件名补齐 */
-            if (!r.data.uid) r.data.uid = uid;
+            if (!r.data.uid) r.data.uid = uid;   /* 老档可能缺 uid */
             return r.data;
           }
         } catch (e) {}
@@ -581,160 +521,73 @@ const APP = {
       rs.forEach((x, j) => {
         if (x) { out.push(x); return; }
         const uid = batch[j].replace(/\.json$/, '');
-        const m = metaMap[uid] || {};
+        const m = meta[uid] || {};
         out.push({
-          uid: uid, name: m.name || m.nick || ('未知玩家 ' + uid.slice(0, 8)),
-          lv: m.lv || 0, created: m.at || 0, lastSeen: m.lastSeen || 0,
-          _broken: true, gold: 0, diamond: 0, stamina: 0, ach: 0,
-          mat: {}, cleared: {}, gun: {}, skin: [], chips: [], mail: [],
+          uid, name: m.name || m.nick || ('未知 ' + uid.slice(0, 8)), lv: m.lv || 0,
+          created: m.at || 0, lastSeen: m.lastSeen || 0, _broken: true,
+          gold: 0, diamond: 0, stamina: 0, ach: 0, mat: {}, cleared: {}, gunOwn: [],
         });
-        fail.push(uid);
       });
     }
-    /* 仅有账号、无存档的：构造占位条目（不发请求，避免上百次超时拖死界面） */
     acc.slice(0, 200).forEach((u) => {
-      const m = metaMap[u] || {};
+      const m = meta[u] || {};
       out.push({
-        uid: u, name: m.name || m.nick || ('账号 ' + String(u).slice(0, 10)),
-        lv: m.lv || 0, created: m.at || 0, lastSeen: m.lastSeen || 0,
-        _noSave: true, gold: 0, diamond: 0, stamina: 0, ach: 0,
-        mat: {}, cleared: {}, gun: {}, skin: [], chips: [], mail: [],
+        uid: u, name: m.name || m.nick || ('账号 ' + String(u).slice(0, 10)), lv: m.lv || 0,
+        created: m.at || 0, lastSeen: m.lastSeen || 0, _noSave: true,
+        gold: 0, diamond: 0, stamina: 0, ach: 0, mat: {}, cleared: {}, gunOwn: [],
       });
     });
-    this.PLIST_FAIL = fail;
-    this.PLIST_UIDS = uids.slice(0, 200);
+
     this.PLIST = out;
-    /* 自动静默维护索引：若索引缺失/不完整，用本次收集到的 UID 回写。
-     * 无需运营手动点「重建索引」——下次列表即可脱离不稳的目录枚举。 */
-    this.autoIndex(uids, metaMap);
     this.PLIST_AT = Date.now();
     this.sortPlayers();
     this.saveSnapshot(out);
-    /* 选中项失效则清空，避免操作到已删除的玩家 */
-    if (this.SEL && !out.find((p) => p.uid === this.SEL.uid)) {
-      this.SEL = null;   /* 玩家已被删除 → 清空选中，避免后续操作到空对象 */
-    }
+    this.autoIndex(uids, meta);
+    if (this.SEL && !out.find((p) => p.uid === this.SEL.uid)) this.SEL = null;
     if (!opt.silent) this.render();
   },
-  /* 已注销/已封禁玩家沉到列表末尾，避免混在正常玩家中间造成"销户了还在"的错觉 */
+
+  /* 静默维护索引：下次进后台即可脱离不稳的目录枚举 */
+  async autoIndex(uids, meta) {
+    if (!uids || !uids.length) return;
+    try {
+      const ri = await TMO(Net.read(DBP.index), 8000, null);
+      const cur = (ri && ri.data && Array.isArray(ri.data.list)) ? ri.data.list : [];
+      const have = {}; cur.forEach((x) => { if (x && x.uid) have[x.uid] = x; });
+      const dead = {};
+      (this.PLIST || []).forEach((p) => { if (p.destroyed) dead[p.uid] = 1; });
+      const keep = cur.filter((x) => !dead[x.uid]);
+      const miss = uids.filter((u) => !have[u]);
+      if (!miss.length && keep.length === cur.length) return;
+      const list = keep.slice();
+      miss.forEach((u) => {
+        const m = (meta || {})[u] || {};
+        const p = (this.PLIST || []).find((x) => x.uid === u);
+        list.push({ uid: u, name: m.name || (p && p.name) || '', lv: (p && p.lv) || 0, at: Date.now() });
+      });
+      if (list.length > 2000) list.splice(0, list.length - 2000);
+      await Net.write(DBP.index, { list, updAt: Date.now() }, '自动维护索引 ' + list.length + ' 人');
+    } catch (e) {}
+  },
+
+  /* 已注销 / 已封禁沉底 */
   sortPlayers() {
     this.PLIST.sort((a, b) => {
-      const da = (a.destroyed ? 1 : 0) - (b.destroyed ? 1 : 0);
-      if (da) return da;
-      const ba = (a.ban ? 1 : 0) - (b.ban ? 1 : 0);
-      if (ba) return ba;
+      const d = (a.destroyed ? 1 : 0) - (b.destroyed ? 1 : 0);
+      if (d) return d;
+      const b2 = (a.ban ? 1 : 0) - (b.ban ? 1 : 0);
+      if (b2) return b2;
       return U.pw(b) - U.pw(a);
     });
   },
-
-  /* =========================================================
-   * 封禁 / 解封（统一入口）
-   * 严重 BUG 修复：此前封禁只写「玩家存档」的 p.ban = true，
-   * 但游戏端登录校验的是「账号文件」data/zb/users/{uid}.json 的 u.banned。
-   * 两个文件互不相干 —— 后台点了封禁，玩家照样正常登录，封禁形同虚设。
-   * 现在两处都写：账号文件（登录拦截）+ 玩家存档（列表展示/离线兜底）。
-   * ========================================================= */
-  acctPath(uid) { return 'data/zb/users/' + uid + '.json'; },
-  async setBan(p, ban, opt) {
-    opt = opt || {};
-    const uid = p.uid;
-    /* 先写玩家存档（列表状态展示） */
-    if (ban) {
-      p.ban = true;
-      p.banUntil = opt.until || 0;
-      p.banReason = opt.reason || '';
-      p.banType = opt.type || '永久';
-      p.banAt = Date.now();
-    } else {
-      p.ban = false; p.banUntil = 0; p.banReason = '';
-    }
-    const savedP = await this.save(p, ban ? '封禁 ' + (opt.reason || '') : '解封');
-    /* 再写账号文件（这才是登录拦截真正读的地方） */
-    let acctOk = false, acctMsg = '';
-    try {
-      const u = await DB.get(this.acctPath(uid), null);
-      if (u && u.id) {
-        if (ban) {
-          u.banned = true; u.banUntil = opt.until || 0;
-          u.banReason = opt.reason || ''; u.banAt = Date.now(); u.banOp = opt.op || 'admin';
-        } else {
-          u.banned = false; u.unbanAt = Date.now(); u.unbanOp = opt.op || 'admin';
-        }
-        acctOk = await DB.set(this.acctPath(uid), u, ban ? '封禁账号' : '解封账号');
-      } else { acctMsg = '云端无账号记录（可能离线），仅写入存档'; }
-    } catch (e) { acctMsg = e.message; }
-    /* 同步追加指令：玩家在线时存档里的 ban 会在 30 秒内被其自动存档覆盖，
-     * 且登录校验只在登录时跑 —— 在线的作弊者会一直玩到手动退出。
-     * 现在队列里也发一条，游戏端消费后立即置 ban 并退出登录。 */
-    await this.pushOp(uid, ban
-      ? { t: 'ban', until: opt.until || 0, reason: opt.reason || '' }
-      : { t: 'unban' });
-    return { savedP: savedP, acctOk: acctOk, acctMsg: acctMsg };
-  },
-  /* p.skins 正常是 ['sk_c01a'] 数组；历史存档可能被写成 {id:1} 对象，
-   * 直接 .map 会抛 "(p.skins||[]).map is not a function" 让整页白屏。 */
-  skinArr(p) {
-    /* 统一口径：优先走 E.skinArr（游戏端同一真源），
-     * 后台未加载 engine.js 时退回本地等价实现，行为一致。 */
-    if (window.E && E.skinArr) return E.skinArr(p);
-    const v = p && p.skins;
-    if (Array.isArray(v)) return v;
-    if (v && typeof v === 'object') return Object.keys(v).filter((k) => v[k]);
-    return [];
-  },
-  async save(p, msg) {
-    try {
-      await Net.write(PDIR + p.uid + '.json', p, msg || '后台修改 ' + p.name);
-      return true;
-    } catch (e) { this.toast('保存失败：' + e.message, 'err'); return false; }
-  },
-
-  /* =========================================================
-   * 玩家「待应用指令队列」（append-only）
-   * 严重 BUG 修复：此前后台补发是【直接改写玩家云端存档】。
-   *   而游戏端每 30 秒无条件把内存里的 P 整份写回同一路径（MAIN.save），
-   *   Net.write 每次重新 GET sha，不会 409 冲突 —— 而是静默覆盖。
-   * 实测链路：后台补发 500 → 云端 gold 1500 → 玩家在线自动存档 → 云端 gold 1000。
-   *   后台界面提示「已补发 ×500」并记入审计日志，玩家永远拿不到，
-   *   且整个过程不报错 —— 典型的静默失效。
-   * 现在改为：发放类操作只往「指令队列」追加一条记录（不碰存档），
-   *   游戏端定期消费，用本地 p.opsDone 记录已处理 id 去重。
-   * 好处：① 在线玩家不会被覆盖，5 分钟内到账；
-   *       ② 离线玩家下次登录时消费，同样到账；
-   *       ③ 追加写 + 本地去重，不会重复发放，也不与游戏端抢写同一文件。
-   * ========================================================= */
-  OPDIR: 'data/zb/ops/',
-  opPath(uid) { return this.OPDIR + uid + '.json'; },
-  async pushOp(uid, op) {
-    if (!uid) return false;
-    op = op || {};
-    op.id = op.id || ('op' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
-    op.at = op.at || Date.now();
-    try {
-      const f = await DB.get(this.opPath(uid), { list: [] });
-      f.list = Array.isArray(f.list) ? f.list : [];
-      if (f.list.some((x) => x && x.id === op.id)) return true;   /* 幂等 */
-      f.list.push(op);
-      if (f.list.length > 200) f.list = f.list.slice(-200);
-      return await DB.set(this.opPath(uid), f, '玩家指令 ' + (op.t || ''));
-    } catch (e) { this.toast('指令队列写入失败：' + e.message, 'err'); return false; }
-  },
-  /* 默认隐藏已注销玩家：销户后文件因网络原因常删不掉（覆盖成空档），
-   * 混在正常玩家列表里会让运营以为"销户了还在"。
-   * SHOW_DEAD = true 时才显示（查询页可切换）。 */
-  SHOW_DEAD: false,
   deadCount() { return (this.PLIST || []).filter((p) => p.destroyed).length; },
+
   view() {
     const f = (this.FILTER || '').trim().toLowerCase();
     let base = this.PLIST;
     if (!this.SHOW_DEAD) base = base.filter((p) => !p.destroyed);
     if (!f) return base;
-    /* 手机号可搜
-     * BUG：玩家查询页搜索框 placeholder 写的是「UID / 昵称 / 手机号」，
-     *   而这里只匹配 name 和 uid —— 手机号从来没被搜过。
-     *   手机号在「账号资料」页可手工补录（p.ext.phone），玩家申诉时报手机号
-     *   是最常见的方式；运营输入手机号却搜不到任何人，只能挨个翻列表。
-     * 现在补上 ext.phone / ext.device 匹配（设备号同理，找回账号常用）。 */
+    /* UID / 昵称 / 手机号 / 设备号 都能搜（玩家申诉常报手机号） */
     return base.filter((p) => {
       if ((p.name || '').toLowerCase().indexOf(f) >= 0) return true;
       if ((p.uid || '').toLowerCase().indexOf(f) >= 0) return true;
@@ -744,127 +597,141 @@ const APP = {
       return false;
     });
   },
-  /* 玩家卡片（可点选） */
-  pcard(p, attr) {
-    const c = (EX.chars || []).find((x) => x.id === p.char);
-    return `<div class="pcard ${this.SEL && this.SEL.uid === p.uid ? 'on' : ''}"
-      data-sel="${U.esc(p.uid)}" ${attr || ''}>
-      <div class="r1"><div class="zav">${U.esc((p.avatar || '🧑').slice(0, 2))}</div>
-        <b>${U.esc(p.name)}</b>${p.destroyed ? '<span class="ban">已注销</span>' : p.ban ? '<span class="ban">封禁</span>' : ''}</div>
+
+  /* 玩家卡 */
+  pcard(p) {
+    const cls = this.SEL && this.SEL.uid === p.uid ? 'pcard on' : 'pcard';
+    const tag = p.destroyed ? '<span class="bd r">已注销</span>'
+      : p.ban ? '<span class="bd r">封禁</span>'
+        : p._noSave ? '<span class="bd n">无存档</span>'
+          : p._broken ? '<span class="bd y">读取失败</span>' : '';
+    return `<div class="${cls}" data-a="sel" data-uid="${U.esc(p.uid)}">
+      <div class="r1"><div class="av">${U.esc((p.avatar || '🧑').slice(0, 2))}</div>
+        <b>${U.esc(p.name || '未命名')}</b>${tag}</div>
       <div class="r2">
-        <span class="chipx y">Lv.${p.lv || 1}</span>
-        <span class="chipx g">${U.fmt(U.pw(p))}</span>
+        <span class="chipx">Lv.${p.lv || 1}</span>
+        <span class="chipx">⚔${U.fmt(U.pw(p))}</span>
         <span class="chipx">🪙${U.fmt(p.gold)}</span>
         <span class="chipx">💎${U.fmt(p.diamond)}</span>
       </div>
       <div class="r3">${U.esc(p.uid)} · ${U.ago(p.lastSeen)}</div>
     </div>`;
   },
-  bindSel(box) {
-    DA((box || '#body') + ' [data-sel]').forEach((b) => {
-      b.onclick = () => {
-        const u = b.dataset.sel;
-        this.SEL = this.PLIST.find((p) => p.uid === u) || null;
-        this.render();
-      };
-    });
+
+  /* =================================================================
+   * 指令队列（发放类操作一律走队列，绝不直接改写存档）
+   *
+   * 为什么：游戏端每 30 秒无条件把内存 P 整份写回同一路径，
+   * 后台直接改存档会被在线玩家的自动存档静默覆盖 —— 补发的东西玩家
+   * 永远拿不到，且界面还提示成功。改为追加指令，游戏端消费后去重。
+   * ================================================================= */
+  opPath(uid) { return OPDIR + uid + '.json'; },
+  async pushOp(uid, op) {
+    if (!uid) return false;
+    op = op || {};
+    op.id = op.id || ('op' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
+    op.at = op.at || Date.now();
+    try {
+      const f = await DB.get(this.opPath(uid), { list: [] });
+      f.list = Array.isArray(f.list) ? f.list : [];
+      if (f.list.some((x) => x && x.id === op.id)) return true;
+      f.list.push(op);
+      if (f.list.length > 200) f.list = f.list.slice(-200);
+      return await DB.set(this.opPath(uid), f, '玩家指令 ' + (op.t || ''));
+    } catch (e) { this.toast('指令写入失败：' + e.message, 'err'); return false; }
   },
-  /* 玩家搜索条 */
-  searchBar(id, ph) {
-    return `<div class="sb"><input id="${id}" placeholder="${ph || '搜索 UID / 昵称'}" value="${U.esc(this.FILTER)}"></div>`;
+
+  /* 封禁：账号文件（登录拦截）+ 存档（展示）+ 指令队列（在线即时生效） */
+  acctPath(uid) { return UDIR + uid + '.json'; },
+  async setBan(p, ban, o) {
+    o = o || {};
+    const uid = p.uid;
+    if (ban) {
+      p.ban = true; p.banUntil = o.until || 0;
+      p.banReason = o.reason || ''; p.banType = o.type || '永久'; p.banAt = Date.now();
+    } else { p.ban = false; p.banUntil = 0; p.banReason = ''; }
+    const okP = await this.save(p, ban ? '封禁 ' + (o.reason || '') : '解封');
+    let okA = false, msg = '';
+    try {
+      const u = await DB.reload(this.acctPath(uid));
+      if (u && (u.id || u.name)) {
+        if (ban) {
+          u.banned = true; u.banUntil = o.until || 0;
+          u.banReason = o.reason || ''; u.banAt = Date.now(); u.banOp = 'admin';
+        } else { u.banned = false; u.unbanAt = Date.now(); u.unbanOp = 'admin'; }
+        okA = await DB.set(this.acctPath(uid), u, ban ? '封禁账号' : '解封账号');
+      } else { msg = '云端无账号记录，仅写入存档'; }
+    } catch (e) { msg = e.message; }
+    await this.pushOp(uid, ban
+      ? { t: 'ban', until: o.until || 0, reason: o.reason || '' }
+      : { t: 'unban' });
+    return { okP, okA, msg };
   },
-  bindSearch(id) {
-    const s = D('#' + id);
-    if (s) s.oninput = () => { this.FILTER = s.value; const v = s.value; this.render();
-      const n = D('#' + id); if (n) { n.value = v; n.focus(); } };
+
+  /* skins 历史存档可能被写成对象，直接 .map 会抛错导致整页白屏 */
+  skinArr(p) {
+    if (window.E && E.skinArr) return E.skinArr(p);
+    const v = p && p.skins;
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') return Object.keys(v).filter((k) => v[k]);
+    return [];
   },
-  /* 数字输入读取 */
+
+  async save(p, msg) {
+    try {
+      await TMO(Net.write(PDIR + p.uid + '.json', p, msg || '后台修改'), 15000, null);
+      DB.drop(PDIR + p.uid + '.json');
+      return true;
+    } catch (e) { this.toast('保存失败：' + (e && e.message ? e.message : e), 'err'); return false; }
+  },
+
+  /* 表单取值 */
   num(id) { const e = D(id); return e ? (parseFloat(e.value) || 0) : 0; },
   val(id) { const e = D(id); return e ? (e.value || '') : ''; },
+  str(id) { const e = D(id); return e ? String(e.value || '').trim() : ''; },
+  chk(id) { const e = D(id); return !!(e && e.checked); },
 
-  /* 给玩家加物品（通用）
-   * 严重BUG修复：此前消耗品写进 p.use，但游戏端背包「消耗」页与
-   * 使用函数都读 p.mat —— 后台补发的急救包/护盾/药剂，玩家背包显示 ×0、
-   * 点「使用」提示数量不足，等于全部作废。
-   * 现在统一到 p.mat，并把历史 p.use 中的数据迁移过去（兼容旧存档）。 */
-  grant(p, id, n) {
-    n = Math.max(0, Math.floor(n || 0));
-    if (id === 'gold') p.gold = (p.gold || 0) + n;
-    else if (id === 'diamond') p.diamond = (p.diamond || 0) + n;
-    else if (id === 'ach') p.ach = (p.ach || 0) + n;
-    else if (id === 'stamina') p.stamina = (p.stamina || 0) + n;
-    else if (id === 'evToken') p.evToken = (p.evToken || 0) + n;
-    /* 芯片（表32/表35）：C01 白 / C02 蓝 / C03 红，以及品质码 chipN/chipE/chipL/chipRed
-     * 严重 BUG 修复：这些 id 此前一律掉进 else 写进 p.mat['C01']，
-     *   而芯片真实存放在 p.bag（芯片对象数组），芯片面板只读 p.bag。
-     * 后果：运营在「道具补发 / 邮件附件 / 礼包模板 / 商店奖励」里发芯片，
-     *   后台提示「补发成功」，玩家【芯片页永远显示 0】，既不能装备也不能合成。
-     *   实测：APP.grant(p,'C01',1) → p.mat.C01=1、p.bag=0（游戏端 E.grant 则为 bag=1）。
-     * 现在按品质 roll 出真实芯片推进 p.bag，与游戏端 E.grant 行为一致。 */
-    else if (/^(C01|C02|C03|chipN|chipE|chipL|chipRed)$/.test(id)) {
-      const q = (id === 'C01' || id === 'chipN') ? '白'
-        : (id === 'C02' || id === 'chipE') ? '蓝' : '红';
-      const c = Math.max(1, n);
-      for (let i = 0; i < c; i++) {
-        try {
-          if (window.E && E.giveChipByQuality) E.giveChipByQuality(p, q);
-          else if (window.E && E.rollChipByQuality) {
-            const ch = E.rollChipByQuality(q); if (ch) (p.bag = p.bag || []).push(ch);
-          }
-        } catch (e) {}
-      }
-      return;
-    }
-    /* 皮肤（sk_xxx）→ p.skins 数组，并自动穿戴
-     * BUG：此前写进 p.mat['sk_c01b']，玩家皮肤页什么都没有。 */
-    else if (/^sk_/.test(id)) {
-      p.skins = p.skins || [];
-      if (p.skins.indexOf(id) < 0) p.skins.push(id);
-      p.skin = id;
-      return;
-    }
-    /* 宝石（G_R/G_B/G_G/G_P）→ p.gems 计数
-     * BUG：此前写进 p.mat['G_R']，宝石页永远数量 0，镶嵌/合成用不了。 */
-    else if (/^G_[A-Z]$/.test(id)) {
-      p.gems = p.gems || {};
-      p.gems[id] = (p.gems[id] || 0) + Math.max(1, n);
-      return;
-    }
-    /* 称号 → p.titles；头像框 → p.frames（两个都是"数组去重"，n 只作有无判断） */
-    else if ((EX.titles || []).some((x) => x.id === id)) {
-      p.titles = p.titles || [];
-      if (p.titles.indexOf(id) < 0) p.titles.push(id);
-      return;
-    }
-    else if ((EX.frames || []).some((x) => x.id === id)) {
-      p.frames = p.frames || [];
-      if (p.frames.indexOf(id) < 0) p.frames.push(id);
-      return;
-    }
-    else {
-      /* 旧存档迁移：p.use 里残留的消耗品并入 p.mat */
-      if (p.use && Object.keys(p.use).length) {
-        p.mat = p.mat || {};
-        for (const k in p.use) { p.mat[k] = (p.mat[k] || 0) + (p.use[k] || 0); }
-        delete p.use;
-      }
-      p.mat = p.mat || {};
-      p.mat[id] = (p.mat[id] || 0) + n;
-      /* 同步图鉴解锁
-       * BUG（双重）：① E 上根本没有 codexAdd 这个方法（正确名是 codexUnlock），
-       *              前面的 if (E.codexAdd) 守卫让它永远走不到 —— 静默失效；
-       *            ② 就算改对名字，传的类别是 'item'，而图鉴只有
-       *              zombie / gun / skin 三类（EX.codexKinds），
-       *              会在 p.codex 里多出一个谁也不读的 item 数组，属于脏数据。
-       * 现在按 ID 前缀判断：只有发的是武器(W…)或皮肤(sk_)才解锁对应图鉴。 */
-      try {
-        if (window.E && E.codexUnlock) {
-          if (/^W\d/.test(id)) E.codexUnlock(p, 'gun', id);
-          else if (/^sk_/.test(id)) E.codexUnlock(p, 'skin', id);
-        }
-      } catch (e) {}
-    }
+  /* 通用：确认危险操作 */
+  confirm(text) { return window.confirm(text); },
+
+  /* 选中玩家摘要条 */
+  selBar() {
+    if (!this.SEL) return '<div class="card"><div class="lbl">先在上方点选一名玩家</div></div>';
+    const p = this.SEL;
+    return `<div class="card">
+      <h3>当前选中<span class="tag">${U.esc(p.uid)}</span></h3>
+      <div class="r2" style="display:flex;gap:6px;flex-wrap:wrap">
+        <span class="pill">👤 ${U.esc(p.name || '—')}</span>
+        <span class="pill">Lv.${p.lv || 1}</span>
+        <span class="pill">⚔ ${U.fmt(U.pw(p))}</span>
+        <span class="pill">🪙 ${U.fmt(p.gold)}</span>
+        <span class="pill">💎 ${U.fmt(p.diamond)}</span>
+        ${p.ban ? '<span class="pill">🚫 已封禁</span>' : ''}
+        ${p.destroyed ? '<span class="pill">已注销</span>' : ''}
+      </div></div>`;
+  },
+
+  /* 通用空态 */
+  empty(t) { return `<div class="empty">${U.esc(t || '暂无数据')}</div>`; },
+
+  /* 安全写入：异步回调返回时页面可能已切换，元素不在了不能再写
+   * （否则抛 "Cannot set properties of null (setting 'innerHTML')"） */
+  setHtml(sel, html) {
+    const e = D(sel);
+    if (!e) return false;
+    e.innerHTML = html;
+    return true;
+  },
+
+  /* 通用表格 */
+  table(headers, rows) {
+    if (!rows.length) return this.empty();
+    return `<div class="tw"><table><thead><tr>${
+      headers.map((h) => `<th${h.num ? ' class="num"' : ''}>${U.esc(h.t || h)}</th>`).join('')
+    }</tr></thead><tbody>${
+      rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')
+    }</tbody></table></div>`;
   },
 };
 
-window.addEventListener('DOMContentLoaded', () => { APP.init(); });
+APP.init();
