@@ -371,8 +371,13 @@ const APP = {
      * bind / acts 内部回调的 this 都是 APP，而 acts 定义在页面对象里，
      * 不挂上去的话 this.acts 恒为 undefined（页内互相调用会全部抛错） */
     this.acts = p.acts || {};
+    /* 加载进度条：读 200 份存档要几十秒，不提示会被误认为"读不到玩家" */
+    const pg = this.LOAD_PROG;
+    const bar = (pg && pg.total)
+      ? `<div class="card" style="padding:8px 12px"><div class="lbl">
+           ⟳ 正在拉取玩家存档 ${pg.done}/${pg.total} …</div></div>` : '';
     try {
-      b.innerHTML = '<div class="ph"><h2>' + U.esc(p.n) + '</h2></div>' + p.render.call(this);
+      b.innerHTML = '<div class="ph"><h2>' + U.esc(p.n) + '</h2></div>' + bar + p.render.call(this);
     } catch (e) {
       b.innerHTML = `<div class="card"><div class="lbl">页面渲染出错：${U.esc(e.message)}</div></div>`;
       console.error(e); return;
@@ -440,34 +445,39 @@ const APP = {
     const fresh = snap && (Date.now() - (snap.at || 0)) < 5 * 60e3;
     if (typeof Net !== 'undefined' && Net.online === false && fresh && !opt.force) return;
 
-    const core = [], acc = [], srcs = [];
-    const addC = (u) => { if (u && core.indexOf(u) < 0) core.push(u); };
+    const core = [], acc = [], srcs = [], idxBuf = [];
+    const hasSave = {};   /* 确实存在存档文件的 uid */
+    const addC = (u, has) => { if (u && core.indexOf(u) < 0) { core.push(u); if (has) hasSave[u] = 1; } };
     const addA = (u) => { if (u && acc.indexOf(u) < 0 && core.indexOf(u) < 0) acc.push(u); };
 
     try {
       const r = await TMO(Net.read(DBP.index), 10000, null);
       if (r && r.data && Array.isArray(r.data.list) && r.data.list.length) {
-        r.data.list.forEach((x) => addC(x.uid)); srcs.push('索引' + r.data.list.length);
+        r.data.list.forEach((x) => idxBuf.push(x.uid)); srcs.push('索引' + r.data.list.length);
       }
     } catch (e) {}
+    /* 存档目录优先：这里列出来的 uid 一定真的有存档文件，
+     * 索引里多为历史 uid（实测 342 条里仅 78 条仍有存档），
+     * 若让索引排前面，前 200 个读取请求大半扑空，首屏迟迟出不来人。 */
     try {
       const ns = await TMO(Net.list(PDIR), 15000, []);
       const hit = (ns || []).filter((x) => x.endsWith('.json') && x !== '.gitkeep');
-      if (hit.length) { hit.forEach((f) => addC(f.replace(/\.json$/, ''))); srcs.push('存档' + hit.length); }
+      if (hit.length) { hit.forEach((f) => addC(f.replace(/\.json$/, ''), true)); srcs.push('存档' + hit.length); }
     } catch (e) {}
     [DBP.rank, DBP.endless].forEach(async () => {});
     try {
       const r = await TMO(Net.read(DBP.rank), 10000, null);
       if (r && r.data && r.data.list && r.data.list.length) {
-        r.data.list.forEach((x) => addC(x.uid)); srcs.push('战力榜' + r.data.list.length);
+        r.data.list.forEach((x) => addC(x.uid, true)); srcs.push('战力榜' + r.data.list.length);
       }
     } catch (e) {}
     try {
       const r = await TMO(Net.read(DBP.endless), 10000, null);
       if (r && r.data && r.data.list && r.data.list.length) {
-        r.data.list.forEach((x) => addC(x.uid)); srcs.push('无尽榜' + r.data.list.length);
+        r.data.list.forEach((x) => addC(x.uid, true)); srcs.push('无尽榜' + r.data.list.length);
       }
     } catch (e) {}
+    idxBuf.forEach((u) => addC(u));   /* 索引兜底，排在真实存档之后 */
     try {
       const ns = await TMO(Net.list(UDIR), 15000, []);
       const hit = (ns || []).filter((x) => x.endsWith('.json'));
@@ -503,8 +513,13 @@ const APP = {
       }
     } catch (e) {}
 
-    const out = [], files = core.slice(0, 200).map((u) => u + '.json');
-    const WIN = 12;
+    /* 只读取确实有存档文件的 uid：
+     * 索引里 342 条历史 uid 仅 78 条仍有存档，若一并发请求，
+     * 列表中会冒出上百张「读取失败」卡片，把真实玩家淹没。 */
+    const realU = core.filter((u) => hasSave[u]);
+    const files = (realU.length ? realU : core).slice(0, 200).map((u) => u + '.json');
+    const out = [];
+    const WIN = 24;
     for (let i = 0; i < files.length; i += WIN) {
       const batch = files.slice(i, i + WIN);
       const rs = await Promise.all(batch.map(async (f) => {
@@ -528,15 +543,26 @@ const APP = {
           gold: 0, diamond: 0, stamina: 0, ach: 0, mat: {}, cleared: {}, gunOwn: [],
         });
       });
+      /* 流式上屏：真实网络下读满 200 份存档要几十秒，
+       * 每批完成即刻渲染，避免列表长时间空白被当成"读不到玩家"。 */
+      this.LOAD_PROG = { done: Math.min(i + WIN, files.length), total: files.length };
+      this.PLIST = out.slice();
+      this.PLIST_AT = Date.now();
+      this.sortPlayers();
+      if (!opt.silent) this.render();
     }
+    this.LOAD_PROG = null;
+    const accRows = [];
     acc.slice(0, 200).forEach((u) => {
       const m = meta[u] || {};
-      out.push({
+      accRows.push({
         uid: u, name: m.name || m.nick || ('账号 ' + String(u).slice(0, 10)), lv: m.lv || 0,
         created: m.at || 0, lastSeen: m.lastSeen || 0, _noSave: true,
         gold: 0, diamond: 0, stamina: 0, ach: 0, mat: {}, cleared: {}, gunOwn: [],
       });
     });
+    /* 账号兜底只在【一份存档都没读到】时才展示，否则会淹没真实玩家 */
+    if (!out.length) accRows.forEach((x) => out.push(x));
 
     this.PLIST = out;
     this.PLIST_AT = Date.now();
