@@ -19,13 +19,30 @@ const E = {
    * 配合本轮关卡奖励曲线上调，这里同步下调到 1.14，使两者增速匹配。 */
   GUN_COST_RATE: 1.14,
   GUN_COST_BASE: 300,
+  /* 强化等级封顶。后台 GM 可任意设置 gunLv，不设上限时：
+   *   1.14^lv 溢出成 Infinity → gold - Infinity = -Infinity（存档金币被污染）
+   *   1.078^lv 溢出成 Infinity → 攻击无穷 → 战斗内 coin/结算金币一起溢出
+   * 正常玩到 10-10 约 Lv78，999 远超可达范围，不影响任何正常玩法。 */
+  GUN_MAX_LV: 999,
+  TALENT_MAX_LV: 999,
+  BUILD_MAX_LV: 999,
   SPD_MUL: 22,          // 资料移速 6.0 → 像素 132
 
   fmt(n) {
     n = Math.round(Number(n) || 0);
-    if (Math.abs(n) >= 1e8) return (n / 1e8).toFixed(2) + '亿';
-    if (Math.abs(n) >= 1e4) return (n / 1e4).toFixed(1) + '万';
-    return String(n);
+    /* Infinity / NaN：JSON 存档会把它们写成 null，读回来是 0，这里保持一致显示 0，
+     * 否则界面会出现「Infinity亿」这种既荒谬又撑破布局的文本。 */
+    if (!isFinite(n)) return '0';
+    const a = Math.abs(n);
+    let s;
+    if (a >= 1e16) s = (n / 1e16).toFixed(2) + '京';
+    else if (a >= 1e12) s = (n / 1e12).toFixed(2) + '兆';
+    else if (a >= 1e8) s = (n / 1e8).toFixed(2) + '亿';
+    else if (a >= 1e4) s = (n / 1e4).toFixed(1) + '万';
+    else s = String(n);
+    /* 极端大数兜底：不再让「99999999999.00亿」这类超长串撑破 UI */
+    if (s.length > 10) s = n.toExponential(2);
+    return s;
   },
   qi(q) { return EX.qualities.indexOf(q); },
   item(id) { return EX.items.find((x) => x.id === id); },
@@ -158,7 +175,9 @@ const E = {
       p[k] = Math.max(0, N(p[k], 0));
     });
     p.stamina = Math.min(EX.STAMINA_MAX || 100, p.stamina);
-    p.gunLv = Math.max(1, p.gunLv || 1);
+    /* 后台 GM 可把 gunLv 设成任意值，不钳制会让 1.078^lv 溢出成 Infinity，
+     * 进而让战斗内的 coin 与结算金币一起溢出。上限取 GUN_MAX_LV。 */
+    p.gunLv = Math.max(1, Math.min(this.GUN_MAX_LV, p.gunLv || 1));
     if (!p.lv || p.lv < 1) p.lv = 1;   /* 等级最小 1，补 0 会让升级/经验计算异常 */
     if (p.charStar != null) p.charStar = Math.min(5, Math.max(0, p.charStar));
     /* BUG修复（旧存档/损坏存档白屏）：
@@ -313,10 +332,18 @@ const E = {
   /* 武器升级费用：300 × 1.16^(lv-1)
    * 原 1.28 增长过快：Lv80 需 1170亿、Lv84 金币不足永久卡死 */
   gunUpgradeCost(p) {
-    return Math.round(this.GUN_COST_BASE * Math.pow(this.GUN_COST_RATE, p.gunLv - 1));
+    /* 等级封顶后不再计算费用：否则 1.14^lv 会溢出成 Infinity，
+     * 而 gold - Infinity = -Infinity 会把存档里的金币直接污染掉。 */
+    if ((p.gunLv || 1) >= this.GUN_MAX_LV) return Infinity;
+    const c = this.GUN_COST_BASE * Math.pow(this.GUN_COST_RATE, p.gunLv - 1);
+    return isFinite(c) ? Math.round(c) : Infinity;
   },
   upgradeGun(p) {
+    if ((p.gunLv || 1) >= this.GUN_MAX_LV) {
+      return { ok: false, msg: '🔫 武器已达最高等级 Lv.' + this.GUN_MAX_LV };
+    }
     const c = this.gunUpgradeCost(p);
+    if (!isFinite(c)) return { ok: false, msg: '🔫 已达强化上限' };
     if (p.gold < c) return { ok: false, msg: EX.tip('popup.noCoin', { v: this.fmt(c) }) };
     p.gold -= c; p.gunLv++;
     const oldA = this.advOf(p.gunLv - 1), newA = this.advOf(p.gunLv);
@@ -472,7 +499,10 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   },
   talentCost(p, id) {
     const t = EX.talents.find((x) => x.id === id); if (!t) return 0;
-    return Math.round(t.cost0 * Math.pow(t.costGrow, p.talents[id] || 0));
+    /* 封顶后返回 Infinity，调用方据此拒绝升级，避免金币被减成 -Infinity */
+    if ((p.talents[id] || 0) >= this.TALENT_MAX_LV) return Infinity;
+    const c = t.cost0 * Math.pow(t.costGrow, p.talents[id] || 0);
+    return isFinite(c) ? Math.round(c) : Infinity;
   },
   /* 天赋点：每 10 级 +1（表25 #1「每10级解锁新技能槽」），初始赠送 3 点 */
   TP_INIT: 3,
@@ -486,7 +516,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 表25 #7「金币点选」→ 金币为主消耗；天赋点为额外门槛（每10级+1） */
     const tp = this.tpOf(p);
     if (tp <= 0) return { ok: false, msg: '天赋点不足（每升 10 级 +1 点）' };
+    if (cur >= this.TALENT_MAX_LV) return { ok: false, msg: '⭐ ' + t.n + ' 已达最高等级' };
     const c = this.talentCost(p, id);
+    if (!isFinite(c)) return { ok: false, msg: '⭐ ' + t.n + ' 已达最高等级' };
     if (p.gold < c) return { ok: false, msg: EX.tip('popup.noCoin', { v: this.fmt(c) }) };
     p.gold -= c; p.tp = tp - 1; p.talents[id] = cur + 1;
     return { ok: true, msg: '⭐ ' + t.n + ' Lv.' + p.talents[id] + '（剩 ' + p.tp + ' 天赋点）' };
@@ -502,13 +534,17 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   },
   buildCost(p, id) {
     const b = EX.buildings.find((x) => x.id === id); if (!b) return 0;
-    return Math.round(b.cost0 * Math.pow(b.grow, (p.build[id] || 1) - 1));
+    if ((p.build[id] || 1) >= this.BUILD_MAX_LV) return Infinity;
+    const c = b.cost0 * Math.pow(b.grow, (p.build[id] || 1) - 1);
+    return isFinite(c) ? Math.round(c) : Infinity;
   },
   upBuild(p, id) {
     const b = EX.buildings.find((x) => x.id === id); if (!b) return { ok: false, msg: '建筑不存在' };
     const cur = p.build[id] || 1;
     if (cur >= b.max) return { ok: false, msg: '已达最高等级' };
+    if (cur >= this.BUILD_MAX_LV) return { ok: false, msg: '🏗️ ' + b.n + ' 已达最高等级' };
     const c = this.buildCost(p, id);
+    if (!isFinite(c)) return { ok: false, msg: '🏗️ ' + b.n + ' 已达最高等级' };
     if (p.gold < c) return { ok: false, msg: EX.tip('popup.noCoin', { v: this.fmt(c) }) };
     p.gold -= c; p.build[id] = cur + 1;
     return { ok: true, msg: '🏗️ ' + b.n + ' 升至 Lv.' + p.build[id] };
@@ -659,7 +695,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      *   费用 Lv1=300 → Lv80=1170亿（39 亿倍）
      * 收益线性 vs 成本指数 → Lv84 永久卡死，且后期越打越轻松。
      * 改复利后收益与成本同为指数，卡关→攒金币→升级→突破 的循环才成立。 */
-    const gunBase = g.dmg * Math.pow(this.GUN_GROW_RATE || 1.078, p.gunLv - 1);
+    /* 等级再钳一次：sanitize 只在登录时跑，后台 GM 热改档后可能绕过 */
+    const _gLv = Math.max(1, Math.min(this.GUN_MAX_LV, p.gunLv || 1));
+    const gunBase = g.dmg * Math.pow(this.GUN_GROW_RATE || 1.078, _gLv - 1);
     /* 攻击强化%（天赋 + 军械库 + 芯片 + 武器词条） */
     const atkUp = this.talentVal(p, 'atk') + this.buildVal(p, 'atk')
       + this.chipVal(p, 'atk');   /* 进阶词条的 dmg 已并入 affixBonus().dmg，勿在此重复相加 */
