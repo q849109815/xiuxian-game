@@ -571,6 +571,8 @@ const APP = {
     this.autoIndex(uids, meta);
     if (this.SEL && !out.find((p) => p.uid === this.SEL.uid)) this.SEL = null;
     if (!opt.silent) this.render();
+    /* 拉完列表顺手清理到期封禁（不阻塞渲染） */
+    try { this.expireBans(); } catch (e) {}
   },
 
   /* 静默维护索引：下次进后台即可脱离不稳的目录枚举 */
@@ -607,6 +609,49 @@ const APP = {
     });
   },
   deadCount() { return (this.PLIST || []).filter((p) => p.destroyed).length; },
+
+  /* =================================================================
+   * 封禁状态统一判定（智能化）
+   * -----------------------------------------------------------------
+   * 旧代码只判断 ban 布尔值，后台列表和玩家端都只显示「封禁」两个字：
+   *   ① 运营看不出封了多久、何时到期，复查/申诉时无从核对；
+   *   ② 时限封禁到期后标记不清理 → 7 天封禁实际等同永久封禁（真 BUG）。
+   * 现在：给出剩余时长/到期时刻，并把「已到期」单独识别出来以便自动清理。
+   * ================================================================= */
+  banOf(p) {
+    p = p || {};
+    if (!p.ban && !p.banned) return { on: false, perm: false, text: '' };
+    const until = Number(p.banUntil) || 0;
+    const now = Date.now();
+    if (until && until <= now) return { on: false, expired: true, text: '' };
+    const reason = p.banReason || '';
+    if (!until) return { on: true, perm: true, reason, text: '永久封禁', left: '永久' };
+    const s = Math.floor((until - now) / 1000);
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), mi = Math.floor((s % 3600) / 60);
+    const left = d > 0 ? `${d}天${h}小时` : h > 0 ? `${h}小时${mi}分` : `${Math.max(mi, 1)}分钟`;
+    return { on: true, perm: false, until, reason, left, text: '封禁·剩' + left, at: U.dt(until) };
+  },
+  /* 封禁到期自动解封：扫描一次，把已过期的清理掉（存档 + 账号 + 指令）。
+   * 每次拉完玩家列表后调用，运营无需手工点解封。 */
+  async expireBans() {
+    const list = (this.PLIST || []).filter((p) => {
+      const b = this.banOf(p);
+      return b.expired && !p.destroyed && !p._noSave;
+    });
+    if (!list.length) return 0;
+    let n = 0;
+    for (const p of list) {
+      try {
+        const r = await this.setBan(p, false, {});
+        if (r && r.okP) n++;
+      } catch (e) {}
+    }
+    if (n) {
+      AUDIT.log('封禁到期自动解封', list.map((x) => x.uid).join(','), n + ' 人');
+      try { this.toast(`已自动解封 ${n} 人（时限已到）`, 'ok'); } catch (e) {}
+    }
+    return n;
+  },
 
   view() {
     const f = (this.FILTER || '').trim().toLowerCase();
@@ -694,6 +739,52 @@ const APP = {
     return { okP, okA, msg };
   },
 
+  /* =================================================================
+   * 永久删除账号（与「注销」是两回事）
+   *   注销   ：标记 destroyed，删存档但保留账号记录 —— 可在「显示已注销」里找回
+   *   永久删除：账号文件 + 存档 + 指令队列 + 索引 + 榜单条目 全部物理删除，
+   *             之后任何界面都不再出现，不可恢复
+   * 旧后台只有注销，账号记录永远堆在库里，列表越滚越长且无法清理。
+   * ================================================================= */
+  async purge(p) {
+    const uid = p && p.uid;
+    if (!uid) return { ok: false, msg: '无 UID' };
+    const r = { ok: true, acct: false, save: false, op: false, idx: false, board: false };
+    try { r.acct = !!(await Net.del(UDIR + uid + '.json')); } catch (e) {}
+    try { r.save = !!(await Net.del(PDIR + uid + '.json')); } catch (e) {}
+    try { r.op = !!(await Net.del(OPDIR + uid + '.json')); } catch (e) {}
+    /* 索引移除 */
+    try {
+      const idx = await DB.reload(DBP.index);
+      if (idx && Array.isArray(idx.list)) {
+        const before = idx.list.length;
+        idx.list = idx.list.filter((x) => x && x.uid !== uid);
+        if (idx.list.length !== before) {
+          idx.updAt = Date.now();
+          r.idx = !!(await Net.write(DBP.index, idx, '永久删除·索引移除'));
+        } else r.idx = true;
+      }
+    } catch (e) {}
+    /* 榜单条目移除：否则账号已删除，榜上还挂着幽灵条目 */
+    try {
+      for (const key of ['rank', 'endless']) {
+        const d = await DB.reload(DBP[key]);
+        if (!d || !Array.isArray(d.list)) continue;
+        const before = d.list.length;
+        d.list = d.list.filter((x) => !x || (x.uid !== uid && x.u !== uid));
+        if (d.list.length !== before) {
+          d.updAt = Date.now();
+          await Net.write(DBP[key], d, '永久删除·榜单移除');
+          r.board = true;
+        }
+      }
+    } catch (e) {}
+    try { DB.drop(PDIR + uid + '.json'); DB.drop(UDIR + uid + '.json'); } catch (e) {}
+    this.PLIST = (this.PLIST || []).filter((x) => x.uid !== uid);
+    if (this.SEL && this.SEL.uid === uid) this.SEL = null;
+    return r;
+  },
+
   /* skins 历史存档可能被写成对象，直接 .map 会抛错导致整页白屏 */
   skinArr(p) {
     if (window.E && E.skinArr) return E.skinArr(p);
@@ -732,7 +823,9 @@ const APP = {
         <span class="pill">⚔ ${U.fmt(U.pw(p))}</span>
         <span class="pill">🪙 ${U.fmt(p.gold)}</span>
         <span class="pill">💎 ${U.fmt(p.diamond)}</span>
-        ${p.ban ? '<span class="pill">🚫 已封禁</span>' : ''}
+        ${(() => { const b = this.banOf(p); return b.on
+          ? `<span class="pill">🚫 ${U.esc(b.text)}${b.at ? '（' + U.esc(b.at) + ' 解封）' : ''}${b.reason ? ' · ' + U.esc(b.reason) : ''}</span>`
+          : ''; })()}
         ${p.destroyed ? '<span class="pill">已注销</span>' : ''}
       </div></div>`;
   },
