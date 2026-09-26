@@ -575,6 +575,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   syncPatrol(p) {
     const r = this.patrolRateOf(p);
     if (p.patrolRate !== r) p.patrolRate = r;
+    /* 【时间回拨保护】玩家改过系统时间（或设备时钟自动同步跳变）后，
+     * p.patrolT 可能落在未来，导致 (now - patrolT) 恒为负数：
+     *   ① 巡逻面板「累计可领」显示负数金币（实测 -334）
+     *   ② 点领取必走 gain<=0 分支被拒绝，且 patrolT 不重置
+     *   ③ 结果巡逻永久卡住，要等真实时间追上那个未来时刻才恢复
+     * 与体力 staminaAt 是同一类问题（后者已修）。这里统一钳回当前时刻。 */
+    if (p.patrolT && p.patrolT > Date.now()) p.patrolT = Date.now();
     /* 【当前章节】p.ch 全项目【只读不写】：
      *      UI 里两处 `第 ${p.ch || 1} 章`（巡逻面板、主线任务面板）
      *      永远显示「第 1 章」，即使玩家已经打到第 10 章。
@@ -1068,6 +1075,12 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       return { ok: true, msg: def.n + '：' + def.desc };
     }
     /* 战斗外：预置到下一场 */
+    /* BUG：I01 急救包在战斗外预置后，进入战斗时玩家必定是满血，
+     * applyItem 的 heal 会被 Math.min(wallMax, wallHp+heal) 吃掉 → 治疗量恒为 0，
+     * 道具却已被扣除（实测 3 个变 2 个，血量纹丝不动），
+     * 而提示还写着「进入下一场战斗自动生效」。
+     * 恢复类道具只在战斗内残血时才有意义，这里直接拒绝，不扣道具。 */
+    if (id === 'I01') return { ok: false, msg: '急救包需在战斗中使用' };
     p.mat[id]--;
     p.pendingItem = p.pendingItem || {};
     p.pendingItem[id] = (p.pendingItem[id] || 0) + 1;
@@ -1102,11 +1115,20 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   applyPendingItems(p) {
     const pd = p.pendingItem || {};
     let n = 0;
+    const rest = {};
+    /* 满血判定：开局必定满血，此时恢复类道具（I01）治疗量恒为 0。
+     * 老存档里可能还留着修复前预置的 I01，这里不让它们白白蒸发，
+     * 原样保留到玩家真正残血的那一场。 */
+    const r = window.BT && BT.run;
+    const full = !r || (r.wallHp != null ? r.wallHp : r.hp) >= (r.wallMax || r.maxHp || 0);
     for (const id in pd) {
       const c = pd[id] || 0;
-      for (let i = 0; i < c; i++) { if (this.applyItem(p, id).ok) n++; }
+      for (let i = 0; i < c; i++) {
+        if (id === 'I01' && full) { rest[id] = (rest[id] || 0) + 1; continue; }
+        if (this.applyItem(p, id).ok) n++;
+      }
     }
-    if (n) p.pendingItem = {};
+    p.pendingItem = Object.keys(rest).length ? rest : {};
     return n;
   },
 
