@@ -380,7 +380,8 @@ r_tavern(p, tab) {
     if (tab === '巡逻') {
       const last = p.patrolT || 0;
       const now = Date.now();
-      const hrs = Math.min(8, (now - last) / 3600000);
+      /* 双重保险：时间回拨时 (now-last) 为负，会让「累计可领」显示负数金币 */
+      const hrs = Math.min(8, Math.max(0, (now - last) / 3600000));
       const gain = Math.floor(hrs * ((p.patrolRate || 16)));
       return `<div class="card"><div class="card-t">🚩 巡逻收益
         <span class="sub">章节越高，收益越大</span></div>
@@ -435,7 +436,8 @@ r_tavern(p, tab) {
     const cb = $('#ptClaim');
     if (cb) cb.onclick = () => {
       const now = Date.now();
-      const hrs = Math.min(8, (now - (p.patrolT || now)) / 3600000);
+      /* 双重保险：时间回拨时 hrs 为负，gain 变负数被拒且 patrolT 不重置 → 永久卡住 */
+      const hrs = Math.min(8, Math.max(0, (now - (p.patrolT || now)) / 3600000));
       const gain = Math.floor(hrs * (p.patrolRate || 16)) + (p.patrolAcc || 0);
       if (gain <= 0) return this.toast('暂无可领收益', 'err');
       p.gold += gain; p.patrolAcc = 0; p.patrolT = now;
