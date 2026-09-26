@@ -219,7 +219,7 @@ r_tavern(p, tab) {
       if (!lg) return '<div class="empty">尚未加入军团</div>';
       const mem = lg.members || [];
       return `<div class="card"><div class="card-t">成员 <span class="sub">${mem.length} 人</span></div>
-        ${mem.map((m) => `<div class="kv"><span>${m.role || '成员'} ${m.n}</span><b>战力 ${E.fmt(m.pw || 0)}</b></div>`).join('')}
+        ${mem.map((m) => `<div class="kv"><span>${this.esc(m.role || '成员')} ${this.esc(m.n)}</span><b>战力 ${E.fmt(m.pw || 0)}</b></div>`).join('')}
       </div>`;
     }
     if (lg) {
@@ -228,7 +228,7 @@ r_tavern(p, tab) {
       const totalPw = mem.reduce((s, m) => s + (m.pw || 0), 0);
       return `<div class="card" style="text-align:center">
         ${this.zAvatarHTML(lg.id, '')}
-        <div style="font-size:15px;font-weight:800;margin-top:6px;color:var(--yel)">${lg.n}</div>
+        <div style="font-size:15px;font-weight:800;margin-top:6px;color:var(--yel)">${this.esc(lg.n)}</div>
         <div class="sub">${lg.lv || 1}级 · 成员 ${mem.length}/${lg.cap || 50} · 战力 ${E.fmt(Math.max(totalPw, E.power(p)))}</div>
       </div>
       <div class="card"><div class="card-t">战团</div>
@@ -1373,17 +1373,19 @@ r_tavern(p, tab) {
   r_friends(p, tab) {
     if (tab === '聊天') {
       const msgs = (p.chat || []).slice(-20).reverse();
+      /* 聊天昵称和消息文本都是别的玩家随便填的，直接拼进 innerHTML 就是存储型 XSS：
+       * 对方发一句 <img src=x onerror=...> 你打开聊天就执行了。全部转义。 */
       return `<div class="card"><div class="card-t">聊天</div>
         ${msgs.length ? msgs.map((m) => `<div class="zrow">${this.zAvatarHTML(m.n)}
-          <div class="zi"><b>${m.n || '匿名'}</b><span>${m.t || ''}</span></div></div>`).join('')
+          <div class="zi"><b>${this.esc(m.n || '匿名')}</b><span>${this.esc(m.t || '')}</span></div></div>`).join('')
         : '<div class="lbl">暂无消息</div>'}</div>`;
     }
     if (tab === '申请') {
       const reqs = p.friendReq || [];
       return `<div class="card"><div class="card-t">好友申请 <span class="sub">${reqs.length}</span></div>
         ${reqs.length ? reqs.map((r) => `<div class="zrow">${this.zAvatarHTML(r.id)}
-          <div class="zi"><b>${r.n}</b><span>战力 ${E.fmt(r.pw || 0)}</span></div>
-          <button class="btn g sm" data-accept="${r.id}">接受</button></div>`).join('')
+          <div class="zi"><b>${this.esc(r.n)}</b><span>战力 ${E.fmt(r.pw || 0)}</span></div>
+          <button class="btn g sm" data-accept="${this.esc(r.id)}">接受</button></div>`).join('')
         : '<div class="lbl">暂无申请</div>'}</div>`;
     }
     const fs = p.friends || [];
@@ -1391,7 +1393,7 @@ r_tavern(p, tab) {
       <span class="sub">${fs.length} 人 · 每个 +0.5% 攻击</span></div>
       ${fs.length ? fs.map((f) => `<div class="zrow">
         ${this.zAvatarHTML(f.id || f)}
-        <div class="zi"><b>${(f && f.n) || f.id || '未知'}</b><span>战力 ${E.fmt((f && f.pw) || 0)} · 可发送体力</span></div>
+        <div class="zi"><b>${this.esc((f && f.n) || f.id || '未知')}</b><span>战力 ${E.fmt((f && f.pw) || 0)} · 可发送体力</span></div>
         ${(function () {
           const today = new Date().toDateString();
           const sent = (p.sendStDate === today) ? (p.sendStTo || []) : [];
@@ -1492,9 +1494,12 @@ r_tavern(p, tab) {
         else if (board === '活动冲榜') lb.sort((a, b) => (b.ev || 0) - (a.ev || 0));
         else lb.sort((a, b) => (b.eb || 0) - (a.eb || 0) || (b.pw || 0) - (a.pw || 0));
         if (!lb.length) return '<div class="lbl">暂无排行数据，通关后自动上传</div>';
+        /* 榜单昵称来自云端 leaderboard.json，是别人填的 —— 必须转义。
+         * 不转义的话，谁把昵称设成 <img src=x onerror=...> 并上传成绩，
+         * 所有打开排行榜的玩家都会执行那段脚本（存储型 XSS）。 */
         return lb.map((x, i) => `<div class="item">
           <div class="ic" style="font-size:15px;background:${i < 3 ? 'linear-gradient(135deg,#ffe9a8,#f0a020)' : 'rgba(10,16,28,.7)'};color:${i < 3 ? '#2a1a00' : '#fff'}">${i + 1}</div>
-          <div class="info"><div class="nm">${x.n || x.name || '匿名'}</div>
+          <div class="info"><div class="nm">${this.esc(x.n || x.name || '匿名')}</div>
             <div class="sub">${x.lv || '—'} · 无尽 ${x.eb || 0} 层</div></div>
           <div class="act"><span class="tag y">${board === '活动冲榜' ? E.fmt(x.ev || 0) + ' 积分' : board === '战力榜' ? E.fmt(x.pw || 0) : E.fmt(x.pw || 0)}</span></div></div>`).join('');
       }).call(this)}
@@ -2016,7 +2021,7 @@ r_tavern(p, tab) {
     <div class="card">
       <button class="btn n blk" id="setSwitchAcct">🔁 退出登录 / 切换账号</button></div>
     <div class="card"><div class="card-t">账号信息</div>
-      <div class="kv"><span>代号</span><b>${p.name}</b></div>
+      <div class="kv"><span>代号</span><b>${this.esc(p.name)}</b></div>
       <div class="kv"><span>UID</span><b style="font-size:10px">${p.uid}</b></div>
       <div class="kv"><span>角色</span><b>${E.char(p).n}</b></div>
       <div class="kv"><span>通关关卡</span><b>${Object.keys(p.cleared || {}).length} / ${EX.levels.length}</b></div>
