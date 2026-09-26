@@ -1703,7 +1703,10 @@ r_tavern(p, tab) {
     if (!ck.ok) return this.toast(ck.msg, 'err');
     const maxBySt = Math.floor((p.stamina || 0) / EX.SWEEP_STAMINA);
     const max = Math.max(1, Math.min(EX.SWEEP_MAX, maxBySt));
-    const rw1 = EX.sweepRw(parseInt(String(lvId).split('-')[1] || '1', 10), 1);
+    /* 用与 E.sweep 同源的预览，避免「弹窗显示」与「实际到账」对不上 */
+    const rw1 = E.sweepPreview ? E.sweepPreview(p, lvId, 1) : EX.sweepRw(parseInt(String(lvId).split('-')[1] || '1', 10), 1);
+    const matTxt = Object.keys(rw1.mat || {}).map((k) => (E.itemName ? E.itemName(k) : k) + ' ×' + rw1.mat[k]).join(' · ') || '无';
+    const noSt = maxBySt < 1;
     /* 用通用面板层承载扫荡弹窗 */
     const box = document.getElementById('sweepBox');
     if (!box) return this.sweepQuick(lvId, 1);
@@ -1711,10 +1714,10 @@ r_tavern(p, tab) {
       <button id="swX">✕</button></div><div class="pn-main"><div class="pn-body">
       <div class="card"><div class="card-t">扫荡设置</div>
       <div class="sub">单次消耗体力 ${EX.SWEEP_STAMINA} · 当前体力 ${Math.floor(p.stamina || 0)}</div>
-      <div class="sub">单次产出：金币 ${E.fmt(rw1.gold)} · 金属 ${rw1.M01} · 经验 ${rw1.xp}</div>
+      <div class="sub">单次产出：金币 ${E.fmt(rw1.gold)} · ${matTxt} · 经验 ${rw1.xp} · 体力 ${rw1.stamina}</div>
       <div class="kv"><span>扫荡次数</span><b><input type="number" id="swN" value="${max}" min="1" max="${max}"
         style="width:64px;padding:4px;border-radius:6px;border:1px solid #555;background:#222;color:#fff"></b></div>
-      <button class="btn c blk" id="swGo">开始扫荡（最多 ${max} 次）</button>
+      <button class="btn c blk" id="swGo" ${noSt ? 'disabled style="opacity:.5"' : ''}>${noSt ? '体力不足（需 ' + EX.SWEEP_STAMINA + ' 点）' : '开始扫荡（最多 ' + max + ' 次）'}</button>
       <button class="btn d blk" id="swX2">取消</button></div></div></div></div>`;
     box.classList.add('on');
     const g = document.getElementById('swGo');
@@ -1742,13 +1745,16 @@ r_tavern(p, tab) {
     const cost = E.buildCost(p, b.id);
     /* 仓库（stat==='gold'）此前显示写死的 offline(120)×等级，与实际产出不符 */
     const val = b.stat === 'gold' ? E.offlineRate(p) + ' 金币/小时' : '+' + (cur * b.per * 100).toFixed(0) + '%';
+    /* 离线面板此前只显示金币数字，金属/经验写成「金属 + 经验」没有数量，
+     * 而领取时三者都发 —— 玩家看不到自己能拿多少。这里按实际计算值显示。 */
+    const ofc = E.offlineCalc(p);
     return `<div class="card"><div class="card-t">${b.icon} ${b.n} <span class="sub">Lv.${cur}/${b.max}</span></div>
       <div class="kv"><span>效果</span><b style="color:var(--green)">${val}</b></div>
       <div class="kv"><span>说明</span><b style="font-size:11px">${b.desc}</b></div>
       <button class="btn c blk" id="buUp" ${p.gold < cost ? 'disabled' : ''}>升级 · ${E.fmt(cost)} 金币</button></div>
       <div class="card"><div class="card-t">离线产出</div>
       <div class="kv"><span>仓库离线收益</span><b style="color:var(--gold)">${E.fmt(E.offlineIncome(p))} 金币</b></div>
-      <div class="kv"><span>同时产出</span><b>金属 + 经验</b></div>
+      <div class="kv"><span>同时产出</span><b>${ofc.metal} 金属 · ${ofc.xp} 经验</b></div>
       <button class="btn blk" id="buClaim">领取离线收益</button>
       <div class="lbl">离线最多累计 8 小时（表34）。</div></div>`;
   },
