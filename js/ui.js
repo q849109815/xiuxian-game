@@ -1451,7 +1451,7 @@ r_tavern(p, tab) {
     return `<div class="card"><div class="card-t">邮件 <span class="sub">${un} 封未读</span></div>
       ${ms.length ? ms.slice().reverse().map((m) => `<div class="zrow">
         ${this.zAvatarHTML(m.t)}
-        <div class="zi"><b>${m.t}</b><span>${m.b || ''}</span>
+        <div class="zi"><b>${this.esc(m.t || '邮件')}</b><span>${this.esc(m.b || '')}</span>
           <span>🪙${m.gold || 0} 💎${m.dia || 0}</span></div>
         ${m.got ? '<span class="st off">已领</span>'
           : `<button class="btn sm g" data-ml="${m.id || ''}">领取</button><i class="gdot"></i>`}
