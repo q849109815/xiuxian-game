@@ -120,6 +120,11 @@ const MAIN = {
       }
     }
     P = p; window.P = p; UI.P = p;
+    /* 旧档兼容：offBase（离线结算基准）是新字段，老存档没有。
+     * 必须在【startSave 启动之前】用云端记录的 offlineAt 初始化 ——
+     * 一旦自动存档跑过一轮，offlineAt 就会被刷成当前时间，
+     * 老玩家这一次登录就永远领不到离线收益了。 */
+    if (!p.offBase) p.offBase = Number(p.offlineAt) || Date.now();
     /* 读档基准：记录"内存里这份数据来自云端哪一版"。
      * 存档写入时用它判断本地是否已被云端超越（多设备 / 读到旧分支），
      * 防止把旧档写回去覆盖别人的新进度（回档）。 */
@@ -127,6 +132,15 @@ const MAIN = {
     this.savePath = path;
     this.migrate(p);
     UI.home(); UI.show('home');
+    /* 离线收益提示：入口藏在「基地→仓库」里，玩家根本不知道要手动领，
+     * 登录时若有可领收益就主动提示一次（只提示，不自动发放）。 */
+    try {
+      const oc = E.offlineCalc(p);
+      if (oc && oc.hrs >= 0.05 && (oc.gold > 0 || oc.metal > 0 || oc.xp > 0)) {
+        const hh = Math.floor(oc.hrs), mm = Math.round((oc.hrs - hh) * 60);
+        UI.toast(`🕐 离线 ${hh}小时${mm}分：可领 ${E.fmt(oc.gold)} 金币 · ${oc.metal} 金属 · ${oc.xp} 经验（基地→仓库领取）`, 'ok');
+      }
+    } catch (e) {}
     /* 凭据失效：读到的多半是本机旧缓存，必须让玩家知道"这不是回档，是读不到云端"，
      * 否则他会以为进度丢了、反复重玩，越玩越乱。 */
     if (Net.authFail) {
