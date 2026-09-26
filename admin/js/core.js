@@ -782,11 +782,13 @@ const APP = {
   async setBan(p, ban, o) {
     o = o || {};
     const uid = p.uid;
-    if (ban) {
-      p.ban = true; p.banUntil = o.until || 0;
-      p.banReason = o.reason || ''; p.banType = o.type || '永久'; p.banAt = Date.now();
-    } else { p.ban = false; p.banUntil = 0; p.banReason = ''; }
-    const okP = await this.save(p, ban ? '封禁 ' + (o.reason || '') : '解封');
+    /* 只改封禁相关字段：整份覆盖会把玩家在线期间的进度一起回退 */
+    const patch = ban
+      ? { ban: true, banUntil: o.until || 0, banReason: o.reason || '', banType: o.type || '永久', banAt: Date.now() }
+      : { ban: false, banUntil: 0, banReason: '', banType: '', unbanAt: Date.now() };
+    Object.keys(patch).forEach((k) => { p[k] = patch[k]; });
+    const saved = await this.mergeSave(p, patch, ban ? '封禁 ' + (o.reason || '') : '解封');
+    const okP = !!saved;
     let okA = false, msg = '';
     try {
       const u = await DB.reload(this.acctPath(uid));
@@ -865,6 +867,39 @@ const APP = {
       DB.drop(PDIR + p.uid + '.json');
       return true;
     } catch (e) { this.toast('保存失败：' + (e && e.message ? e.message : e), 'err'); return false; }
+  },
+
+  /* =================================================================
+   * 只改指定字段的写入（运营操作专用）
+   * 为什么：后台 loadPlayers 拿到的是【打开后台那一刻】的存档快照。
+   * 玩家很可能在这之后又玩了几十分钟，云端早已是更新版本。此时若把
+   * 旧快照整份写回，等于把玩家打回过去 —— 运营以为只改了个等级，
+   * 实际把进度一起抹掉了。
+   * 实测（本次修复前）：
+   *   后台加载时 gold=1000 / 通关 1 关
+   *   → 玩家玩到 gold=9000 / 通关 2 关（云端已是新版）
+   *   → 运营在后台只把等级改成 30 → 保存
+   *   → 云端 gold 变回 1000、通关记录退回 1 关。
+   * 现在：写之前重读云端最新，只把本次要改的字段合并进去，
+   *       再把最新对象同步回内存快照（后续操作不再基于旧对象）。
+   * 注意：回档 / 重置存档 是【有意整份覆盖】，不要走这里。
+   * ================================================================= */
+  async mergeSave(p, patch, msg) {
+    let cur = null;
+    try {
+      const r = await TMO(Net.read(PDIR + p.uid + '.json'), 12000, null);
+      if (r && r.data && typeof r.data === 'object') cur = r.data;
+    } catch (e) {}
+    const fresh = !!cur;
+    const out = Object.assign({}, cur || p, patch || {});
+    out.uid = p.uid;
+    try {
+      await TMO(Net.write(PDIR + p.uid + '.json', out, msg || '后台修改'), 15000, null);
+      DB.drop(PDIR + p.uid + '.json');
+      Object.keys(out).forEach((k) => { p[k] = out[k]; });
+      out._fresh = fresh;
+      return out;
+    } catch (e) { this.toast('保存失败：' + (e && e.message ? e.message : e), 'err'); return null; }
   },
 
   /* 表单取值 */
