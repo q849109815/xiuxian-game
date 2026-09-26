@@ -913,10 +913,20 @@ function onBattleEnd(res, d) {
        * 关卡奖励这条占全部金币约 4 成的来源完全不吃加成
        * （attrs().goldMul 定义后全项目零消费，是死字段）。 */
       rw.gold = Math.round((lr.gold || 0) * (E.attrs(P).goldMul || 1));
+      /* 结算面板此前只显示 EXP / 金币 / 击杀 / 「1阶枪械部件」，
+       * 而「1阶枪械部件」这个格子是从未赋值的 rw.parts，恒显示 0；
+       * 关卡配置真正发的材料（如 1-1 的 M02×5）一行都不显示 ——
+       * 玩家拿到 5 个材料却完全不知道。这里把实发材料记进 rw.mat 供面板渲染。 */
+      rw.mat = {};
       for (const k in lr) {
         if (k === 'gold') continue;
-        if (k === 'chip') { for (let i = 0; i < lr[k]; i++) P.bag.push(E.rollChipById('CH01')); }
-        else P.mat[k] = (P.mat[k] || 0) + lr[k];
+        if (k === 'chip') {
+          for (let i = 0; i < lr[k]; i++) P.bag.push(E.rollChipById('CH01'));
+          rw.chip = (rw.chip || 0) + lr[k];
+        } else {
+          P.mat[k] = (P.mat[k] || 0) + lr[k];
+          rw.mat[k] = (rw.mat[k] || 0) + lr[k];
+        }
       }
     }
   } else {
