@@ -325,6 +325,7 @@ const MAIN = {
     p.stats = p.stats || { kills: 0, runs: 0, bossKill: 0, noHitBest: 0, endlessBest: 0 };
     p.guide = p.guide || {}; p.ach = p.ach || 0; p.endlessTime = p.endlessTime || 0;
     p.mail = p.mail || [];
+    p.tempItems = Array.isArray(p.tempItems) ? p.tempItems : [];
     E.resetTasks(p); E.tickStamina(p);
     /* 图鉴回填：补录已拥有但历史未记账的武器/皮肤 */
     try { if (E.codexBackfill) E.codexBackfill(p); } catch (e) {}
@@ -333,6 +334,8 @@ const MAIN = {
     /* GM「加属性」若填了持续时间，到期需扣回 ——
      * 否则临时增益变成永久增益，与后台配置意图不符。 */
     this.tickTempBuff(p);
+    /* 限时道具到期回收：tempItems 此前只写不读，限时道具实际永久化 */
+    try { this.tickTempItems(p); } catch (e) {}
     /* 登记到玩家索引：后台据此枚举全部玩家。
      * 只在注册/登录时写是不够的 —— 老账号从未写过，
      * 后台就只能靠不稳的目录枚举，结果长期只显示一个玩家。
@@ -404,6 +407,57 @@ const MAIN = {
     });
     p.tempBuff = keep;
     if (n) { try { E.save(p); } catch (e) {} }
+  },
+
+  /* ---------- 限时道具到期回收 ----------
+   * BUG：运营补发带有效期的道具时（applyOp 的 op.exp 分支），
+   * 除了直接 E.grant 发放，还会往 p.tempItems 记一条 {id,n,exp}。
+   * 但 tempItems 全项目【只写不读】—— 没有任何地方检查到期、也不会扣回，
+   * 于是「限时道具」实际上变成永久道具，且数组只增不减（存档持续膨胀）。
+   * 现在按到期时间扣回，与 GM 临时增益 tickTempBuff 同一套语义；
+   * 扣回时发一封邮件说明，避免玩家以为物品凭空消失。 */
+  tickTempItems(p) {
+    if (!p || !Array.isArray(p.tempItems) || !p.tempItems.length) return 0;
+    const now = Date.now();
+    const keep = [];
+    const got = {};
+    p.tempItems.forEach((t) => {
+      if (!t || !t.id) return;
+      if ((Number(t.exp) || 0) > now) { keep.push(t); return; }
+      const q = Math.max(0, Math.floor(Number(t.n) || 0));
+      if (q <= 0) return;
+      const k = t.id;
+      let real = 0;
+      if (k === 'gold') { real = Math.min(q, p.gold || 0); p.gold = Math.max(0, (p.gold || 0) - q); }
+      else if (k === 'diamond') { real = Math.min(q, p.diamond || 0); p.diamond = Math.max(0, (p.diamond || 0) - q); }
+      else if (k === 'stamina') { real = Math.min(q, Math.floor(p.stamina || 0)); p.stamina = Math.max(0, (p.stamina || 0) - q); }
+      else {
+        p.mat = p.mat || {};
+        real = Math.min(q, Math.floor(Number(p.mat[k]) || 0));
+        p.mat[k] = Math.max(0, (Number(p.mat[k]) || 0) - q);
+      }
+      if (real > 0) got[k] = (got[k] || 0) + real;
+    });
+    p.tempItems = keep.slice(-100);
+    const ks = Object.keys(got);
+    if (!ks.length) { try { E.save(p); } catch (e) {} return 0; }
+    const txt = ks.map((k) => E.itemName(k) + '×' + got[k]).join('、');
+    p.mail = p.mail || [];
+    p.mail.unshift({ id: 'tmp' + Date.now(), t: '限时道具已到期',
+      b: '以下限时道具已到期并回收：' + txt, rw: {}, from: '系统',
+      got: false, at: Date.now() });
+    if (p.mail.length > 40) p.mail.length = 40;
+    try { E.save(p); } catch (e) {}
+    return ks.length;
+  },
+  /* 某个物品当前是否处于限时状态（用于背包角标） */
+  tempExpOf(p, id) {
+    if (!p || !Array.isArray(p.tempItems)) return 0;
+    let e = 0;
+    p.tempItems.forEach((t) => {
+      if (t && t.id === id && (Number(t.exp) || 0) > Date.now()) e = Math.max(e, Number(t.exp) || 0);
+    });
+    return e;
   },
 
   /* 关页面时的同步快照：localStorage 写入是同步的，一定赶得及。
