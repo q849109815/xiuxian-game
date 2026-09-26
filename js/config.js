@@ -519,7 +519,7 @@ const EX = {
    * =================================================== */
   HOT_UPDATE: {
     enabled: true,
-    version: '20260927a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20260927b',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/style.css', ver: '20260927a', size: 0 },
