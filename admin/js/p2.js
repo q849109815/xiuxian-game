@@ -455,18 +455,47 @@ APP.pages['rank-refresh'] = {
   },
   bind() {
     const build = async (kind) => {
+      /* 统一口径：榜单行一律由 E.rankRow 产出。
+       * 此前两处各自手写半套键（战力榜 5 键、无尽榜 4 键），
+       * 而游戏端面板要读 u/n/eb/pw/ev/lv —— 重建后 eb、pw 读不到，
+       * 表现为「后台点一次重建，全服玩家无尽层数显示 0」。
+       * char 是后台列表展示专用，补在统一行之后（不污染游戏端字段）。 */
+      const RR = (p) => Object.assign(
+        (window.E && E.rankRow)
+          ? E.rankRow(p)
+          : { uid: p.uid, u: p.uid, name: p.name, n: p.name, lv: p.lv || 1,
+              pw: U.pw(p), eb: p.endlessBest || 0, t: p.endlessBest || 0,
+              ev: p.evScore || 0, at: Date.now() },
+        { char: p.char });
+      /* 重建 = 重算，但必须【并入旧榜】而非整体覆盖：
+       * 若某个玩家存档这次读取失败（PLIST_FAIL），整体覆盖会把他直接从榜上
+       * 抹掉 —— 他打出来的历史最佳层数再也回不来。
+       * 现在：以旧榜为底，用 PLIST 的新值合并覆盖，读不到的保留旧行。 */
+      const rebuild = async (path, sortKey, label) => {
+        const oldL = ((await DB.get(path, { list: [] })) || {}).list || [];
+        const m = new Map();
+        oldL.forEach((r) => { const k = r.uid || r.u; if (k) m.set(k, r); });
+        this.PLIST.forEach((p) => {
+          const k = p.uid; if (!k) return;
+          const prev = m.get(k);
+          m.set(k, (window.E && E.mergeRankRow) ? E.mergeRankRow(prev, RR(p))
+            : Object.assign({}, prev, RR(p)));
+        });
+        const list = [...m.values()]
+          .sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0)).slice(0, 50);
+        await DB.set(path, { list: list, updated: Date.now() }, label);
+        return list.length;
+      };
       if (kind === 'pw' || kind === 'all') {
-        const list = this.PLIST.slice().sort((a, b) => U.pw(b) - U.pw(a)).slice(0, 50)
-          .map((p) => ({ uid: p.uid, name: p.name, lv: p.lv || 1, pw: U.pw(p), char: p.char }));
-        await DB.set(DBP.rank, { list: list, updated: Date.now() }, '重建战力榜');
+        const n = await rebuild(DBP.rank, 'pw', '重建战力榜');
+        this.toast('战力榜已重建 ' + n + ' 条', 'ok');
       }
       if (kind === 'endless' || kind === 'all') {
-        const list = this.PLIST.slice().sort((a, b) => (b.endlessBest || 0) - (a.endlessBest || 0)).slice(0, 50)
-          .map((p) => ({ uid: p.uid, name: p.name, t: p.endlessBest || 0, lv: p.lv || 1 }));
-        await DB.set(DBP.endless, { list: list, updated: Date.now() }, '重建无尽榜');
+        const n = await rebuild(DBP.endless, 't', '重建无尽榜');
+        this.toast('无尽榜已重建 ' + n + ' 条', 'ok');
       }
       AUDIT.log('重建排行榜', kind, '');
-      this.toast('已重建', 'ok'); this.render();
+      this.render();
     };
     /* 此前 rrCache 只是个摆设输入框，填了不保存、游戏端也无从读取 ——
      * 文档要求「设置榜单缓存时间」，现在落到云端并展示当前值。 */
