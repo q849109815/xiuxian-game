@@ -48,6 +48,8 @@ let DEAD = {};                       // { ep: expireAt }，3 分钟后自动复�
 try { DEAD = JSON.parse(localStorage.getItem(LS.dead) || '{}'); } catch (e) { DEAD = {}; }
 let QUEUE = [];
 try { QUEUE = JSON.parse(localStorage.getItem(LS.queue) || '[]'); } catch (e) { QUEUE = []; }
+/* 写入串行锁：{ path: Promise }，同一客户端同路径的写入排队执行 */
+const WRITING = {};
 let ONLINE = localStorage.getItem(LS.net) !== 'offline';
 /* 凭据失效标记：网络通但令牌被拒（401/403）。
  * 此时读写必然失败，若不明确提示，玩家只会读到本机旧缓存并以为"自己回档"。 */
@@ -359,7 +361,33 @@ const Net = {
    *    更糟：409 会被 markDead 拉黑端点，越用越糟。
    * ② 拿到的若是 main 的旧内容，会原样覆盖 players 的新档。
    * =============================================================== */
+  /* 同一客户端对同一路径的写入串行排队（进程内锁）。
+   * BUG（实测）：30 秒定时器与玩家手动「立即保存」会并发进入 writeSave，
+   *   二者读到相同 cloudRev、算出相同 nextRev，后写者必然 409；
+   *   新增的并发守卫会把它判为 stale，main.js 随即提示
+   *   「检测到【其他设备】有更新的进度」—— 其实是自己撞自己，属误报。
+   * 排队后，后一次写入读到的是前一次写完的最新云端，版本号正常推进。 */
   async writeSave(path, obj, msg, content) {
+    /* 排队必须等【链尾】，而不是"进来那一刻看到的那个"。
+     * 否则多个调用同时 await 同一个 promise，被唤醒后彼此并发 ——
+     * 实测 3 次并发仍出现 1 次 409 + 1 次 stale（锁形同虚设）。
+     * 每个调用登记自己的 self；只有自己是链尾时才负责清理。 */
+    const slot = WRITING[path];
+    const prev = slot ? slot.p : Promise.resolve();
+    let release = null;
+    const cur = new Promise((r) => { release = r; });
+    const self = { p: prev.then(() => cur, () => cur) };
+    WRITING[path] = self;
+    try { await prev; } catch (e) {}
+    try {
+      return await this._writeSave(path, obj, msg, content);
+    } finally {
+      try { release && release(); } catch (e) {}
+      if (WRITING[path] === self) delete WRITING[path];
+    }
+  },
+
+  async _writeSave(path, obj, msg, content) {
     const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
     const eps = [...GH.extra, 'https://api.github.com'].filter((e, i, a) => e && a.indexOf(e) === i);
     const br = GH.dataBranch || GH.branch;
@@ -410,7 +438,7 @@ const Net = {
     /* 写入内容里带上推进后的版本号，但【只有 PUT 成功才写回 obj】——
      * 否则写入失败时本地版本号已被抬高，重试时版本号守卫会失效。 */
     let payload = content;
-    const nextRev = (cloudRev || 0) + 1;
+    let nextRev = (cloudRev || 0) + 1;
     try { payload = b64(JSON.stringify({ ...obj, _rev: nextRev })); } catch (e) {}
 
     /* 409 = sha 过时（不是端点故障）→ 重取 sha 重试，绝不拉黑端点 */
@@ -437,17 +465,53 @@ const Net = {
           markDead(ep);
         } catch (e) { st = 0; markDead(ep); }
       }
-      /* 重取 sha 后再试一次 */
-      let nsha = null;
+      /* 重取 sha 后再试一次。
+       * ============================================================
+       * 竞态 BUG（实测复现，是"回档"的残留元凶之一）：
+       *   两个标签页/两台设备并发写入时，二者读到相同的 cloudRev、
+       *   算出相同的 nextRev、带着相同的 sha 去 PUT。先写者成功，
+       *   后写者必然 409。旧实现重取 sha 后【直接再次 PUT】——
+       *   用的仍是旧的 obj 与旧的 nextRev，于是：
+       *     ① 后写者静默覆盖先写者的内容（丢失更新，那一局进度被吞）；
+       *     ② 两次成功写入的 _rev 相同（版本号不再单调递增），
+       *        先写者本地 _rev 被抬到与云端一致，其后续保存能通过
+       *        版本号守卫继续覆盖 —— 形成完整的回档链。
+       * 修法：重取 sha 时一并重取云端内容，重新跑一遍守卫；
+       *   云端已被他人推进 → 本地这份属旧派生，返回 stale 放弃写入，
+       *   由调用方重新拉取（main.js 已实现丢弃快照 + 提示）。
+       *   守卫通过则基于最新 cloudRev 重算版本号再写，保证严格单调。
+       * ============================================================ */
+      let nsha = null, ncloud = null;
       for (const ep of eps) {
         try {
           const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/${path}?ref=${br}`, { headers: H }, 10000);
-          if (r.ok) { const j = await r.json(); nsha = j.sha || null; break; }
+          if (r.ok) {
+            const j = await r.json();
+            nsha = j.sha || null;
+            const txt = unb64(j.content || '');
+            if (txt) { try { ncloud = JSON.parse(txt); } catch (e) {} }
+            break;
+          }
           if (r.status === 404) { nsha = null; break; }
         } catch (e) {}
       }
       if (nsha === sha) break;      /* sha 没变 → 不是 sha 问题，别空转 */
+
+      /* 重跑守卫：云端已被别人推进（版本号或时间）→ 放弃本次写入 */
+      const cRev2 = Number(ncloud && ncloud._rev) || 0;
+      if (myRev && cRev2 && myRev < cRev2) {
+        try { console.log('[存档] 并发冲突：本地 v' + myRev + ' 落后云端 v' + cRev2 + '，放弃写入以保护新档'); } catch (e) {}
+        return 'stale';
+      }
+      const theirs2 = Number(ncloud && ncloud.offlineAt) || 0;
+      if (mine && theirs2 && theirs2 > mine + 5000) {
+        try { console.log('[存档] 并发冲突：本地数据比云端旧，放弃写入以保护新档'); } catch (e) {}
+        return 'stale';
+      }
+
       sha = nsha;
+      nextRev = (cRev2 || 0) + 1;
+      try { payload = b64(JSON.stringify({ ...obj, _rev: nextRev })); } catch (e) {}
     }
 
     /* 重置存档期间禁止入队（理由同前） */
@@ -516,7 +580,16 @@ const Net = {
           headers: { ...H, 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: 'delete ' + path, sha: d.sha, branch: /^data\/zb\//.test(path) ? (GH.dataBranch || GH.branch) : GH.branch }),
         }, 12000);
-        if (r.ok || r.status === 200) return true;
+        if (r.ok || r.status === 200) {
+          /* 必须同步清掉本地缓存。
+           * BUG（实测复现）：read(path, true) 的 quick 分支直接返回
+           *   localStorage 里的 ss_cache_<path>。del 只删了云端，
+           *   缓存原样留着 → 删完再读照样拿得到已删除的数据。
+           *   表现：后台「永久删除账号」/玩家注销后，列表里这个人还在；
+           *   运营反复删仍显示存在（缓存命中，根本没去问云端）。 */
+          try { localStorage.removeItem(LS.cache + path); } catch (e) {}
+          return true;
+        }
       } catch (e) {}
     }
     return false;
