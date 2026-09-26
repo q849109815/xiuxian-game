@@ -2541,11 +2541,17 @@ r_tavern(p, tab) {
       + ((r.def || {}).n ? ' · ' + r.def.n : '');
     /* 奖励（截图51：EXP / 枪械部件 / 技能 / 宝石 / 图纸 / R币） */
     const rw = d.rw || {};
-    $('#rsGrid').innerHTML = `
-      <div class="rs-i"><div class="v">${E.fmt(rw.exp || 15)}</div><div class="l">EXP</div></div>
-      <div class="rs-i"><div class="v">${E.fmt(rw.gold)}</div><div class="l">R币</div></div>
-      <div class="rs-i"><div class="v">${d.kills}</div><div class="l">击杀</div></div>
-      <div class="rs-i"><div class="v">${rw.parts || 0}</div><div class="l">1阶枪械部件</div></div>`;
+    /* BUG：第四格「1阶枪械部件」读的是从未赋值的 rw.parts，恒为 0；
+     * 而关卡真正发放的材料（rw.mat，如 1-1 的 M02×5）一行都不显示，
+     * 玩家领了材料却看不见。现在按实际发放渲染材料格 + 星级格。 */
+    const mk = Object.keys(rw.mat || {}).filter((k) => (rw.mat[k] || 0) > 0);
+    const cell = (v, l) => `<div class="rs-i"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+    $('#rsGrid').innerHTML = cell(E.fmt(rw.exp || 15), 'EXP')
+      + cell(E.fmt(rw.gold), 'R币')
+      + cell(d.kills, '击杀')
+      + cell(win ? (d.stars || 0) : 0, '星级')
+      + (rw.chip ? cell(rw.chip, '芯片') : '')
+      + mk.map((k) => cell(rw.mat[k], E.itemName ? E.itemName(k) : k)).join('');
     /* 技能伤害统计（截图51） */
     const dm = $('#rsDmg');
     if (dm) {
