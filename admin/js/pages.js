@@ -500,7 +500,7 @@ const PAGES = {
           const d = await DB.reload(DBP.rankrw);
           const l = (d && d.list) || [];
           box.innerHTML = l.length ? this.table(['榜单', '名次', '奖励', '操作'],
-            l.map((x) => [U.esc(x.board), x.from + '~' + x.to,
+            l.map((x) => [U.esc(x.board), (x.a || x.from) + '~' + (x.b || x.to),
               U.itemName(x.item) + '×' + x.n,
               `<button class="btn sm err" data-a="delRw" data-id="${U.esc(x.id)}">删除</button>`]))
             : this.empty('还没有配置');
@@ -523,7 +523,8 @@ const PAGES = {
           let cnt = 0;
           for (let i = 0; i < rows.length; i++) {
             const rank = i + 1;
-            const hits = list.filter((x) => x.board === b && rank >= x.from && rank <= x.to);
+            const hits = list.filter((x) => x.board === b
+              && rank >= Number(x.a || x.from || 1) && rank <= Number(x.b || x.to || 1));
             for (const h of hits) {
               await this.pushOp(rows[i].uid, {
                 t: 'grant', item: h.item, n: h.n,
@@ -724,8 +725,13 @@ const PAGES = {
           }
           if (!Object.keys(rw).length) { this.toast('至少配置一个物品', 'err'); return; }
           const d = await DB.reload(DBP.cdkey);
-          d.tpls = d.tpls || [];
-          d.tpls.push({ id: 'tp' + Date.now().toString(36), n, rw, at: Date.now() });
+          /* 契约修复：游戏端 redeemCode 读 db.templates[]{id,name,items,once}，
+           * 旧后台写的是 tpls[]{n,rw} —— 字段全不对，玩家兑换必失败。
+           * 现改为 templates，并双写旧字段供老数据/后台展示兼容。 */
+          d.templates = d.templates || (d.tpls || []);
+          delete d.tpls;
+          d.templates.push({ id: 'tp' + Date.now().toString(36), name: n, n,
+            items: rw, rw, once: false, at: Date.now() });
           if (await DB.set(DBP.cdkey, d, '新建礼包模板')) {
             AUDIT.log('新建礼包模板', n, JSON.stringify(rw));
             this.toast('已创建', 'ok');
@@ -735,16 +741,17 @@ const PAGES = {
         async listTpl() {
           const box = D('#tpBox'); if (!box) return;
           const d = await DB.reload(DBP.cdkey);
-          const l = (d && d.tpls) || [];
+          const l = (d && (d.templates || d.tpls)) || [];
           box.innerHTML = l.length ? this.table(['模板', '内容', '操作'],
-            l.map((x) => [U.esc(x.n),
-              Object.keys(x.rw).map((k) => U.itemName(k) + '×' + x.rw[k]).join('，'),
+            l.map((x) => [U.esc(x.name || x.n),
+              Object.keys(x.items || x.rw || {}).map((k) => U.itemName(k) + '×' + (x.items || x.rw)[k]).join('，'),
               `<button class="btn sm err" data-a="delTpl" data-id="${U.esc(x.id)}">删除</button>`]))
             : this.empty('还没有模板，先建一个');
         },
         async delTpl(t) {
           const d = await DB.get(DBP.cdkey, {});
-          d.tpls = (d.tpls || []).filter((x) => x.id !== t.dataset.id);
+          const keep = (d.templates || d.tpls || []).filter((x) => x.id !== t.dataset.id);
+          d.templates = keep; delete d.tpls;
           await DB.set(DBP.cdkey, d, '删除模板');
           this.toast('已删除', 'ok');
           this.acts.listTpl.call(this);
@@ -752,24 +759,29 @@ const PAGES = {
         async genKey() {
           const tplId = this.val('#gk_tpl');
           const d = await DB.reload(DBP.cdkey);
-          const tpl = ((d && d.tpls) || []).find((x) => x.id === tplId);
+          const tpl = ((d && (d.templates || d.tpls)) || []).find((x) => x.id === tplId);
           if (!tpl) { this.toast('请先选择有效模板', 'err'); return; }
           const n = this.num('#gk_n') || 1;
           const exp = this.num('#gk_exp');
           const bind = this.val('#gk_bind') === '1' ? this.str('#gk_uid') : '';
-          d.keys = d.keys || [];
+          /* 契约修复：游戏端读 db.codes[]{code,tpl,maxUse,used,usedBy,bindUid,status,exp}
+           * （旧后台写 keys[]{max,users,bind,void}），不改则后台生成的码玩家 100% 兑不了。 */
+          d.codes = d.codes || (d.keys || []);
+          delete d.keys;
           const made = [];
           for (let i = 0; i < n; i++) {
             const k = U.code(12);
-            d.keys.unshift({
-              code: k, tpl: tpl.id, tplName: tpl.n, rw: tpl.rw,
-              use: this.num('#gk_use') || 1, max: this.num('#gk_max') || 0,
+            d.codes.unshift({
+              code: k, tpl: tpl.id, tplName: (tpl.name || tpl.n), rw: (tpl.items || tpl.rw),
+              use: this.num('#gk_use') || 1,
+              maxUse: this.num('#gk_max') || 0, max: this.num('#gk_max') || 0,
               exp: exp > 0 ? Date.now() + exp * 864e5 : 0,
-              bind: bind, used: 0, users: [], void: false, at: Date.now(),
+              bindUid: bind, bind: bind, used: 0, usedBy: [], users: [],
+              status: '', void: false, at: Date.now(),
             });
             made.push(k);
           }
-          if (d.keys.length > 2000) d.keys.length = 2000;
+          if (d.codes.length > 2000) d.codes.length = 2000;
           if (await DB.set(DBP.cdkey, d, '生成兑换码 ' + n)) {
             AUDIT.log('生成兑换码', tpl.n, n + ' 个' + (bind ? ' 绑定' + bind : ''));
             const box = D('#gkBox');
@@ -779,8 +791,9 @@ const PAGES = {
         },
         async exKey() {
           const d = await DB.reload(DBP.cdkey);
-          const rows = ((d && d.keys) || []).filter((x) => !x.void && (!x.max || x.used < x.max))
-            .map((x) => [x.code, x.tplName, x.used + '/' + (x.max || '∞'), x.exp ? U.d(x.exp) : '永久']);
+          const rows = ((d && (d.codes || d.keys)) || []).filter((x) => !x.void && x.status !== '作废'
+              && (!(x.maxUse || x.max) || x.used < (x.maxUse || x.max)))
+            .map((x) => [x.code, x.tplName, x.used + '/' + ((x.maxUse || x.max) || '∞'), x.exp ? U.d(x.exp) : '永久']);
           U.download('兑换码_' + U.d(Date.now()) + '.csv',
             U.csv(['兑换码', '礼包', '已用', '过期'], rows), 'text/csv');
           this.toast('已导出', 'ok');
@@ -788,21 +801,22 @@ const PAGES = {
         async ckReload() {
           const box = D('#ckBox'); if (!box) return;
           const d = await DB.reload(DBP.cdkey);
-          let l = (d && d.keys) || [];
+          let l = (d && (d.codes || d.keys)) || [];
           const q = (APP.CKQ || '').trim().toLowerCase();
           if (q) l = l.filter((x) => (x.code || '').toLowerCase().indexOf(q) >= 0
-            || (x.bind || '').toLowerCase().indexOf(q) >= 0);
+            || (x.bindUid || x.bind || '').toLowerCase().indexOf(q) >= 0);
           box.innerHTML = l.length ? this.table(['兑换码', '礼包', '已用', '绑定', '状态', '操作'],
             l.slice(0, 100).map((x) => [U.esc(x.code), U.esc(x.tplName || ''),
-              x.used + '/' + (x.max || '∞'), U.esc(x.bind || '—'),
-              x.void ? '<span class="bd r">已作废</span>' : (x.exp && x.exp < Date.now()) ? '<span class="bd n">已过期</span>' : '<span class="bd g">有效</span>',
+              x.used + '/' + ((x.maxUse || x.max) || '∞'), U.esc(x.bindUid || x.bind || '—'),
+              (x.void || x.status === '作废') ? '<span class="bd r">已作废</span>' : (x.exp && x.exp < Date.now()) ? '<span class="bd n">已过期</span>' : '<span class="bd g">有效</span>',
               `<button class="btn sm err" data-a="voidOne" data-c2="${U.esc(x.code)}">作废</button>`]))
             : this.empty('暂无兑换码');
         },
         async voidOne(t) {
           const d = await DB.get(DBP.cdkey, {});
-          const k = (d.keys || []).find((x) => x.code === t.dataset.c2);
-          if (k) { k.void = true; k.voidAt = Date.now(); }
+          const k = (d.codes || d.keys || []).find((x) => x.code === t.dataset.c2);
+          /* 游戏端判 status==='作废'，后台列表判 void —— 两处都写 */
+          if (k) { k.void = true; k.status = '作废'; k.voidAt = Date.now(); }
           await DB.set(DBP.cdkey, d, '作废兑换码');
           AUDIT.log('作废兑换码', t.dataset.c2, '');
           this.toast('已作废', 'ok');
@@ -815,8 +829,8 @@ const PAGES = {
         if (g) {
           DB.reload(DBP.cdkey).then((d) => {
             if (!g) return;
-            g.innerHTML = ((d && d.tpls) || []).map((x) =>
-              `<option value="${U.esc(x.id)}">${U.esc(x.n)}</option>`).join('') || '<option value="">（无模板）</option>';
+            g.innerHTML = ((d && (d.templates || d.tpls)) || []).map((x) =>
+              `<option value="${U.esc(x.id)}">${U.esc(x.name || x.n)}</option>`).join('') || '<option value="">（无模板）</option>';
           });
         }
         if (APP.T.cdkey === 'tpl') this.acts.listTpl.call(this);
@@ -920,9 +934,14 @@ const PAGES = {
             <div class="fr"><label class="wide">限购</label><select id="sh_l">
               <option value="0">不限</option><option value="day">每日</option>
               <option value="week">每周</option><option value="month">每月</option></select></div>
+            <div class="fr"><label class="wide">数量</label><input id="sh_n" type="number" value="1"></div>
+            <div class="fr"><label class="wide">限购次数</label><input id="sh_lim" type="number" value="1" title="每周期内可购买次数，0=不限"></div>
+            ${which === 'ach'
+    ? `<div class="fr"><label class="wide">解锁条件</label><input id="sh_un" placeholder="如：通关10关（留空=无条件）"></div>`
+    : `<div class="fr"><label class="wide">每日限购</label><input id="sh_d" type="number" value="1" title="活动商店按每日限购决定刷新周期"></div>`}
             <div class="btns"><button class="btn pri" data-a="shopAdd" data-w="${which}">＋ 上架商品</button></div>
             ${l.length ? this.table(['物品', '价格', '币种', '限购', '操作'],
-              l.map((x) => [U.itemName(x.item || x.id) + '×' + (x.n || 1), x.price, U.esc(x.cur || 'ach'),
+              l.map((x) => [U.itemName(x.item || x.id) + '×' + (x.n || 1), (x.cost != null ? x.cost : x.price), U.esc(x.cur || 'ach'),
                 x.per || '不限',
                 `<button class="btn sm err" data-a="shopDel" data-w="${which}" data-id="${U.esc(x.id)}">下架</button>`]))
             : this.empty('暂无商品')}`);
@@ -933,10 +952,20 @@ const PAGES = {
           const d = await DB.reload(path);
           d.list = d.list || [];
           const per = this.val('#sh_l');
+          /* 契约修复：游戏端读 cost/limit/refresh/unlock/daily/act。
+           * 旧后台只写 price/per —— cost 缺失导致 Number(undefined)||0 = 0，
+           * 后台上架的每一件商品在游戏端都是【免费白送】，可被无限兑换。 */
+          const days = per === 'day' ? 1 : per === 'week' ? 7 : per === 'month' ? 30 : 0;
+          const price = this.num('#sh_p');
           d.list.push({
-            id: 'sh' + Date.now().toString(36), item: this.val('#sh_i'), n: 1,
-            price: this.num('#sh_p'), cur: this.val('#sh_c'),
-            per: per === '0' ? null : per, at: Date.now(),
+            id: 'sh' + Date.now().toString(36), item: this.val('#sh_i'),
+            n: this.num('#sh_n') || 1,
+            cost: price, price: price, cur: this.val('#sh_c'),
+            limit: this.num('#sh_lim') || 0,
+            refresh: days, per: per === '0' ? null : per,
+            unlock: this.str('#sh_un') || '',
+            daily: w === 'ach' ? 0 : (this.num('#sh_d') || 0),
+            act: '', at: Date.now(),
           });
           if (await DB.set(path, d, '上架商品')) {
             AUDIT.log('上架商品', w, U.itemName(this.val('#sh_i')));
@@ -964,9 +993,12 @@ const PAGES = {
               <input id="rr_z" type="number" value="3" style="max-width:70px"></div>
             <div class="fr"><label class="wide">奖励</label>${U.picker('rr_i', 'diamond')}</div>
             <div class="fr"><label class="wide">数量</label><input id="rr_n" type="number" value="100"></div>
+            <div class="fr"><label class="wide">结算周期</label><input id="rr_s" type="number" value="7" title="每多少天结算一次，0/留空=每期"></div>
+            <div class="fr"><label class="wide">可叠加</label><select id="rr_k">
+              <option value="0">不叠加</option><option value="1">可叠加</option></select></div>
             <div class="btns"><button class="btn pri" data-a="rrAdd">＋ 添加</button></div>
             ${l.length ? this.table(['榜单', '名次', '奖励', '操作'],
-              l.map((x) => [U.esc(x.board), x.from + '~' + x.to, U.itemName(x.item) + '×' + x.n,
+              l.map((x) => [U.esc(x.board), (x.a || x.from) + '~' + (x.b || x.to), U.itemName(x.item) + '×' + x.n,
                 `<button class="btn sm err" data-a="rrDel" data-id="${U.esc(x.id)}">删除</button>`]))
             : this.empty('还没配置排名奖励')}
             <h3 style="margin:16px 0 8px;font-size:13px">数值热更（cfg.json）</h3>
@@ -983,8 +1015,13 @@ const PAGES = {
           d.list = d.list || [];
           d.list.push({
             id: 'rr' + Date.now().toString(36), board: this.val('#rr_b'),
+            /* 契约修复：游戏端读 a/b（名次区间）与 settle/stack。
+             * 旧后台写 from/to —— 映射后 lo=hi=1，所有奖励只剩【第 1 名】能领。 */
+            a: this.num('#rr_a') || 1, b: this.num('#rr_z') || 1,
             from: this.num('#rr_a'), to: this.num('#rr_z'),
-            item: this.val('#rr_i'), n: this.num('#rr_n'), at: Date.now(),
+            item: this.val('#rr_i'), n: this.num('#rr_n'),
+            settle: this.num('#rr_s') || 0, stack: this.val('#rr_k') === '1',
+            at: Date.now(),
           });
           if (await DB.set(DBP.rankrw, d, '配置排名奖励')) {
             AUDIT.log('配置排名奖励', this.val('#rr_b'), '');
