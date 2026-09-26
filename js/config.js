@@ -1004,7 +1004,14 @@ const EX = {
   ],
   shopGoods: {
     '每日': [
-      { id: 'D1', n: '金币袋', icon: '🪙', img: 'assets/icon/d1_gold.jpg', price: 1000, cur: 'gold', give: { gold: 5000 } },
+      /* D1「金币袋」
+       * BUG（经济崩坏）：原配 price:1000 cur:'gold' give:{gold:5000} —— 花 1000 金币买 5000 金币，
+       *   净赚 4000 且【无限购】，玩家点 12 次金币从 1000 翻到 49000，几分钟刷到天文数字，
+       *   金币稀缺性彻底失效（武器/建筑升级全部失去意义）。
+       *   「金币买金币」必然套利，故改为钻石计价（与同 tab 的 D2~D6 一致），并加每日限购 1 次。
+       * 汇率参考：D3 100钻→2000金+材料、GP03 10钻→500金，此处取 200钻→5000金（1:25）。 */
+      { id: 'D1', n: '金币袋', icon: '🪙', img: 'assets/icon/d1_gold.jpg', price: 200, cur: 'diamond',
+        give: { gold: 5000 }, limit: { t: 'daily', v: 1 }, desc: '金币×5000 · 每日1次' },
       { id: 'D2', n: '体力包', icon: '⚡', price: 50, cur: 'diamond', give: { stamina: 60 } },
       { id: 'D3', n: '宝箱', icon: '🎁', img: 'assets/icon/d3_box.jpg', price: 100, cur: 'diamond', give: { M01: 50, gold: 2000 } },
       { id: 'D4', n: '武器箱', icon: '🔫', price: 200, cur: 'diamond', give: { M02: 30 } },
@@ -1054,10 +1061,16 @@ const EX = {
         desc: '金币2000+金属50+枪械碎片10 · 限购1' },
       { id: 'SH02', n: '钻石小包', icon: '💎', img: 'assets/icon/sh02_diamond.jpg', price: 60, cur: 'diamond', rmb: '6元',
         give: { diamond: 60 }, desc: '钻石 ×60' },
+      /* SH03 / SH04「钻石中包/大包」
+       * BUG（无限套利）：这两档是人民币充值档位（rmb 30元/98元），单机无支付 SDK 故用钻石计价，
+       *   但配置里【没有 limit】→ 玩家花 300 钻买回 330 钻（净 +30）、花 980 买回 1150（净 +170），
+       *   可无限循环：980→1150→1320→1490… 实测点 10 次钻石从 980 涨到 2680，
+       *   等于所有付费内容（月卡/战令/皮肤/传说芯片）全部白嫖。
+       * 修法：保留"多充多送"的档位设计，补上月度限购（每月 1 次），套利量降到可忽略。 */
       { id: 'SH03', n: '钻石中包', icon: '💎', price: 300, cur: 'diamond', rmb: '30元',
-        give: { diamond: 330 }, desc: '钻石 300 + 赠送 30' },
+        give: { diamond: 330 }, limit: { t: 'monthly', v: 1 }, desc: '钻石 300 + 赠送 30 · 每月1次' },
       { id: 'SH04', n: '钻石大包', icon: '💎', price: 980, cur: 'diamond', rmb: '98元',
-        give: { diamond: 1150 }, desc: '钻石 1000 + 赠送 150' },
+        give: { diamond: 1150 }, limit: { t: 'monthly', v: 1 }, desc: '钻石 1000 + 赠送 150 · 每月1次' },
       { id: 'SH05', n: '月卡', icon: '📅', img: 'assets/icon/sh05_mcard.jpg', price: 300, cur: 'diamond', rmb: '30元',
         give: {}, monthly: true, limit: { t: 'monthly', v: 1 },
         desc: '每日领 钻石50 + 体力60（30天）' },
