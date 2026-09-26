@@ -46,7 +46,7 @@ const UI = {
     $('#hmLevel').textContent = E.char(p).n + ' · ' + E.levelName(cur);
     $('#hmLevelName').textContent = E.levelName(cur) + (E.staminaCost(cur) > 1 ? '（体力' + E.staminaCost(cur) + '）' : '');
     const eb = $('#hmEndBest');
-    if (eb) eb.textContent = E.endlessUnlocked(p) ? ('最佳 ' + (p.endlessBest || 0) + ' 层') : '通关 3-3 解锁';
+    if (eb) eb.textContent = E.endlessUnlocked(p) ? ('最佳 ' + (p.endlessBest || 0) + ' 层') : ('通关 ' + (EX.ENDLESS_UNLOCK || '10-10') + ' 解锁');
     const st = $('#hmStamina');
     if (st) st.textContent = Math.floor(p.stamina || 0) + '/' + EX.STAMINA_MAX;
     const avEl = $('#hmAvIco');
@@ -1707,7 +1707,7 @@ r_tavern(p, tab) {
       ${E.endlessUnlocked(p)
         ? `<div class="kv"><span>最佳层数</span><b>${p.endlessBest || 0}</b></div>
            <button class="btn c blk" data-lv="endless">进入无尽（体力 2）</button>`
-        : '<div class="lbl">通关 3-3 后解锁</div>'}</div>`;
+        : '<div class="lbl">通关 ' + (EX.ENDLESS_UNLOCK || '10-10') + ' 后解锁</div>'}</div>`;
   },
   b_level(p) {
     $$('#pnBody [data-ch]').forEach((b) => { b.onclick = () => { this.curChapter = +b.dataset.ch; this.open('level'); }; });
@@ -2611,12 +2611,11 @@ r_tavern(p, tab) {
           <b>${E.fmt(st[k])}</b><i>${E.fmt(Math.round(st[k] / sec))}/s</i></div>`;
       }).join('') : '';
     }
-    /* 今日剩余次数（截图51） */
+    /* 剩余体力：挑战次数已改为纯体力制，不再显示「今日剩余次数 x/3」 */
     const tn = $('#rsTimes');
     if (tn) {
-      /* BUG修复：此前用广告剩余次数(10)当挑战次数，显示成「10/3」 */
-      const left = E.runLeft ? E.runLeft(this.P) : 3;
-      tn.textContent = '今日剩余次数：' + Math.max(0, left) + '/3';
+      const left = E.runLeft ? E.runLeft(this.P) : 0;
+      tn.textContent = '剩余体力：' + Math.max(0, left) + '/' + ((window.EX && EX.STAMINA_MAX) || 100);
     }
     $('#rsNext').style.display = win && !BT.run.endless ? '' : 'none';
     /* 广告：双倍奖励 / 复活 */
