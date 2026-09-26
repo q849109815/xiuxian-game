@@ -1567,7 +1567,24 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (ld && ld.rw && ld.rw.diamond) p.diamond = (p.diamond || 0) + ld.rw.diamond * t;
     /* 表25 #1：经验走角色等级系统（自动升级） */
     const lr = this.addXp(p, rw.xp);
-    return { ok: true, msg: '扫荡 ' + t + ' 次完成！' + (lr.msg ? ' ' + lr.msg : ''), rw: rw, cost: cost, ups: lr.ups };
+    /* 扫荡推进任务计数（表29）
+     * BUG：sweep() 此前只发奖励，从不调用 pushStats ——
+     *   每日任务 D02「通关1次关卡」/ D03「击杀50僵尸」、
+     *   每周任务 W01「通关10关」  / W02「击杀1000只」
+     *   四条全部不推进。玩家每天花体力扫荡刷材料，这四个任务
+     *   永远显示 0/x，成就点一分拿不到，扫荡用得越多亏得越多。
+     * 击杀数按「关卡波次 × 每波怪物数区间均值」估算，与手动通关同量级。 */
+    const _per = (ld && ld.per) || [8, 13];
+    const _killEst = Math.round((Number(ld && ld.waves) || 20)
+      * (((Number(_per[0]) || 8) + (Number(_per[1]) || 13)) / 2)) * t;
+    try {
+      this.pushStats(p, {
+        kills: _killEst,
+        clear: t,
+        boss: (ld && (ld.cond === 'boss' || ld.cond === 'bossAll')) ? t : 0,
+      });
+    } catch (e) {}
+    return { ok: true, msg: '扫荡 ' + t + ' 次完成！' + (lr.msg ? ' ' + lr.msg : ''), rw: rw, cost: cost, ups: lr.ups, kills: _killEst };
   },
 
   /* =========================================================
@@ -2549,7 +2566,10 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (endlessSec) p.endlessTime = Math.max(p.endlessTime || 0, Math.floor(endlessSec));
     this.resetTasks(p);
     const dp = p.tasks.dailyProg, wp = p.tasks.weeklyProg;
-    if (clear) { dp.clear = (dp.clear || 0) + 1; wp.clear = (wp.clear || 0) + 1; }
+    /* clear 是「次數」不是布尔：手动通关传 1，扫荡传次数 t。
+     * 此前写成 +1，导致一次扫荡 5 次只记 1 次通关。 */
+    const cn = Number(clear) || 0;
+    if (cn) { dp.clear = (dp.clear || 0) + cn; wp.clear = (wp.clear || 0) + cn; }
     dp.kill = (dp.kill || 0) + (kills || 0);
     wp.kill = (wp.kill || 0) + (kills || 0);
     this.syncAch(p);
