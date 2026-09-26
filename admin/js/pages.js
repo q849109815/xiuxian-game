@@ -26,7 +26,7 @@ const PAGES = {
           <div class="kpis">
             <div class="kpi"><div class="v">${this.PLIST.length}</div><div class="k">玩家总数</div></div>
             <div class="kpi"><div class="v">${this.PLIST.filter((p) => !p._noSave && !p._broken).length}</div><div class="k">有存档</div></div>
-            <div class="kpi"><div class="v">${this.PLIST.filter((p) => p.ban).length}</div><div class="k">封禁中</div></div>
+            <div class="kpi"><div class="v">${this.PLIST.filter((p) => this.banOf(p).on).length}</div><div class="k">封禁中</div></div>
             <div class="kpi"><div class="v">${this.deadCount()}</div><div class="k">已注销</div></div>
             <div class="kpi"><div class="v">${this.PLIST.filter((p) => U.ago(p.lastSeen).indexOf('小时前') > 0 || U.ago(p.lastSeen).indexOf('分') > 0 || U.ago(p.lastSeen) === '刚刚').length}</div><div class="k">今日活跃</div></div>
           </div>
@@ -56,6 +56,12 @@ const PAGES = {
             <button class="btn err" data-a="ban">🚫 封禁</button>
             <button class="btn ok" data-a="unban">✅ 解封</button>
             <button class="btn err" data-a="destroy">💀 注销账号</button>
+            <button class="btn err" data-a="purge">🔥 永久删除</button>
+            <button class="btn warn" data-a="purgeDead">🧹 清理已注销(${this.deadCount()})</button>
+          </div>
+          <div class="hint">
+            <b>注销</b>＝停用并标记，账号记录保留，可在「显示已注销」里找回；
+            <b>永久删除</b>＝账号 / 存档 / 指令 / 索引 / 榜单全部物理删除，从此不再显示，不可恢复。
           </div>
         </div>` : ''}`;
       },
@@ -99,14 +105,17 @@ const PAGES = {
         },
         detail() {
           const p = this.SEL; if (!p) return;
+          const b = this.banOf(p);
+          const banRow = b.on
+            ? { 封禁: b.perm ? '永久' : b.text, 解封时间: b.at || '—', 剩余: b.left || '—', 理由: b.reason || '—' }
+            : { 封禁: '否' };
           this.openModal(`<h3>账号详情</h3><pre class="json">${
-            U.esc(JSON.stringify({
+            U.esc(JSON.stringify(Object.assign({
               uid: p.uid, name: p.name, lv: p.lv, 战力: U.pw(p),
               金币: p.gold, 钻石: p.diamond, 体力: p.stamina, 成就点: p.ach,
               注册: U.dt(p.created), 活跃: U.dt(p.lastSeen),
-              封禁: p.ban ? (p.banReason || '是') : '否', 注销: p.destroyed ? '是' : '否',
-              扩展: p.ext || {},
-            }, null, 2))}</pre>
+              注销: p.destroyed ? ('是 · ' + (p.destroyWhy || '')) : '否',
+            }, banRow, { 扩展: p.ext || {} }), null, 2))}</pre>
             <div class="btns"><button class="btn" data-m="close">关闭</button></div>`);
         },
         resetpwd() {
@@ -140,24 +149,40 @@ const PAGES = {
         },
         ban() {
           const p = this.SEL; if (!p) return;
+          const cur = this.banOf(p);
           this.openModal(`
             <h3>封禁 · ${U.esc(p.name || '')}</h3>
+            ${cur.on ? `<div class="hint warn">当前状态：${U.esc(cur.text)}${cur.at ? '（' + U.esc(cur.at) + ' 解封）' : ''}${cur.reason ? ' · ' + U.esc(cur.reason) : ''}</div>` : ''}
             <div class="fr"><label>类型</label><select id="bk_t">
-              <option value="永久">永久</option><option value="7天">7 天</option><option value="30天">30 天</option></select></div>
-            <div class="fr"><label>理由</label><input id="bk_r" placeholder="如：使用外挂"></div>
+              <option value="永久">永久</option><option value="1天">1 天</option><option value="3天">3 天</option>
+              <option value="7天">7 天</option><option value="30天">30 天</option><option value="自定义">自定义天数</option></select></div>
+            <div class="fr" id="bk_dw" style="display:none"><label>天数</label><input id="bk_d" type="number" min="1" max="3650" placeholder="如 15"></div>
+            <div class="fr"><label>理由</label><input id="bk_r" placeholder="如：使用外挂（玩家可见）"></div>
+            <div class="hint">时限封禁到期后自动解封，无需手工操作；理由会显示在玩家登录界面</div>
             <div class="btns">
               <button class="btn err" data-m="ok">确认封禁</button>
               <button class="btn" data-m="close">取消</button>
             </div>`, {
             ok: async () => {
-              const t = this.val('#bk_t'); const until = t === '7天' ? Date.now() + 7 * 864e5
-                : t === '30天' ? Date.now() + 30 * 864e5 : 0;
-              const r = await this.setBan(p, true, { until, reason: this.str('#bk_r') || '违规', type: t });
-              AUDIT.log('封禁', p.uid, this.str('#bk_r') || '违规');
-              this.toast('已封禁（存档' + (r.okP ? '✓' : '✗') + ' 账号' + (r.okA ? '✓' : '✗') + ' 指令✓）', 'ok');
+              const t = this.val('#bk_t');
+              let days = t === '7天' ? 7 : t === '30天' ? 30 : t === '3天' ? 3 : t === '1天' ? 1 : 0;
+              if (t === '自定义') {
+                days = Math.floor(this.num('#bk_d'));
+                if (!(days >= 1)) { this.toast('请填写有效天数（1-3650）', 'err'); return; }
+                if (days > 3650) { this.toast('天数不能超过 3650', 'err'); return; }
+              }
+              const until = days ? Date.now() + days * 864e5 : 0;
+              const label = days ? days + '天' : '永久';
+              const reason = this.str('#bk_r') || '违规';
+              const r = await this.setBan(p, true, { until, reason, type: label });
+              AUDIT.log('封禁 ' + label, p.uid, reason + (until ? ' 至 ' + U.dt(until) : ''));
+              this.toast('已封禁 ' + label + '（存档' + (r.okP ? '✓' : '✗') + ' 账号' + (r.okA ? '✓' : '✗') + ' 指令✓）', 'ok');
               this.closeModal(); this.render();
             },
           });
+          /* 选自定义才显示天数输入 */
+          const sel = D('#bk_t'), dw = D('#bk_dw');
+          if (sel && dw) sel.onchange = () => { dw.style.display = sel.value === '自定义' ? '' : 'none'; };
         },
         unban: async function () {
           const p = this.SEL; if (!p) return;
@@ -180,6 +205,59 @@ const PAGES = {
             this.SEL = null;
             await this.loadPlayers({ force: true });
           })();
+        },
+        /* 永久删除：账号 / 存档 / 指令 / 索引 / 榜单 全清，之后不再显示 */
+        purge() {
+          const p = this.SEL; if (!p) return;
+          this.openModal(`
+            <h3>🔥 永久删除 · ${U.esc(p.name || '')}</h3>
+            <div class="hint err">
+              将彻底删除以下内容，<b>不可恢复</b>：<br>
+              · 账号文件（该账号名可重新注册）<br>
+              · 玩家存档（全部进度）<br>
+              · 指令队列、玩家索引、榜单条目<br><br>
+              仅想停用时请用「注销账号」（可找回）。
+            </div>
+            <div class="fr"><label>输入 UID 确认</label><input id="pg_uid" placeholder="${U.esc(p.uid)}"></div>
+            <div class="btns">
+              <button class="btn err" data-m="ok">永久删除</button>
+              <button class="btn" data-m="close">取消</button>
+            </div>`, {
+            ok: async () => {
+              if (this.str('#pg_uid') !== p.uid) { this.toast('UID 不匹配，已取消', 'err'); return; }
+              this.closeModal();
+              this.toast('正在永久删除…');
+              const r = await this.purge(p);
+              AUDIT.log('永久删除账号', p.uid, p.name + ' 存档' + (r.save ? '✓' : '✗') + ' 账号' + (r.acct ? '✓' : '✗'));
+              this.toast('已永久删除（账号' + (r.acct ? '✓' : '✗') + ' 存档' + (r.save ? '✓' : '✗')
+                + ' 索引' + (r.idx ? '✓' : '✗') + ' 榜单' + (r.board ? '✓' : '—') + '）', 'ok');
+              await this.loadPlayers({ force: true });
+            },
+          });
+        },
+        /* 批量清理已注销：把标记为注销的账号全部物理删除 */
+        purgeDead() {
+          const list = (this.PLIST || []).filter((p) => p.destroyed);
+          if (!list.length) { this.toast('没有已注销的账号', 'err'); return; }
+          this.openModal(`
+            <h3>🧹 清理已注销账号</h3>
+            <div class="hint err">将永久删除 ${list.length} 个已注销账号的全部数据，不可恢复。</div>
+            <div class="fr"><label>输入 YES 确认</label><input id="pd_y" placeholder="YES"></div>
+            <div class="btns">
+              <button class="btn err" data-m="ok">确认清理</button>
+              <button class="btn" data-m="close">取消</button>
+            </div>`, {
+            ok: async () => {
+              if (this.str('#pd_y') !== 'YES') { this.toast('未确认，已取消', 'err'); return; }
+              this.closeModal();
+              this.toast('正在清理 ' + list.length + ' 个…');
+              let n = 0;
+              for (const p of list) { try { await this.purge(p); n++; } catch (e) {} }
+              AUDIT.log('批量永久删除', '', '已注销 ' + n + ' 个');
+              this.toast('已清理 ' + n + ' 个', 'ok');
+              await this.loadPlayers({ force: true });
+            },
+          });
         },
       },
     };
@@ -273,21 +351,38 @@ const PAGES = {
         },
         async backup() {
           const p = this.SEL; if (!p) return;
-          const path = 'data/zb/backup/' + p.uid + '/' + Date.now() + '.json';
+          const ts = Date.now();
+          const path = 'data/zb/backup/' + p.uid + '/' + ts + '.json';
           if (await DB.set(path, JSON.parse(JSON.stringify(p)), '备份存档')) {
+            /* 同时维护备份索引：目录枚举在多数反代端点上不支持，
+             * 只靠 Net.list 会导致「刷新备份列表」永远是空的（备份其实都在） */
+            try {
+              const idx = await DB.reload('data/zb/backup/' + p.uid + '/index.json');
+              const o = (idx && Array.isArray(idx.list)) ? idx : { list: [] };
+              o.list.push({ f: ts + '.json', at: ts, lv: p.lv || 1, gold: p.gold || 0, pw: U.pw(p) });
+              if (o.list.length > 50) o.list = o.list.slice(-50);
+              await DB.set('data/zb/backup/' + p.uid + '/index.json', o, '备份索引');
+            } catch (e) {}
             AUDIT.log('备份存档', p.uid, '');
             this.toast('已备份', 'ok');
           }
         },
         async listBak() {
           const p = this.SEL; if (!p) return;
-          const ns = await TMO(Net.list('data/zb/backup/' + p.uid + '/'), 12000, []);
           const box = D('#bakBox'); if (!box) return;
-          const fs = (ns || []).filter((x) => x.endsWith('.json')).sort().reverse();
-          if (!fs.length) { box.innerHTML = this.empty('还没有备份'); return; }
+          /* 优先读索引（稳），索引没有再退目录枚举 */
+          let rows = [];
+          const idx = await DB.reload('data/zb/backup/' + p.uid + '/index.json');
+          if (idx && Array.isArray(idx.list) && idx.list.length) rows = idx.list.slice().reverse();
+          else {
+            const ns = await TMO(Net.list('data/zb/backup/' + p.uid + '/'), 12000, []);
+            rows = (ns || []).filter((x) => x.endsWith('.json') && x !== 'index.json')
+              .sort().reverse().map((f) => ({ f, at: parseInt(f, 10) || 0, lv: '—', gold: '—' }));
+          }
+          if (!rows.length) { box.innerHTML = this.empty('还没有备份'); return; }
           box.innerHTML = this.table(['时间', '等级', '金币', '操作'],
-            fs.map((f) => [U.dt(parseInt(f, 10)), '—', '—',
-              `<button class="btn sm" data-a="restore" data-f="${U.esc(f)}">回档到此</button>`]));
+            rows.map((x) => [U.dt(x.at), x.lv, U.fmt(x.gold),
+              `<button class="btn sm" data-a="restore" data-f="${U.esc(x.f)}">回档到此</button>`]));
           /* 表格里的按钮靠外层委托（data-a 已在 #body 上） */
         },
         async restore(t) {
@@ -295,10 +390,12 @@ const PAGES = {
           if (!this.confirm('确定把「' + (p.name || p.uid) + '」回档到该备份？')) return;
           const r = await TMO(Net.read('data/zb/backup/' + p.uid + '/' + t.dataset.f), 12000, null);
           if (!r || !r.data) { this.toast('读取备份失败', 'err'); return; }
-          if (await this.pushOp(p.uid, { t: 'restore', data: r.data })) {
-            AUDIT.log('回档', p.uid, t.dataset.f);
-            this.toast('回档指令已下发（玩家在线 5 分钟内生效）', 'ok');
-          }
+          /* 必须双写：只下发指令的话，离线玩家的指令一直不被消费，
+           * 点了回档却毫无变化（在线玩家的自动存档还会把旧进度写回去） */
+          const okSave = await this.save(r.data, '回档');
+          const okOp = await this.pushOp(p.uid, { t: 'restore', data: r.data });
+          AUDIT.log('回档', p.uid, t.dataset.f);
+          this.toast('已回档（存档' + (okSave ? '✓' : '✗') + ' 在线指令' + (okOp ? '✓' : '✗') + '）', okSave || okOp ? 'ok' : 'err');
         },
         async resetSave() {
           const p = this.SEL; if (!p) return;
@@ -374,23 +471,34 @@ const PAGES = {
         },
         banNow() {
           const p = this.SEL; if (!p) return;
+          const cur = this.banOf(p);
           this.openModal(`
             <h3>在线封禁 · ${U.esc(p.name || '')}</h3>
+            ${cur.on ? `<div class="hint warn">当前：${U.esc(cur.text)}${cur.at ? '（' + U.esc(cur.at) + ' 解封）' : ''}</div>` : ''}
+            <div class="fr"><label>时长</label><select id="ob_t">
+              <option value="0">永久</option><option value="1">1 天</option><option value="3">3 天</option>
+              <option value="7">7 天</option><option value="30">30 天</option></select></div>
             <div class="fr"><label>理由</label><input id="ob_r" placeholder="如：使用外挂"></div>
-            <div class="hint">指令下发后，在线玩家 5 分钟内被强制登出</div>
+            <div class="hint">写完存档 + 账号 + 在线指令三处；在线玩家 5 分钟内被强制登出</div>
             <div class="btns"><button class="btn err" data-m="ok">确认</button><button class="btn" data-m="close">取消</button></div>`, {
             ok: async () => {
-              await this.pushOp(p.uid, { t: 'ban', until: 0, reason: this.str('#ob_r') || '违规' });
-              AUDIT.log('在线封禁', p.uid, this.str('#ob_r'));
-              this.toast('封禁指令已下发', 'ok'); this.closeModal();
+              const days = Math.floor(this.num('#ob_t'));
+              const until = days > 0 ? Date.now() + days * 864e5 : 0;
+              /* 此前只推指令，存档与账号文件不写 → 后台列表看不出封禁状态，
+               * 玩家重开游戏也照样能进（指令消费前不受限）。统一走 setBan 三写。 */
+              const r = await this.setBan(p, true, { until, reason: this.str('#ob_r') || '违规', type: days ? days + '天' : '永久' });
+              AUDIT.log('在线封禁 ' + (days ? days + '天' : '永久'), p.uid, this.str('#ob_r'));
+              this.toast('已封禁（存档' + (r.okP ? '✓' : '✗') + ' 账号' + (r.okA ? '✓' : '✗') + ' 指令✓）', 'ok');
+              this.closeModal(); this.render();
             },
           });
         },
         async unbanNow() {
           const p = this.SEL; if (!p) return;
-          await this.pushOp(p.uid, { t: 'unban' });
+          const r = await this.setBan(p, false, {});
           AUDIT.log('在线解封', p.uid, '');
-          this.toast('解封指令已下发', 'ok');
+          this.toast('已解封（存档' + (r.okP ? '✓' : '✗') + ' 账号' + (r.okA ? '✓' : '✗') + ' 指令✓）', 'ok');
+          this.render();
         },
         async opLog() {
           const p = this.SEL; if (!p) return;
@@ -427,6 +535,12 @@ const PAGES = {
             <div class="fr"><label class="wide">名次区间</label><input id="rw_a" type="number" value="1" style="max-width:70px"> ~ <input id="rw_b2" type="number" value="3" style="max-width:70px"></div>
             <div class="fr"><label class="wide">奖励</label>${U.picker('rw_i', 'diamond')}</div>
             <div class="fr"><label class="wide">数量</label><input id="rw_n" type="number" value="100"></div>
+            <div class="fr"><label class="wide">结算周期</label><select id="rw_c">
+              <option value="活动结束">活动结束</option><option value="每日">每日</option><option value="每周">每周</option></select></div>
+            <div class="fr"><label class="wide">可叠加</label><select id="rw_s">
+              <option value="0">否（每期一次）</option><option value="1">是</option></select></div>
+            <div class="hint">名次区间按 <b>a/b</b> 写入（游戏端读的是 a/b；
+              只写 from/to 时 lo=hi=1，会导致只有第 1 名能领、第 2/3 名永远领不到）</div>
             <div class="btns"><button class="btn pri" data-a="addRw">＋ 添加配置</button></div>
             <div id="rwBox" style="margin-top:10px"><div class="empty">点上方加载已有配置</div></div>`;
         } else {
@@ -532,14 +646,23 @@ const PAGES = {
         async addRw() {
           const d = await DB.get(DBP.rankrw, { list: [] });
           d.list = d.list || [];
+          const a = Math.max(1, Math.floor(this.num('#rw_a') || 1));
+          const b = Math.max(a, Math.floor(this.num('#rw_b2') || a));
+          /* 契约修复：游戏端 main.js 解析 rankrw 时读的是 a / b（lo / hi），
+           * 此前后台只写 from / to → Number(x.a)||1 恒为 1 → lo=hi=1，
+           * 名次区间整体塌成「仅第 1 名」，第 2、3 名永远领不到奖励。
+           * 现在 a/b 为主，from/to 保留只为兼容旧数据。 */
           d.list.push({
             id: 'rr' + Date.now().toString(36), board: this.val('#rw_b'),
-            from: this.num('#rw_a'), to: this.num('#rw_b2'),
-            item: this.val('#rw_i'), n: this.num('#rw_n'), at: Date.now(),
+            a, b, from: a, to: b,
+            item: this.val('#rw_i'), n: this.num('#rw_n'),
+            settle: this.val('#rw_c') || '活动结束',
+            stack: this.val('#rw_s') === '1' ? 1 : 0,
+            at: Date.now(),
           });
           if (await DB.set(DBP.rankrw, d, '添加排名奖励')) {
-            AUDIT.log('配置排名奖励', this.val('#rw_b'), this.num('#rw_a') + '~' + this.num('#rw_b2'));
-            this.toast('已添加', 'ok');
+            AUDIT.log('配置排名奖励', this.val('#rw_b'), a + '~' + b);
+            this.toast('已添加（第 ' + a + '~' + b + ' 名）', 'ok');
             this.acts.listRw.call(this);
           }
         },
@@ -547,9 +670,12 @@ const PAGES = {
           const box = D('#rwBox'); if (!box) return;
           const d = await DB.reload(DBP.rankrw);
           const l = (d && d.list) || [];
-          box.innerHTML = l.length ? this.table(['榜单', '名次', '奖励', '操作'],
-            l.map((x) => [U.esc(x.board), (x.a || x.from) + '~' + (x.b || x.to),
+          const BN = { endless: '无尽榜', power: '战力榜', event: '活动榜' };
+          box.innerHTML = l.length ? this.table(['榜单', '名次', '奖励', '结算', '操作'],
+            l.map((x) => [U.esc(BN[x.board] || x.board),
+              (x.a || x.from || 1) + '~' + (x.b || x.to || (x.a || x.from || 1)),
               U.itemName(x.item) + '×' + x.n,
+              U.esc(x.settle || '活动结束') + (x.stack ? ' · 可叠加' : ''),
               `<button class="btn sm err" data-a="delRw" data-id="${U.esc(x.id)}">删除</button>`]))
             : this.empty('还没有配置');
         },
