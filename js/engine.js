@@ -276,6 +276,23 @@ const E = {
     try { this.codexUnlock(p, 'gun', id); } catch (e) {}
     return { ok: true, msg: '已装备 ' + this.gun(p).n };
   },
+  /* 直接解锁武器（购买 / 后台发放用，跳过通关条件）
+   * 商店「武器」页签此前只给材料不给枪，就是缺这个入口。 */
+  unlockGun(p, id) {
+    const g = (EX.guns || []).find((x) => x.id === id);
+    if (!g) {
+      /* 兼容：传进来的是中文名（后台热更可能只写名字） */
+      const byName = (EX.guns || []).find((x) => x.n === id);
+      if (!byName) return { ok: false, msg: '武器不存在：' + id };
+      return this.unlockGun(p, byName.id);
+    }
+    p.gunOwn = Array.isArray(p.gunOwn) ? p.gunOwn : ['W01'];
+    const isNew = p.gunOwn.indexOf(id) < 0;
+    if (isNew) p.gunOwn.push(id);
+    p.gun = id;
+    try { this.codexUnlock(p, 'gun', id); } catch (e) {}
+    return { ok: true, msg: isNew ? ('已解锁并装备 ' + g.n) : ('已装备 ' + g.n), isNew: isNew };
+  },
   /* 进阶等级：每 5 级一次 */
   advOf(lv) {
     let a = 0;
@@ -779,13 +796,41 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   starsFor(hpRatio) { return hpRatio > 0.6 ? 3 : hpRatio > 0.3 ? 2 : 1; },
   clearLevel(p, id, hpRatio) {
     const st = this.starsFor(hpRatio);
+    /* 首次通关判定必须在写入 p.cleared 之前取快照 */
+    const firstEver = Object.keys(p.cleared || {}).length === 0;
     p.cleared[id] = Math.max(p.cleared[id] || 0, st);
     /* 解锁下一关（关卡表 unlock 链自动生效） */
     const nx = this.nextLevel(id);
     if (nx) p.curLevel = nx;
     /* 通关后同步巡逻收益档位（进入新章节时提升） */
     try { this.syncPatrol(p); } catch (e) {}
+    /* 称号「初出茅庐」（first_clear）
+     * BUG：称号表明确配了"首次通关"这一条，但全项目零发放 ——
+     *      玩家通关 100 关，称号列表里这一格永远是灰的、永远拿不到。
+     *      这里在首次通关时补发（只发一次）。 */
+    if (firstEver) {
+      try { this.grantTitle(p, 'first_clear'); } catch (e) {}
+    }
     return st;
+  },
+  /* 称号/头像框发放（去重，返回是否新获得） */
+  grantTitle(p, id) {
+    if (!id) return false;
+    const known = (EX.titles || []).some((t) => t.id === id);
+    if (!known) return false;
+    p.titles = Array.isArray(p.titles) ? p.titles : [];
+    if (p.titles.indexOf(id) >= 0) return false;
+    p.titles.push(id);
+    return true;
+  },
+  grantFrame(p, id) {
+    if (!id) return false;
+    const known = (EX.frames || []).some((t) => t.id === id);
+    if (!known) return false;
+    p.frames = Array.isArray(p.frames) ? p.frames : [];
+    if (p.frames.indexOf(id) >= 0) return false;
+    p.frames.push(id);
+    return true;
   },
   totalStars(p) { return Object.values(p.cleared || {}).reduce((s, v) => s + v, 0); },
   /* 无尽解锁：通关 3-3 */
@@ -1445,6 +1490,30 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     p.frame = id || '';
     return { ok: true, msg: id ? ('已装备头像框：' + this.frameName(id)) : '已卸下头像框' };
   },
+  /* 皮肤购买
+   * BUG：皮肤表 11 款里有 7 款是付费皮肤（680~980 钻），
+   *      但全项目只有 sk_c01b 在「直购」SH08 有入口，
+   *      sk_c03c 在活动商店 ES09、sk_c04b 在排行榜 RK08 ——
+   *      剩下 4 款（sk_c02b 战术套装 / sk_c03b 装甲骑士 /
+   *      sk_c01c 沙漠突击 / sk_c02c 防化服）一个购买入口都没有。
+   *      角色→皮肤页签里它们标着「未拥有」，玩家点上去只会提示
+   *      "尚未拥有"，却根本没地方买 —— 皮肤系统的主要付费内容形同虚设。
+   *      这里补上按皮肤表 price 用钻石购买的入口。 */
+  buySkin(p, id) {
+    const sk = (EX.skins || []).find((x) => x.id === id);
+    if (!sk) return { ok: false, msg: '皮肤不存在' };
+    p.skins = Array.isArray(p.skins) ? p.skins : [];
+    if (p.skins.indexOf(id) >= 0) return { ok: false, msg: '已拥有该皮肤' };
+    const price = Number(sk.price) || 0;
+    if (price <= 0) return { ok: false, msg: '该皮肤无法购买' };
+    if ((p.diamond || 0) < price) return { ok: false, msg: '钻石不足（需 ' + price + '）' };
+    p.diamond -= price;
+    p.skins.push(id);
+    p.skin = id;
+    /* 同步图鉴（此前靠 codexBackfill 在读档时补，购买后即时补上） */
+    try { this.codexUnlock(p, 'skin', id); } catch (e) {}
+    return { ok: true, msg: '已购买并穿戴「' + sk.n + '」' };
+  },
 
   /* 通用发放 */
   grant(p, give) {
@@ -2051,7 +2120,15 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   pushStats(p, { kills, clear, boss, noHit, endlessSec }) {
     const st = p.stats;
     st.kills = (st.kills || 0) + (kills || 0);
-    if (boss) st.bossKill = (st.bossKill || 0) + boss;
+    if (boss) {
+      const hadBoss = (st.bossKill || 0) > 0;
+      st.bossKill = (st.bossKill || 0) + boss;
+      /* 称号「屠龙者」（boss_slayer）
+       * BUG：称号表配了"首次击杀 BOSS"，但全项目零发放 ——
+       *      玩家 BOSS 关打了无数次，这一格永远拿不到。
+       *      这里在首次击杀 BOSS 时补发。 */
+      if (!hadBoss) { try { this.grantTitle(p, 'boss_slayer'); } catch (e) {} }
+    }
     if (noHit) st.noHitBest = Math.max(st.noHitBest || 0, noHit);
     if (endlessSec) p.endlessTime = Math.max(p.endlessTime || 0, Math.floor(endlessSec));
     this.resetTasks(p);
