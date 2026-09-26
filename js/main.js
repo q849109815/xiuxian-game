@@ -108,6 +108,14 @@ const MAIN = {
     if (!p) {
       p = E.newPlayer(UID, name, gender);
       UI.toast('欢迎加入，先锋官！', 'ok');
+      /* 「重置存档 / 注销后重注册 → 历史运营补发被全部重发一遍」修复。
+       * 指令去重只靠存档里的 p.opsDone 本地记录，而重置会把它清空，
+       * 云端 data/zb/ops/<uid>.json 却原封不动留着 ——
+       * 于是几个月前的补发（含大额补偿）会一次性全部再发一次。
+       * 实测确认：重置后 consumeOps 把旧 grant 又发了一遍。
+       * 首次注册时该文件不存在；存在即说明是「重开」→ 预置成已处理，
+       * 只放行之后新追加的指令。 */
+      try { await this.seedOpsDone(UID, p); } catch (e) {}
     } else { p.name = p.name || name; p.lastSeen = Date.now(); }
     /* 封禁兜底：优先看账号文件（user.js 已拦），
      * 但离线或账号文件缺失时，玩家存档里的 p.ban 也要能拦住 */
@@ -207,6 +215,23 @@ const MAIN = {
       await this.syncCloudCfg();
       try { UI.home(); } catch (e) {}
     } catch (e) {}
+  },
+
+  /* 新档首次建立时，把云端已存在的历史指令 id 预置为「已处理」。
+   * 用途：重置存档 / 注销后重注册场景下，避免历史补发被整批重发。
+   * 只记 id、不发放任何东西；返回预置条数。 */
+  async seedOpsDone(uid, p) {
+    const path = 'data/zb/ops/' + uid + '.json';
+    let f = null;
+    try {
+      const r = await window.TMO(Net.read(path), 6000);
+      if (r && r.data) f = r.data;
+    } catch (e) {}
+    if (!f || !Array.isArray(f.list) || !f.list.length) { p.opsDone = p.opsDone || []; return 0; }
+    p.opsDone = [];
+    f.list.forEach((op) => { if (op && op.id) p.opsDone.push(op.id); });
+    if (p.opsDone.length > 300) p.opsDone = p.opsDone.slice(-300);
+    return p.opsDone.length;
   },
 
   /* ---------- 运营「待应用指令」队列消费 ----------
