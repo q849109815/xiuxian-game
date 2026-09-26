@@ -67,6 +67,14 @@ const MAIN = {
     let p = null;
     const rr = await window.TMO(Net.read(path), 9000);
     if (rr && rr.data) p = rr.data;
+    /* 关页面快照兜底：上次直接关标签页 / 手机切走时，异步上传来不及完成，
+     * 当时已在 pagehide 里同步存了一份到 localStorage。这里如果本地比云端新
+     * （云端那次写入根本没成功），就用本地这份，否则整局进度白丢。 */
+    const snap = this.loadSnap(UID);
+    if (snap && (!p || (Number(snap.offlineAt) || 0) > (Number(p.offlineAt) || 0))) {
+      p = snap;
+      try { UI.toast('已恢复上次未保存的进度', 'ok'); } catch (e) {}
+    }
     if (!p) {
       p = E.newPlayer(UID, name, gender);
       UI.toast('欢迎加入，先锋官！', 'ok');
@@ -357,10 +365,33 @@ const MAIN = {
     if (n) { try { E.save(p); } catch (e) {} }
   },
 
+  /* 关页面时的同步快照：localStorage 写入是同步的，一定赶得及。
+   * 异步的 Net.write 在页面卸载时会被浏览器掐断，进度就丢了。 */
+  snapKey(uid) { return 'zb_snap_' + (uid || UID || ''); },
+  syncSnap() {
+    if (!P) return;
+    try {
+      P.offlineAt = Date.now(); P.lastSeen = Date.now();
+      localStorage.setItem(this.snapKey(P.uid), JSON.stringify(P));
+    } catch (e) {}
+  },
+  loadSnap(uid) {
+    try {
+      const s = localStorage.getItem(this.snapKey(uid));
+      if (!s) return null;
+      const o = JSON.parse(s);
+      return (o && o.uid) ? o : null;
+    } catch (e) { return null; }
+  },
+
   async save() {
     if (!P || !this.savePath) return;
     P.lastSeen = Date.now(); P.offlineAt = Date.now();
-    try { await Net.write(this.savePath, P); } catch (e) {}
+    /* 每次都同步留一份快照，写成功后再清掉 —— 关页面时它就能顶上 */
+    this.syncSnap();
+    let ok = false;
+    try { ok = await Net.write(this.savePath, P); } catch (e) {}
+    if (ok) { try { localStorage.removeItem(this.snapKey(P.uid)); } catch (e) {} }
     this.uploadRank();
   },
   startSave() { if (saveT) clearInterval(saveT); saveT = setInterval(() => { if (P) this.save(); }, 30000); },
@@ -1175,7 +1206,15 @@ function bindAll() {
   if (rb) rb.onclick = () => { UI.hideResult(); UI.home(); UI.show('home'); if (window.SND) SND.bgm('base'); };
 
   document.addEventListener('visibilitychange', () => { if (document.hidden && BT.on) BT.paused = true; });
-  window.addEventListener('beforeunload', () => { if (P) MAIN.save(); });
+  /* 关页面/切走时保存进度。
+   * 原来只挂 beforeunload 且只调异步 save()：
+   *   ① 浏览器不等待 Promise，页面一关 fetch 就被掐断，那一局的进度全丢；
+   *   ② iOS Safari / 手机切 App 根本不触发 beforeunload。
+   * 现在三个事件都挂，且先同步写 localStorage 快照（一定成功），再试异步上传。 */
+  const byeNow = () => { if (!P) return; MAIN.syncSnap(); try { MAIN.save(); } catch (e) {} };
+  window.addEventListener('beforeunload', byeNow);
+  window.addEventListener('pagehide', byeNow);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) byeNow(); });
 
   bindJoystick(); bindKeys();
 }
