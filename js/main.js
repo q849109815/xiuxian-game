@@ -111,13 +111,29 @@ const MAIN = {
     } else { p.name = p.name || name; p.lastSeen = Date.now(); }
     /* 封禁兜底：优先看账号文件（user.js 已拦），
      * 但离线或账号文件缺失时，玩家存档里的 p.ban 也要能拦住 */
-    if (p.ban) {
-      const until = p.banUntil || 0;
-      if (!until || until > Date.now()) {
-        UI.toast('🚫 该账号已被封禁：' + (p.banReason || '违规处理'), 'err');
-        P = null; window.P = null;
-        return;
-      }
+    /* 封禁兜底：优先看账号文件（user.js 已拦，且提示带剩余天数），
+     * 但离线或账号文件缺失时，玩家存档里的 p.ban 也要能拦住。
+     * 提示统一走 banInfo：玩家看得到封多久、何时解封、为什么。 */
+    const bInfo = (window.UA && UA.banInfo) ? UA.banInfo(p)
+      : { on: !!(p && p.ban) && (!p.banUntil || p.banUntil > Date.now()), text: '' };
+    if (bInfo.on) {
+      const msg = bInfo.text || ('🚫 该账号已被封禁\n理由：' + ((p && p.banReason) || '违规处理'));
+      const html = msg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+      try { UI.toast(msg.replace(/\n/g, ' '), 'err'); } catch (e) {}
+      try { UI.show('login'); } catch (e) {}
+      try {
+        const t = document.getElementById('lgTip');
+        if (t) { t.innerHTML = html; t.style.color = '#ff8fa4'; }
+      } catch (e) {}
+      P = null; window.P = null;
+      return;
+    }
+    /* 时限封禁已到期：自动清除存档上的标记。
+     * 原逻辑只在读取时跳过、从不清理，标记会一直挂着 ——
+     * 7 天封禁实际等同于永久封禁，这是真 BUG。 */
+    if (bInfo.expired && p) {
+      p.ban = false; p.banUntil = 0; p.banReason = '';
+      p.unbanAt = Date.now(); p.unbanOp = 'auto-expire';
     }
     P = p; window.P = p; UI.P = p;
     /* 旧档兼容：offBase（离线结算基准）是新字段，老存档没有。
@@ -829,7 +845,9 @@ const MAIN = {
           rank: '第' + (x.a || 1) + '-' + (x.b || 1) + '名',
           lo: Number(x.a) || 1, hi: Number(x.b) || 1,
           rw: { [x.item]: Number(x.n) || 1 },
-          cyc: x.settle ? (x.settle + ' 天') : '每期',
+          /* settle 可能是天数（数字）也可能是「每日 / 每周 / 活动结束」；
+           * 一律拼「天」会显示成「每周 天」这种怪文案 */
+          cyc: x.settle ? (/^\d+$/.test(String(x.settle).trim()) ? String(x.settle).trim() + ' 天' : String(x.settle)) : '每期',
           stack: !!x.stack,
         }));
         /* 后台覆盖到的榜单 → 用后台数据；未覆盖的榜单 → 保留默认配置 */
@@ -1410,7 +1428,11 @@ function bindAll() {
 
   const sayTip = (el, m, ok) => {
     if (!el) return;
-    el.textContent = m || '';
+    /* 支持多行（封禁提示要分行显示剩余时长/解封时刻/理由），
+     * 同时转义 HTML —— 封禁理由由运营在后台填写，属外部输入 */
+    el.innerHTML = String(m == null ? '' : m)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
     el.style.color = ok ? 'var(--green)' : '#ff8fa4';
   };
 
