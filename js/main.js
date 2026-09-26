@@ -884,13 +884,31 @@ const MAIN = {
          * EX.shop 只是人民币充值档位（SH01~）。两者都要覆盖，
          * 只改 EX.shop 的话运营改的「霰弹枪 5000 金」根本不会变。 */
         const ov = db.list.filter((x) => x && x.id);
+        /* 后台周期 → 游戏端限购类型（shopGoods 用 daily/weekly/monthly，
+         * 与 achshop 的 day/week/month 是两套写法，必须映射）。 */
+        const PER_MAP = { day: 'daily', week: 'weekly', month: 'monthly', once: 'once',
+          daily: 'daily', weekly: 'weekly', monthly: 'monthly' };
         const patch = (s) => {
           const o = ov.find((x) => x.id === s.id);
           if (!o) return s;
           const c = Object.assign({}, s);
           if (o.price != null) c.price = Number(o.price) || 0;
-          if (o.per) c.per = o.per;
-          if (o.limit != null) c.limit = Number(o.limit) || 0;
+          /* 限购：游戏端读的是 limit【对象】{ t:'daily', v:1 }（见 engine.giftCan）。
+           * 此前直接写 c.limit = Number(o.limit) || 0 —— 后台只改个价，
+           * 原来的 {t:'daily',v:1} 就被覆盖成数字 0：
+           *   · giftCan 里 `g.limit || {t:'once',v:1}` 因 0 为 falsy → 每日限购退化成【终身1次】
+           *   · isArbitrage 里 `if (g.limit) return false` 因 0 为 falsy → 被当成【无限购】
+           * 运营改一次价，限购策略和套利守卫同时失效。现在转成对象，
+           * 且后台没给周期/次数时【完全不动】原限购结构。 */
+          const oL = s.limit;
+          const oldT = (oL && oL.t) || 'once';
+          const oldV = (oL && oL.v != null) ? oL.v : 1;
+          if (o.per) {
+            c.limit = { t: PER_MAP[o.per] || oldT, v: (o.limit != null ? (Number(o.limit) || oldV) : oldV) };
+            c.per = o.per;                       /* 兼容 achshop 风格读取 */
+          } else if (o.limit != null) {
+            c.limit = { t: oldT, v: Number(o.limit) || oldV };
+          }
           return c;
         };
         if (ov.length) {
@@ -914,9 +932,15 @@ const MAIN = {
             const o = ov.find((x) => x.id === a.id);
             if (!o) return a;
             const c = Object.assign({}, a);
-            if (o.max != null) c.max = Number(o.max) || 0;
-            if (o.daily != null) c.daily = Number(o.daily) || 0;
-            if (o.item) { c.rw = {}; c.rw[o.item] = Number(o.n) || 1; }
+            /* 关键：游戏端 E.adLeft 读的是【d.limit】（见 engine.js），
+             * 此前这里只写 max / daily —— 后台配的「每日上限」玩家端压根读不到，
+             * 玩家仍可无限看广告领奖励。现在落到 limit 字段。 */
+            if (o.max != null) c.limit = Number(o.max) || 0;
+            if (o.daily != null) c.limit = Number(o.daily) || 0;
+            if (o.limit != null) c.limit = Number(o.limit) || 0;
+            /* 奖励：EX.ads.rw 是给玩家看的文案（如 '体力 +10'），
+             * 不能直接覆盖成对象，否则界面显示 [object Object]。另存 rwItem。 */
+            if (o.item) c.rwItem = { item: o.item, n: Number(o.n) || 1 };
             return c;
           });
           console.log('[cfg] 广告位云端覆盖 ' + ov.length + ' 个');
