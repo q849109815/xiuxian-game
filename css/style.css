@@ -608,7 +608,10 @@ input{font-family:inherit}
 .bth-pw{font-size:9px;color:#7d8ca8}
 
 /* --- 右上：货币 --- */
-.bt-cur{position:absolute;right:8px;top:52px;z-index:6;display:flex;flex-direction:column;
+/* 布局修复：右上角「弹药 / 击杀货币 / 结算资源」三块原本分别定位在
+ * top:46 / 52 / 96，垂直区间互相压住（实测弹药⇄货币重叠38%、结算⇄货币重叠61%）。
+ * 现按 48 → 86 → 162 依次向下排开，信息全部保留、不再互相遮挡。 */
+.bt-cur{position:absolute;right:8px;top:86px;z-index:6;display:flex;flex-direction:column;
   gap:3px;align-items:flex-end}
 .bt-cur span{display:flex;align-items:center;gap:3px;font-size:10px;color:#cfd8e8;
   padding:2px 6px;border-radius:8px;background:rgba(8,13,22,.82);border:1px solid rgba(255,255,255,.08)}
@@ -846,7 +849,7 @@ input{font-family:inherit}
   background:rgba(0,0,0,.45);border:1.5px solid rgba(255,255,255,.35);color:var(--yel)}
 
 /* 右上：武器 + 弹药 */
-.bt-ammo{position:absolute;right:8px;top:46px;display:flex;align-items:center;gap:5px;
+.bt-ammo{position:absolute;right:8px;top:48px;display:flex;align-items:center;gap:5px;
   padding:4px 8px;border-radius:10px;background:rgba(0,0,0,.42);
   border:1.5px solid rgba(255,255,255,.28)}
 .ba-gun{width:22px;height:22px;display:flex;align-items:center;justify-content:center}
@@ -1009,7 +1012,7 @@ input{font-family:inherit}
 #wxtName{font-size:16px}
 
 /* ---- 战斗右上：金币/钻石 ---- */
-.bt-coin{position:absolute;right:8px;top:96px;z-index:6;display:flex;flex-direction:column;
+.bt-coin{position:absolute;right:8px;top:162px;z-index:6;display:flex;flex-direction:column;
   gap:3px;align-items:flex-end;font-size:11px;color:var(--txt2);
   text-shadow:0 1px 3px rgba(0,0,0,.9)}
 .bt-coin b{color:var(--gold);font-size:12px}
