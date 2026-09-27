@@ -3770,7 +3770,21 @@ const BT = {
        * 只有在 BT.spriteMode=true 时才退回立绘。 */
       const sp = this.spriteMode ? SPR.get(z.img) : null;
       const bob = Math.sin(((z.animT || 0) * 7) + ((z.id || z.x || 0) % 7)) * sz * 0.04;
-      if (sp) {
+      /* Q 版二头身贴图优先：已抠底透明 PNG，带描边与自身配色。
+       * 贴图没到位 / 该种类没有贴图 → 自动退回立绘或矢量骨骼，不会开天窗。 */
+      let zChi = false;
+      const _ck = (z && z.d && z.d.chibi) || null;
+      if (_ck && typeof CHIBI !== 'undefined' && CHIBI && (CHIBI.ready(_ck) || CHIBI.ensure(_ck))) {
+        this.shadow3d(c, z.x, z.y + sz * 0.18, sz * 0.44, sc);
+        zChi = CHIBI.draw(c, _ck, z.x, z.y + sz * 0.16, sz * 1.80, {
+          bob: bob,
+          flash: (z.hitT > 0) ? Math.min(0.6, z.hitT * 4) : 0,
+          tilt: ((z.slow || 0) < 0.9) ? Math.sin((z.animT || 0) * 6.2) * 0.05 : 0
+        });
+        if (zChi) this._zTop = z.y + sz * 0.16 - sz * 1.80;
+      }
+      if (zChi) { /* Q 版已绘制：跳过立绘与矢量两套画法 */ }
+      else if (sp) {
         const h = sz * 1.72, w = h * (sp.w / sp.h);
         /* 脚底对齐到接触点（裁剪后主体底边就是脚），不再按整图居中 */
         const bx = z.x - w / 2, by = z.y + sz * 0.16 - h + bob;
@@ -3871,6 +3885,20 @@ const BT = {
     const heroSrc = (sk && sk.img) || this.charImg || (this.P && this.P.avatarImg);
     const hsp = this.spriteMode ? SPR.get(heroSrc) : null;
     let heroDrawn = false;
+    /* Q 版主角：按当前武器取对应贴图（图里已含枪械，故后续不再重画手持武器） */
+    let heroChi = false;
+    {
+      let _g = null;
+      try { _g = (typeof E !== 'undefined' && E.gun && this.P) ? E.gun(this.P) : null; } catch (e) { _g = null; }
+      const _gid = (_g && (_g.id || _g.gun)) || (this.P && (this.P.gunId || this.P.gun)) || null;
+      const _hk = (typeof CHIBI !== 'undefined' && CHIBI) ? (CHIBI.keyOfGun(_gid) || 'hero_base') : null;
+      if (_hk && (CHIBI.ready(_hk) || CHIBI.ensure(_hk))) {
+        const _hb = Math.sin((r.time || 0) * 4) * 1.2;
+        this.shadow3d(c, r.px, r.py + 12, 22, 1);
+        heroChi = CHIBI.draw(c, _hk, r.px, r.py + 12, 78, { bob: _hb });
+        if (heroChi) heroDrawn = true;
+      }
+    }
     if (this.card3d) this.drawCard(c, r.px, r.py + 20, 60, 76, 'hero', { t: r.time || 0, ph: 0, sw: 0.85, glow: true });
     if (hsp) {
       const hh = 62, hw = hh * (hsp.w / hsp.h);
@@ -3892,8 +3920,9 @@ const BT = {
       this.drawHeroShape(c, r.px, r.py);
       c.restore();
     }
-    /* 手持武器：跟随瞄准方向旋转 + 后坐力 + 枪口火光 */
-    this.drawHeldGun(c, r, aim);
+    /* 手持武器：跟随瞄准方向旋转 + 后坐力 + 枪口火光
+     * Q 版贴图里已经画了枪，再叠加一次会出现两把枪，故此处跳过。 */
+    if (!heroChi) this.drawHeldGun(c, r, aim);
     if (r.shield > 0) {
       c.strokeStyle = 'rgba(92,216,255,0.75)'; c.lineWidth = 2.5;
       c.beginPath(); c.arc(r.px, r.py, 26, 0, 7); c.stroke();
