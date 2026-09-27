@@ -700,13 +700,13 @@ input{font-family:inherit}
 /* 主按钮：黄色（截图「镶嵌」「前往任务」「添加好友」「购买」） */
 .btn{background:linear-gradient(180deg,#ffe680,var(--yel) 45%,#e8a800);
   color:#3a2500;font-weight:800;border:2px solid rgba(255,255,255,.6);
-  box-shadow:0 3px 0 #b87d00,0 4px 10px rgba(0,0,0,.35);border-radius:12px}
+  box-shadow:0 3px 0 #b87d00;border-radius:12px}
 .btn:active{transform:translateY(2px);box-shadow:0 1px 0 #b87d00}
 .btn.g{background:linear-gradient(180deg,#a5f08a,var(--grn) 45%,#3f9c34);
-  color:#123d0a;box-shadow:0 3px 0 #2e7d24,0 4px 10px rgba(0,0,0,.35)}
+  color:#123d0a;box-shadow:0 3px 0 #2e7d24}
 .btn.g:active{box-shadow:0 1px 0 #2e7d24}
 .btn.o{background:linear-gradient(180deg,#ffb04d,var(--orange) 45%,#c25e00);
-  color:#fff;box-shadow:0 3px 0 #93460a,0 4px 10px rgba(0,0,0,.35)}
+  color:#fff;box-shadow:0 3px 0 #93460a}
 .btn.o:active{box-shadow:0 1px 0 #93460a}
 /* .btn.sm 实测高仅 25px（11px 字 + 6px 上下内边距 + 2px 描边），
  * 是商店「🪙3000 购买」、皮肤「💎 980 购买」等高频付费按钮。
@@ -1189,7 +1189,7 @@ input{font-family:inherit}
   font-weight:800 !important;
   letter-spacing:.6px !important;
   border:2px solid rgba(0,0,0,.24) !important;
-  box-shadow:0 3px 0 rgba(0,0,0,.30) !important;
+  /* 立体底边统一由下方「立体玩具按钮」段落提供，此处不再声明，避免两层叠加 */
   text-shadow:0 1px 0 rgba(255,255,255,.32) !important;
 }
 /* 按下：整体下沉并吃掉立体底边（Q 版按压反馈） */
@@ -1258,7 +1258,7 @@ html,body,button,input,select,textarea{
 .btn,.btn.c{
   background:linear-gradient(180deg,var(--q-y1),var(--q-y2) 55%,var(--q-o2)) !important;
   color:#4a2c00 !important;
-  box-shadow:0 4px 0 var(--q-o3),0 6px 12px rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.55) !important;
+  box-shadow:0 4px 0 var(--q-o3),inset 0 2px 0 rgba(255,255,255,.55) !important;
   transition:transform .08s,box-shadow .08s;
 }
 .btn:active,.btn.c:active{
@@ -1266,13 +1266,13 @@ html,body,button,input,select,textarea{
   box-shadow:0 0 0 var(--q-o3),0 2px 6px rgba(0,0,0,.3),inset 0 2px 0 rgba(255,255,255,.4) !important;
 }
 .btn.g{background:linear-gradient(180deg,var(--q-g1),var(--q-g2) 55%,#3fb85c) !important;
-  color:#0d3a17 !important;box-shadow:0 4px 0 var(--q-g3),0 6px 12px rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.5) !important}
+  color:#0d3a17 !important;box-shadow:0 4px 0 var(--q-g3),inset 0 2px 0 rgba(255,255,255,.5) !important}
 .btn.g:active{transform:translateY(4px) !important;box-shadow:0 0 0 var(--q-g3),inset 0 2px 0 rgba(255,255,255,.4) !important}
 .btn.o{background:linear-gradient(180deg,var(--q-o1),var(--q-o2) 55%,#e8722a) !important;
-  color:#4a2100 !important;box-shadow:0 4px 0 var(--q-o3),0 6px 12px rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.5) !important}
+  color:#4a2100 !important;box-shadow:0 4px 0 var(--q-o3),inset 0 2px 0 rgba(255,255,255,.5) !important}
 .btn.o:active{transform:translateY(4px) !important;box-shadow:0 0 0 var(--q-o3),inset 0 2px 0 rgba(255,255,255,.4) !important}
 .btn.d{background:linear-gradient(180deg,#ffb0b0,#ff6b6b 55%,#d63b3b) !important;
-  color:#4a0d0d !important;box-shadow:0 4px 0 #a32424,0 6px 12px rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.45) !important}
+  color:#4a0d0d !important;box-shadow:0 4px 0 #a32424,inset 0 2px 0 rgba(255,255,255,.45) !important}
 .btn.d:active{transform:translateY(4px) !important;box-shadow:0 0 0 #a32424 !important}
 .btn:disabled{opacity:.45;filter:grayscale(.5)}
 
@@ -1406,7 +1406,7 @@ html,body,button,input,select,textarea{
   border-radius:18px !important;
   background:linear-gradient(170deg,#6a58ab,#3a2f68) !important;
   border:3px solid var(--q-ink) !important;
-  box-shadow:0 6px 0 var(--q-ink2),0 10px 22px rgba(0,0,0,.5),inset 0 2px 0 rgba(255,255,255,.2) !important;
+  box-shadow:0 6px 0 var(--q-ink2),inset 0 2px 0 rgba(255,255,255,.2) !important;
   animation:ccIn .28s cubic-bezier(.2,1.5,.4,1) backwards !important;
 }
 .ccard > i{border-radius:14px !important;border:2.5px solid var(--q-ink) !important;
@@ -1445,7 +1445,7 @@ html,body,button,input,select,textarea{
 /* ---------- 登录：糖果卡片 ---------- */
 .lg-box{border-radius:22px !important;border:3px solid var(--q-ink) !important;
   background:linear-gradient(180deg,#4a3f7a,#2a2250) !important;
-  box-shadow:0 8px 0 var(--q-ink2),0 18px 44px rgba(0,0,0,.6) !important}
+  box-shadow:0 8px 0 var(--q-ink2) !important}
 .lg-title{text-shadow:0 3px 0 var(--q-ink)}
 .lg-field input,.lg-form input{
   border-radius:14px !important;border:2.5px solid var(--q-ink) !important;
@@ -1463,7 +1463,7 @@ html,body,button,input,select,textarea{
 .toast{border-radius:999px !important;border:2.5px solid var(--q-ink) !important;
   background:linear-gradient(180deg,#5b4d94,#3a2f68) !important;
   color:#fff !important;font-weight:800;
-  box-shadow:0 4px 0 var(--q-ink2),0 8px 18px rgba(0,0,0,.45) !important}
+  box-shadow:0 4px 0 var(--q-ink2) !important}
 .toast.ok{background:linear-gradient(180deg,var(--q-g1),var(--q-g2)) !important;color:#0d3a17 !important}
 .toast.err{background:linear-gradient(180deg,#ffb0b0,#ff6b6b) !important;color:#4a0d0d !important}
 
@@ -1471,7 +1471,7 @@ html,body,button,input,select,textarea{
 .rs-box,.ps-box,.lvup-box,.gd-box{
   border-radius:24px !important;border:3px solid var(--q-ink) !important;
   background:linear-gradient(180deg,#5b4d94,#2f2657) !important;
-  box-shadow:0 8px 0 var(--q-ink2),0 20px 44px rgba(0,0,0,.6) !important}
+  box-shadow:0 8px 0 var(--q-ink2) !important}
 .rs-i{border-radius:16px !important;border:2.5px solid var(--q-ink) !important;
   background:rgba(0,0,0,.28) !important;box-shadow:0 3px 0 var(--q-ink2) !important}
 .rs-i .v{color:var(--q-y2) !important;text-shadow:0 2px 0 var(--q-ink)}
@@ -1499,7 +1499,7 @@ html,body,button,input,select,textarea{
   background:linear-gradient(180deg,rgba(20,15,38,.92),rgba(20,15,38,0)) !important}
 .btb-lv{color:#fff !important;text-shadow:0 2px 0 var(--q-ink) !important}
 .bt-talk{border:3px solid var(--q-ink) !important;border-radius:18px !important;
-  box-shadow:0 5px 0 var(--q-ink2),0 8px 18px rgba(0,0,0,.45) !important}
+  box-shadow:0 5px 0 var(--q-ink2) !important}
 
 /* ---------- 输入类控件统一 ---------- */
 input,select{
@@ -1536,7 +1536,7 @@ input:focus,select:focus{outline:none;border-color:var(--q-y2) !important}
 .hm-nav .hn.main{
   background:linear-gradient(180deg,var(--q-o1),var(--q-o2) 55%,#e8722a);
   border-color:var(--q-ink);
-  box-shadow:0 5px 0 var(--q-o3),0 6px 14px rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.5);
+  box-shadow:0 5px 0 var(--q-o3),inset 0 2px 0 rgba(255,255,255,.5);
   padding:9px 2px;
 }
 .hm-nav .hn.main i{font-size:27px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
