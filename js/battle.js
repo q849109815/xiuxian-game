@@ -338,7 +338,11 @@ const BT = {
         rwMul: Math.max(1, (curD && curD.mul) || 1),
         cond: 'endless', boss: null, scene: 'city', endless: true };
     }
-    const d = EX.levels.find((x) => x.id === levelId) || EX.levels[0];
+    const d = EX.levels.find((x) => x.id === levelId) || EX.levels[0]
+      /* 兜底：关卡表被清空时 find 与 [0] 都为 undefined，读 d.id 直接抛错
+       * → 进战斗即白屏。给一个可打的内置关卡，保证游戏永远进得去。 */
+      || { id: levelId || '1-1', ch: 1, n: '废弃街道', waves: 20, pool: [],
+           per: [8, 20], mul: 1, cond: 'clear', boss: null, scene: 'city', rw: { gold: 500 } };
     return {
       id: d.id, ch: d.ch,
       /* 截图格式「1.城市大街」= 章节号.关卡名。
@@ -425,6 +429,12 @@ const BT = {
       gunId: (p && p.gun) || 'W01',
       atk: a.atk, rate: a.rate, range: a.range, pierce: a.pierce, spread: a.spread,
       pellets: a.pellets || 1, crit: a.crit, critDmg: a.critDmg, moveSpd: a.moveSpd,
+      /* 后坐力倍率（武器表 recoil 低0.55/中1.0/高1.6）
+       * 此前 attrs() 已算出 a.recoil，但 run 里【没有这个字段】
+       * → 绘制层读 r.recoil 恒为 undefined → Number() 后 NaN → 兜底成 1
+       * → 三档后坐力实测完全一致（低1.11/中0.95/高0.57px，且与配表无关）。 */
+      recoil: Number(a.recoil) > 0 ? Number(a.recoil) : 1,
+      shakeT: 0, shakeX: 0, shakeY: 0,
       dmgMin: a.dmgMin, dmgMax: a.dmgMax, ls: a.ls, erMul: a.erMul, reloadCut: a.reloadCut,
       mag: a.mag, magMax: a.mag, reloadT: 0, reloading: false,
       shootT: 0,
@@ -552,6 +562,13 @@ const BT = {
     /* 难度倍率：血量/伤害/移速在关卡强度之上再乘一层
      * （恶魔 5.5 倍血 + 2.2 倍伤害，靠的是这里，不是改关卡表） */
     const dm = (this.run && this.run.diffMul) || { hp: 1, dmg: 1, spd: 1 };
+    /* 兜底：僵尸表被清空时，关卡 pool 里的 id 全部找不到定义 → d 为 undefined
+     * → 读 d.hp 抛错，战斗一开波就崩（整页白屏、无任何提示）。
+     * 给一个能打死的占位怪，保证「表坏了也能进战斗」而不是直接玩不了。 */
+    if (!d || typeof d !== 'object') {
+      d = { id: 'z_placeholder', n: '感染者', icon: '🧟', hp: 100, spd: 58, dmg: 8,
+            atkR: 30, gold: 10, xp: 4, def: 0 };
+    }
     /* 波次伤害递增（仅无尽）：
      * 此前无尽只放大血量（mul 每波 +0.35），伤害【完全不随波次变】
      *   → 怪越来越肉但打人不痛 → 防线永远满血 → 无尽可以无限刷，
@@ -703,6 +720,13 @@ const BT = {
     r.time += dt;
     if (r.hitFlash > 0) r.hitFlash -= dt;
     if (r.muzzleT > 0) r.muzzleT = Math.max(0, r.muzzleT - dt);   /* 枪口火光计时 */
+    /* 屏幕震动衰减：由开火触发，强度按武器表 recoil（低0.55/中1.0/高1.6） */
+    if (r.shakeT > 0) {
+      r.shakeT = Math.max(0, r.shakeT - dt);
+      const amp = (Number(r.recoil) || 1) * 1.7 * (r.shakeT / 0.09);
+      r.shakeX = (Math.random() * 2 - 1) * amp;
+      r.shakeY = (Math.random() * 2 - 1) * amp * 0.7;
+    } else { r.shakeX = 0; r.shakeY = 0; }
     for (const z of r.zombies) if (z.hitT > 0) z.hitT = Math.max(0, z.hitT - dt);
     this.tickBuffs(dt);            /* 消耗品增益计时（I03 攻击 +30%） */
 
@@ -1286,10 +1310,33 @@ const BT = {
   bossTick(z, dt, dist) {
     const r = this.run, d = z.bossDef;
     const ratio = z.hp / z.maxHp;
-    const th = (d.skills || []).filter((sk) => typeof sk.trig === 'number');
+    let th = (d.skills || []).filter((sk) => typeof sk.trig === 'number');
+    /* 【BOSS 表 phases 字段此前零消费】
+     * 表里每个 BOSS 都声明了 phases: 2/3（共几个阶段），但阶段切换完全由
+     * skills 中数值型 trig 的【数量】隐式决定，phases 从头到尾没人读。
+     * 实测配置与实现不一致：深渊领主 / 修道士 / 尸王 都声明 3 阶段，
+     * 却只有 2 个数值触发点 → 玩家永远看不到第 3 阶段，白写一半配置。
+     * 现在按 phases 补齐：声明的阶段数多于触发点时，在最低阈值下方均匀补点。 */
+    const want = Math.max(1, Number(d.phases) || th.length);
+    if (want > th.length) {
+      const lowest = th.length ? Math.min.apply(null, th.map((s) => s.trig)) : 0.5;
+      for (let i = th.length; i < want; i++) {
+        const t = +(lowest * (1 - (i - th.length + 1) * 0.22)).toFixed(3);
+        /* 技能名必须避开 bossCast 的关键词（狂暴/召唤/孢子/震击…），
+         * 否则补出来的阶段会误触发「狂暴」分支 ×1.5 移速 ×1.35 伤害，
+         * 与下面的渐进强化叠加后 BOSS 残血时移速可达初始 2.6 倍（过难）。
+         * 用中性名，让它只走渐进强化，不额外放技能。 */
+        if (t > 0.05) th.push({ n: '阶段推进', sk: '属性提升', trig: t });
+      }
+    }
     for (let i = 0; i < th.length; i++) {
       if (ratio <= th[i].trig && z.phase <= i) {
         z.phase = i + 1;
+        /* 阶段递增强化：让「多阶段 BOSS」真的越打越凶
+         * （此前阶段只是一次性放技能，BOSS 本体强度全程不随阶段变化，
+         *   3 阶段 BOSS 打到残血和刚出场一样弱，阶段感形同虚设） */
+        z.dmg = Math.round(z.dmg * 1.07 * 100) / 100;
+        z.spd = Math.round(z.spd * 1.05 * 100) / 100;
         r.efx.push({ t: 'warn', x: z.x, y: z.y, r: 200, life: 0.8, max: 0.8 });
         UI.toast('⚠️ ' + d.n + ' 进入第 ' + z.phase + ' 阶段：' + th[i].n, 'boss');
         this.bossCast(z, th[i], i + 1);
@@ -1696,6 +1743,8 @@ const BT = {
     }
     /* 枪口火光 / 后坐力：供绘制层做开火反馈 */
     r.muzzleT = 0.07;
+    /* 屏幕震动：按武器表 recoil 倍率（低0.55/中1.0/高1.6），高后坐力枪体感更猛 */
+    r.shakeT = 0.09;
     r.aimA = base;
     if (r.mag <= 0) this.reload();
   },
@@ -3804,8 +3853,11 @@ const BT = {
     /* 呼吸（站立小幅起伏）+ 开火后坐（身体微后仰） */
     const breathe = Math.sin(t * 1.5) * sz * 0.012;
     const fire = r.muzzleT > 0 ? 1 : 0;
-    const recoil = fire * sz * 0.030;
-    const kick = fire ? 4.2 : 0;
+    /* 后坐位移按武器表 recoil 倍率（低0.55/中1.0/高1.6）
+     * 此前写死 0.030，狙击枪与加特林后仰完全一致，配表零消费。 */
+    const rcMul = Number(r.recoil) > 0 ? Number(r.recoil) : 1;
+    const recoil = fire * sz * 0.030 * rcMul;
+    const kick = fire ? 4.2 * rcMul : 0;
     const bob = breathe;
 
     const hipY = y - sz * 0.32 - bob;
@@ -3955,6 +4007,13 @@ const BT = {
     const r = this.run; if (!r) { return; }
     const c = this.ctx; if (!c) return;
     const W = this.W, H = this.H;
+
+    /* 屏幕震动：开火后整场画面轻微抖动，强度按武器表 recoil（低0.55/中1.0/高1.6） */
+    const _shk = (r && r.shakeT > 0) ? 1 : 0;
+    if (_shk) {
+      c.save();
+      c.translate(Number(r.shakeX) || 0, Number(r.shakeY) || 0);
+    }
 
     /* 背景 */
     const bg = this.img(this.scene);
@@ -4726,6 +4785,9 @@ const BT = {
       c.fillText(f.v, f.x, f.y);
       c.globalAlpha = 1;
     }
+
+    /* 屏幕震动收尾：与 draw() 开头的 save/translate 配对 */
+    if (_shk) c.restore();
   },
 };
 
