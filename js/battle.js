@@ -509,6 +509,11 @@ const BT = {
     const cnt = (r.diffMul && r.diffMul.cnt) || 1;
     r.spawnLeft = Math.min(90, Math.round((isBossWave ? base * 0.7 : base) * cnt));
     r.spawnT = 0; r.spawnGap = Math.max(0.18, 0.60 - w * 0.05);
+    /* 本波刷怪统计：供 spawn 处做高威胁怪限流（30% 上限） */
+    /* 注意：r.waveTotal 是【总波数】(def.waves)，被波次推进用于判定最后一波。
+     * 这里统计的是【本波刷怪数】，必须用不同名字，否则会覆盖总波数，
+     * 导致 wave >= 刷怪数 时误判成最后一波 → 提前通关。 */
+    r.waveSpawnN = r.spawnLeft; r.waveHiN = 0;
     /* 【表03 FX_WaveStart】波次来袭扫描带：新一波开始时的视觉提示 */
     if (w > 1 && r.efx && r.efx.length < 90) {
       r.efx.push({ t: 'wavestart', x: 0, y: (r.py || 400) - 40, w: this.w || 480, life: 0.7, max: 0.7 });
@@ -539,10 +544,18 @@ const BT = {
     /* 难度倍率：血量/伤害/移速在关卡强度之上再乘一层
      * （恶魔 5.5 倍血 + 2.2 倍伤害，靠的是这里，不是改关卡表） */
     const dm = (this.run && this.run.diffMul) || { hp: 1, dmg: 1, spd: 1 };
+    /* 波次伤害递增（仅无尽）：
+     * 此前无尽只放大血量（mul 每波 +0.35），伤害【完全不随波次变】
+     *   → 怪越来越肉但打人不痛 → 防线永远满血 → 无尽可以无限刷，
+     *     实测 lv25 打到第 50 波仍是 636/636，挑战性为零。
+     * 现在伤害同步递增（每波 +10%，上限 4 倍），无尽才真的会失败。 */
+    const wv = (this.run && this.run.endless)
+      ? Math.min(4, 1 + Math.max(0, (this.run.wave - 1)) * 0.10)
+      : 1;
     const hp = hpOverride != null ? Math.round(hpOverride * dm.hp) : Math.round(d.hp * mul * dm.hp);
     return {
       d, id: d.id, n: d.n, icon: d.icon, img: d.img,
-      x: 0, y: 0, hp, maxHp: hp, spd: d.spd * dm.spd, dmg: d.dmg * dm.dmg, atkR: d.atkR,
+      x: 0, y: 0, hp, maxHp: hp, spd: d.spd * dm.spd, dmg: d.dmg * dm.dmg * wv, atkR: d.atkR,
       ai: d.ai, def: d.def || 0, front: d.front || 0, fly: !!d.fly,
       slow: 0, slowT: 0, burn: 0, burnT: 0, atkCd: 0, dashT: 0, facing: 0,
       dead: false, boss: false,
@@ -836,8 +849,34 @@ const BT = {
       r.spawnT -= dt;
       if (r.spawnT <= 0) {
         r.spawnT = r.spawnGap;
-        const id = r.def.pool[Math.floor(Math.random() * r.def.pool.length)];
-        const d = EX.zombies.find((x) => x.id === id) || EX.zombies[0];
+        /* ---------------- 刷怪取种：分层 + 限流 ----------------
+         * 两个实测出来的逻辑问题：
+         * ① 新手期刷高速怪：1-1 怪物池只有 2 种，其中一种是疾跑僵尸（130 速，
+         *    普通僵尸才 58）。第 1 关第 1 波就有 50% 概率刷出拦不住的高速怪，
+         *    实测装备更好的账号反而更容易输（1-5 恶魔：枪15 存活 / 枪20 团灭）
+         *    —— 难度由运气决定，不是由装备决定。
+         * ② 高威胁怪无比例上限：整波都可能是疾跑/自爆/重甲，一波直接压垮防线。
+         * 现在：第 1~2 章不刷 spd>=110 的怪；单波高威胁怪占比封顶 30%。 */
+        const _CH = r.ch || 1;
+        const _zOf = (id) => EX.zombies.find((x) => x.id === id);
+        const _isHi = (z) => !!z && (z.spd >= 100 || z.dmg >= 26 || z.hp >= 300 || (z.def || 0) >= 0.4);
+        let _pool = (r.def.pool || []).filter((id) => {
+          const z = _zOf(id);
+          if (!z) return false;
+          if (_CH <= 2 && z.spd >= 110) return false;   /* 新手期不刷高速怪 */
+          return true;
+        });
+        if (!_pool.length) _pool = (r.def.pool || []).slice();
+        if (!_pool.length) _pool = ['putong'];
+        let id = _pool[Math.floor(Math.random() * _pool.length)];
+        /* 高威胁限流：本波已刷的高威胁数达上限时，改用普通怪（若有） */
+        const _hiCap = Math.max(1, Math.ceil((r.waveSpawnN || r.spawnLeft || 1) * 0.30));
+        if (_isHi(_zOf(id)) && (r.waveHiN || 0) >= _hiCap) {
+          const _low = _pool.filter((x) => !_isHi(_zOf(x)));
+          if (_low.length) id = _low[Math.floor(Math.random() * _low.length)];
+        }
+        const d = _zOf(id) || EX.zombies[0];
+        if (_isHi(d)) r.waveHiN = (r.waveHiN || 0) + 1;
         const mul = (r.mul || 1) * (r.endless ? 1 + (r.wave - 1) * 0.35 : 1);
         const z = this.mkZ(d, mul); this.randEdge(z);
         r.zombies.push(z); r.spawnLeft--;
