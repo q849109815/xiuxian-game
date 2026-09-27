@@ -336,7 +336,8 @@ r_tavern(p, tab) {
       if (!p.legion) return this.toast('请先加入军团', 'err');
       const today = E.dailyKey();   /* UTC+8 业务日，与签到/礼包限购同一基准（原为本地时区） */
       if (p.lgShopDate !== today) { p.lgShopDate = today; p.lgShopBuy = {}; }
-      p.lgShopBuy = p.lgShopBuy || {};
+      /* 就地防御：污染时对它的赋值失效 → 军团商店每日限购失效 */
+      p.lgShopBuy = E.recObj(p, 'lgShopBuy');
       this.sheet('军团商店', `
         <div class="kv"><span>我的贡献</span><b>${E.fmt(p.legionExp || 0)}</b></div>
         ${(EX.legionShop || []).map((g) => {
@@ -352,7 +353,7 @@ r_tavern(p, tab) {
       $$('[data-lbuy]').forEach((b) => { b.onclick = () => {
         const g = (EX.legionShop || []).find((x) => x.id === b.dataset.lbuy); if (!g) return;
         if ((p.legionExp || 0) < g.cost) return this.toast('贡献不足', 'err');
-        const used = (p.lgShopBuy || {})[g.id] || 0;
+        const used = E.recObj(p, 'lgShopBuy')[g.id] || 0;
         if (g.lim && used >= g.lim) return this.toast('已达每日兑换上限', 'err');
         p.legionExp -= g.cost;
         p.lgShopBuy[g.id] = used + 1;
