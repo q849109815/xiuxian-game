@@ -130,13 +130,30 @@ const E = {
   /* =================================================
    * 关卡（资料关卡表：3 章 10 关）
    * ================================================ */
-  levels() { return EX.levels; },
-  levelDef(id) { return EX.levels.find((x) => x.id === id) || EX.levels[0]; },
-  levelIdx(id) { const i = EX.levels.findIndex((x) => x.id === id); return i < 0 ? 0 : i; },
-  nextLevel(id) {
-    const i = this.levelIdx(id);
-    return i < EX.levels.length - 1 ? EX.levels[i + 1].id : null;
+  levels() { return (EX.levels && EX.levels.length) ? EX.levels : [this._nullLevel()]; },
+  /* 空表兜底：关卡表被清空时 EX.levels[0] 为 undefined，
+   * 而 levelUnlocked / battle.js 随后读 d.unlock / d.waves → 关卡面板与战斗
+   * 整体抛错（实测 levelDef 返回 null）。 */
+  _nullLevel() {
+    return { id: '1-1', ch: 1, n: '（关卡表为空）', waves: 20, pool: ['putong'], per: [10, 15],
+      mul: 1.0, cond: 'clear', rw: { gold: 100 }, unlock: null, scene: 'city' };
   },
+  levelDef(id) { return this.levels().find((x) => x.id === id) || this.levels()[0]; },
+  levelIdx(id) { const i = this.levels().findIndex((x) => x.id === id); return i < 0 ? 0 : i; },
+  nextLevel(id) {
+    const l = this.levels(); const i = this.levelIdx(id);
+    return i < l.length - 1 ? l[i + 1].id : null;
+  },
+  /* 空表兜底：章节表被清空时 EX.chapters[0] 为 undefined，
+   * r_level 读 cd.icon → 关卡选择面板整体崩溃（实测）。 */
+  _nullChapter() {
+    return { id: 1, n: '第一章', icon: '🏙️' };
+  },
+  chapter(id) {
+    const l = this.chapters();
+    return l.find((x) => x.id === id) || l[0];
+  },
+  chapters() { return (EX.chapters && EX.chapters.length) ? EX.chapters : [this._nullChapter()]; },
   /* 关卡是否已解锁：前一关通关 */
   levelUnlocked(p, id) {
     const d = this.levelDef(id);
@@ -145,8 +162,9 @@ const E = {
   },
   /* 当前可挑战的下一关 */
   curLevel(p) {
-    for (const l of EX.levels) if (!p.cleared[l.id]) return l.id;
-    return EX.levels[EX.levels.length - 1].id;
+    const l = this.levels();
+    for (const x of l) if (!p.cleared[x.id]) return x.id;
+    return l[l.length - 1].id;
   },
   /* 真实进度章节：已通关最大章 与 p.curLevel 所在章 取较大者
    * 用途：巡逻收益档位、无尽模式掉落档位等一切"按章节取档"的地方都必须用它，
@@ -214,10 +232,18 @@ const E = {
    * 现在归入 ARRS。 */
   ARRS: ['bag','skins','titles','frames','mercs','chars','gunOwn','friends',
          'friendReq','chat',
-         'sendStTo','tempBuff','logs','mailGot','cdkGot'],
+         'sendStTo','tempBuff','logs','mailGot','cdkGot',
+         /* mail 此前【不在任何列表里】：存档里 p.mail 被写成对象时，
+          * sanitize 完全不管，邮件面板 `(p.mail || []).slice()` 直接抛
+          * "slice is not a function" → 邮件面板整体崩溃。 */
+         'mail'],
   OBJS: ['mat','chips','cleared','codex','equip','gems','build','talents',
          'tasks','stats','giftBuy','evShopBuy','achShopBuy','lgShopBuy',
-         'adUsed','gunStats'],
+         'adUsed','gunStats',
+         /* gunAffix 此前【不在任何列表里】：它是 { 枪id: 词条数组 }，
+          * 被写成字符串/数组时，gunAffixes 里的补齐逻辑与 role/gun/chip
+          * 等 6 个面板全部抛错白屏。归入 OBJS 统一重置为 {}。 */
+         'gunAffix'],
   sanitize(p) {
     if (!p || typeof p !== 'object') return p;
     const N = (v, d) => { const n = Number(v); return isFinite(n) ? n : (d || 0); };
@@ -256,8 +282,26 @@ const E = {
       if (!p[k]) return;
       Object.keys(p[k]).forEach((i) => { const n = Number(p[k][i]); p[k][i] = isFinite(n) ? n : 0; });
     });
+    /* 字符串字段：此前一律 String(p[k])，对象会被转成 "[object Object]"
+     * 直接显示在设置页账号栏（实测 uid/name 被写成对象 → 界面显示
+     * [object Object]）。现在只有 string / number 才转换，其它一律
+     * 置为安全默认，不让乱码透到界面。 */
+    const STRDEF = { name: '指挥官', char: 'C01', skin: 'sk_c01a', curLevel: '1-1', gun: 'W01' };
+    /* gunStats 的元素必须是 { k, v } 对象。
+     * 实测注入 { a: 1 }（数字值）时，affixBonus 里 st.k 读到 undefined，
+     * 武器强化面板直接抛错白屏。这里清掉非对象元素。 */
+    if (p.gunStats && typeof p.gunStats === 'object') {
+      Object.keys(p.gunStats).forEach((s) => {
+        const st = p.gunStats[s];
+        if (!st || typeof st !== 'object' || Array.isArray(st)) delete p.gunStats[s];
+      });
+    }
     ['uid','name','char','skin','curLevel','gun'].forEach((k) => {
-      if (p[k] != null && typeof p[k] !== 'string') p[k] = String(p[k]);
+      const t = typeof p[k];
+      if (p[k] == null) { p[k] = STRDEF[k] !== undefined ? STRDEF[k] : ''; return; }
+      if (t === 'string') return;
+      if (t === 'number' && isFinite(p[k])) { p[k] = String(p[k]); return; }
+      p[k] = STRDEF[k] !== undefined ? STRDEF[k] : '';
     });
     return p;
   },
@@ -320,16 +364,33 @@ const E = {
   /* 判空防御：p 为空时会抛 "Cannot read properties of null (reading 'char')"，
    * 例如军团面板在未加入分支里用 this.P（尚未赋值）调用 E.power(this.P)，
    * 首次渲染即整页崩溃。 */
+  /* 空表兜底：运营在后台把整张表清空 / 热更推送了空数组时，
+   * EX.chars[0] 是 undefined，而 attrs() 随后读 c.hp / c.armor / c.crit
+   * → 角色、武器、芯片、军团、设置共 7 个面板整体抛错白屏（实测）。
+   * 表为空时返回一个同结构的占位对象，保证界面与战斗始终可用。 */
+  _nullChar() {
+    return { id: 'C01', n: '角色', icon: '🧑', img: '', hp: 1000, spd: 1,
+      armor: 0, crit: 0.05, unlockLv: null, unlockTxt: '', desc: '（角色表为空）' };
+  },
   char(p) {
-    if (!p) return EX.chars[0];
-    return EX.chars.find((c) => c.id === p.char) || EX.chars[0];
+    const list = (EX.chars && EX.chars.length) ? EX.chars : null;
+    if (!list) return this._nullChar();
+    if (!p) return list[0];
+    return list.find((c) => c.id === p.char) || list[0];
   },
   charUnlocked(p, id) {
     const c = EX.chars.find((x) => x.id === id); if (!c) return false;
     if (!c.unlockLv) return true;
     return !!p.cleared[c.unlockLv];
   },
-  skin(p) { return EX.skins.find((s) => s.id === p.skin) || EX.skins[0]; },
+  _nullSkin() {
+    return { id: 'sk_c01a', n: '默认外观', char: 'C01', icon: '🧑', img: '', price: 0, bonus: {}, desc: '' };
+  },
+  skin(p) {
+    const list = (EX.skins && EX.skins.length) ? EX.skins : null;
+    if (!list) return this._nullSkin();
+    return list.find((s) => s.id === p.skin) || list[0];
+  },
   skinOf(charId) { return EX.skins.filter((s) => s.char === charId); },
   switchChar(p, id) {
     if (!this.charUnlocked(p, id)) {
@@ -348,7 +409,19 @@ const E = {
   /* =================================================
    * 武器（资料武器表 10 把 + 进阶）
    * ================================================ */
-  gun(p) { return EX.guns.find((g) => g.id === p.gun) || EX.guns[0]; },
+  /* 同 char()：武器表被清空时 EX.guns[0] 为 undefined，
+   * attrs() 读 g.dmg → 角色/武器/芯片/军团 面板整体白屏（实测）。 */
+  _nullGun() {
+    return { id: 'W01', n: '武器', img: '', kind: '步枪', type: '', dmg: 20,
+      rate: 2, mag: 30, reload: 1.5, bullet: 1, pierce: 0, pellets: 1,
+      range: 380, spread: 0, recoil: 0, bspd: 12, icon: '🔫', q: '白',
+      unlockLv: null, slots: 0, crit: 0.05, critDmg: 1.5, dmgMin: 0, dmgMax: 0 };
+  },
+  gun(p) {
+    const list = (EX.guns && EX.guns.length) ? EX.guns : null;
+    if (!list) return this._nullGun();
+    return list.find((g) => g.id === p.gun) || list[0];
+  },
   gunUnlocked(p, id) {
     const g = EX.guns.find((x) => x.id === id); if (!g) return false;
     if (!g.unlockLv) return true;
@@ -595,6 +668,17 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   /* =================================================
    * 基地建筑
    * ================================================ */
+  /* 空表兜底：建筑表被清空时 EX.buildings[0] 为 undefined，
+   * r_base / b_base 读 b.id → 基地建筑四个页签全部崩溃（实测）。 */
+  _nullBuilding() {
+    return { id: 'hospital', n: '建筑', icon: '🏥', desc: '（建筑表为空）',
+      stat: 'hp', per: 0, cost0: 0, grow: 1, max: 1 };
+  },
+  building(tab) {
+    const l = (EX.buildings && EX.buildings.length) ? EX.buildings : null;
+    if (!l) return this._nullBuilding();
+    return l.find((x) => x.id === tab || x.n === tab) || l[0];
+  },
   buildVal(p, stat) {
     const b = EX.buildings.find((x) => x.stat === stat);
     if (!b) return 0;
@@ -1747,6 +1831,20 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     }
     return true;
   },
+  /* 后台热更 / 运营编辑商品时漏填字段的兜底
+   * 实测三类事故（旧行为）：
+   *   cost 缺失 → `p.ach -= undefined` → 玩家成就点变【NaN】，此后一切购买失效
+   *   cost 负数 → `p.ach -= -100` → 玩家买东西还【倒赚 100 点】，可无限刷
+   *   limit 缺失 → `b[k].n >= undefined` 恒为 false → 【无限购买】
+   * 故价格/限购/奖励三处统一在此收紧。 */
+  safePrice(v) { const n = Number(v); return (isFinite(n) && n >= 0) ? n : null; },
+  safeLimit(v, dft) {
+    const n = Number(v);
+    return (isFinite(n) && n > 0) ? n : (dft == null ? 1 : dft);
+  },
+  validGive(g) {
+    return !!(g && typeof g === 'object' && Object.keys(g).length);
+  },
   achShopBuyItem(p, id) {
     const it = (EX.achShop || []).find((x) => x.id === id);
     if (!it) return { ok: false, msg: '商品不存在' };
@@ -1759,9 +1857,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (it.need > 0 && Object.keys(p.cleared || {}).length < it.need) {
       return { ok: false, msg: '需先通关 ' + it.need + ' 关' };
     }
-    if (b[k].n >= it.limit) return { ok: false, msg: '已达限购次数（' + it.limit + '）' };
-    if ((p.ach || 0) < it.cost) return { ok: false, msg: '成就点不足（需 ' + it.cost + '）' };
-    p.ach -= it.cost;
+    const cost = this.safePrice(it.cost);
+    if (cost === null) return { ok: false, msg: '商品价格配置异常，暂不可兑换' };
+    if (!this.validGive(it.give)) return { ok: false, msg: '商品奖励配置异常，暂不可兑换' };
+    const lim = this.safeLimit(it.limit, 1);
+    if (b[k].n >= lim) return { ok: false, msg: '已达限购次数（' + lim + '）' };
+    if ((p.ach || 0) < cost) return { ok: false, msg: '成就点不足（需 ' + cost + '）' };
+    p.ach -= cost;
     b[k].n++; b[k].t = Date.now();
     this.grant(p, it.give);
     return { ok: true, msg: '兑换成功：' + it.n };
@@ -1943,9 +2045,15 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const k = 'es_' + id;
     if (!b[k]) b[k] = { n: 0, t: Date.now() };
     this._perReset(b[k], it.per, it.ev);
-    if (b[k].n >= it.limit) return { ok: false, msg: '已达限购次数（' + it.limit + '）' };
-    if ((p.evToken || 0) < it.cost) return { ok: false, msg: '活动代币不足（需 ' + it.cost + '）' };
-    p.evToken -= it.cost;
+    /* 同 achShopBuyItem：后台漏填 cost/limit/give 会分别导致
+     * 货币变 NaN / 无限购买 / 扣了代币却什么都没发。 */
+    const cost = this.safePrice(it.cost);
+    if (cost === null) return { ok: false, msg: '商品价格配置异常，暂不可兑换' };
+    if (!this.validGive(it.give)) return { ok: false, msg: '商品奖励配置异常，暂不可兑换' };
+    const lim = this.safeLimit(it.limit, 1);
+    if (b[k].n >= lim) return { ok: false, msg: '已达限购次数（' + lim + '）' };
+    if ((p.evToken || 0) < cost) return { ok: false, msg: '活动代币不足（需 ' + cost + '）' };
+    p.evToken -= cost;
     b[k].n++; b[k].t = Date.now();
     this.grant(p, it.give);
     return { ok: true, msg: '兑换成功：' + it.n };
@@ -2347,9 +2455,19 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 渲染时整体抛异常、界面一片空白，且没有任何提示。
      * 非数组时直接重置为空数组并重新生成，不让一个坏字段拖垮整个面板。 */
     if (!Array.isArray(p.gunAffix[gid])) p.gunAffix[gid] = [];
+    /* 清掉无效条目（null / 无 id）。
+     * EX.affixes 被清空时 rollAffixOne 会返回 null，push 进去后
+     * affixBonus 里 af.id 直接抛错 —— 实测连带 role(装备/宝石/皮肤)、
+     * gun(强化)、chip(芯片)、legion 共 6 个面板白屏。这里先过滤。 */
+    p.gunAffix[gid] = p.gunAffix[gid].filter((x) => x && x.id);
     const sl = this.gunSlots(p);
     /* 槽位变化时补齐/裁剪 */
-    while (p.gunAffix[gid].length < sl) p.gunAffix[gid].push(EX.rollAffixOne(false));
+    let guard = 0;
+    while (p.gunAffix[gid].length < sl && guard++ < 64) {
+      const one = EX.rollAffixOne && EX.rollAffixOne(false);
+      if (!one || !one.id) break;                    /* 词条表为空：不再硬塞 null */
+      p.gunAffix[gid].push(one);
+    }
     if (p.gunAffix[gid].length > sl) p.gunAffix[gid].length = sl;
     return p.gunAffix[gid];
   },
@@ -2369,6 +2487,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const b = { dmg: 0, rate: 0, crit: 0, critDmg: 0, pierce: 0, lifesteal: 0,
       mag: 0, reload: 0, er: 0, double: 0, extra: 0 };
     this.gunAffixes(p).forEach((af) => {
+      if (!af || !af.id) return;
       const a = EX.affixOf(af.id); if (!a || !b.hasOwnProperty(a.k)) return;
       if (a.stack) b[a.k] += af.v; else b[a.k] = Math.max(b[a.k], af.v);
     });
