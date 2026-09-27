@@ -1710,6 +1710,13 @@ function bindAll() {
   bindJoystick(); bindKeys();
 }
 
+/* 图片兜底：资源 404 时浏览器会显示裂图占位，界面上看就是"图标没有"。
+ * 统一捕获后隐藏损坏图片，回退到父级已有的 emoji / 文字。 */
+document.addEventListener('error', (e) => {
+  const t = e.target;
+  if (t && t.tagName === 'IMG') { t.style.display = 'none'; t.dataset.broken = '1'; }
+}, true);
+
 window.addEventListener('DOMContentLoaded', async () => {
   bindAll();
   await MAIN.boot();
