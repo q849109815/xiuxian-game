@@ -775,7 +775,7 @@ r_tavern(p, tab) {
       <span class="sub" style="color:var(--yel);font-size:13px;font-weight:800">${E.fmt(E.power(p))}</span></div>
       <div style="display:flex;align-items:center;gap:8px">
         <div class="zav">🧟</div>
-        <div class="grid4" style="flex:1">${(p.bag || []).slice(0, 4).map((c) =>
+        <div class="grid4" style="flex:1">${(p.bag || []).filter((c)=>c&&c.id).slice(0, 4).map((c) =>
           `<div class="gcell"><div class="gi" style="color:${EX.qColor[c.q]}">🔲</div>
            <div class="gn" style="color:${EX.qColor[c.q]}">${c.q}品</div></div>`).join('')
           || '<div class="lbl">未装芯片</div>'}</div>
@@ -792,8 +792,8 @@ r_tavern(p, tab) {
         return c ? `<button class="btn n sm" data-chipoff="1" style="width:100%;margin-top:8px">卸下当前槽位芯片</button>`
                  : '<div class="lbl" style="margin-top:8px">选中槽位为空，无需卸下</div>'; })()}</div></div>
       <div class="card"><div class="card-t">可装备芯片</div>
-      ${(p.bag || []).length ? (p.bag || []).map((c) => `<div class="item">
-        <div class="ic" style="border:1.5px solid ${EX.qColor[c.q]}">
+      ${(p.bag || []).length ? (p.bag || []).filter((c) => c && c.id).map((c) => `<div class="item">
+        <div class="ic" style="border:1.5px solid ${EX.qColor[c.q] || '#b9c4d4'}">
           <img src="assets/icon/i_chip.jpg" style="width:30px;height:30px;border-radius:6px;object-fit:cover"
                onerror="this.outerHTML='🔲'"></div>
         <div class="info"><div class="nm" style="color:${EX.qColor[c.q]}">${E.chipName(c)}</div></div>
@@ -899,9 +899,14 @@ r_tavern(p, tab) {
   /* ---------- 任务（截图：主线/日常/成就 + 黄色「前往任务」） ---------- */
   r_task(p, tab) {
     const DONE = '✔';
+    /* 任务表兜底：EX.tasks 被清空（后台误操作/空文件）时，
+     * EX.tasks.main / achieve 为 undefined，下面 .map/.filter 直接抛错，
+     * 任务面板整体白屏。这里统一取一份安全副本。 */
+    const T = EX.tasks || {};
+    const _T = { main: T.main || [], daily: T.daily || [], weekly: T.weekly || [], achieve: T.achieve || [] };
     if (tab === '周常') {
       return `<div class="card"><div class="card-t">周常任务 <span class="sub">每周刷新</span></div>
-        ${(EX.tasks.weekly || []).map((t) => {
+        ${(_T.weekly || []).map((t) => {
           const cur = E.taskProg(p, t), need = t.cond.v || t.need || 1, done = cur >= need;
           return `<div class="zrow">
             <div class="zav">🏆</div>
@@ -914,7 +919,7 @@ r_tavern(p, tab) {
     }
     if (tab === '日常') {
       return `<div class="card"><div class="card-t">日常任务 <span class="sub">每日刷新</span></div>
-        ${EX.tasks.daily.map((t) => {
+        ${_T.daily.map((t) => {
           const need = t.need || (t.cond ? t.cond.v : 1);
           const cur = E.taskProg(p, t), done = cur >= need;
           return `<div class="zrow">
@@ -928,12 +933,12 @@ r_tavern(p, tab) {
     }
     if (tab === '成就') {
       return `<div class="card"><div class="card-t">成就
-        <span class="sub">${EX.tasks.achieve.filter((a) => E.taskDone(p, a)).length}/${EX.tasks.achieve.length}</span></div>
+        <span class="sub">${_T.achieve.filter((a) => E.taskDone(p, a)).length}/${_T.achieve.length}</span></div>
         <div class="kv"><span>成就点</span><b style="color:var(--yel)">${p.ach || 0}</b></div>
         <button class="btn o blk" id="toAchShop">🔄 前往成就商店</button>
       </div>
       <div class="card"><div class="card-t">成就列表</div>
-        ${EX.tasks.achieve.map((a) => {
+        ${_T.achieve.map((a) => {
           const done = E.taskDone(p, a);
           const got = (p.achGot || {})[a.id] || done;
           const claimed = (p.tasks.achieveClaimed || []).indexOf(a.id) >= 0;
@@ -949,7 +954,7 @@ r_tavern(p, tab) {
     /* 主线（截图：清除僵尸/通关关卡/收集材料/领取奖励 + 紫宝石金币奖励） */
     return `<div class="card"><div class="card-t">主线任务
       <span class="sub">第 ${p.ch || 1} 章</span></div>
-      ${EX.tasks.main.map((t) => {
+      ${_T.main.map((t) => {
         const need = t.need || (t.cond && t.cond.t === 'clearLv' ? 1 : (t.cond ? t.cond.v : 1));
         const cur = E.taskProg(p, t), done = cur >= need;
         return `<div class="zrow">
@@ -1789,8 +1794,11 @@ r_tavern(p, tab) {
   /* ---------- 关卡选择 ---------- */
   r_level(p) {
     const ch = this.curChapter || E.chapterOf(E.curLevel(p));
-    const cd = EX.chapters.find((x) => x.id === ch) || EX.chapters[0];
-    const list = EX.levels.filter((x) => x.ch === ch);
+    const cd = E.chapter(ch)
+      /* 章节表被清空时上面两个都是 undefined，读 cd.icon 直接抛错，
+       * 关卡选择页整体白屏。占位后至少能进界面。 */
+      || { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️' };
+    const list = E.levels().filter((x) => x.ch === ch);
     return `<div class="card"><div class="card-t">${cd.icon} ${cd.n}</div>
       ${list.map((l) => {
         const lock = !E.levelUnlocked(p, l.id);
@@ -1806,7 +1814,7 @@ r_tavern(p, tab) {
             + (st ? `<button class="btn sm o" data-sw="${l.id}" style="margin-top:4px">扫荡</button>` : '')}</div></div>`;
       }).join('')}</div>
       <div class="card"><div class="card-t">章节</div>
-      <div class="lvgrid">${EX.chapters.map((c) => `<button class="lvc ${c.id === ch ? 'cur' : ''}" data-ch="${c.id}">
+      <div class="lvgrid">${E.chapters().map((c) => `<button class="lvc ${c.id === ch ? 'cur' : ''}" data-ch="${c.id}">
         <i style="font-size:17px;font-style:normal;display:block">${c.icon}</i><b style="font-size:9px">${c.n.split(' · ')[0]}</b></button>`).join('')}</div></div>
       <div class="card"><div class="card-t">无尽模式</div>
       ${E.endlessUnlocked(p)
@@ -1876,7 +1884,10 @@ r_tavern(p, tab) {
   /* ---------- 基地建筑 ---------- */
   r_base(p, tab) {
     /* tab 既可能是建筑 id（程序调用）也可能是中文名（界面 tab） */
-    const b = EX.buildings.find((x) => x.id === tab || x.n === tab) || EX.buildings[0];
+    const b = E.building(tab)
+      /* 建筑表被清空时上面两个都是 undefined，读 b.id 直接抛错，
+       * 基地 4 个页签全部白屏。这里给一个占位，保证界面始终可用。 */
+      || { id: 'hospital', n: '医疗站', icon: '🏥', stat: 'hp', per: 0.05, max: 20, desc: '建筑表为空' };
     const cur = p.build[b.id] || 1;
     const cost = E.buildCost(p, b.id);
     /* 仓库（stat==='gold'）此前显示写死的 offline(120)×等级，与实际产出不符 */
@@ -1898,7 +1909,10 @@ r_tavern(p, tab) {
     /* 升级必须按建筑 id 调用：
      * tab 现在是中文名（"军械库"），而 E.upBuild 内部按 id 匹配，
      * 直接传 tab 会找不到建筑 → 点了升级毫无反应。 */
-    const b = EX.buildings.find((x) => x.id === tab || x.n === tab) || EX.buildings[0];
+    const b = E.building(tab)
+      /* 建筑表被清空时上面两个都是 undefined，读 b.id 直接抛错，
+       * 基地 4 个页签全部白屏。这里给一个占位，保证界面始终可用。 */
+      || { id: 'hospital', n: '医疗站', icon: '🏥', stat: 'hp', per: 0.05, max: 20, desc: '建筑表为空' };
     const u = $('#buUp'); if (u) u.onclick = () => {
       const r = E.upBuild(p, b.id); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('base', tab); this.home(); }
     };
