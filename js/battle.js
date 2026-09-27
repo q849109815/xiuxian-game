@@ -356,7 +356,13 @@ const BT = {
   start(p, levelNo, opt = {}) {
     /* 表37 埋点：level_start */
     try { OPS.track('level_start', { lv: levelNo, pw: E.power(p) }); } catch (e) {}
-    const def = this.levelDef(levelNo);
+    /* 必须把玩家 p 传进去：levelDef 内部靠它算无尽模式的章节 ch 与收益倍率。
+     * 此前漏传 → levelDef 里 `p ? ... : 1` 全部走兜底，实测（玩家在 10-10）：
+     *   不传 p：ch=1   → 掉落表按第 1 章过滤，后期稀有金属/角色碎片永远掉不出来
+     *   传   p：ch=10  → 掉落档位随进度正确提升
+     * 后果是「无尽模式越打越深，掉落却永远停在第 1 章水平」，
+     * 玩家打到第 50 波拿到的还是新手材料。 */
+    const def = this.levelDef(levelNo, p);
     const a = E.attrs(p);
     /* 表16：战斗外使用的消耗品，在开局统一生效
      * 【注意】不能在这里调：此时 this.run 还是【上一局的残骸或未定义】，
@@ -439,7 +445,7 @@ const BT = {
        * 在 battle.js 里零引用，选了只涨等级数字，战斗效果为零。 */
       zones: [],
       skills: {}, mods: this.emptyMods(),
-      lv: 1, xp: 0, xpNeed: 18,
+      lv: 1, xp: 0, xpNeed: 18, killXp: 0,   /* killXp：本局击杀经验基数，结算角色经验用 */
       gold: 0, kills: 0, time: 0, over: false,
       reviveLeft: a.revive, novaT: 0, auraT: 0,
       /* 玩家护甲：此前 run 里根本没有这个字段，
@@ -1024,6 +1030,8 @@ const BT = {
        * 此前 bulletSpd 拼错导致 vx=NaN，而所有比较对 NaN 恒为 false，
        * 子弹既不出界也不被剔除，还会“命中”僵尸 —— 静默且极难排查。 */
       if (!isFinite(b.x) || !isFinite(b.y) || !isFinite(b.vx) || !isFinite(b.vy)) { b.life = 0; continue; }
+      /* 记录本帧起点，供扫掠判定使用（见下方命中检测） */
+      b.px0 = b.x; b.py0 = b.y;
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.x < -20 || b.x > this.W + 20 || b.y < -20 || b.y > this.H + 20) b.life = 0;
       if (b.life <= 0) continue;
@@ -1045,7 +1053,20 @@ const BT = {
       for (const z of r.zombies) {
         if (z.dead) continue;
         if (b.hit.indexOf(z) >= 0) continue;
-        if (Math.hypot(z.x - b.x, z.y - b.y) > 18) continue;
+        /* 命中判定：点判定 → 扫掠判定（线段-圆最短距离）
+         * 严重BUG：原写法只判断「子弹当前点」到僵尸中心的距离是否 ≤18px，
+         *   而子弹每帧位移 = 弹速 × dt。一旦位移超过判定直径(36px)，
+         *   子弹会在两帧之间「跨过」僵尸，两端都不满足距离条件 → 直接穿过去。
+         * 实测（狙击枪 bspd=1400，僵尸冻结移动，随机距离 60~360px）：
+         *   60fps 位移 23px → 命中率 100%
+         *   30fps 位移 47px → 命中率 33%
+         *   20fps 位移 70px → 命中率 0%（完全打不中）
+         *   15fps 位移 93px → 命中率 0%
+         * 也就是说：手机一旦掉帧，激光枪(1600)/电磁炮(1500)/狙击枪(1400)
+         *   全部变成「打不中的废枪」，玩家只会以为这把枪坏了。
+         * 现在改用「本帧起点→终点」这条线段到僵尸中心的最短距离，
+         *   无论帧率多低、弹速多快都不会漏判。 */
+        if (this.segDist(b.px0, b.py0, b.x, b.y, z.x, z.y) > this.hitR(z)) continue;
         b.hit.push(z);
         let dmg = b.dmg;
         /* z.def 已统一在 hurt() 内应用（对所有伤害来源生效），此处不再重复 */
@@ -1596,6 +1617,26 @@ const BT = {
     });
   },
 
+  /* 线段 (x1,y1)-(x2,y2) 到点 (px,py) 的最短距离
+   * 用于子弹的扫掠命中判定，避免高速子弹在两帧之间穿过目标 */
+  segDist(x1, y1, x2, y2, px, py) {
+    if (!isFinite(x1) || !isFinite(y1)) return Math.hypot(px - x2, py - y2);
+    const dx = x2 - x1, dy = y2 - y1;
+    const l2 = dx * dx + dy * dy;
+    if (l2 <= 0) return Math.hypot(px - x2, py - y2);
+    let t = ((px - x1) * dx + (py - y1) * dy) / l2;
+    t = t < 0 ? 0 : (t > 1 ? 1 : t);
+    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+  },
+
+  /* 命中半径：大体型僵尸（BOSS/精英）判定圈更大，符合视觉 */
+  hitR(z) {
+    if (!z) return 18;
+    if (z.isBoss) return 34;
+    if (z.d && z.d.elite) return 24;
+    return 18;
+  },
+
   /* ---------------- 伤害 ---------------- */
   hurt(z, dmg, crit, src) {
     const r = this.run;
@@ -1724,6 +1765,12 @@ const BT = {
      * 而击杀这条主要经验来源走的是 gainXp(z.xp)，完全没乘天赋
      * → 实测天赋 Lv0 与 Lv20 击杀经验都是 4，点满 20 级毫无收益。 */
     this.gainXp(Math.max(1, Math.round((z.xp || 2) * (1 + E.talentVal(this.P, 'xp')))));
+    /* 累计「本局击杀经验基数」供结算时的角色经验使用。
+     * 此前 main.js 结算写死 `kills * 4`：不管杀的是第 1 章普通僵尸
+     * 还是第 10 章 BOSS、也不管关卡倍率，每只一律 4 点 ——
+     * 实测第 10 章通关 300 杀只给 1200 经验，而 Lv20 升一级要 12302，
+     * 等于刷十几关才升 1 级，玩家完全没有推进高关卡的动力。 */
+    r.killXp = (r.killXp || 0) + Math.max(1, Math.round(z.xp || 0));
     if (z.d.split) {
       const dd = EX.zombies.find((x) => x.id === 'xiaozombie');
       for (let i = 0; i < z.d.split; i++) {
@@ -1846,10 +1893,15 @@ const BT = {
       r.xpNeed = Math.round(r.xpNeed * 1.28 + 6);
       /* 【表03 FX_LevelUp】升级光柱：此前升级只有弹窗，角色身上没有任何光效 */
       if (r.efx && r.efx.length < 90) r.efx.push({ t: 'levelup', x: r.px, y: r.py, life: 0.9, max: 0.9 });
-      /* 升级弹窗（截图52）+ 奖励 R币 */
-      if (window.UI && UI.showLvUp) UI.showLvUp(r.lv, 200);
+      /* 升级弹窗（截图52）+ 奖励金币
+       * 奖励此前写死 200，与关卡收益倍率脱钩：
+       * 第 10 章 rwMul≈131，击杀一只普通僵尸已有 395 金币，
+       * 升一级却只给 200 —— 后期「升级」奖励还不如杀半只怪，
+       * 局内升级的正反馈完全消失。现在按本关 rwMul 同步缩放。 */
+      const lvRw = Math.round(200 * Math.max(1, Number(r.rwMul) || 1));
+      if (window.UI && UI.showLvUp) UI.showLvUp(r.lv, lvRw);
       if (window.UI && UI.guideTrigger) UI.guideTrigger('firstUpgrade');
-      if (this.P) { this.P.gold = (this.P.gold || 0) + 200; }
+      if (this.P) { this.P.gold = (this.P.gold || 0) + lvRw; }
       /* 严重BUG：此前每升一级立刻 offerSkills()，
        * 一次吃掉大量经验连升 5 级就会连调 5 次：
        *  ① this._picks 被后一次覆盖 → 玩家只能看到最后 1 组候选，
