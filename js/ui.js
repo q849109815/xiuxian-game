@@ -1593,7 +1593,7 @@ r_tavern(p, tab) {
         ${(EX.rankRewards || []).filter((x) => x.board === b).map((rw) => {
           const rk = myRank[b] || 0;
           const inRank = rk >= rw.lo && rk <= rw.hi;
-          const got = (p.rankRwGot || {})['rk_' + b + '_' + rw.id];
+          const got = (p.rankRwGot || {})[E.rankRwKey(p, b, rw)];
           return `<div class="zrow">
             <div class="zav">🏅</div>
             <div class="zi"><b>${rw.rank}</b><span>${rw.cyc}结算 · ${Object.keys(rw.rw).map((k) => E.itemName(k)).join('、')}</span></div>
