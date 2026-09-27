@@ -79,13 +79,13 @@ const EX = {
     { id: 'W06', n: '加特林', img: 'assets/icon/w_gatling.jpg', kind: '主', type: '重机枪', dmg: 20, rate: 16, mag: 120, reload: 4.0,
       bullet: '普通弹', pierce: 0, pellets: 1, range: 35, spread: 2, recoil: '高', bspd: 850, icon: '⚙️', q: '紫', unlockLv: '3-1', slots: 3, crit: 0.05, critDmg: 1.5, dmgMin: 17, dmgMax: 23},
     { id: 'S01', n: '手雷', img: 'assets/icon/w_handgrenade.jpg', kind: '副', type: '投掷', dmg: 150, rate: 0.6, mag: 2, reload: 2.0,
-      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 0.8, er: 78, icon: '🧨', q: '蓝', unlockLv: '1-3', slots: 2, crit: 0.08, critDmg: 1.5, dmgMin: 120, dmgMax: 180},
+      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 0.8, er: 78, range: 30, icon: '🧨', q: '蓝', unlockLv: '1-3', slots: 2, crit: 0.08, critDmg: 1.5, dmgMin: 120, dmgMax: 180},
     { id: 'S02', n: '燃烧瓶', img: 'assets/icon/w_molotov.jpg', kind: '副', type: '投掷', dmg: 80, rate: 0.6, mag: 2, reload: 2.0,
-      bullet: '燃烧弹', pierce: 0, pellets: 1, burn: 0.7, icon: '🔥', q: '蓝', unlockLv: '2-2', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 60, dmgMax: 100},
+      bullet: '燃烧弹', pierce: 0, pellets: 1, burn: 0.7, range: 28, icon: '🔥', q: '蓝', unlockLv: '2-2', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 60, dmgMax: 100},
     { id: 'S03', n: '地雷', img: 'assets/icon/w_mine.jpg', kind: '副', type: '布置', dmg: 200, rate: 0.3, mag: 3, reload: 3.0,
-      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 1.0, er: 70, icon: '💣', q: '紫', unlockLv: '3-2', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 160, dmgMax: 240},
+      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 1.0, er: 70, range: 20, icon: '💣', q: '紫', unlockLv: '3-2', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 160, dmgMax: 240},
     { id: 'S04', n: '电击棒', img: 'assets/icon/w_taser.jpg', kind: '副', type: '近战', dmg: 90, rate: 1.2, mag: 1, reload: 0.5,
-      bullet: '近战', pierce: 0, pellets: 1, icon: '⚡', q: '绿', unlockLv: '2-3', slots: 2, crit: 0.08, critDmg: 2.0, dmgMin: 70, dmgMax: 110},
+      bullet: '近战', pierce: 0, pellets: 1, range: 14, icon: '⚡', q: '绿', unlockLv: '2-3', slots: 2, crit: 0.08, critDmg: 2.0, dmgMin: 70, dmgMax: 110},
   ],
   /* 武器进阶：每 5 级进阶一次，品质 白→绿→蓝→紫→橙 */
   gunAdvance: [
@@ -627,6 +627,69 @@ const EX = {
     { t: '配音', pre: 'VO_', rule: 'VO_角色/用途_台词ID', eg: 'VO_NPC_001', dir: 'Audio/VO', pr: 'P1' },
     { t: '配置表', pre: 'DT_', rule: 'DT_表名', eg: 'DT_WeaponTable', dir: 'Data/Config', pr: 'P0' },
   ],
+
+  /* =====================================================
+   * 【表03_特效帧】FX 帧动画配置
+   * 此前全项目没有任何特效帧表 —— 战斗里的爆炸/命中/元素反馈
+   * 全是 draw 阶段用 canvas 图元现画的，美术无法替换、无法复用。
+   * 现在把每种特效抽象成「帧序列」配置项：帧数 / 单帧时长 / 尺寸 /
+   * 混合模式 / 素材路径。素材缺失时自动回退到 canvas 现画，不会开天窗。
+   * =================================================== */
+  VFX: [
+    { id: 'FX_Fire', n: '火焰', frames: 8, fps: 18, size: 96, blend: 'screen', loop: true, dir: 'Art/VFX/FX_Fire', pr: 'P0' },
+    { id: 'FX_Frost', n: '冰霜', frames: 6, fps: 12, size: 88, blend: 'screen', loop: false, dir: 'Art/VFX/FX_Frost', pr: 'P0' },
+    { id: 'FX_Explode', n: '爆炸', frames: 10, fps: 24, size: 128, blend: 'screen', loop: false, dir: 'Art/VFX/FX_Explode', pr: 'P0' },
+    { id: 'FX_Hit', n: '命中', frames: 4, fps: 30, size: 48, blend: 'screen', loop: false, dir: 'Art/VFX/FX_Hit', pr: 'P0' },
+    { id: 'FX_ChainLightning', n: '闪电链', frames: 6, fps: 30, size: 64, blend: 'screen', loop: false, dir: 'Art/VFX/FX_ChainLightning', pr: 'P1' },
+    { id: 'FX_Muzzle', n: '枪口火光', frames: 3, fps: 60, size: 40, blend: 'screen', loop: false, dir: 'Art/VFX/FX_Muzzle', pr: 'P0' },
+    { id: 'FX_Burn_Dot', n: '灼烧持续', frames: 6, fps: 10, size: 72, blend: 'screen', loop: true, dir: 'Art/VFX/FX_Burn', pr: 'P1' },
+    { id: 'FX_Chill_Aura', n: '寒霜光环', frames: 6, fps: 10, size: 72, blend: 'screen', loop: true, dir: 'Art/VFX/FX_Chill', pr: 'P1' },
+    { id: 'FX_Heal', n: '治疗', frames: 6, fps: 16, size: 64, blend: 'screen', loop: false, dir: 'Art/VFX/FX_Heal', pr: 'P2' },
+    { id: 'FX_LevelUp', n: '升级光效', frames: 8, fps: 20, size: 96, blend: 'screen', loop: false, dir: 'Art/VFX/FX_LevelUp', pr: 'P2' },
+  ],
+
+  /* =====================================================
+   * 【表04_配音】VO 台词配置
+   * 此前全项目零配音：所有反馈只有合成音效，没有任何人声台词。
+   * 现在按「触发场景」登记台词条目，含文案、时长、语种、素材路径。
+   * 素材缺失时自动回退：用表41的合成音效 + 屏幕字幕，不会静默无声。
+   * =================================================== */
+  VO: [
+    { id: 'VO_001', n: '进入战斗', txt: '防线就位，准备迎敌！', dur: 1.6, lang: 'zh', dir: 'Audio/VO/VO_001', sfx: 'start', src: '', pr: 'P1' },
+    { id: 'VO_002', n: '波次开始', txt: '新一波尸潮来了！', dur: 1.4, lang: 'zh', dir: 'Audio/VO/VO_002', sfx: 'wave', src: '', pr: 'P1' },
+    { id: 'VO_003', n: 'BOSS出现', txt: '警告，巨型目标靠近！', dur: 2.0, lang: 'zh', dir: 'Audio/VO/VO_003', sfx: 'boss', src: '', pr: 'P0' },
+    { id: 'VO_004', n: '防线告急', txt: '防线撑不住了，快增援！', dur: 1.8, lang: 'zh', dir: 'Audio/VO/VO_004', sfx: 'hurt', src: '', pr: 'P0' },
+    { id: 'VO_005', n: '灼烧警告', txt: '火焰僵尸，防线在燃烧！', dur: 1.7, lang: 'zh', dir: 'Audio/VO/VO_005', sfx: 'burn', src: '', pr: 'P1' },
+    { id: 'VO_006', n: '寒霜警告', txt: '寒气入侵，射击变慢了！', dur: 1.7, lang: 'zh', dir: 'Audio/VO/VO_006', sfx: 'chill', src: '', pr: 'P1' },
+    { id: 'VO_007', n: '战斗胜利', txt: '守住了，干得漂亮！', dur: 1.6, lang: 'zh', dir: 'Audio/VO/VO_007', sfx: 'win', src: '', pr: 'P1' },
+    { id: 'VO_008', n: '战斗失败', txt: '防线失守，撤退重整！', dur: 1.8, lang: 'zh', dir: 'Audio/VO/VO_008', sfx: 'lose', src: '', pr: 'P1' },
+    { id: 'VO_009', n: '武器升级', txt: '武器强化完成，火力提升。', dur: 1.5, lang: 'zh', dir: 'Audio/VO/VO_009', sfx: 'upgrade', src: '', pr: 'P2' },
+    { id: 'VO_010', n: '抽奖稀有', txt: '检测到高稀有度物资！', dur: 1.7, lang: 'zh', dir: 'Audio/VO/VO_010', sfx: 'rare', src: '', pr: 'P2' },
+  ],
+
+  /* =====================================================
+   * 武器射程换算：表44 的 range 是「米」级设计值（15~80），
+   * 此前 attrs() 硬编码 380 → 全场无限射程，六把枪手感完全一样，
+   * 散弹枪和狙击枪除了伤害数值没有任何区别。
+   *
+   * 换算基准（按现有难度标定，不是拍脑袋）：
+   *   ① 下限必须 > 远程僵尸最大攻击距离（表内 atkR 最大 210），
+   *      否则该僵尸永远走不进射程 → 打不死 → 该波永远清不完 → 卡关。
+   *      最短的近战电击棒 14 → 253px，留出 43px 安全余量。
+   *   ② 上限 = 战场纵深（约 640px），狙击 80 → 642px 覆盖全场，
+   *      保证狙击枪「全场点名」的定位不变。
+   *   ③ 线性插值：px = RANGE_BASE + range * RANGE_STEP
+   * =================================================== */
+  /* 表03 特效帧查询：美术按 dir 规则放入帧序列后自动生效；
+   * 未放素材时由 battle.js 用 canvas 图元按同一份参数（size/fps/loop）回退绘制。 */
+  vfxDef(id) {
+    const t = Array.isArray(this.VFX) ? this.VFX : [];
+    return t.find((x) => x.id === id) || null;
+  },
+  RANGE_BASE: 170,
+  RANGE_STEP: 5.9,
+  /* 射程内无目标超过该秒数 → 临时解除射程限制（防卡关兜底） */
+  RANGE_STALL_GUARD: 2.5,
 
   /* =====================================================
    * 【30_武器词条池】AF01~AF12，按品质分档
