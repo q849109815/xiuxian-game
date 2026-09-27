@@ -2169,7 +2169,10 @@ r_tavern(p, tab) {
         <div class="card"><div class="card-t">自定义加速地址</div>
         <textarea id="setEps" rows="2" placeholder="https://xxx.workers.dev"
           style="width:100%;padding:8px;border-radius:8px;background:rgba(10,16,28,.85);border:1px solid var(--line);color:var(--txt);font-size:11px;outline:none">${(GH.extra || []).join('\n')}</textarea>
-        <button class="btn c blk" id="setSaveEps">保存加速地址</button></div>`;
+        <button class="btn c blk" id="setSaveEps">保存加速地址</button>
+        <div class="lbl" style="margin-top:6px;line-height:1.6">每行填一个地址，保存后优先走这些通道。<br>
+        推荐自建 Cloudflare Worker（免费，10 万次/天）：令牌存在云端不下发到玩家浏览器，还能缓存省配额。做法见仓库内 <b>Cloudflare代理-照着做.md</b>。<br>
+        <span style="opacity:.75">注意：地址要填域名根（如 https://xxx.workers.dev），不要带 /https://api.github.com 后缀。</span></div></div>`;
     }
     if (tab === '数值') {
       return `<div class="card"><div class="card-t">伤害公式 <span class="sub">资料 10 条</span></div>
