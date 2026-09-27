@@ -96,6 +96,23 @@ const SND = {
         this.noise(0.16, { freq: 500, freqTo: 90, vol: 0.2 });
         this.tone(120, 0.16, { type: 'sine', to: 50, vol: 0.14 });
         break;
+      case 'start':                       // 表04 VO_001 进入战斗：低沉号角
+        this.tone(160, 0.35, { type: 'sawtooth', to: 240, vol: 0.12 });
+        setTimeout(() => this.tone(240, 0.3, { type: 'triangle', vol: 0.1 }), 180);
+        break;
+      case 'rare':                        // 表04 VO_010 稀有物品：三连上行
+        this.tone(660, 0.09, { type: 'triangle', vol: 0.13 });
+        setTimeout(() => this.tone(880, 0.09, { type: 'triangle', vol: 0.13 }), 90);
+        setTimeout(() => this.tone(1320, 0.16, { type: 'triangle', vol: 0.15 }), 180);
+        break;
+      case 'burn':                        // 表04 VO_005 火焰僵尸灼烧：低频嘶嘶燃烧
+        this.noise(0.5, { freq: 1200, freqTo: 300, vol: 0.2, filter: 'bandpass' });
+        this.tone(220, 0.4, { type: 'sawtooth', to: 120, vol: 0.1 });
+        break;
+      case 'chill':                       // 表04 VO_006 冰霜僵尸寒气：清脆冰裂下行
+        this.tone(1600, 0.12, { type: 'triangle', to: 900, vol: 0.14 });
+        setTimeout(() => this.tone(1100, 0.16, { type: 'triangle', to: 500, vol: 0.12 }), 110);
+        break;
       case 'explode':                     // 爆炸
         this.noise(0.55, { freq: 900, freqTo: 60, vol: 0.42, filter: 'lowpass' });
         this.tone(60, 0.5, { type: 'sine', to: 28, vol: 0.3 });
@@ -269,3 +286,52 @@ const SND = {
 })();
 
 window.SND = SND;
+
+
+/* ============================================================
+ * 表04_配音（VO）运行时
+ * 此前全项目零配音：EX.VO 表根本不存在，所有反馈只有合成音效，
+ * 没有任何台词/字幕，运营也无法替换或新增。
+ * 现在按「触发场景」登记台词，并在这里提供统一播放入口：
+ *   ① 若后台/美术提供了真实配音素材（EX.VO[].src）→ 播放人声
+ *   ② 否则回退：播合成音效 + 出字幕（表04 的 txt 字段）
+ * 素材缺失不会静默无声，也不会报错。
+ * ============================================================ */
+(function () {
+  const VO = {
+    on: true,
+    cache: {},
+    def(id) {
+      const t = (typeof EX !== 'undefined' && Array.isArray(EX.VO)) ? EX.VO : [];
+      return t.find((x) => x.id === id) || null;
+    },
+    /* 配音开关（设置页「音频」里可关） */
+    setOn(v) { this.on = !!v; try { localStorage.setItem('zb_vo_on', v ? '1' : '0'); } catch (e) {} },
+    loadOn() { try { this.on = localStorage.getItem('zb_vo_on') !== '0'; } catch (e) {} },
+    say(id, opt) {
+      const d = this.def(id);
+      if (!d || !this.on) return false;
+      try {
+        /* ① 真实配音素材（美术按表04 dir 规则放入后自动生效） */
+        if (d.src) {
+          let a = this.cache[id];
+          if (!a) { a = new Audio(d.src); a.preload = 'auto'; this.cache[id] = a; }
+          a.currentTime = 0;
+          a.volume = (opt && opt.vol != null) ? opt.vol : 0.85;
+          const pr = a.play();
+          if (pr && pr.catch) pr.catch(() => {});
+        } else if (d.sfx && window.SND && SND.ctx && SND.sfxOn) {
+          /* ② 回退：合成音效 */
+          SND.play(d.sfx);
+        }
+      } catch (e) {}
+      /* ③ 字幕：无论有没有人声都出，保证信息可达 */
+      try {
+        if (window.UI && UI.subtitle) UI.subtitle(d.txt || '', Number(d.dur) || 1.6);
+      } catch (e) {}
+      return true;
+    },
+  };
+  VO.loadOn();
+  if (typeof window !== 'undefined') window.VO = VO;
+})();
