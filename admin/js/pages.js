@@ -1652,11 +1652,11 @@ const PAGES = {
            * 于是「文案表」永远渲染成一张空表，运营进来什么都看不到。 */
           const I18N = (EX && EX.I18N) || {};
           const keys = Object.keys(I18N);
-          body = `<div class="fr"><label class="wide">当前语言</label><select id="lg_s">
+          body = `<div class="fr"><label class="wide">当前语言</label><select id="lg_s" disabled>
               ${L.map((x) => `<option value="${U.esc(x.k)}"${x.k === cur ? ' selected' : ''}>${U.esc(x.n || x.k)}</option>`).join('')}
             </select></div>
-            <div class="btns"><button class="btn pri" data-a="lgSave">💾 保存语言设置</button></div>
-            <h3 style="font-size:13px;margin:16px 0 8px">文案表<span class="tag">${keys.length} 条 · 改完点「下发」实时生效</span></h3>
+            <div class="hint">本游戏仅支持简体中文（其它语种已下线），下方文案表只维护中文。</div>
+            <h3 style="font-size:13px;margin:16px 0 8px">文案表<span class="tag">${keys.length} 条 · 改完点「保存并下发」实时生效</span></h3>
             ${keys.length ? this.table(['ID'].concat(L.map((x) => x.n || x.k)).concat(['操作']),
               keys.map((k) => [U.esc(k)].concat(L.map((x) => U.esc(String((I18N[k] || {})[x.k] || ''))))
                 .concat([`<button class="btn sm" data-a="txEdit" data-id="${U.esc(k)}">编辑</button>`])))
@@ -1685,10 +1685,10 @@ const PAGES = {
           }
         },
         lgSave() {
-          const k = this.val('#lg_s');
-          if (window.OPS && OPS.setLang) OPS.setLang(k);
-          AUDIT.log('切换语言', k, '');
-          this.toast('已保存（游戏端语言切换仍在开发中）', 'warn');
+          /* 单语言版本：语言选择器已禁用，这里只做兜底提示 */
+          if (window.OPS && OPS.setLang) OPS.setLang('zh');
+          AUDIT.log('切换语言', 'zh', '');
+          this.toast('本游戏仅支持简体中文', 'warn');
         },
         txEdit(t) {
           const id = t.dataset.id;
@@ -1706,7 +1706,16 @@ const PAGES = {
                * 会覆盖 EX.I18N（该键已存在），于是后台改的文案真能在游戏里生效。
                * 此前后台「多语言文案管理」只是展示，改了也无处下发。 */
               const c = await DB.reload(DBP.cfg);
-              c.I18N = Object.assign({}, I18N, { [id]: nv });
+              /* 单语言版本：整表裁成只含 zh，避免云端残留的旧外语
+               * 被 Object.assign 原样带回去（也会让后台表格冒出外语列）。 */
+              const merged = Object.assign({}, I18N, { [id]: nv });
+              const cl = {};
+              Object.keys(merged).forEach((k2) => {
+                const e = merged[k2];
+                if (e && typeof e === 'object') cl[k2] = { zh: e.zh || '' };
+                else if (typeof e === 'string') cl[k2] = { zh: e };
+              });
+              c.I18N = cl;
               if (await DB.set(DBP.cfg, c, '文案 ' + id)) {
                 try { if (window.EX) { EX.I18N = c.I18N; } } catch (err) {}
                 AUDIT.log('改文案', id, JSON.stringify(nv));
