@@ -411,11 +411,26 @@ const E = {
      *   整整停摆 24 小时 —— 玩家只会以为「体力系统坏了」。
      * 修法：基准点落在未来时先钳回当前时刻，恢复立刻正常。 */
     if (!(p.staminaAt > 0) || p.staminaAt > now) p.staminaAt = now;
+    /* 【体力值自身兜底】
+     * 此前只钳了【上限】，没有钳【下限】，也没处理非有限值。
+     * 而 sanitize 之外的写入路径（后台改档、热更覆盖、旧档残留、传输截断）
+     * 都可能把 stamina 写成负数 / 对象 / NaN：
+     *   实测 stamina=-50  → tick 后仍是 -26（负）→ 提示「体力不足（需 2，当前 -26）」
+     *   实测 stamina={}   → ({}||0)+add = NaN → Math.min(MAX, NaN) = NaN
+     *     → 体力永久变成 NaN，此后 `p.stamina -= c` 也一直是 NaN，
+     *       玩家看到「当前 NaN」且再也无法进任何关卡（除非 sanitize 恰好修掉）。
+     * 现在统一钳到 [0, STAMINA_MAX]，非有限值归零后按正常恢复规则累积。 */
+    const MAX = EX.STAMINA_MAX || 100;
+    let cur = p.stamina;
+    if (typeof cur === 'string') cur = Number(cur);   /* 后台表单常把数字存成字符串 */
+    if (typeof cur !== 'number' || !isFinite(cur)) cur = 0;
+    cur = Math.max(0, Math.min(MAX, cur));
     const add = Math.floor((now - (p.staminaAt || now)) / EX.STAMINA_MS);
     if (add > 0) {
-      p.stamina = Math.min(EX.STAMINA_MAX, (p.stamina || 0) + add);
+      cur = Math.min(MAX, cur + add);
       p.staminaAt = now;
     }
+    p.stamina = cur;
     return p.stamina;
   },
   /* 只检查体力是否够，【不扣除】
