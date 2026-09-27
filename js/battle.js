@@ -2801,80 +2801,656 @@ const BT = {
     c.restore();
   },
 
-  /* ---------- 3D 僵尸 ---------- */
+  /* ===================================================================
+   * 高质感角色渲染 v2（人物 / 怪物 / 武器 / 弹道 / 命中特效）
+   *
+   * 旧版是"球体 + 圆柱"直接堆叠：没有描边、没有环境反射光、
+   * 头身比约 1:2.3（Q 版木偶感）、主角手里根本没有枪 —— 这是画面
+   * "廉价 / 纸片 / 难看"的主要来源。
+   *
+   * 新版统一光照模型：
+   *   主光：左上 (-0.6,-0.8)  → 顶部受亮
+   *   环境反射光：右下冷色     → 暗部不死黑，体积能"转"过去
+   *   描边：每个体块深色外轮廓（卡通渲染质感的关键一步）
+   *   接触阴影 + 边缘冷光 rim → 角色从背景里"立"起来
+   * 头身比调整为约 1:3.6，并补上真实的武器模型（按武器 type 分型）。
+   * =================================================================== */
+
+  /* 横向材质渐变：左暗 → 中亮 → 右暗 → 右下冷色反射光 */
+  matG(c, x0, x1, base, hi, amb) {
+    try {
+      const g = c.createLinearGradient(x0, 0, x1, 0);
+      g.addColorStop(0, 'rgba(0,0,0,.16)');
+      g.addColorStop(0.15, base);
+      g.addColorStop(0.40, hi);
+      g.addColorStop(0.74, base);
+      g.addColorStop(0.92, 'rgba(0,0,0,.12)');
+      g.addColorStop(1, amb || 'rgba(110,165,235,.28)');
+      return g;
+    } catch (e) { return base; }
+  },
+
+  /* 竖向材质渐变（用于盔甲板 / 胸甲等大面积） */
+  matV(c, y0, y1, base, hi) {
+    try {
+      const g = c.createLinearGradient(0, y0, 0, y1);
+      g.addColorStop(0, hi);
+      g.addColorStop(0.45, base);
+      g.addColorStop(1, 'rgba(0,0,0,.16)');
+      return g;
+    } catch (e) { return base; }
+  },
+
+  /* 描边：卡通渲染的质感关键（让体块之间有明确分界） */
+  ink(c, lw, col) {
+    if (lw > 0) {
+      c.strokeStyle = col || 'rgba(6,9,14,.82)';
+      c.lineWidth = lw; c.lineJoin = 'round'; c.lineCap = 'round';
+      c.stroke();
+    }
+  },
+
+  /* 立体四肢：带描边的锥形肢体（远侧肢体自动压暗） */
+  limbInk(c, x1, y1, x2, y2, w, base, hi, lw, dim) {
+    if (!isFinite(x1) || !isFinite(y1) || !isFinite(x2) || !isFinite(y2) || !(w > 0)) return;
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len * w * 0.5, ny = dx / len * w * 0.5;
+    c.save();
+    if (dim) c.globalAlpha = dim;
+    c.beginPath();
+    c.moveTo(x1 + nx, y1 + ny);
+    c.lineTo(x2 + nx * 0.82, y2 + ny * 0.82);
+    c.lineTo(x2 - nx * 0.82, y2 - ny * 0.82);
+    c.lineTo(x1 - nx, y1 - ny);
+    c.closePath();
+    c.fillStyle = this.matG(c, x1 - nx * 1.6, x1 + nx * 1.6, base, hi);
+    c.fill();
+    this.ink(c, lw);
+    c.restore();
+  },
+
+  /* 立体球体（头 / 关节）：受光 + 描边 + 顶部高光 */
+  ballInk(c, x, y, r, base, hi, lw) {
+    if (!isFinite(x) || !isFinite(y) || !(r > 0)) return;
+    try {
+      const g = c.createRadialGradient(x - r * 0.36, y - r * 0.42, r * 0.08, x, y, r * 1.16);
+      g.addColorStop(0, hi);
+      g.addColorStop(0.52, base);
+      g.addColorStop(0.86, 'rgba(0,0,0,.20)');
+      g.addColorStop(1, 'rgba(96,150,220,.30)');
+      c.fillStyle = g;
+    } catch (e) { c.fillStyle = base; }
+    c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
+    this.ink(c, lw);
+  },
+
+  /* ---------- 武器模型（主角 / 佣兵手持） ----------
+   * 局部坐标：原点＝握把，+X＝枪口方向。按武器表 type 分型：
+   * 自动 / 散弹 / 狙击 / 爆炸 / 激光，各自有可辨识的剪影。 */
+  drawWeapon3d(c, hx, hy, ang, type, sz, kick, flash, t) {
+    if (!isFinite(hx) || !isFinite(hy) || !isFinite(ang) || !(sz > 0)) return;
+    const k = sz / 46;
+    const metal = '#3a4350', metalHi = '#8f9daf', metalDk = '#1c222b';
+    const wood = '#5a4632', woodHi = '#8a6b48';
+    /* 各型参数：枪管长 / 管粗 / 是否瞄准镜 / 是否弹鼓 / 是否能量 */
+    let barrel = 30, btube = 1.5, scope = false, drum = false, energy = false, pump = false, thick = 0;
+    let mini = false, thrown = false;
+    if (type === '狙击') { barrel = 42; btube = 1.5; scope = true; }
+    else if (type === '散弹') { barrel = 26; btube = 2.7; pump = true; thick = 0.5; }
+    else if (type === '爆炸') { barrel = 22; btube = 3.3; drum = true; thick = 1; }
+    else if (type === '重机枪' || type === '机枪') { barrel = 32; btube = 3.6; mini = true; drum = true; thick = 0.6; }
+    else if (type === '投掷') { thrown = true; }
+    else if (type === '激光' || type === '能量') { barrel = 28; btube = 2.0; energy = true; }
+    else if (type === '冲锋') { barrel = 24; btube = 1.5; }
+
+    c.save();
+    c.translate(hx, hy);
+    c.rotate(ang);
+    c.translate(-kick * k, 0);
+    const lw = Math.max(0.7, 1.1 * k);
+
+    /* —— 投掷物（手雷 / 燃烧瓶）：手持小型物件，无枪身 —— */
+    if (thrown) {
+      const r0 = 4.6 * k;
+      /* 瓶体 / 弹体：球形 + 顶部受光 */
+      this.ballInk(c, 2 * k, 0, r0, '#3f4a3a', '#7d8f6a', lw);
+      /* 瓶颈 */
+      c.beginPath();
+      c.rect(2 * k + r0 * 0.5, -1.5 * k, 3.2 * k, 3.0 * k);
+      c.fillStyle = this.matV(c, -1.5 * k, 1.5 * k, '#2c3328', '#5c6a4c'); c.fill();
+      this.ink(c, lw * 0.7);
+      /* 引信（发光火花，随时间跳动） */
+      const sp = 0.6 + Math.abs(Math.sin((t || 0) * 9)) * 0.4;
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      const fg = c.createRadialGradient(2 * k + r0 * 0.5 + 3.4 * k, 0, 0, 2 * k + r0 * 0.5 + 3.4 * k, 0, 5.5 * k * sp);
+      fg.addColorStop(0, 'rgba(255,250,214,.95)');
+      fg.addColorStop(0.4, 'rgba(255,176,60,.70)');
+      fg.addColorStop(1, 'rgba(255,110,20,0)');
+      c.fillStyle = fg;
+      c.beginPath(); c.arc(2 * k + r0 * 0.5 + 3.4 * k, 0, 5.5 * k * sp, 0, 7); c.fill();
+      c.restore();
+      /* 握持的手 */
+      this.ballInk(c, -1 * k, 1.5 * k, 3.0 * k, '#e0b58a', '#ffd8ac', lw * 0.6);
+      c.restore();
+      return;
+    }
+
+    /* —— 枪托 —— */
+    c.beginPath();
+    c.moveTo(-16 * k, -5.2 * k); c.lineTo(-7 * k, -4.2 * k);
+    c.lineTo(-7 * k, 4.0 * k); c.lineTo(-15 * k, 5.6 * k);
+    c.closePath();
+    c.fillStyle = this.matV(c, -5.2 * k, 5.6 * k, wood, woodHi); c.fill();
+    this.ink(c, lw);
+    /* —— 机匣 —— */
+    c.beginPath();
+    if (c.roundRect) c.roundRect(-8 * k, -4.4 * k - thick * k, 17 * k, 8.6 * k + thick * k, 1.6 * k);
+    else c.rect(-8 * k, -4.4 * k - thick * k, 17 * k, 8.6 * k + thick * k);
+    c.fillStyle = this.matV(c, -4.4 * k, 4.2 * k, metal, metalHi); c.fill();
+    this.ink(c, lw);
+    /* 机匣顶：导轨（细高光棱） */
+    c.fillStyle = 'rgba(210,226,245,.34)';
+    c.fillRect(-7 * k, -4.0 * k - thick * k, 15 * k, 1.1 * k);
+    /* —— 弹匣 / 弹鼓 —— */
+    if (drum) {
+      c.beginPath(); c.arc(1 * k, 7.4 * k, 4.4 * k, 0, 7);
+      c.fillStyle = this.matV(c, 3 * k, 11.8 * k, '#2f3742', '#5d6b7c'); c.fill();
+      this.ink(c, lw);
+    } else {
+      c.beginPath();
+      c.moveTo(0.5 * k, 3.4 * k); c.lineTo(5.6 * k, 3.4 * k);
+      c.lineTo(4.6 * k, 10.6 * k); c.lineTo(-0.4 * k, 10.6 * k);
+      c.closePath();
+      c.fillStyle = this.matV(c, 3.4 * k, 10.6 * k, '#2c333d', '#59677a'); c.fill();
+      this.ink(c, lw);
+    }
+    /* —— 握把 —— */
+    c.beginPath();
+    c.moveTo(-6 * k, 3.2 * k); c.lineTo(-0.6 * k, 3.2 * k);
+    c.lineTo(-2.4 * k, 9.4 * k); c.lineTo(-7.6 * k, 9.4 * k);
+    c.closePath();
+    c.fillStyle = this.matV(c, 3.2 * k, 9.4 * k, '#262c35', '#4e5a68'); c.fill();
+    this.ink(c, lw);
+    /* —— 护木 / 泵动 —— */
+    c.beginPath();
+    if (c.roundRect) c.roundRect(10 * k, -2.9 * k - thick * k, (pump ? 12 : 11) * k, 5.8 * k + thick * k * 2, 1.5 * k);
+    else c.rect(10 * k, -2.9 * k - thick * k, (pump ? 12 : 11) * k, 5.8 * k + thick * k * 2);
+    c.fillStyle = this.matV(c, -2.9 * k, 2.9 * k, pump ? '#4a3b2a' : metal, pump ? '#7a6244' : metalHi);
+    c.fill();
+    this.ink(c, lw);
+    if (pump) { /* 泵动握把纹路 */
+      c.strokeStyle = 'rgba(0,0,0,.34)'; c.lineWidth = 0.9 * k;
+      for (let i = 0; i < 4; i++) {
+        c.beginPath(); c.moveTo((12 + i * 2.4) * k, -2.4 * k); c.lineTo((12 + i * 2.4) * k, 2.4 * k); c.stroke();
+      }
+    }
+    /* —— 枪管 —— */
+    const bx0 = (pump ? 20 : 19) * k, blen = (barrel - (pump ? 20 : 19)) * k;
+    if (mini) {
+      /* 加特林：旋转的三根管束（随时间滚动，做出"转轮"感） */
+      const roll = ((t || 0) * 9) % 1;
+      for (let i = 0; i < 3; i++) {
+        const off = ((i / 3 + roll) % 1 - 0.5) * btube * 1.7 * k;
+        c.beginPath(); c.rect(bx0, off - btube * 0.62 * k, blen, btube * 1.24 * k);
+        c.fillStyle = this.matV(c, off - btube * 0.62 * k, off + btube * 0.62 * k, metalDk, metalHi);
+        c.fill(); this.ink(c, lw * 0.55);
+        c.fillStyle = 'rgba(226,238,252,.34)';
+        c.fillRect(bx0, off - btube * 0.62 * k, blen, Math.max(0.5, btube * 0.30 * k));
+      }
+      /* 枪口环（把管束箍在一起） */
+      c.beginPath();
+      c.ellipse(barrel * k, 0, btube * 0.55 * k, btube * 1.35 * k, 0, 0, 7);
+      c.fillStyle = this.matV(c, -btube * 1.35 * k, btube * 1.35 * k, '#232a34', '#68758a'); c.fill();
+      this.ink(c, lw * 0.6);
+    } else {
+      c.beginPath();
+      c.rect(bx0, -btube * k, blen, btube * 2 * k);
+      c.fillStyle = this.matV(c, -btube * k, btube * k, metalDk, metalHi); c.fill();
+      this.ink(c, lw * 0.8);
+      /* 枪管上沿高光（圆柱感） */
+      c.fillStyle = 'rgba(226,238,252,.42)';
+      c.fillRect(bx0, -btube * k, blen, Math.max(0.6, btube * 0.42 * k));
+    }
+    /* —— 准星 —— */
+    c.fillStyle = '#22282f';
+    c.fillRect((barrel - 7) * k, -btube * k - 3.0 * k, 1.3 * k, 3.0 * k);
+    /* —— 瞄准镜（狙击） —— */
+    if (scope) {
+      c.beginPath();
+      if (c.roundRect) c.roundRect(-2 * k, -9.2 * k, 13 * k, 4.6 * k, 2.2 * k);
+      else c.rect(-2 * k, -9.2 * k, 13 * k, 4.6 * k);
+      c.fillStyle = this.matV(c, -9.2 * k, -4.6 * k, '#242c36', '#69788b'); c.fill();
+      this.ink(c, lw * 0.9);
+      /* 镜片（冷光） */
+      c.fillStyle = 'rgba(120,220,255,.85)';
+      c.beginPath(); c.ellipse(10.6 * k, -6.9 * k, 1.5 * k, 2.0 * k, 0, 0, 7); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.55)';
+      c.beginPath(); c.ellipse(9.9 * k, -7.6 * k, 0.7 * k, 0.9 * k, 0, 0, 7); c.fill();
+    }
+    /* —— 能量武器：枪管充能辉光 —— */
+    if (energy) {
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      const eg = c.createLinearGradient(18 * k, 0, barrel * k, 0);
+      eg.addColorStop(0, 'rgba(120,220,255,0)');
+      eg.addColorStop(1, 'rgba(150,235,255,.55)');
+      c.fillStyle = eg;
+      c.fillRect(18 * k, -btube * 1.9 * k, (barrel - 18) * k, btube * 3.8 * k);
+      c.restore();
+    }
+    /* —— 枪口火焰（开火瞬间） —— */
+    if (flash > 0) {
+      const a = Math.min(1, flash / 0.07);
+      const fx = barrel * k, fy = 0;
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      /* 三层：外辉光 → 中焰 → 白核 */
+      const gg = c.createRadialGradient(fx, fy, 0, fx, fy, 13 * k * a + 3);
+      gg.addColorStop(0, 'rgba(255,248,214,' + (a * 0.95).toFixed(3) + ')');
+      gg.addColorStop(0.35, 'rgba(255,186,72,' + (a * 0.75).toFixed(3) + ')');
+      gg.addColorStop(1, 'rgba(255,120,30,0)');
+      c.fillStyle = gg;
+      c.beginPath(); c.arc(fx, fy, 6.5 * k * a + 1.5, 0, 7); c.fill();
+      /* 星芒（四向尖刺，随角度抖动） */
+      c.fillStyle = 'rgba(255,236,180,' + (a * 0.9).toFixed(3) + ')';
+      c.beginPath();
+      const spikes = 4;
+      for (let i = 0; i < spikes * 2; i++) {
+        const an = (i / (spikes * 2)) * Math.PI * 2;
+        const rr = (i % 2 === 0 ? 1 : 0.34) * (6 * k * a + 1.2);
+        const px = fx + Math.cos(an) * rr, py = fy + Math.sin(an) * rr * 0.68;
+        if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+      }
+      c.closePath(); c.fill();
+      c.restore();
+    }
+    c.restore();
+  },
+
+  /* ---------- 3D 僵尸（按种类改变体型 / 姿态 / 质感） ---------- */
   drawZombieShape(c, x, y, sz, z) {
     if (!isFinite(x) || !isFinite(y) || !isFinite(sz) || sz <= 0) return;
     const d = (z && z.d) || {};
-    const big = !!z.isBoss || !!d.elite;
-    /* 每类僵尸的配色/体型差异（精英偏紫、BOSS 偏冷灰、毒系偏绿、护盾带盾） */
-    let skin = '#73996d', skinHi = '#a8d69f', cloth = '#3d5140', clothHi = '#6b866e';
-    if (z.isBoss) { skin = '#4e6f7d'; skinHi = '#8fbccb'; cloth = '#26333d'; clothHi = '#48606f'; }
-    else if (d.elite) { skin = '#7d6f9c'; skinHi = '#b9a6dd'; cloth = '#332a4a'; clothHi = '#5d4d85'; }
-    else if (d.poison) { skin = '#5f8a4a'; skinHi = '#96c977'; cloth = '#2f3f28'; clothHi = '#557043'; }
-    else if (d.armor) { skin = '#8a8f96'; skinHi = '#c3c9d1'; cloth = '#3a4046'; clothHi = '#666e78'; }
-    /* 步频随移动速度：被减速时步伐变慢，静止啃墙时几乎不摆 */
+    const boss = !!z.isBoss, elite = !!d.elite;
+    const armored = !!d.armor, toxic = !!d.poison, fiery = !!d.fire;
+    const frozen = !!(z && z.slowT > 0);
     const moving = z && (z.slow || 0) < 0.9;
-    const stride = z.isBoss ? 0.55 : (moving ? 1 : 0.25);
-    this.figure3d(c, {
-      x: x, y: y, sz: sz,
-      ph: (z.animT || 0),
-      stride: stride,
-      skin: skin, skinHi: skinHi, cloth: cloth, clothHi: clothHi,
-      frozen: z && z.slowT > 0,
-      shield: !!d.front,
-      big: big,
-      eye: d.fire ? '#ff8a3c' : null,
-      armReach: 1,
-    });
+
+    /* 配色：普通腐绿 / BOSS 冷灰 / 精英紫 / 毒系亮绿 / 火系焦褐 / 装甲铁灰 */
+    let skin = '#86aa78', skinHi = '#c2e6b6', cloth = '#4b6144', clothHi = '#78936d';
+    if (boss)         { skin = '#5d8494'; skinHi = '#a8d2e0'; cloth = '#2e3d49'; clothHi = '#556d84'; }
+    else if (elite)   { skin = '#8575a8'; skinHi = '#c8b5ea'; cloth = '#3a304f'; clothHi = '#61528f'; }
+    else if (toxic)   { skin = '#70a455'; skinHi = '#b0e28b'; cloth = '#37492e'; clothHi = '#62844f'; }
+    else if (fiery)   { skin = '#9a5a40'; skinHi = '#e08f60'; cloth = '#492b20'; clothHi = '#7a4a37'; }
+    else if (armored) { skin = '#93a086'; skinHi = '#d2dcc3'; cloth = '#495248'; clothHi = '#788378'; }
+
+    /* 形态：驼背程度 / 体宽 —— 这是"种类可辨识"的关键 */
+    const hunch  = boss ? 0.10 : (armored ? 0.01 : (elite ? 0.05 : 0.14));
+    const wide   = boss ? 1.26 : (armored ? 1.22 : (toxic ? 1.14 : 1.0));
+    const stride = boss ? 0.5 : (moving ? 1 : 0.22);
+    const ph = z.animT || 0, cyc = ph * 6.2;
+    const sA = Math.sin(cyc) * stride, sB = Math.sin(cyc + Math.PI) * stride;
+    const liftA = Math.max(0, Math.sin(cyc)) * sz * 0.085 * stride;
+    const liftB = Math.max(0, Math.sin(cyc + Math.PI)) * sz * 0.085 * stride;
+    const bob = Math.abs(Math.sin(cyc)) * sz * 0.05 * stride;
+    const sway = Math.sin(cyc * 0.5) * sz * 0.03 * stride;
+
+    const lw = Math.max(0.8, sz * 0.042);
+    const INK = 'rgba(8,12,18,.62)';
+    /* 头身比约 1:3.6（旧版 1:2.3 太 Q，像木偶） */
+    const headR = sz * (boss ? 0.185 : 0.155);
+
+    c.save();
+    /* 接触阴影（抬脚时变小） */
+    const shS = 1 - Math.abs(Math.sin(cyc)) * 0.14 * stride;
+    this.shadow3d(c, x, y + sz * 0.10, sz * 0.46 * shS * wide, sz / 24);
+
+    const hipY = y - sz * 0.32 - bob;
+    const shY  = y - sz * (0.74 - hunch) - bob;
+    const legW = sz * 0.145 * wide, armW = sz * 0.115 * wide;
+    const spread = sz * 0.125 * wide;
+    const cx = x + sway;
+
+    /* —— 远侧腿 / 臂（压暗＝在身后） —— */
+    c.save(); c.globalAlpha = 0.68;
+    this.limbInk(c, cx + spread * 0.5, hipY, cx + spread + sB * sz * 0.085, hipY + sz * 0.20 - liftB, legW * 0.92, cloth, clothHi, lw, 0);
+    this.limbInk(c, cx + spread + sB * sz * 0.085, hipY + sz * 0.20 - liftB, cx + spread + sB * sz * 0.05, y - liftB, legW * 0.80, cloth, clothHi, lw, 0);
+    c.restore();
+    c.save(); c.globalAlpha = 0.68;
+    this.limbInk(c, cx + spread * 1.0, shY + sz * 0.04, cx + spread * 1.95 + sB * sz * 0.06, shY + sz * 0.22, armW * 0.9, skin, skinHi, lw, 0);
+    this.limbInk(c, cx + spread * 1.95 + sB * sz * 0.06, shY + sz * 0.22, cx + spread * 2.1 - sB * sz * 0.05, shY + sz * 0.50, armW * 0.8, skin, skinHi, lw, 0);
+    c.restore();
+
+    /* —— 躯干（破烂上衣：主体 + 下摆破布） —— */
+    const tw = sz * 0.52 * wide, th = sz * 0.40;
+    c.beginPath();
+    c.moveTo(cx - tw * 0.42, shY);
+    c.quadraticCurveTo(cx - tw * 0.62, shY + th * 0.55, cx - tw * 0.50, shY + th);
+    c.lineTo(cx + tw * 0.50, shY + th);
+    c.quadraticCurveTo(cx + tw * 0.62, shY + th * 0.55, cx + tw * 0.42, shY);
+    c.closePath();
+    c.fillStyle = this.matG(c, cx - tw * 0.62, cx + tw * 0.62, cloth, clothHi);
+    c.fill(); this.ink(c, lw, INK);
+    /* 破布下摆（锯齿边＝撕烂的衣服） */
+    c.beginPath();
+    c.moveTo(cx - tw * 0.50, shY + th * 0.94);
+    for (let i = 0; i < 5; i++) {
+      const px = cx - tw * 0.50 + (tw / 4) * i;
+      c.lineTo(px + tw * 0.12, shY + th * (1.02 + (i % 2 ? 0.14 : 0.03)));
+    }
+    c.lineTo(cx + tw * 0.50, shY + th * 0.94);
+    c.closePath();
+    c.fillStyle = this.matG(c, cx - tw * 0.5, cx + tw * 0.5, cloth, clothHi);
+    c.fill(); this.ink(c, lw * 0.8, INK);
+    /* 胸腹暗部 + 暴露的肋骨（腐肉质感） */
+    c.fillStyle = 'rgba(0,0,0,.22)';
+    c.beginPath(); c.ellipse(cx, shY + th * 0.34, tw * 0.34, th * 0.15, 0, 0, 7); c.fill();
+    if (!armored) {
+      c.strokeStyle = 'rgba(228,232,206,.30)'; c.lineWidth = Math.max(0.6, sz * 0.022);
+      for (let i = 0; i < 3; i++) {
+        c.beginPath();
+        c.moveTo(cx - tw * 0.22, shY + th * (0.30 + i * 0.13));
+        c.quadraticCurveTo(cx, shY + th * (0.36 + i * 0.13), cx + tw * 0.22, shY + th * (0.30 + i * 0.13));
+        c.stroke();
+      }
+    }
+    /* 装甲僵尸：胸甲 + 肩甲（金属板，有厚度） */
+    if (armored || boss) {
+      c.beginPath();
+      if (c.roundRect) c.roundRect(cx - tw * 0.44, shY + th * 0.06, tw * 0.88, th * 0.62, sz * 0.05);
+      else c.rect(cx - tw * 0.44, shY + th * 0.06, tw * 0.88, th * 0.62);
+      c.fillStyle = this.matV(c, shY + th * 0.06, shY + th * 0.68, '#4a5350', '#93a29c');
+      c.fill(); this.ink(c, lw * 0.9, INK);
+      c.fillStyle = 'rgba(226,238,252,.26)';
+      c.fillRect(cx - tw * 0.40, shY + th * 0.10, tw * 0.80, sz * 0.026);
+      /* 肩甲（两个圆角块，带厚度） */
+      for (const sx of [-1, 1]) {
+        c.beginPath();
+        if (c.roundRect) c.roundRect(cx + sx * tw * 0.46 - tw * 0.20, shY - sz * 0.03, tw * 0.40, th * 0.30, sz * 0.05);
+        else c.rect(cx + sx * tw * 0.46 - tw * 0.20, shY - sz * 0.03, tw * 0.40, th * 0.30);
+        c.fillStyle = this.matV(c, shY - sz * 0.03, shY + th * 0.27, '#414a47', '#8b9a94');
+        c.fill(); this.ink(c, lw * 0.8, INK);
+      }
+    }
+
+    /* —— 近侧腿 —— */
+    this.limbInk(c, cx - spread * 0.5, hipY, cx - spread + sA * sz * 0.085, hipY + sz * 0.20 - liftA, legW, cloth, clothHi, lw, 0);
+    this.limbInk(c, cx - spread + sA * sz * 0.085, hipY + sz * 0.20 - liftA, cx - spread + sA * sz * 0.05, y - liftA, legW * 0.88, cloth, clothHi, lw, 0);
+    /* 破鞋（两只，随抬脚离地） */
+    for (const [fx2, fl] of [[cx - spread + sA * sz * 0.05, liftA], [cx + spread + sB * sz * 0.05, liftB]]) {
+      c.beginPath();
+      if (c.roundRect) c.roundRect(fx2 - sz * 0.10, y - fl - sz * 0.045, sz * 0.20, sz * 0.09, sz * 0.03);
+      else c.rect(fx2 - sz * 0.10, y - fl - sz * 0.045, sz * 0.20, sz * 0.09);
+      c.fillStyle = '#22262b'; c.fill(); this.ink(c, lw * 0.7, INK);
+    }
+
+    /* —— 近侧手臂（前伸抓挠，僵尸特征） —— */
+    const elbAx = cx - spread * 1.95 + sA * sz * 0.06, elbAy = shY + sz * 0.26;
+    const handAy = shY + sz * 0.54 + sA * sz * 0.09;
+    this.limbInk(c, cx - spread * 1.0, shY + sz * 0.05, elbAx, elbAy, armW, skin, skinHi, lw, 0);
+    this.limbInk(c, elbAx, elbAy, cx - spread * 2.1 - sA * sz * 0.05, handAy, armW * 0.86, skin, skinHi, lw, 0);
+    /* 爪手（三指，僵尸特征） */
+    const hxx = cx - spread * 2.1 - sA * sz * 0.05;
+    this.ballInk(c, hxx, handAy, sz * 0.072, skin, skinHi, lw * 0.7);
+    c.strokeStyle = 'rgba(238,240,214,.62)'; c.lineWidth = Math.max(0.6, sz * 0.024);
+    for (let i = -1; i <= 1; i++) {
+      c.beginPath();
+      c.moveTo(hxx - sz * 0.03, handAy + i * sz * 0.028);
+      c.lineTo(hxx - sz * 0.11, handAy + i * sz * 0.040);
+      c.stroke();
+    }
+    this.ballInk(c, cx + spread * 2.1 - sB * sz * 0.05, shY + sz * 0.50, sz * 0.065, skin, skinHi, lw * 0.7);
+
+    /* —— 头 —— */
+    const hx = cx + Math.sin(cyc * 0.9) * sz * 0.02 * stride;
+    const hy = shY - headR * 1.15 - bob * 0.4;
+    this.ballInk(c, hx, hy, headR, skin, skinHi, lw);
+    /* 头顶高光 + 右下冷色边缘光（让头从背景里"立"起来） */
+    c.fillStyle = 'rgba(255,255,255,.20)';
+    c.beginPath(); c.ellipse(hx - headR * 0.34, hy - headR * 0.46, headR * 0.40, headR * 0.24, -0.5, 0, 7); c.fill();
+    c.strokeStyle = 'rgba(130,190,255,.30)'; c.lineWidth = Math.max(0.7, headR * 0.14);
+    c.beginPath(); c.arc(hx, hy, headR * 0.96, -0.35, 0.95); c.stroke();
+    /* 眼窝（凹陷） */
+    c.fillStyle = 'rgba(0,0,0,.42)';
+    c.beginPath(); c.ellipse(hx, hy + headR * 0.12, headR * 0.60, headR * 0.28, 0, 0, 7); c.fill();
+    /* 发光眼（冻结变冰蓝 / 火系橙 / BOSS 红） */
+    const eye = frozen ? '#8ceeff' : (fiery ? '#ff8a3c' : (boss ? '#ff5a5a' : '#ffe066'));
+    c.save();
+    c.fillStyle = eye; c.shadowColor = eye; c.shadowBlur = 6 * (sz / 26);
+    c.beginPath(); c.arc(hx - headR * 0.34, hy + headR * 0.06, headR * 0.17, 0, 7); c.fill();
+    c.beginPath(); c.arc(hx + headR * 0.34, hy + headR * 0.06, headR * 0.17, 0, 7); c.fill();
+    c.restore();
+    /* 张口 + 獠牙 */
+    c.fillStyle = '#1d1414';
+    c.beginPath(); c.ellipse(hx, hy + headR * 0.48, headR * 0.26, headR * 0.17, 0, 0, 7); c.fill();
+    c.fillStyle = '#e8e2d0';
+    c.fillRect(hx - headR * 0.15, hy + headR * 0.36, headR * 0.09, headR * 0.13);
+    c.fillRect(hx + headR * 0.06, hy + headR * 0.36, headR * 0.09, headR * 0.13);
+
+    /* 毒系：体表脓包（气泡） */
+    if (toxic) {
+      for (let i = 0; i < 4; i++) {
+        const an = i * 1.9 + 0.6;
+        this.ballInk(c, cx + Math.cos(an) * tw * 0.34, shY + th * (0.22 + (i % 3) * 0.22), headR * 0.24, '#7fbf52', '#c6f39a', lw * 0.6);
+      }
+    }
+    /* 火系：身上跳动的小火苗 */
+    if (fiery) {
+      c.save(); c.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 3; i++) {
+        const fy2 = shY + th * (0.15 + i * 0.28) - (ph * 12 % 10) * 0.4;
+        const fg = c.createRadialGradient(cx, fy2, 0, cx, fy2, sz * 0.13);
+        fg.addColorStop(0, 'rgba(255,220,140,.55)');
+        fg.addColorStop(1, 'rgba(255,110,30,0)');
+        c.fillStyle = fg;
+        c.beginPath(); c.arc(cx + Math.sin(ph * 3 + i) * sz * 0.06, fy2, sz * 0.13, 0, 7); c.fill();
+      }
+      c.restore();
+    }
+    /* 冰冻：整体冰罩 */
+    if (frozen) {
+      c.fillStyle = 'rgba(120,220,255,.26)';
+      c.beginPath(); c.arc(cx, shY + th * 0.3, sz * 0.62 * wide, 0, 7); c.fill();
+      c.strokeStyle = 'rgba(190,245,255,.62)'; c.lineWidth = 1.4;
+      c.beginPath(); c.arc(cx, shY + th * 0.3, sz * 0.62 * wide, 0, 7); c.stroke();
+    }
+    /* BOSS / 精英：头顶等级环 */
+    if (boss || elite) {
+      const by2 = hy - headR * 1.5;
+      c.fillStyle = boss ? '#ff4d6d' : '#c08cff';
+      c.beginPath(); c.arc(hx, by2, headR * 0.44, 0, 7); c.fill();
+      this.ink(c, lw * 0.8, 'rgba(0,0,0,.5)');
+      c.fillStyle = 'rgba(255,255,255,.92)';
+      c.font = 'bold ' + Math.round(headR * 0.62) + 'px sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('!', hx, by2 + headR * 0.03);
+    }
+    /* 护盾僵尸：正面盾牌（有厚度 + 金属高光） */
+    if (d.front) {
+      const sw = sz * 0.48, sh = sz * 0.44;
+      c.save();
+      c.translate(cx - sz * 0.10, y - sz * 0.42);
+      c.fillStyle = 'rgba(0,0,0,.30)';
+      c.beginPath(); c.ellipse(3, 4, sw * 0.5, sh * 0.5, 0, 0, 7); c.fill();
+      c.beginPath();
+      c.moveTo(-sw * 0.5, -sh * 0.46); c.lineTo(sw * 0.5, -sh * 0.46);
+      c.lineTo(sw * 0.42, sh * 0.34); c.lineTo(0, sh * 0.5); c.lineTo(-sw * 0.42, sh * 0.34);
+      c.closePath();
+      c.fillStyle = this.matV(c, -sh * 0.46, sh * 0.5, '#5b6674', '#c3d2e2');
+      c.fill(); this.ink(c, lw, INK);
+      c.fillStyle = 'rgba(226,238,252,.34)';
+      c.fillRect(-sw * 0.34, -sh * 0.30, sw * 0.68, sz * 0.028);
+      c.fillStyle = 'rgba(0,0,0,.28)';
+      c.beginPath(); c.arc(0, 0, sw * 0.16, 0, 7); c.fill();
+      c.restore();
+    }
+    c.restore();
   },
 
-  /* ---------- 3D 主角（末日士兵） ---------- */
-  /* ---------- 3D 主角（末日士兵）：骨骼模型 + 呼吸 + 持枪臂跟随瞄准 ---------- */
+  /* ---------- 3D 主角（末日士兵）：战术装备 + 真实武器 + 开火反馈 ---------- */
   drawHeroShape(c, x, y) {
     if (!isFinite(x) || !isFinite(y)) return;
     const r = this.run || {};
     const t = r.time || 0;
-    const sz = 46;
-    /* 站立小幅呼吸（stride 很小＝不迈步，只有起伏） */
-    const breathe = 0.18;
-    let aim = -Math.PI / 2;
-    let nz = null, nd = 1e9;
+    const sz = 54;                          /* 原 46：手机屏上过小，细节全糊 */
+    const lw = Math.max(1.0, sz * 0.048);
+    const INK = 'rgba(8,12,18,.62)';
+    const headR = sz * 0.155;
+
+    /* 瞄准：锁定最近的存活僵尸 */
+    let aim = -Math.PI / 2, nz = null, nd = 1e9;
     for (const z of (r.zombies || [])) {
       if (z.dead) continue;
       const dd = (z.x - x) * (z.x - x) + (z.y - y) * (z.y - y);
       if (dd < nd) { nd = dd; nz = z; }
     }
-    if (nz) aim = Math.atan2(nz.y - (y - 12), nz.x - x);
-    const kick = r.muzzleT > 0 ? 4.5 : 0;
-    this.figure3d(c, {
-      x: x, y: y, sz: sz,
-      ph: t * 0.55,                 /* 缓慢呼吸节奏 */
-      stride: breathe,
-      skin: '#e3b98d', skinHi: '#ffd9ae',
-      cloth: '#41536e', clothHi: '#6d84a8',
-      big: false,
-      armReach: 0.4,
-      gun: true, aim: aim, kick: kick,
-    });
-    /* 战术头盔（半球 + 高光）叠在头部 */
-    const hy = y - sz * 0.90;
+    if (nz) aim = Math.atan2(nz.y - (y - sz * 0.60), nz.x - x);
+
+    /* 武器类型（决定枪的剪影） */
+    let gtype = '自动';
+    try {
+      const g = (typeof E !== 'undefined' && E.gun && this.P) ? E.gun(this.P) : null;
+      if (g && g.type) gtype = g.type;
+      else if (r.gunId) {
+        const gg = (EX && EX.guns ? EX.guns : []).find((q) => q.id === r.gunId);
+        if (gg && gg.type) gtype = gg.type;
+      }
+    } catch (e) {}
+
+    /* 呼吸（站立小幅起伏）+ 开火后坐（身体微后仰） */
+    const breathe = Math.sin(t * 1.5) * sz * 0.012;
+    const fire = r.muzzleT > 0 ? 1 : 0;
+    const recoil = fire * sz * 0.030;
+    const kick = fire ? 4.2 : 0;
+    const bob = breathe;
+
+    const hipY = y - sz * 0.32 - bob;
+    const shY  = y - sz * 0.74 - bob;
+    const spread = sz * 0.115;
+    const legW = sz * 0.145, armW = sz * 0.118;
+    const cx = x - recoil * 0.5;
+
+    /* 军绿制服配色 */
+    const uniform = '#6b8253', uniformHi = '#a8c184';
+    const vest = '#53643f', vestHi = '#8aa061';
+    const skin = '#e0b58a', skinHi = '#ffd8ac';
+    const gear = '#49543a', gearHi = '#8b9a68';
+
     c.save();
-    const hg = c.createLinearGradient(x - 10, hy - 10, x + 10, hy + 3);
-    hg.addColorStop(0, '#4c5f7d'); hg.addColorStop(0.5, '#7d92b3'); hg.addColorStop(1, '#33415a');
-    c.fillStyle = hg;
-    c.beginPath(); c.arc(x, hy - 1, 10.5, Math.PI * 1.02, Math.PI * 1.98); c.fill();
-    c.fillStyle = '#2c3850';
-    c.beginPath(); c.ellipse(x, hy - 2, 11, 3.4, 0, 0, 7); c.fill();
-    /* 护目镜（发光） */
-    c.fillStyle = '#5cd8ff'; c.shadowColor = '#5cd8ff'; c.shadowBlur = 6;
-    c.beginPath();
-    if (c.roundRect) c.roundRect(x - 7.5, hy - 1.5, 15, 4, 1.8); else c.rect(x - 7.5, hy - 1.5, 15, 4);
-    c.fill();
-    c.shadowBlur = 0;
+    /* 接触阴影 */
+    this.shadow3d(c, x, y + sz * 0.10, sz * 0.46, sz / 24);
+    /* 脚下金色选中光环（表示玩家） */
+    c.strokeStyle = 'rgba(255,201,60,.50)'; c.lineWidth = 2;
+    c.beginPath(); c.ellipse(x, y + sz * 0.10, sz * 0.44, sz * 0.17, 0, 0, 7); c.stroke();
+
+    /* —— 远侧腿（压暗） —— */
+    c.save(); c.globalAlpha = 0.66;
+    this.limbInk(c, cx + spread * 0.55, hipY, cx + spread * 0.95, hipY + sz * 0.17, legW * 0.94, uniform, uniformHi, lw, 0);
+    this.limbInk(c, cx + spread * 0.95, hipY + sz * 0.17, cx + spread * 0.90, y - sz * 0.02, legW * 0.82, gear, gearHi, lw, 0);
     c.restore();
-    /* 头顶选中光环（金色，表示玩家） */
-    c.strokeStyle = 'rgba(255,201,60,.55)'; c.lineWidth = 2;
-    c.beginPath(); c.ellipse(x, y + sz * 0.10, 20, 8, 0, 0, 7); c.stroke();
+    /* —— 近侧腿 + 战术靴 —— */
+    this.limbInk(c, cx - spread * 0.55, hipY, cx - spread * 0.95, hipY + sz * 0.17, legW, uniform, uniformHi, lw, 0);
+    this.limbInk(c, cx - spread * 0.95, hipY + sz * 0.17, cx - spread * 0.90, y - sz * 0.02, legW * 0.86, gear, gearHi, lw, 0);
+    for (const sx of [-1, 1]) {
+      const bx = cx + sx * spread * 0.90;
+      c.beginPath();
+      if (c.roundRect) c.roundRect(bx - sz * 0.105, y - sz * 0.075, sz * 0.21, sz * 0.085, sz * 0.028);
+      else c.rect(bx - sz * 0.105, y - sz * 0.075, sz * 0.21, sz * 0.085);
+      c.fillStyle = this.matV(c, y - sz * 0.075, y, '#3a4331', '#75855c');
+      c.fill(); this.ink(c, lw * 0.7, INK);
+    }
+
+    /* —— 躯干（制服） —— */
+    const tw = sz * 0.50, th = sz * 0.42;
+    c.beginPath();
+    c.moveTo(cx - tw * 0.40, shY);
+    c.quadraticCurveTo(cx - tw * 0.58, shY + th * 0.55, cx - tw * 0.46, shY + th);
+    c.lineTo(cx + tw * 0.46, shY + th);
+    c.quadraticCurveTo(cx + tw * 0.58, shY + th * 0.55, cx + tw * 0.40, shY);
+    c.closePath();
+    c.fillStyle = this.matG(c, cx - tw * 0.58, cx + tw * 0.58, uniform, uniformHi);
+    c.fill(); this.ink(c, lw, INK);
+    /* 战术背心（带弹匣袋 + 肩垫） */
+    c.beginPath();
+    if (c.roundRect) c.roundRect(cx - tw * 0.44, shY + th * 0.04, tw * 0.88, th * 0.70, sz * 0.05);
+    else c.rect(cx - tw * 0.44, shY + th * 0.04, tw * 0.88, th * 0.70);
+    c.fillStyle = this.matV(c, shY + th * 0.04, shY + th * 0.74, vest, vestHi);
+    c.fill(); this.ink(c, lw * 0.9, INK);
+    /* 弹匣袋（三个） */
+    for (let i = -1; i <= 1; i++) {
+      const px = cx + i * tw * 0.28;
+      c.beginPath();
+      if (c.roundRect) c.roundRect(px - tw * 0.10, shY + th * 0.30, tw * 0.20, th * 0.30, sz * 0.022);
+      else c.rect(px - tw * 0.10, shY + th * 0.30, tw * 0.20, th * 0.30);
+      c.fillStyle = this.matV(c, shY + th * 0.30, shY + th * 0.60, '#3d4a2c', '#758a52');
+      c.fill(); this.ink(c, lw * 0.6, INK);
+      c.fillStyle = 'rgba(230,240,252,.22)';
+      c.fillRect(px - tw * 0.09, shY + th * 0.32, tw * 0.18, sz * 0.018);
+    }
+    /* 腰带 */
+    c.fillStyle = '#2a3038';
+    c.fillRect(cx - tw * 0.46, shY + th * 0.78, tw * 0.92, sz * 0.05);
+    this.ink(c, lw * 0.6, INK);
+    c.fillStyle = '#c9a24a';
+    c.fillRect(cx - sz * 0.055, shY + th * 0.78, sz * 0.11, sz * 0.05);
+    /* 肩垫（两侧小圆角块） */
+    for (const sx of [-1, 1]) {
+      c.beginPath();
+      if (c.roundRect) c.roundRect(cx + sx * tw * 0.44 - tw * 0.16, shY - sz * 0.02, tw * 0.32, th * 0.26, sz * 0.04);
+      else c.rect(cx + sx * tw * 0.44 - tw * 0.16, shY - sz * 0.02, tw * 0.32, th * 0.26);
+      c.fillStyle = this.matV(c, shY - sz * 0.02, shY + th * 0.24, '#47562f', '#7f9460');
+      c.fill(); this.ink(c, lw * 0.7, INK);
+    }
+    /* 背包（身后，露出上缘） */
+    c.beginPath();
+    if (c.roundRect) c.roundRect(cx - tw * 0.72, shY + th * 0.06, tw * 0.30, th * 0.60, sz * 0.04);
+    else c.rect(cx - tw * 0.72, shY + th * 0.06, tw * 0.30, th * 0.60);
+    c.fillStyle = this.matV(c, shY + th * 0.06, shY + th * 0.66, '#3f4d2d', '#778c56');
+    c.fill(); this.ink(c, lw * 0.7, INK);
+
+    /* —— 头 + 战术头盔 —— */
+    const hx = cx + Math.sin(t * 1.5) * sz * 0.012;
+    const hy = shY - headR * 1.10;
+    this.ballInk(c, hx, hy, headR, skin, skinHi, lw * 0.8);
+    /* 面罩（下半脸） */
+    c.fillStyle = 'rgba(26,32,42,.82)';
+    c.beginPath(); c.ellipse(hx, hy + headR * 0.42, headR * 0.72, headR * 0.40, 0, 0, 7); c.fill();
+    /* 头盔（半球 + 盔沿 + 高光） */
+    c.beginPath(); c.arc(hx, hy - headR * 0.06, headR * 1.10, Math.PI * 1.03, Math.PI * 1.97); c.closePath();
+    c.fillStyle = this.matV(c, hy - headR * 1.16, hy + headR * 0.10, '#5c7046', '#9db468');
+    c.fill(); this.ink(c, lw, INK);
+    c.fillStyle = '#2c3850';
+    c.beginPath(); c.ellipse(hx, hy - headR * 0.10, headR * 1.16, headR * 0.34, 0, 0, 7); c.fill();
+    /* 头盔顶高光弧 */
+    c.strokeStyle = 'rgba(226,238,252,.38)'; c.lineWidth = Math.max(0.8, headR * 0.16);
+    c.beginPath(); c.arc(hx, hy - headR * 0.06, headR * 0.92, Math.PI * 1.18, Math.PI * 1.72); c.stroke();
+    /* 夜视仪（左侧伸出的镜筒，发光） */
+    c.save();
+    c.fillStyle = '#28303c';
+    c.beginPath();
+    if (c.roundRect) c.roundRect(hx - headR * 1.30, hy - headR * 0.16, headR * 0.62, headR * 0.44, headR * 0.16);
+    else c.rect(hx - headR * 1.30, hy - headR * 0.16, headR * 0.62, headR * 0.44);
+    c.fill(); this.ink(c, lw * 0.6, INK);
+    c.fillStyle = '#7ef0a0'; c.shadowColor = '#7ef0a0'; c.shadowBlur = 5;
+    c.beginPath(); c.arc(hx - headR * 1.34, hy + headR * 0.06, headR * 0.15, 0, 7); c.fill();
+    c.restore();
+
+    /* —— 远侧臂（托枪） —— */
+    const gx = Math.cos(aim) * sz * 0.40, gy = Math.sin(aim) * sz * 0.40;
+    c.save(); c.globalAlpha = 0.7;
+    this.limbInk(c, cx + spread * 1.0, shY + sz * 0.06, cx + gx * 0.42 - sz * 0.02, shY + sz * 0.14 + gy * 0.34, armW * 0.9, uniform, uniformHi, lw, 0);
+    c.restore();
+    /* —— 近侧臂（扣扳机，前伸到握把） —— */
+    const gripX = cx + Math.cos(aim) * sz * 0.46, gripY = shY + sz * 0.16 + Math.sin(aim) * sz * 0.28;
+    this.limbInk(c, cx - spread * 1.0, shY + sz * 0.06, cx + gx * 0.50, shY + sz * 0.16 + gy * 0.42, armW, uniform, uniformHi, lw, 0);
+    this.limbInk(c, cx + gx * 0.50, shY + sz * 0.16 + gy * 0.42, gripX, gripY, armW * 0.86, skin, skinHi, lw, 0);
+    this.ballInk(c, gripX, gripY, sz * 0.062, skin, skinHi, lw * 0.6);
+
+    /* —— 武器（真实的枪，按 type 分型） —— */
+    this.drawWeapon3d(c, gripX, gripY, aim, gtype, sz, kick, r.muzzleT || 0, t);
+
+    c.restore();
   },
 
   draw() {
@@ -3041,41 +3617,89 @@ const BT = {
       c.beginPath(); c.arc(r.px, r.py, r.mods.auraR, 0, 7); c.stroke();
     }
 
-    /* 子弹 */
+    /* 子弹：按元素分型的曳光弹
+     * 旧版所有武器都是同一种黄色小球，看不出武器/元素差异。
+     * 新版：拖尾（沿速度反向的锥形）+ 弹头亮核 + 外辉光 + 地面光斑反射。 */
     for (const b of r.bullets) {
       if (!isFinite(b.x) || !isFinite(b.y)) continue;
       const bs = this.depthScale(b.y);
       /* 地面投影点：子弹悬空飞行 → 地面上一个淡影，强化 3D 空间感 */
       c.fillStyle = 'rgba(0,0,0,.22)';
       c.beginPath(); c.ellipse(b.x, b.y + 6 * bs, 3.4 * bs, 1.4 * bs, 0, 0, 7); c.fill();
+
       if (b.enemy) {
+        /* 敌方投射物：毒液 / 酸球（外圈毒雾 + 内亮核 + 拖尾液滴） */
         const er = 5 * bs;
-        const eg = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, er * 2.1);
         const ec = b.kind === 'poison' ? '123,232,106' : '200,224,90';
-        eg.addColorStop(0, 'rgba(255,255,255,.85)');
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        const tr = c.createLinearGradient(b.x, b.y, b.x - b.vx * 0.05, b.y - b.vy * 0.05);
+        tr.addColorStop(0, 'rgba(' + ec + ',.55)');
+        tr.addColorStop(1, 'rgba(' + ec + ',0)');
+        c.fillStyle = tr;
+        c.beginPath(); c.ellipse(b.x - b.vx * 0.025, b.y - b.vy * 0.025,
+          Math.max(3, er * 1.7), Math.max(1.4, er * 0.8), Math.atan2(b.vy, b.vx), 0, 7); c.fill();
+        const eg = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, er * 2.1);
+        eg.addColorStop(0, 'rgba(255,255,255,.90)');
         eg.addColorStop(0.35, 'rgba(' + ec + ',.95)');
         eg.addColorStop(1, 'rgba(' + ec + ',0)');
         c.fillStyle = eg;
         c.beginPath(); c.arc(b.x, b.y, er * 2.1, 0, 7); c.fill();
-      } else {
-        /* 拖尾：由粗到细的锥形光迹 */
-        const tx = b.x - b.vx * 0.030, ty = b.y - b.vy * 0.030;
-        const lg = c.createLinearGradient(b.x, b.y, tx, ty);
-        lg.addColorStop(0, 'rgba(255,236,170,.92)');
-        lg.addColorStop(1, 'rgba(255,180,60,0)');
-        c.strokeStyle = lg; c.lineCap = 'round';
-        c.lineWidth = 3.4 * bs;
-        c.beginPath(); c.moveTo(b.x, b.y); c.lineTo(tx, ty); c.stroke();
-        /* 弹头：立体发光球（高光偏左上） */
-        const hr = 3.2 * bs;
-        const hg = c.createRadialGradient(b.x - hr * 0.4, b.y - hr * 0.4, 0, b.x, b.y, hr * 2.0);
-        hg.addColorStop(0, 'rgba(255,255,255,.95)');
-        hg.addColorStop(0.40, 'rgba(255,215,106,.95)');
-        hg.addColorStop(1, 'rgba(255,140,40,0)');
-        c.fillStyle = hg;
-        c.beginPath(); c.arc(b.x, b.y, hr * 2.0, 0, 7); c.fill();
-        c.lineCap = 'butt';
+        c.restore();
+        continue;
       }
+
+      /* 玩家弹：按元素取三段色（核心 / 主体 / 余晖） */
+      const el = b.el || '物';
+      let c0, c1, c2;
+      if (el === '火')      { c0 = '255,248,214'; c1 = '255,150,52';  c2 = '220,60,16'; }
+      else if (el === '冰') { c0 = '235,252,255'; c1 = '120,220,255'; c2 = '52,140,235'; }
+      else if (el === '电') { c0 = '242,232,255'; c1 = '186,132,255'; c2 = '116,54,235'; }
+      else if (el === '毒') { c0 = '232,255,208'; c1 = '146,236,96';  c2 = '66,176,38'; }
+      else                  { c0 = '255,248,222'; c1 = '255,208,96';  c2 = '236,132,32'; }
+
+      const ang = Math.atan2(b.vy, b.vx);
+      const spd = Math.hypot(b.vx || 0, b.vy || 0) || 520;
+      /* 拖尾长度随弹速：狙击（1400）拖尾明显更长 → 高速感 */
+      const tl = Math.max(10, Math.min(34, spd * 0.024)) * bs;
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      /* ① 拖尾：从弹头向后的锥形光迹（沿弹道旋转的椭圆渐变） */
+      c.save();
+      c.translate(b.x, b.y);
+      c.rotate(ang);
+      const tg = c.createLinearGradient(0, 0, -tl, 0);
+      tg.addColorStop(0, 'rgba(' + c0 + ',.85)');
+      tg.addColorStop(0.28, 'rgba(' + c1 + ',.52)');
+      tg.addColorStop(1, 'rgba(' + c2 + ',0)');
+      c.fillStyle = tg;
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.quadraticCurveTo(-tl * 0.45, -2.6 * bs, -tl, 0);
+      c.quadraticCurveTo(-tl * 0.45, 2.6 * bs, 0, 0);
+      c.closePath(); c.fill();
+      c.restore();
+      /* ② 外辉光（柔和光晕，让弹丸在暗场里"发亮"） */
+      const hr = 3.0 * bs;
+      const gg = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, hr * 2.6);
+      gg.addColorStop(0, 'rgba(' + c1 + ',.55)');
+      gg.addColorStop(1, 'rgba(' + c2 + ',0)');
+      c.fillStyle = gg;
+      c.beginPath(); c.arc(b.x, b.y, hr * 2.6, 0, 7); c.fill();
+      /* ③ 弹头亮核（高光偏左上＝受光方向一致） */
+      const hg = c.createRadialGradient(b.x - hr * 0.35, b.y - hr * 0.35, 0, b.x, b.y, hr * 1.5);
+      hg.addColorStop(0, 'rgba(255,255,255,.98)');
+      hg.addColorStop(0.45, 'rgba(' + c0 + ',.95)');
+      hg.addColorStop(1, 'rgba(' + c1 + ',.15)');
+      c.fillStyle = hg;
+      c.beginPath(); c.arc(b.x, b.y, hr * 1.5, 0, 7); c.fill();
+      c.restore();
+      /* ④ 地面光斑反射：子弹在地面投下一小片元素色光 */
+      const gl = c.createRadialGradient(b.x, b.y + 7 * bs, 0, b.x, b.y + 7 * bs, 7 * bs);
+      gl.addColorStop(0, 'rgba(' + c1 + ',.22)');
+      gl.addColorStop(1, 'rgba(' + c1 + ',0)');
+      c.fillStyle = gl;
+      c.beginPath(); c.ellipse(b.x, b.y + 7 * bs, 7 * bs, 3 * bs, 0, 0, 7); c.fill();
     }
 
     /* 僵尸 */
