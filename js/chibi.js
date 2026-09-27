@@ -22,6 +22,11 @@
     S01: 's01', S02: 's02', S03: 's03', S04: 's04', S05: 's05', S06: 's06', S07: 's07', S08: 's08', S09: 's09', S10: 's10'
   };
 
+  /* 炮台 id → 贴图名（Q 版二头身炮塔，与美术产出一一对应） */
+  var TURMAP = {
+    T_HB: 't_hb', T_HY: 't_hy', T_DC: 't_dc', T_JJ: 't_jj'
+  };
+
   /* 开关：整体启用 / 停用（停用后完全走原来的矢量画法） */
   var ON = true;
 
@@ -57,6 +62,12 @@
   function keyOfGun(id) {
     if (!id) return null;
     return GUNMAP[id] || null;
+  }
+
+  /* 按炮台 id 取贴图名 */
+  function keyOfTurret(id) {
+    if (!id) return null;
+    return TURMAP[id] || null;
   }
 
   /* 画一个 Q 版单位：
@@ -106,6 +117,8 @@
     preload: preload,
     keyOfZombie: keyOfZombie,
     keyOfGun: keyOfGun,
+    keyOfTurret: keyOfTurret,
+    TURMAP: TURMAP,
     draw: draw,
     has: function (k) { var c = CACHE[k]; return !!(c && c.ok); },
     ready: function (k) { var c = CACHE[k]; return !!(c && c.ok); },
