@@ -940,7 +940,9 @@ const BT = {
       if (z.immuneSlow) { z.slow = 0; z.slowT = 0; }
       else if (z.slowT > 0) { z.slowT -= dt; if (z.slowT <= 0) z.slow = 0; }
       if (z.burnT > 0) { z.burnT -= dt; this.hurt(z, z.burn * r.atk * dt, false, '火'); }
-      const sp = z.spd * (1 - (z.slow || 0));
+      /* 眩晕优先于减速：stunT>0 时完全定身（速度归零），到期自动恢复 */
+      const sp = (z.stunT > 0) ? 0 : z.spd * (1 - (z.slow || 0));
+      if (z.stunT > 0) z.stunT -= dt;
       const dx = r.px - z.x, dy = r.py - z.y;
       const dist = Math.hypot(dx, dy) || 1;
       z.facing = Math.atan2(dy, dx);
@@ -1050,6 +1052,10 @@ const BT = {
             z.burnT = Math.max(z.burnT || 0, b.burnT || 3);
           }
           if (b.chain > 0 && Math.random() < b.chain) this.chain(z, b.chainN || 2, b.dmg * 0.55);
+          /* 眩晕（闪光弹 S05 stun:1.2）：僵尸完全定身，与减速独立 */
+          if (b.stun > 0) {
+            z.stunT = Math.max(z.stunT || 0, b.stunT || b.stun);
+          }
         }
         /* 分裂子弹（被动 fenliezidan）：命中后向两侧散射 N 枚子弹。
          * isSplit 守卫避免分裂出的子弹再次分裂导致指数爆炸；
@@ -1499,10 +1505,32 @@ const BT = {
         /* 武器元素效果：燃烧瓶 S02 burn:0.7 此前全项目零消费
          * —— 配置里写了「燃烧弹」，实际打中没有任何持续伤害。 */
         el: g.el || '物',
+        stun: g.stun || 0, stunT: g.stun || 0,
         burn: g.burn || 0, burnT: g.burn ? 3 : 0,
         slow: g.slow || 0, slowT: g.slowT || 0,
         chain: g.chain || 0, chainN: g.chainN || 0,
       });
+    }
+    /* 支援型武器：医疗包 heal / 护盾发生器 shield
+     * 这两种此前在武器表里只有名字、没有任何实现，装备后开火毫无反应。
+     * 护盾减伤链路（hurt 里 r.shield 抵扣）本来就有，这里只负责「加盾」；
+     * 因为 attrs 默认 maxShield=0，必须同步抬高上限，否则加了立刻被夹成 0。 */
+    if (g.heal > 0) {
+      const wm = r.wallMax || r.maxHp || 1;
+      r.wallHp = Math.min(wm, (r.wallHp != null ? r.wallHp : r.hp) + g.heal);
+      r.hp = r.wallHp;
+      r.efx.push({ t: 'nova', x: r.px, y: r.py - 20, life: 0.5, max: 0.5, r: 46 });
+      try { if (window.UI && UI.toast) UI.toast('🩹 防线回复 ' + Math.round(g.heal)); } catch (e) {}
+    }
+    if (g.shield > 0) {
+      r.shield = (Number(r.shield) || 0) + g.shield;
+      r.maxShield = Math.max(Number(r.maxShield) || 0, r.shield);
+      r.efx.push({ t: 'nova', x: r.px, y: r.py - 20, life: 0.5, max: 0.5, r: 46 });
+      try { if (window.UI && UI.toast) UI.toast('🛡️ 护盾 +' + Math.round(g.shield)); } catch (e) {}
+    }
+    /* 抛壳：开火反馈的写实细节（此前完全没有） */
+    if (r.efx && r.gunId !== 'W09' && r.gunId !== 'W12') {
+      r.efx.push({ t: 'shell', x: r.px + 6, y: r.py - 24, a: -1.1, life: 0.5, max: 0.5 });
     }
     /* 枪口火光 / 后坐力：供绘制层做开火反馈 */
     r.muzzleT = 0.07;
@@ -1582,6 +1610,8 @@ const BT = {
       r.skillDmg[k] = (r.skillDmg[k] || 0) + d;
     }
     this.addFloat(z.x, z.y - 14, Math.round(d), crit ? 'crit' : 'dmg');
+    /* 暴击星芒：暴击此前只有数字变色，画面上与普通命中无异 */
+    if (crit && r.efx) r.efx.push({ t: 'crit', x: z.x, y: z.y, life: 0.35, max: 0.35 });
     /* 命中火花：3D 粒子向外飞散（子弹打击感，此前命中只有飘字、无任何特效） */
     if (r.efx && r.efx.length < 90) {
       const ra0 = Math.random() * Math.PI * 2;
@@ -1652,6 +1682,8 @@ const BT = {
   kill(z) {
     const r = this.run; if (z.dead) return;
     z.dead = true; r.kills++;
+    /* 击杀反馈：此前僵尸是「瞬间消失」，没有任何消散表现 */
+    if (r.efx) r.efx.push({ t: 'die', x: z.x, y: z.y, life: 0.45, max: 0.45 });
     /* 表37 埋点：kill_monster */
     try { OPS.track('kill_monster', { z: z.id || z.n }); } catch (e) {}
     if (r.kills === 1 && window.UI && UI.guideTrigger) UI.guideTrigger('firstKill');
@@ -3707,6 +3739,9 @@ const BT = {
         c.beginPath(); c.arc(f.x, f.y, Math.max(1, rr * 0.8), 0, 7); c.fill();
         c.strokeStyle = 'rgba(255,150,60,' + al + ')'; c.lineWidth = 3;
         c.beginPath(); c.arc(f.x, f.y, rr, 0, 7); c.stroke();
+        /* 地面冲击波：火球之外补一层贴地扩散环 */
+        c.strokeStyle = 'rgba(255,238,190,' + (al * 0.6).toFixed(3) + ')'; c.lineWidth = 2.4;
+        c.beginPath(); c.ellipse(f.x, f.y, rr * 1.35, rr * 0.5, 0, 0, 7); c.stroke();
       } else if (f.t === 'nova') {
         c.strokeStyle = 'rgba(92,216,255,' + al + ')'; c.lineWidth = 2.5;
         c.beginPath(); c.arc(f.x, f.y, f.r * (1.25 - al * 0.4), 0, 7); c.stroke();
@@ -3754,6 +3789,49 @@ const BT = {
       } else if (f.t === 'warn') {
         c.strokeStyle = 'rgba(255,77,109,' + al + ')'; c.lineWidth = 3;
         c.beginPath(); c.arc(f.x, f.y, f.r * (1.3 - al * 0.5), 0, 7); c.stroke();
+      } else if (f.t === 'crit') {
+        /* 暴击星芒：金色十字光线 + 扩散双环。
+         * 此前暴击只有伤害数字变化，画面上与普通命中毫无区别，
+         * 玩家完全感觉不到「这一枪暴击了」。 */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const k = 1 - al, rr = 9 + k * 27;
+        c.strokeStyle = 'rgba(255,214,90,' + (al * 0.95).toFixed(3) + ')'; c.lineWidth = 2.6;
+        for (let i = 0; i < 4; i++) {
+          const a = i * Math.PI / 2 + 0.4;
+          c.beginPath();
+          c.moveTo(f.x + Math.cos(a) * rr * 0.32, f.y + Math.sin(a) * rr * 0.26);
+          c.lineTo(f.x + Math.cos(a) * rr, f.y + Math.sin(a) * rr * 0.8);
+          c.stroke();
+        }
+        c.beginPath(); c.arc(f.x, f.y, rr * 0.5, 0, 7); c.stroke();
+        c.restore();
+      } else if (f.t === 'die') {
+        /* 死亡消散：向上飘散的绿色粒子（僵尸倒下的反馈） */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 7; i++) {
+          const a = (i / 7) * Math.PI * 2, k = 1 - al;
+          const px = f.x + Math.cos(a) * k * 22, py = f.y + Math.sin(a) * k * 15 - k * 26;
+          const pg = c.createRadialGradient(px, py, 0, px, py, 4 * al + 1);
+          pg.addColorStop(0, 'rgba(160,255,150,' + (al * 0.85).toFixed(3) + ')');
+          pg.addColorStop(1, 'rgba(120,220,110,0)');
+          c.fillStyle = pg; c.beginPath(); c.arc(px, py, 4 * al + 1, 0, 7); c.fill();
+        }
+        c.restore();
+      } else if (f.t === 'shock') {
+        /* 地面冲击波：贴地扩散椭圆环（爆炸/重击的地面反馈） */
+        const k = 1 - al;
+        c.strokeStyle = 'rgba(255,238,190,' + (al * 0.72).toFixed(3) + ')';
+        c.lineWidth = Math.max(0.5, 3.5 * (1 - k * 0.5));
+        c.beginPath(); c.ellipse(f.x, f.y, f.r * (0.3 + k * 1.15), f.r * (0.3 + k * 1.15) * 0.36, 0, 0, 7); c.stroke();
+      } else if (f.t === 'shell') {
+        /* 抛壳：开火时弹出的一枚小弹壳，带旋转与抛物线 */
+        const k = 1 - al;
+        c.save();
+        c.translate(f.x + Math.cos(f.a || 0) * k * 30, f.y - k * 20 + k * k * 32);
+        c.rotate((f.a || 0) + k * 8);
+        c.fillStyle = 'rgba(255,208,96,' + al.toFixed(3) + ')';
+        c.fillRect(-2.5, -1.2, 5, 2.4);
+        c.restore();
       }
     }
 
