@@ -348,7 +348,7 @@ input{font-family:inherit}
   width:100%;min-height:0}
 .ccard{flex:1 1 0;min-width:0;max-width:33.33%;display:flex;flex-direction:column;align-items:center;
   gap:6px;padding:11px 7px;border-radius:13px;text-align:center;overflow:hidden;cursor:pointer;
-  max-height:100%
+  max-height:100%;
   background:linear-gradient(120deg,rgba(34,47,66,.96),rgba(16,24,38,.98));
   border:1.5px solid var(--line);box-shadow:0 5px 16px rgba(0,0,0,.5);
   animation:ccIn .3s backwards}
@@ -1206,3 +1206,352 @@ input{font-family:inherit}
   border-radius:22px !important;
   border:3px solid rgba(255,255,255,.18) !important;
 }
+
+/* =========================================================================
+ * ★★★ Q 版卡通主题（统一视觉语言：厚描边 / 大圆角 / 糖果色 / 立体玩具按钮）
+ * 只覆盖"外观"，不改动任何定位与尺寸，保证布局不跑版。
+ * ========================================================================= */
+:root{
+  /* 卡通描边墨色（暖紫黑，比纯黑更柔和） */
+  --q-ink:#2a1b3d;
+  --q-ink2:#191026;
+  /* 糖果主色 */
+  --q-y1:#ffe27a; --q-y2:#ffc93c; --q-y3:#f09500;   /* 糖果黄（主行动） */
+  --q-p1:#ffb3d1; --q-p2:#ff6fa5; --q-p3:#d63b73;   /* 糖果粉 */
+  --q-g1:#a8f0bd; --q-g2:#5fd97a; --q-g3:#2e9c46;   /* 糖果绿 */
+  --q-b1:#a8e4ff; --q-b2:#4fc3f7; --q-b3:#1b7fae;   /* 糖果蓝 */
+  --q-v1:#dcc0ff; --q-v2:#b57bff; --q-v3:#7a3fd1;   /* 糖果紫 */
+  --q-o1:#ffc79a; --q-o2:#ff9a4d; --q-o3:#d96a12;   /* 糖果橙 */
+  /* 背景与文字 */
+  --q-bg1:#4a3f7a; --q-bg2:#332a5c; --q-bg3:#241d42;
+  --q-txt:#fff8ee; --q-txt2:#d9cff2;
+}
+/* 圆体字：Q 版关键（系统无圆体时回退黑体，字形仍保持粗圆观感） */
+html,body,button,input,select,textarea{
+  font-family:"Yuanti SC","Yuanti TC","圆体-简","HYQiHei","Hiragino Sans GB",
+    "PingFang SC","HarmonyOS Sans SC","Source Han Sans CN",
+    "Microsoft YaHei",-apple-system,BlinkMacSystemFont,sans-serif;
+  font-weight:700;
+}
+
+/* ---------- 通用：立体玩具按钮（黄）---------- */
+.btn,.btn.c,.lg-btn,.rs-b,.rs-b.c,.ps-b,.ps-b.c,.ha,.ha.go{
+  border-radius:999px !important;
+  border:2.5px solid var(--q-ink) !important;
+  font-weight:800 !important;
+  letter-spacing:1px;
+}
+.btn,.btn.c{
+  background:linear-gradient(180deg,var(--q-y1),var(--q-y2) 55%,var(--q-o2)) !important;
+  color:#4a2c00 !important;
+  box-shadow:0 4px 0 var(--q-o3),0 6px 12px rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.55) !important;
+  transition:transform .08s,box-shadow .08s;
+}
+.btn:active,.btn.c:active{
+  transform:translateY(4px) !important;
+  box-shadow:0 0 0 var(--q-o3),0 2px 6px rgba(0,0,0,.3),inset 0 2px 0 rgba(255,255,255,.4) !important;
+}
+.btn.g{background:linear-gradient(180deg,var(--q-g1),var(--q-g2) 55%,#3fb85c) !important;
+  color:#0d3a17 !important;box-shadow:0 4px 0 var(--q-g3),0 6px 12px rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.5) !important}
+.btn.g:active{transform:translateY(4px) !important;box-shadow:0 0 0 var(--q-g3),inset 0 2px 0 rgba(255,255,255,.4) !important}
+.btn.o{background:linear-gradient(180deg,var(--q-o1),var(--q-o2) 55%,#e8722a) !important;
+  color:#4a2100 !important;box-shadow:0 4px 0 var(--q-o3),0 6px 12px rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.5) !important}
+.btn.o:active{transform:translateY(4px) !important;box-shadow:0 0 0 var(--q-o3),inset 0 2px 0 rgba(255,255,255,.4) !important}
+.btn.d{background:linear-gradient(180deg,#ffb0b0,#ff6b6b 55%,#d63b3b) !important;
+  color:#4a0d0d !important;box-shadow:0 4px 0 #a32424,0 6px 12px rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.45) !important}
+.btn.d:active{transform:translateY(4px) !important;box-shadow:0 0 0 #a32424 !important}
+.btn:disabled{opacity:.45;filter:grayscale(.5)}
+
+/* ---------- 面板主体：大圆角 + 厚描边 + 顶部糖果条 ---------- */
+.pn-box{
+  border-radius:26px 26px 0 0 !important;
+  background:linear-gradient(180deg,var(--q-bg1),var(--q-bg2) 38%,var(--q-bg3)) !important;
+  border:3px solid var(--q-ink) !important;border-bottom:none !important;
+  box-shadow:0 -8px 30px rgba(0,0,0,.6),inset 0 3px 0 rgba(255,255,255,.14) !important;
+}
+/* ---------- 面板头：返回左 / 标题居中 / 关闭右（逻辑清晰） ---------- */
+.pn-hd{
+  display:flex !important;align-items:center;gap:8px;
+  padding:11px 10px 10px !important;min-height:46px !important;
+  border-bottom:2.5px solid var(--q-ink) !important;
+  background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(0,0,0,.10)) !important;
+}
+.pn-hd b{
+  flex:1;text-align:center;font-size:14.5px;font-weight:800;letter-spacing:2px;
+  color:#fff;text-shadow:0 2px 0 var(--q-ink),0 3px 8px rgba(0,0,0,.55);
+}
+.pn-back{
+  flex:0 0 auto;width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(180deg,#6b5ba8,#4a3d7d) !important;
+  border:2.5px solid var(--q-ink) !important;color:#fff !important;font-size:12px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 3px 0 var(--q-ink2) !important;
+}
+#pnX{
+  flex:0 0 auto;width:32px;height:32px;border-radius:50%;font-size:13px;font-weight:800;
+  background:linear-gradient(180deg,#ff9aa8,#ff5f7e) !important;
+  border:2.5px solid var(--q-ink) !important;color:#fff !important;
+  box-shadow:0 3px 0 var(--q-ink2) !important;cursor:pointer;
+}
+#pnX:active,.pn-back:active{transform:translateY(3px);box-shadow:0 0 0 var(--q-ink2) !important}
+/* 侧栏面板：头部仍绝对定位，但改成「标题居中、关闭靠右」 */
+#panel[data-tp="side"] .pn-hd{height:48px !important;padding:0 10px !important;
+  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(0,0,0,.12)) !important}
+#panel[data-tp="side"] .pn-hd b{position:static !important;flex:1;text-align:center;
+  font-size:14px;letter-spacing:2px;background:none !important;border:none !important;
+  box-shadow:none !important;color:#fff !important}
+#panel[data-tp="side"] #pnX{left:auto !important;right:10px !important;top:8px !important}
+#panel[data-tp="side"] .pn-back{left:10px !important;top:8px !important}
+#panel[data-tp="side"] .pn-main{padding-top:0 !important}
+#panel[data-tp="side"] .pn-body{padding-top:10px !important}
+
+/* ---------- 面板 Tabs：胶囊 + 立体 ---------- */
+.pn-tabs{padding:9px 10px !important;gap:7px;
+  border-bottom:2.5px solid var(--q-ink) !important;
+  background:rgba(0,0,0,.16) !important}
+.pt{
+  padding:7px 15px !important;border-radius:999px !important;font-size:11.5px !important;
+  font-weight:800;background:linear-gradient(180deg,#5b4d94,#3f3570) !important;
+  border:2.5px solid var(--q-ink) !important;color:var(--q-txt2);
+  box-shadow:0 3px 0 var(--q-ink2) !important;transition:transform .08s,box-shadow .08s;
+}
+.pt.on{
+  background:linear-gradient(180deg,var(--q-y1),var(--q-y2) 55%,var(--q-o2)) !important;
+  color:#4a2c00 !important;border-color:var(--q-ink) !important;
+  box-shadow:0 3px 0 var(--q-o3),inset 0 2px 0 rgba(255,255,255,.5) !important;
+}
+.pt:active{transform:translateY(3px);box-shadow:0 0 0 var(--q-ink2) !important}
+/* 侧栏 / 右侧竖排 tab：保持竖排，改成圆角方块 */
+#panel[data-tp="side"] .pt,#panel[data-tp="right"] .pt{
+  border-radius:14px !important;padding:9px 4px !important}
+#panel[data-tp="right"] .pt{
+  background:linear-gradient(180deg,#7a5fc0,#553f9c) !important}
+#panel[data-tp="right"] .pt.on{
+  background:linear-gradient(180deg,var(--q-y1),var(--q-y2) 55%,var(--q-o2)) !important;
+  color:#4a2c00 !important;box-shadow:0 3px 0 var(--q-o3) !important}
+#panel[data-tp="bottom"] .pt{border-radius:999px !important}
+
+/* ---------- 卡片：大圆角 + 厚描边 + 顶部高光 ---------- */
+.card{
+  border-radius:18px !important;padding:12px 13px !important;
+  background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(0,0,0,.20)) !important;
+  border:2.5px solid var(--q-ink) !important;
+  box-shadow:0 4px 0 var(--q-ink2),inset 0 2px 0 rgba(255,255,255,.16) !important;
+}
+.card-t{
+  font-size:13px !important;font-weight:800 !important;letter-spacing:1px;
+  color:var(--q-y2);text-shadow:0 2px 0 var(--q-ink);
+}
+.card-t .sub{color:var(--q-txt2) !important;opacity:.85}
+/* 列表行 */
+.item,.zrow,.mc-card{
+  border-radius:15px !important;
+  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(0,0,0,.16)) !important;
+  border:2.5px solid var(--q-ink) !important;
+  box-shadow:0 3px 0 var(--q-ink2) !important;
+}
+.item .ic,.mc-card .mi{
+  border-radius:12px !important;border:2.5px solid var(--q-ink) !important;
+  background:linear-gradient(160deg,#6a58ab,#463a7c) !important;
+}
+/* 格子（背包/装备/商店） */
+.gcell,.eq,.lvgrid .lvc,.bs,.ha{
+  border-radius:16px !important;border:2.5px solid var(--q-ink) !important;
+  box-shadow:0 3px 0 var(--q-ink2),inset 0 2px 0 rgba(255,255,255,.18) !important;
+}
+.gcell{background:linear-gradient(165deg,#6455a5,#3d3271) !important}
+.gcell.sel{border-color:var(--q-y2) !important;box-shadow:0 0 0 3px rgba(255,201,60,.35),0 3px 0 var(--q-ink2) !important}
+.eq{background:linear-gradient(165deg,#6455a5,#3d3271) !important}
+.eq.on{border-color:var(--q-y2) !important;box-shadow:0 0 0 3px rgba(255,201,60,.35),0 3px 0 var(--q-ink2) !important}
+/* 空状态 */
+.empty{color:var(--q-txt2) !important;opacity:.8}
+
+/* ---------- 标签：胶囊糖果色 ---------- */
+.tag,.pill{
+  border-radius:999px !important;font-weight:800;padding:2px 9px !important;
+  border:2px solid var(--q-ink) !important;
+}
+.tag.y{background:linear-gradient(180deg,var(--q-y1),var(--q-y2)) !important;color:#4a2c00 !important}
+.tag.b{background:linear-gradient(180deg,var(--q-b1),var(--q-b2)) !important;color:#0a3550 !important}
+.tag.g{background:linear-gradient(180deg,var(--q-g1),var(--q-g2)) !important;color:#0d3a17 !important}
+.tag.r{background:linear-gradient(180deg,var(--q-p1),var(--q-p2)) !important;color:#4a0d26 !important}
+.tag.p{background:linear-gradient(180deg,var(--q-v1),var(--q-v2)) !important;color:#2c0f52 !important}
+
+/* ---------- 进度条：糖果渐变 + 厚边 ---------- */
+.bar,.hpbar,.bw-hp,.shbar,.wallbar,.ld-bar,.rs-i{
+  border:2px solid var(--q-ink) !important;border-radius:999px !important;
+  background:rgba(0,0,0,.42) !important;
+}
+.bar i{background:linear-gradient(90deg,var(--q-y3),var(--q-y2) 60%,var(--q-y1)) !important;
+  border-radius:999px !important;box-shadow:0 0 8px rgba(255,201,60,.5)}
+
+/* ---------- 三选一技能卡：Q 版厚描边 + 弹入 ---------- */
+.ccard{
+  border-radius:18px !important;
+  background:linear-gradient(170deg,#6a58ab,#3a2f68) !important;
+  border:3px solid var(--q-ink) !important;
+  box-shadow:0 6px 0 var(--q-ink2),0 10px 22px rgba(0,0,0,.5),inset 0 2px 0 rgba(255,255,255,.2) !important;
+  animation:ccIn .28s cubic-bezier(.2,1.5,.4,1) backwards !important;
+}
+.ccard > i{border-radius:14px !important;border:2.5px solid var(--q-ink) !important;
+  background:linear-gradient(160deg,#7d68c4,#4d3f8c) !important;
+  box-shadow:0 3px 0 var(--q-ink2) !important}
+.ccard .cn{color:#fff;text-shadow:0 2px 0 var(--q-ink)}
+.ccard .cl{color:var(--q-y2) !important}
+.ch-t{color:var(--q-y2) !important;text-shadow:0 3px 0 var(--q-ink),0 0 18px rgba(255,201,60,.5)}
+.ch-refresh{border-radius:999px !important;border:2.5px solid var(--q-ink) !important;
+  background:linear-gradient(180deg,#7a5fc0,#553f9c) !important;color:#fff !important;
+  box-shadow:0 4px 0 var(--q-ink2) !important;font-weight:800}
+#choice .ch-arrow{border-radius:999px !important;border:2.5px solid var(--q-ink) !important;
+  background:linear-gradient(180deg,var(--q-y1),var(--q-y2) 55%,var(--q-o2)) !important;
+  color:#4a2c00 !important;box-shadow:0 4px 0 var(--q-o3) !important}
+#choice .ch-arrow:active{transform:translateY(4px);box-shadow:0 0 0 var(--q-o3) !important}
+
+/* ---------- 主界面：导航气泡 + 大按钮 ---------- */
+.hm-acts .ha{
+  border-radius:18px !important;padding:11px 6px !important;
+  background:linear-gradient(180deg,#6455a5,#3d3271) !important;
+  box-shadow:0 4px 0 var(--q-ink2),inset 0 2px 0 rgba(255,255,255,.18) !important;
+}
+.hm-acts .ha.go{
+  background:linear-gradient(180deg,var(--q-o1),var(--q-o2) 55%,#e8722a) !important;
+  box-shadow:0 4px 0 var(--q-o3),inset 0 2px 0 rgba(255,255,255,.45) !important;
+}
+.hm-acts .ha.go b{color:#4a2100 !important}
+.hm-base .bs{background:linear-gradient(180deg,#6455a5,#3d3271) !important}
+.hm-nav .hn,.hm-nav2 .hn2{border-radius:14px !important}
+.hm-nav .hn.on,.hm-nav2 .hn2.on{
+  background:linear-gradient(180deg,var(--q-y1),var(--q-y2)) !important;
+  color:#4a2c00 !important;border-radius:14px !important;
+  box-shadow:0 3px 0 var(--q-o3) !important;
+}
+
+/* ---------- 登录：糖果卡片 ---------- */
+.lg-box{border-radius:22px !important;border:3px solid var(--q-ink) !important;
+  background:linear-gradient(180deg,#4a3f7a,#2a2250) !important;
+  box-shadow:0 8px 0 var(--q-ink2),0 18px 44px rgba(0,0,0,.6) !important}
+.lg-title{text-shadow:0 3px 0 var(--q-ink)}
+.lg-field input,.lg-form input{
+  border-radius:14px !important;border:2.5px solid var(--q-ink) !important;
+  background:rgba(0,0,0,.32) !important;color:#fff !important;font-weight:700}
+.lg-btn{border-radius:999px !important;border:3px solid var(--q-ink) !important;
+  background:linear-gradient(180deg,var(--q-y1),var(--q-y2) 55%,var(--q-o2)) !important;
+  color:#4a2c00 !important;box-shadow:0 5px 0 var(--q-o3),inset 0 2px 0 rgba(255,255,255,.5) !important}
+.lg-btn:active{transform:translateY(4px) !important;box-shadow:0 1px 0 var(--q-o3) !important}
+.gd{border-radius:14px !important;border:2.5px solid var(--q-ink) !important}
+.gd.on{background:linear-gradient(180deg,var(--q-y1),var(--q-y2)) !important;
+  box-shadow:0 3px 0 var(--q-o3) !important}
+.gd.on span{color:#4a2c00 !important}
+
+/* ---------- Toast：圆润气泡 ---------- */
+.toast{border-radius:999px !important;border:2.5px solid var(--q-ink) !important;
+  background:linear-gradient(180deg,#5b4d94,#3a2f68) !important;
+  color:#fff !important;font-weight:800;
+  box-shadow:0 4px 0 var(--q-ink2),0 8px 18px rgba(0,0,0,.45) !important}
+.toast.ok{background:linear-gradient(180deg,var(--q-g1),var(--q-g2)) !important;color:#0d3a17 !important}
+.toast.err{background:linear-gradient(180deg,#ffb0b0,#ff6b6b) !important;color:#4a0d0d !important}
+
+/* ---------- 结算 / 暂停 / 升级：Q 版弹窗 ---------- */
+.rs-box,.ps-box,.lvup-box,.gd-box{
+  border-radius:24px !important;border:3px solid var(--q-ink) !important;
+  background:linear-gradient(180deg,#5b4d94,#2f2657) !important;
+  box-shadow:0 8px 0 var(--q-ink2),0 20px 44px rgba(0,0,0,.6) !important}
+.rs-i{border-radius:16px !important;border:2.5px solid var(--q-ink) !important;
+  background:rgba(0,0,0,.28) !important;box-shadow:0 3px 0 var(--q-ink2) !important}
+.rs-i .v{color:var(--q-y2) !important;text-shadow:0 2px 0 var(--q-ink)}
+.rs-t.win{text-shadow:0 3px 0 var(--q-ink),0 0 18px rgba(255,201,60,.6)}
+.rs-b,.ps-b{border-radius:999px !important;
+  background:linear-gradient(180deg,#7a5fc0,#553f9c) !important;color:#fff !important;
+  box-shadow:0 4px 0 var(--q-ink2) !important}
+.rs-b.c,.ps-b.c{background:linear-gradient(180deg,var(--q-y1),var(--q-y2) 55%,var(--q-o2)) !important;
+  color:#4a2c00 !important;box-shadow:0 4px 0 var(--q-o3) !important}
+.rs-b:active,.ps-b:active{transform:translateY(4px);box-shadow:0 0 0 var(--q-ink2) !important}
+
+/* ---------- 战斗 HUD：糖果描边（只改外观，位置不动） ---------- */
+.bt-topbar .btb-icon,.bt-topbar .btb-speed,.bt-ammo,.bt-coin,.bt-hero,
+.bt-wall,.bt-turret button,.bt-skills .bs,.bt-reload,.btb-speed{
+  border:2.5px solid var(--q-ink) !important;
+  background:rgba(28,22,52,.82) !important;
+  box-shadow:0 3px 0 var(--q-ink2) !important;
+  border-radius:14px !important;
+}
+.bt-reload{border-radius:50% !important}
+.bt-skills .bs{border-radius:14px !important}
+.bt-turret button.on{border-color:var(--q-b2) !important;color:var(--q-b2) !important}
+.btb-speed{color:var(--q-y2) !important}
+.bt-topbar{
+  background:linear-gradient(180deg,rgba(20,15,38,.92),rgba(20,15,38,0)) !important}
+.btb-lv{color:#fff !important;text-shadow:0 2px 0 var(--q-ink) !important}
+.bt-talk{border:3px solid var(--q-ink) !important;border-radius:18px !important;
+  box-shadow:0 5px 0 var(--q-ink2),0 8px 18px rgba(0,0,0,.45) !important}
+
+/* ---------- 输入类控件统一 ---------- */
+input,select{
+  border-radius:14px !important;border:2.5px solid var(--q-ink) !important;
+}
+input:focus,select:focus{outline:none;border-color:var(--q-y2) !important}
+
+/* ---------- 滚动条：Q 版圆点 ---------- */
+.pn-body::-webkit-scrollbar{width:6px}
+.pn-body::-webkit-scrollbar-thumb{background:rgba(255,201,60,.45);border-radius:999px}
+.pn-body::-webkit-scrollbar-track{background:rgba(0,0,0,.2)}
+
+/* 修正：默认（顶部 tab）面板的标题徽章 —— 取消旧的绝对定位，改为居中 */
+.pn-hd b{
+  position:static !important;right:auto !important;top:auto !important;
+  background:none !important;border:none !important;box-shadow:none !important;
+  padding:0 !important;font-size:14.5px !important;
+}
+
+/* ---------- 主导航「战斗」：突出主行动（更大的糖果橙圆钮） ---------- */
+.hm-nav{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;
+  padding:7px 7px calc(4px + env(safe-area-inset-bottom));align-items:end}
+.hm-nav .hn{
+  position:relative;padding:7px 2px;border-radius:16px;
+  background:linear-gradient(180deg,#6455a5,#3d3271);
+  border:2.5px solid var(--q-ink);
+  box-shadow:0 4px 0 var(--q-ink2),inset 0 2px 0 rgba(255,255,255,.18);
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+  transition:transform .08s,box-shadow .08s;
+}
+.hm-nav .hn i{font-size:20px;font-style:normal;line-height:1.1}
+.hm-nav .hn span{font-size:9.5px;color:var(--q-txt2);font-weight:800;letter-spacing:.5px}
+.hm-nav .hn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--q-ink2)}
+.hm-nav .hn.main{
+  background:linear-gradient(180deg,var(--q-o1),var(--q-o2) 55%,#e8722a);
+  border-color:var(--q-ink);
+  box-shadow:0 5px 0 var(--q-o3),0 6px 14px rgba(0,0,0,.4),inset 0 2px 0 rgba(255,255,255,.5);
+  padding:9px 2px;
+}
+.hm-nav .hn.main i{font-size:27px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+.hm-nav .hn.main span{color:#4a2100;font-size:11px;font-weight:900}
+.hm-nav .hn.main:active{transform:translateY(4px);box-shadow:0 1px 0 var(--q-o3)}
+/* 副导航：糖果紫气泡 */
+.hm-nav2{gap:5px;padding:6px 7px}
+.hm-nav2 .hn2{
+  padding:5px 6px;border-radius:14px;
+  background:linear-gradient(180deg,#584a8f,#362c63);
+  border:2.5px solid var(--q-ink);
+  box-shadow:0 3px 0 var(--q-ink2),inset 0 2px 0 rgba(255,255,255,.14);
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+}
+.hm-nav2 .hn2 i{font-size:16px;font-style:normal}
+.hm-nav2 .hn2 span{font-size:9px;color:var(--q-txt2);font-weight:800}
+.hm-nav2 .hn2:active{transform:translateY(3px);box-shadow:0 0 0 var(--q-ink2)}
+
+/* ---------- 导航红点：可领奖励 / 未读邮件提示 ---------- */
+.hm-nav .hn,.hm-nav2 .hn2{position:relative}
+.nv-dot{
+  position:absolute;right:-3px;top:-3px;z-index:3;
+  min-width:17px;height:17px;padding:0 4px;border-radius:999px;
+  background:linear-gradient(180deg,#ff8a8a,#ff3b5c);
+  border:2px solid var(--q-ink);
+  color:#fff;font-size:9.5px;font-weight:900;line-height:15px;text-align:center;
+  font-style:normal;box-shadow:0 2px 5px rgba(0,0,0,.45);
+  animation:nvPulse 1.4s ease-in-out infinite;
+}
+@keyframes nvPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.16)}}
+/* 主导航圆角统一（覆盖前文的 14px） */
+.hm-nav .hn{border-radius:16px !important}
+.hm-nav .hn.main{border-radius:18px !important}
+.hm-nav2 .hn2{border-radius:14px !important}
