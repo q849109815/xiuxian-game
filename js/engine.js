@@ -443,6 +443,22 @@ const E = {
     if (!list) return this._nullGun();
     return list.find((g) => g.id === p.gun) || list[0];
   },
+
+  /* 武器射程换算（表44 range 15~80 → 像素）
+   * 此前硬编码 380（≈全场），导致六把枪射程完全一致：
+   * 散弹枪与狙击枪除伤害外零差异，武器表 range 字段形同废弃。
+   * 换算下限保证 > 远程僵尸最大 atkR(210)，避免「走不进射程→打不死→卡关」。
+   * 详见 config.js RANGE_BASE / RANGE_STEP 注释。 */
+  gunRange(g) {
+    const v = Number(g && g.range);
+    if (!isFinite(v) || v <= 0) return 380;            /* 无配置 → 维持旧行为 */
+    const base = Number((typeof EX !== 'undefined' && EX.RANGE_BASE) || 170);
+    const step = Number((typeof EX !== 'undefined' && EX.RANGE_STEP) || 5.9);
+    const px = Math.round(base + v * step);
+    /* 硬下限：绝不允许低于远程僵尸最大攻击距离，否则必然出现打不死的僵尸 */
+    return Math.max(240, Math.min(680, px));
+  },
+
   gunUnlocked(p, id) {
     const g = EX.guns.find((x) => x.id === id); if (!g) return false;
     if (!g.unlockLv) return true;
@@ -965,7 +981,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
             /* 射程 300→380：僵尸从上方走到射程边缘约需 8 秒（spd 58），
        * 射程太短导致每波实际射击窗口仅 6 秒，玩家清不完一波就超时推进，
        * 僵尸逐波累积 → 防线必破（实测 1-1 也过不去，防线 160/636） */
-      pellets: (g.pellets || 1) + af.extra, range: 380, spread: 0,
+      pellets: (g.pellets || 1) + af.extra, range: this.gunRange(g), spread: 0,
       crit: Math.min(0.85, crit + this.gemBonus(p).crit),
       critDmg: critDmg + this.gemBonus(p).critDmg,
       rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gemBonus(p).ratePct),
