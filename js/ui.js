@@ -1242,8 +1242,12 @@ r_tavern(p, tab) {
       if (g.give && g.give.stamina && E.staminaFull && E.staminaFull(p)) {
         return this.toast('体力已满（' + EX.STAMINA_MAX + '），无需购买', 'err');
       }
-      if ((p[cur] || 0) < g.price) return this.toast('货币不足', 'err');
-      p[cur] -= g.price;
+      /* 后台热更商品时漏填 price → `p[cur] -= undefined` 把玩家货币算成
+       * 【NaN】，此后所有购买全部失效；负数则买东西倒赚。这里统一收紧。 */
+      const price = E.safePrice(g.price);
+      if (price === null) return this.toast('商品价格配置异常，暂不可购买', 'err');
+      if ((p[cur] || 0) < price) return this.toast('货币不足', 'err');
+      p[cur] -= price;
       if (g.give) for (const k in g.give) {
         if (k === 'gold') p.gold += g.give[k];
         else if (k === 'diamond') {
@@ -1807,7 +1811,7 @@ r_tavern(p, tab) {
         const cost = E.staminaCost(l.id);
         return `<div class="item"><div class="ic">${isBoss ? '👹' : '🎯'}</div>
           <div class="info"><div class="nm">${l.id} ${l.n} ${isBoss ? '<span class="tag r">BOSS</span>' : ''}</div>
-          <div class="sub">${l.waves} 波 · 强度 ×${l.mul} · ${l.pool.map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')}</div>
+          <div class="sub">${l.waves} 波 · 强度 ×${l.mul} · ${(Array.isArray(l.pool) ? l.pool : []).map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')}</div>
           <div class="sub">${st ? '★'.repeat(st) : '未通关'} · 体力 ${cost} · 奖励：${this.rwTxt(l.rw)}</div>
           ${lock ? '<div class="sub" style="color:#ff8fa4">需先通关 ' + l.unlock + '</div>' : ''}</div>
           <div class="act">${lock ? '<span class="tag r">未解锁</span>' : `<button class="btn c sm" data-lv="${l.id}">挑战</button>`
