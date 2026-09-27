@@ -1316,7 +1316,9 @@ html,body,button,input,select,textarea{
   box-shadow:none !important;color:#fff !important}
 #panel[data-tp="side"] #pnX{left:auto !important;right:10px !important;top:8px !important}
 #panel[data-tp="side"] .pn-back{left:10px !important;top:8px !important}
-#panel[data-tp="side"] .pn-main{padding-top:0 !important}
+/* 头部是绝对定位、横贯整个宽度（高 48px），内容区必须让开它，
+ * 否则左侧竖排 tab 的第一个、以及正文顶部会被 ◀ / ✕ 两个圆钮压住。 */
+#panel[data-tp="side"] .pn-main{padding-top:52px !important}
 #panel[data-tp="side"] .pn-body{padding-top:10px !important}
 
 /* ---------- 面板 Tabs：胶囊 + 立体 ---------- */
@@ -1569,3 +1571,56 @@ input:focus,select:focus{outline:none;border-color:var(--q-y2) !important}
 .hm-nav .hn{border-radius:16px !important}
 .hm-nav .hn.main{border-radius:18px !important}
 .hm-nav2 .hn2{border-radius:14px !important}
+
+/* =========================================================
+ * 头像选择弹窗
+ * .modal 本身没有显隐规则（各弹窗各自声明），这里按 #panel 的写法补齐。
+ * ======================================================= */
+#avPick{position:fixed;inset:0;z-index:1200;display:none;align-items:center;justify-content:center;padding:18px}
+#avPick.on{display:flex}
+#avPick .pn-mask{position:absolute;inset:0;background:rgba(0,0,0,.72)}
+.avp-box{position:relative;width:min(92vw,360px);max-height:82vh;overflow-y:auto;
+  padding:0 14px 14px;border-radius:20px;
+  background:linear-gradient(180deg,#4a3d7d,#2a2245);
+  border:3px solid var(--q-ink);box-shadow:0 12px 34px rgba(0,0,0,.6)}
+.avp-box .pn-hd{margin:0 -14px 10px;border-bottom:none !important;min-height:46px}
+.avp-sp{width:32px;flex:0 0 auto}
+.avp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.avp-c{aspect-ratio:1/1;font-size:26px;border-radius:16px;
+  background:linear-gradient(165deg,rgba(255,255,255,.16),rgba(0,0,0,.24));
+  border:2.5px solid var(--q-ink);color:inherit;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 3px 0 var(--q-ink2)}
+.avp-c.on{border-color:var(--q-y2);
+  box-shadow:0 0 0 3px rgba(255,201,60,.4),0 3px 0 var(--q-ink2)}
+.avp-c:active{transform:translateY(3px);box-shadow:0 0 0 var(--q-ink2)}
+
+/* ---------- 音量滑块：原生 range 只有 20px 高、滑块极小，手指点不中 ---------- */
+input[type="range"]{height:44px !important;-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
+input[type="range"]::-webkit-slider-runnable-track{height:12px;border-radius:999px;
+  background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(255,255,255,.18));
+  border:2.5px solid var(--q-ink)}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+  width:26px;height:26px;margin-top:-9px;border-radius:50%;
+  background:linear-gradient(180deg,#ffe08a,var(--q-y2));
+  border:2.5px solid var(--q-ink);box-shadow:0 3px 0 var(--q-ink2)}
+input[type="range"]::-moz-range-track{height:12px;border-radius:999px;
+  background:rgba(255,255,255,.22);border:2.5px solid var(--q-ink)}
+input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
+  background:linear-gradient(180deg,#ffe08a,var(--q-y2));
+  border:2.5px solid var(--q-ink);box-shadow:0 3px 0 var(--q-ink2)}
+
+/* =========================================================
+ * 商城格子：固定 aspect-ratio 1/1（88×88，可视 84px）装不下
+ * 「图 + 名 + 描述 + 按钮 + 限购提示」，内容实测高 116~123px，
+ * flex 居中后图片顶部被裁掉 30~37px —— 就是「物品图片超出界面」。
+ * 改为自适应高度 + 图片允许压缩，保证整图完整显示。
+ * ======================================================= */
+.gcell{aspect-ratio:auto !important;min-height:104px;padding:6px 4px 8px !important}
+.gcell img{flex:0 1 auto;min-height:0;width:auto;height:auto;
+  max-width:64%;max-height:56px;object-fit:contain}
+.gcell .gn{white-space:normal;overflow:hidden;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical}
+/* 描述最多 2 行，避免「图+名+长描述+按钮+限购」把格子顶得过高 */
+.gcell .lbl{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;text-align:center}
