@@ -1055,7 +1055,10 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
             /* 射程 300→380：僵尸从上方走到射程边缘约需 8 秒（spd 58），
        * 射程太短导致每波实际射击窗口仅 6 秒，玩家清不完一波就超时推进，
        * 僵尸逐波累积 → 防线必破（实测 1-1 也过不去，防线 160/636） */
-      pellets: (g.pellets || 1) + af.extra, range: this.gunRange(g), spread: 0,
+      /* 散射角度（度）：此前硬编码 0，武器表 spread（W01=2/W02=8/狙击=0）
+       * 全项目零消费 —— 所有武器的弹幕扇形由 battle.js 写死的 0.13 弧度决定，
+       * 与配表无关，武器之间的"精准/散射"差异完全失效。现在按武器表返回。 */
+      pellets: (g.pellets || 1) + af.extra, range: this.gunRange(g), spread: (Number(g.spread) || 0),
       crit: Math.min(0.85, crit + this.gemBonus(p).crit),
       critDmg: critDmg + this.gemBonus(p).critDmg,
       rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gemBonus(p).ratePct),
