@@ -560,10 +560,10 @@ r_tavern(p, tab) {
           return `<div class="gcell ${on ? '' : 'sel'}" data-skb="${sk.id}"
             style="${own ? '' : 'opacity:.7'}">${sk.img
             ? `<img src="${sk.img}">` : `<div class="gi">${sk.icon}</div>`}
-            <div class="gn">${sk.n}${on ? '<span class="tag y" style="font-size:8px">穿戴中</span>' : ''}</div>
-            <div class="lbl" style="font-size:8px;line-height:1.3">${bt || '无加成'}${own ? '' : ' · 未拥有'}</div>
+            <div class="gn">${sk.n}${on ? '<span class="tag y" style="font-size:11px">穿戴中</span>' : ''}</div>
+            <div class="lbl" style="font-size:11px;line-height:1.3">${bt || '无加成'}${own ? '' : ' · 未拥有'}</div>
             ${(!own && price > 0) ? `<button class="btn sm" data-skby="${sk.id}"
-              style="font-size:9px;padding:3px 6px;margin-top:3px">💎 ${price} 购买</button>` : ''}</div>`;
+              style="font-size:10.5px;padding:3px 6px;margin-top:3px">💎 ${price} 购买</button>` : ''}</div>`;
         }).join('') || '<div class="lbl">暂无外观</div>'}</div>
       </div>`;
     }
@@ -612,8 +612,8 @@ r_tavern(p, tab) {
         return `<div class="gcell ${on2 ? '' : 'sel'}" data-chsel="${ch2.id}"
           style="${ok2 ? '' : 'opacity:.45'}">${ch2.img
             ? `<img src="${ch2.img}">` : `<div class="gi">${ch2.icon}</div>`}
-          <div class="gn">${ch2.n}${on2 ? '<span class="tag y" style="font-size:8px">使用中</span>' : ''}</div>
-          <div class="lbl" style="font-size:8px;line-height:1.3">${ok2
+          <div class="gn">${ch2.n}${on2 ? '<span class="tag y" style="font-size:11px">使用中</span>' : ''}</div>
+          <div class="lbl" style="font-size:11px;line-height:1.3">${ok2
             ? `生命${ch2.hp} · 护甲${ch2.armor} · 暴击${Math.round((ch2.crit || 0) * 100)}%`
             : (ch2.unlockTxt || '未解锁')}</div></div>`;
       }).join('') || '<div class="lbl">暂无角色</div>'}</div>
@@ -712,7 +712,7 @@ r_tavern(p, tab) {
           ? `<img src="${g.img}" style="width:30px;height:30px;border-radius:6px;object-fit:cover">`
           : g.icon}</div>
           <div class="info"><div class="nm"><span style="color:${EX.qColor[g.q]}">${g.q}</span> ${g.n} <span class="tag">${g.type}</span></div>
-          <div class="sub">伤害${g.dmg} 射速${g.rate}/s 弹夹${g.mag} 换弹${g.reload}s 射程${E.gunRange(g)} ${g.pellets > 1 ? '弹丸' + g.pellets : ''} ${g.pierce ? '穿透' + g.pierce : ''}</div>
+          <div class="sub wrap">${g.heal ? '治疗 ' + g.heal : g.shield ? '护盾 ' + g.shield : '伤害 ' + g.dmg} · 射速${g.rate}/s · 弹夹${g.mag} · 换弹${g.reload}s${g.range ? ' · 射程 ' + E.gunRange(g) : ''}${g.pellets > 1 ? ' · 弹丸' + g.pellets : ''}${g.pierce ? ' · 穿透' + g.pierce : ''}</div>
           <div class="sub">${g.bullet}${ok ? '' : ' · 需通关 ' + g.unlockLv}</div></div>
           <div class="act">${on ? '<span class="tag g">使用中</span>' : ok ? `<button class="btn c sm" data-gun="${g.id}">装备</button>` : '<span class="tag r">未解锁</span>'}</div></div>`;
       }).join('')}`).join('')}</div>`;
@@ -733,7 +733,7 @@ r_tavern(p, tab) {
              onerror="this.style.display='none'">` : ''}
         <div style="font-size:26px">${g.icon}</div>
         <div style="color:${EX.qColor[adv.q]};font-weight:700;margin-top:2px">${g.n}</div>
-        <div style="font-size:10px;color:#7d8ca8">${g.kind}武器 · ${g.type} · ${adv.q}品</div>
+        <div style="font-size:11px;color:#7d8ca8">${g.kind}武器 · ${g.type} · ${adv.q}品</div>
       </div></div>
       <div class="card"><div class="card-t">武器属性</div>
       <div class="kv"><span>品质</span><b style="color:${EX.qColor[adv.q]}">${adv.q}品</b></div>
@@ -799,10 +799,10 @@ r_tavern(p, tab) {
 
   /* ---------- 芯片 ---------- */
   r_chip(p, tab) {
-    if (!E.chipUnlocked(p)) return '<div class="empty"><span class="ic">🔲</span>芯片系统未解锁<br><span style="font-size:10px">通关 1-4 后开启</span></div>';
+    if (!E.chipUnlocked(p)) return '<div class="empty"><span class="ic">🔲</span>芯片系统未解锁<br><span style="font-size:11px">通关 1-4 后开启</span></div>';
     if (tab === '背包') {
       const bag = p.bag || [];
-      if (!bag.length) return '<div class="empty"><span class="ic">🔲</span>暂无芯片<br><span style="font-size:10px">BOSS 关掉落 / 活动获取</span></div>';
+      if (!bag.length) return '<div class="empty"><span class="ic">🔲</span>暂无芯片<br><span style="font-size:11px">BOSS 关掉落 / 活动获取</span></div>';
       return `<div class="card"><div class="card-t">芯片背包 <span class="sub">${bag.length} 块</span></div>
       ${bag.map((c) => `<div class="item">
         <div class="ic" style="border:1.5px solid ${EX.qColor[c.q]}">
@@ -833,7 +833,7 @@ r_tavern(p, tab) {
         const c = p.chips[s.k];
         return `<button class="lvc ${this.selChipSlot === s.k ? 'cur' : ''}" data-slot="${s.k}">
           <i style="font-size:18px;font-style:normal;display:block">${c ? '🔲' : '➕'}</i>
-          <b style="font-size:9px;color:${c ? EX.qColor[c.q] : '#6b7899'}">${c ? c.q + '品' : '空'}</b></button>`;
+          <b style="font-size:10.5px;color:${c ? EX.qColor[c.q] : '#6b7899'}">${c ? c.q + '品' : '空'}</b></button>`;
       }).join('')}</div>
       ${(() => { const c = (p.chips || {})[this.selChipSlot || EX.chipSlots[0].k];
         return c ? `<button class="btn n sm" data-chipoff="1" style="width:100%;margin-top:8px">卸下当前槽位芯片</button>`
@@ -849,7 +849,7 @@ r_tavern(p, tab) {
       <button class="btn o" id="chipEquip" style="width:100%;margin:8px 0">装 备 芯 片</button>
       <div class="card"><div class="card-t">芯片图鉴 <span class="sub">资料 8 种</span></div>
       ${EX.chips.map((d) => `<div class="kv"><span style="color:${EX.qColor[d.q]}">${d.n}</span>
-        <b style="font-size:10px">主+${(d.main.v * 100).toFixed(0)}%${d.subPool.length ? ' · 词条' + d.subPool.length : ''} · ${d.src}</b></div>`).join('')}</div>`;
+        <b style="font-size:11px">主+${(d.main.v * 100).toFixed(0)}%${d.subPool.length ? ' · 词条' + d.subPool.length : ''} · ${d.src}</b></div>`).join('')}</div>`;
   },
   b_chip(p, tab) {
     const ce = $('#chipEquip');
@@ -910,7 +910,7 @@ r_tavern(p, tab) {
 
   /* ---------- 天赋 ---------- */
   r_talent(p) {
-    if (!E.sysUnlocked(p, 'talent')) return '<div class="empty"><span class="ic">⭐</span>天赋系统未解锁<br><span style="font-size:10px">通关 1-3 后开启</span></div>';
+    if (!E.sysUnlocked(p, 'talent')) return '<div class="empty"><span class="ic">⭐</span>天赋系统未解锁<br><span style="font-size:11px">通关 1-3 后开启</span></div>';
     return `<div class="card"><div class="card-t">永久天赋 <span class="sub">全局生效，不随关卡重置</span></div>
     ${EX.talents.map((t) => {
       const cur = p.talents[t.id] || 0;
@@ -1065,10 +1065,10 @@ r_tavern(p, tab) {
             ${it.img ? `<img class="zav" src="${it.img}" style="object-fit:cover">`
                      : `<div class="zav">${it.icon}</div>`}
             <div class="zi"><b>${it.n} ×${n}</b><span>${def.desc || it.use || ''}</span>
-              ${pend[it.id] ? `<span style="color:#7ee38a;font-size:9px">下一场生效 ×${pend[it.id]}</span>` : ''}</div>
+              ${pend[it.id] ? `<span style="color:#7ee38a;font-size:10.5px">下一场生效 ×${pend[it.id]}</span>` : ''}</div>
             <div style="display:flex;flex-direction:column;gap:3px">
               <button class="btn sm" data-use="${it.id}" ${n > 0 ? '' : 'disabled'}>使用</button>
-              ${it.id === 'I04' ? `<button class="btn sm" data-use10="${it.id}" ${n >= 10 ? '' : 'disabled'} style="font-size:9px">开10个</button>` : ''}
+              ${it.id === 'I04' ? `<button class="btn sm" data-use10="${it.id}" ${n >= 10 ? '' : 'disabled'} style="font-size:10.5px">开10个</button>` : ''}
             </div></div>`;
         }).join('') : '<div class="lbl">暂无消耗品</div>'}
         <div class="lbl" style="text-align:left;margin-top:6px">战斗中点击立即生效；战斗外使用将在下一场自动生效</div>
@@ -1247,7 +1247,7 @@ r_tavern(p, tab) {
               <div class="zi"><b>Lv.${t.lv} ${t.n}</b><span>${un ? '可领取' : '通关 ' + t.lv + ' 关解锁'}</span></div>
               <div style="display:flex;flex-direction:column;gap:3px">
                 <button class="btn sm" data-psn="${i}" ${(un && !gn) ? '' : 'disabled'}>${gn ? '已领' : '普通'}</button>
-                <button class="btn sm" data-psa="${i}" ${(un && !ga && p.passAdv) ? '' : 'disabled'} style="font-size:9px">${ga ? '已领' : '进阶'}</button>
+                <button class="btn sm" data-psa="${i}" ${(un && !ga && p.passAdv) ? '' : 'disabled'} style="font-size:10.5px">${ga ? '已领' : '进阶'}</button>
               </div></div>`;
           }).join('')}
         </div>
@@ -1259,12 +1259,12 @@ r_tavern(p, tab) {
         const blocked = lm && !lm.ok;
         return `<div class="gcell">
           ${g.img ? `<img src="${g.img}">` : `<div class="gi">${g.icon}</div>`}
-          <div class="gn">${g.n}${g.rmb ? `<span class="tag y" style="font-size:8px">${g.rmb}</span>` : ''}</div>
-          ${g.desc ? `<div class="lbl" style="font-size:8px;line-height:1.3;margin:2px 0">${g.desc}</div>` : ''}
+          <div class="gn">${g.n}${g.rmb ? `<span class="tag y" style="font-size:11px">${g.rmb}</span>` : ''}</div>
+          ${g.desc ? `<div class="lbl" style="font-size:11px;line-height:1.3;margin:2px 0">${g.desc}</div>` : ''}
           <button class="btn sm" data-buy="${g.id}" ${(can && !blocked) ? '' : 'disabled'}
-            style="font-size:9px;padding:3px 6px;margin-top:2px">
+            style="font-size:10.5px;padding:3px 6px;margin-top:2px">
             ${g.price === 0 ? '免费领取' : (g.cur === 'diamond' ? '💎' : '🪙') + g.price}</button>
-          ${lm ? `<div class="lbl" style="font-size:8px;color:${lm.ok ? '#7ee38a' : '#ff8a8a'}">${lm.msg}</div>` : ''}
+          ${lm ? `<div class="lbl" style="font-size:11px;color:${lm.ok ? '#7ee38a' : '#ff8a8a'}">${lm.msg}</div>` : ''}
         </div>`;
       }).join('') : '<div class="lbl">暂无商品</div>'}</div>
     </div>`;
@@ -1772,10 +1772,10 @@ r_tavern(p, tab) {
       ${acts.length ? acts.map((a) => `<div class="zrow">
         <div class="zav">${a.icon || '🎪'}</div>
         <div class="zi"><b>${a.n}</b><span>${a.desc || ''}</span>
-          <span style="font-size:9px;color:#8fa0c0">${a.time || ''} · ${a.rule || ''}</span>
-          ${a.rwDesc ? `<span style="font-size:9px;color:#ffd76a">🎁 ${a.rwDesc}</span>` : ''}
-          ${a.id === 'EV02' ? `<span style="font-size:9px;color:#ffd76a">今日剩余 ${E.bossRaidLeft(p)} / 3 次</span>` : ''}
-          ${a.id === 'EV04' ? `<span style="font-size:9px;color:${p.firstRech ? '#7ee38a' : '#ffd76a'}">${p.firstRech ? '已使用' : '未使用 · 首次购买钻石翻倍'}</span>` : ''}
+          <span style="font-size:10.5px;color:#8fa0c0">${a.time || ''} · ${a.rule || ''}</span>
+          ${a.rwDesc ? `<span style="font-size:10.5px;color:#ffd76a">🎁 ${a.rwDesc}</span>` : ''}
+          ${a.id === 'EV02' ? `<span style="font-size:10.5px;color:#ffd76a">今日剩余 ${E.bossRaidLeft(p)} / 3 次</span>` : ''}
+          ${a.id === 'EV04' ? `<span style="font-size:10.5px;color:${p.firstRech ? '#7ee38a' : '#ffd76a'}">${p.firstRech ? '已使用' : '未使用 · 首次购买钻石翻倍'}</span>` : ''}
         </div>
         ${a.id === 'EV02' ? `<button class="btn sm" data-raid="1" ${E.bossRaidLeft(p) > 0 ? '' : 'disabled'}>挑战</button>` : ''}
         ${a.id === 'EV01' ? `<button class="btn sm" data-evendless="1">参与</button>` : ''}
@@ -1866,7 +1866,7 @@ r_tavern(p, tab) {
       }).join('')}</div>
       <div class="card"><div class="card-t">章节</div>
       <div class="lvgrid">${E.chapters().map((c) => `<button class="lvc ${c.id === ch ? 'cur' : ''}" data-ch="${c.id}">
-        <i style="font-size:17px;font-style:normal;display:block">${c.icon}</i><b style="font-size:9px">${c.n.split(' · ')[0]}</b></button>`).join('')}</div></div>
+        <i style="font-size:17px;font-style:normal;display:block">${c.icon}</i><b style="font-size:10.5px">${c.n.split(' · ')[0]}</b></button>`).join('')}</div></div>
       <div class="card"><div class="card-t">无尽模式</div>
       ${E.endlessUnlocked(p)
         ? `<div class="kv"><span>最佳层数</span><b>${p.endlessBest || 0}</b></div>
@@ -2079,7 +2079,7 @@ r_tavern(p, tab) {
           ${x.img ? `<img src="${x.img}" style="width:60%;height:60%;object-fit:contain">`
                   : `<div class="gi">${x.icon || '❓'}</div>`}
           <div class="gn">${has ? x.n : '???'}</div>
-          ${has && x.skill ? `<div style="font-size:9px;color:#8fb4ff;line-height:1.2;margin-top:1px">${x.skill}</div>` : ''}
+          ${has && x.skill ? `<div style="font-size:10.5px;color:#8fb4ff;line-height:1.2;margin-top:1px">${x.skill}</div>` : ''}
           ${has ? '<span class="gq">✔</span>' : '<span class="gq" style="background:#666">未解锁</span>'}
         </div>`;
       }).join('')}</div>
@@ -2143,7 +2143,7 @@ r_tavern(p, tab) {
       </div>
       <div class="card"><div class="card-t">文本预览 <span class="sub">TXT_001~008</span></div>
         ${Object.keys(EX.I18N || {}).map((id) => `<div class="kv">
-          <span style="font-size:10px">${id}</span><b style="font-size:11px">${window.OPS ? OPS.t(id) : (EX.I18N[id] || {}).zh}</b></div>`).join('')}
+          <span style="font-size:11px">${id}</span><b style="font-size:11px">${window.OPS ? OPS.t(id) : (EX.I18N[id] || {}).zh}</b></div>`).join('')}
       </div>`;
     }
     /* ---------- 运营（表37 埋点 / 表38 版本 / 表40 接口 / 表36 命名 / 热更新） ---------- */
@@ -2173,14 +2173,14 @@ r_tavern(p, tab) {
 
       <div class="card"><div class="card-t">后端接口 <span class="sub">表40 → GitHub 实现</span></div>
         ${(EX.APIS || []).map((a) => `<div class="kv">
-          <span style="font-size:10px">${a.id} ${a.n}</span>
-          <b style="font-size:9.5px;color:var(--txt3)">${a.impl}</b></div>`).join('')}
+          <span style="font-size:11px">${a.id} ${a.n}</span>
+          <b style="font-size:10.5px;color:var(--txt3)">${a.impl}</b></div>`).join('')}
       </div>
 
       <div class="card"><div class="card-t">资源命名规范 <span class="sub">表36 · 12 类</span></div>
         ${(EX.NAMING || []).map((n) => `<div class="kv">
-          <span style="font-size:10px"><b style="color:var(--yel)">${n.pre}</b> ${n.t}</span>
-          <b style="font-size:9.5px;color:var(--txt3)">${n.eg}</b></div>`).join('')}
+          <span style="font-size:11px"><b style="color:var(--yel)">${n.pre}</b> ${n.t}</span>
+          <b style="font-size:10.5px;color:var(--txt3)">${n.eg}</b></div>`).join('')}
       </div>`;
     }
     /* ---------- 兑换码（后台礼包码系统） ---------- */
@@ -2204,7 +2204,7 @@ r_tavern(p, tab) {
     if (tab === '网络') {
       return `<div class="card"><div class="card-t">网络状态</div>
         <div class="kv"><span>状态</span><b style="color:${Net.online ? 'var(--green)' : '#ff8fa4'}">${Net.online ? '● 已连接' : '○ 离线'}</b></div>
-        <div class="kv"><span>端点</span><b style="font-size:10px">${Net.endpoint.replace('https://', '')}</b></div>
+        <div class="kv"><span>端点</span><b style="font-size:11px">${Net.endpoint.replace('https://', '')}</b></div>
         <button class="btn blk" id="setReNet">重新检测</button>
         <button class="btn blk" id="setDiag">逐端点诊断</button>
         <div id="diagBox"><div class="lbl">点「逐端点诊断」测试全部通道</div></div></div>
@@ -2218,15 +2218,15 @@ r_tavern(p, tab) {
     }
     if (tab === '数值') {
       return `<div class="card"><div class="card-t">伤害公式 <span class="sub">资料 10 条</span></div>
-        ${EX.formulas.map((f) => `<div class="kv"><span style="font-size:10px">${f.n}</span><b style="font-size:10px">${f.f}</b></div>`).join('')}</div>
+        ${EX.formulas.map((f) => `<div class="kv"><span style="font-size:11px">${f.n}</span><b style="font-size:11px">${f.f}</b></div>`).join('')}</div>
         <div class="card"><div class="card-t">成长曲线</div>
-        ${EX.growth.map((g) => `<div class="kv"><span style="font-size:10px">${g.n}</span><b style="font-size:10px">${g.curve}</b></div>`).join('')}</div>`;
+        ${EX.growth.map((g) => `<div class="kv"><span style="font-size:11px">${g.n}</span><b style="font-size:11px">${g.curve}</b></div>`).join('')}</div>`;
     }
     const ac = window.UA ? UA.remembered() : {};
     return `<div class="card"><div class="card-t">账号 <span class="sub">账号密码登录</span></div>
       <div class="kv"><span>账号名</span><b>${this.esc(ac.name || '—')}</b></div>
-      <div class="kv"><span>账号 ID</span><b style="font-size:10px">${this.esc(ac.uid || '—')}</b></div>
-      <div class="kv"><span>下次登录</span><b style="font-size:10px">${ac.name ? '需输入密码（已记住账号名）' : '需重新输入'}</b></div>
+      <div class="kv"><span>账号 ID</span><b style="font-size:11px">${this.esc(ac.uid || '—')}</b></div>
+      <div class="kv"><span>下次登录</span><b style="font-size:11px">${ac.name ? '需输入密码（已记住账号名）' : '需重新输入'}</b></div>
       <div class="lbl" style="text-align:left;margin-top:6px">换设备时用同一账号名+密码登录，存档自动继承</div></div>
     <div class="card"><div class="card-t">修改密码</div>
       <div class="fld"><label>原密码</label><input id="spOld" type="password" placeholder="原密码"></div>
@@ -2247,7 +2247,7 @@ r_tavern(p, tab) {
       <button class="btn n blk" id="setSwitchAcct">🔁 退出登录 / 切换账号</button></div>
     <div class="card"><div class="card-t">账号信息</div>
       <div class="kv"><span>代号</span><b>${this.esc(p.name)}</b></div>
-      <div class="kv"><span>UID</span><b style="font-size:10px">${p.uid}</b></div>
+      <div class="kv"><span>UID</span><b style="font-size:11px">${p.uid}</b></div>
       <div class="kv"><span>角色</span><b>${E.char(p).n}</b></div>
       <div class="kv"><span>通关关卡</span><b>${Object.keys(p.cleared || {}).length} / ${EX.levels.length}</b></div>
       <div class="kv"><span>体力</span><b>${Math.floor(p.stamina || 0)}/${EX.STAMINA_MAX} <button class="btn sm" id="setAdStam">看广告+10</button></b></div>
@@ -2276,14 +2276,14 @@ r_tavern(p, tab) {
       }).join('') + ((p.frame) ? '<button class="btn d sm blk" data-eqf="">卸下当前头像框</button>' : '')
         : '<div class="lbl">暂无头像框（活动商店可获得）</div>'}</div>
       <div class="card"><div class="card-t">引导进度 <span class="sub">${Object.keys(p.guide || {}).length}/${EX.guides.length}</span></div>
-      ${EX.guides.filter((g) => g.must).map((g) => `<div class="kv"><span style="font-size:10px">${g.n}</span>
-        <b style="font-size:10px;color:${(p.guide || {})[g.id] ? 'var(--green)' : '#6b7899'}">${(p.guide || {})[g.id] ? '✔ 已完成' : '待引导'}</b></div>`).join('')}</div>
+      ${EX.guides.filter((g) => g.must).map((g) => `<div class="kv"><span style="font-size:11px">${g.n}</span>
+        <b style="font-size:11px;color:${(p.guide || {})[g.id] ? 'var(--green)' : '#6b7899'}">${(p.guide || {})[g.id] ? '✔ 已完成' : '待引导'}</b></div>`).join('')}</div>
       <div class="card"><div class="card-t">广告福利 <span class="sub">表24 广告位</span></div>
-      <div class="kv"><span style="font-size:10px">免费体力 AD03</span>
+      <div class="kv"><span style="font-size:11px">免费体力 AD03</span>
         <b><button class="btn sm" id="setAdStam2">看广告 +10 体力（剩 ${E.adLeft(p, 'AD03')}）</button></b></div>
-      <div class="kv"><span style="font-size:10px">免费抽奖 AD04</span>
+      <div class="kv"><span style="font-size:11px">免费抽奖 AD04</span>
         <b><button class="btn sm" id="setAdDraw">看广告 抽奖1次（剩 ${E.adLeft(p, 'AD04')}）</button></b></div>
-      <div class="kv"><span style="font-size:10px">额外宝箱 AD05</span>
+      <div class="kv"><span style="font-size:11px">额外宝箱 AD05</span>
         <b><button class="btn sm" id="setAdBox">看广告 宝箱×1（剩 ${E.adLeft(p, 'AD05')}）</button></b></div>
       <div class="lbl" style="text-align:left">每日上限：体力5次 · 抽奖3次 · 宝箱5次（每日重置）</div></div>
       <div class="card"><div class="card-t">数据</div>
@@ -2479,8 +2479,8 @@ r_tavern(p, tab) {
       const list = await Net.diagnose();
       const ok = list.filter((x) => x.ok).length;
       box.innerHTML = `<div class="lbl" style="margin-bottom:5px">${ok}/${list.length} 个通道可用</div>` +
-        list.map((x) => `<div class="kv"><span style="font-size:9px;word-break:break-all">${x.ep.replace('https://', '')}</span>
-          <b style="font-size:9px;color:${x.ok ? 'var(--green)' : '#ff8fa4'}">${x.ok ? '✔' : '✘'} ${x.st}</b></div>`).join('');
+        list.map((x) => `<div class="kv"><span style="font-size:10.5px;word-break:break-all">${x.ep.replace('https://', '')}</span>
+          <b style="font-size:10.5px;color:${x.ok ? 'var(--green)' : '#ff8fa4'}">${x.ok ? '✔' : '✘'} ${x.st}</b></div>`).join('');
       await Net.reset(); this.open('set', '网络');
     };
     const se = $('#setSaveEps'); if (se) se.onclick = () => {
