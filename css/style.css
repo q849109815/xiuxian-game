@@ -1132,3 +1132,74 @@ input{font-family:inherit}
   background:rgba(10,16,28,.6);border:1px solid rgba(92,216,255,.25)}
 .bw-sh i{display:block;height:100%;width:0;border-radius:6px;
   background:linear-gradient(90deg,#5cd8ff,#a8e8ff);transition:width .18s}
+
+/* ============================================================
+ * 【Q 版界面风格覆盖层】chibi UI
+ * 目标：圆润卡通、色彩明快、厚描边、立体按钮 —— 与 Q 版立绘统一观感。
+ * 设计约束：只覆盖「视觉属性」（圆角/描边/阴影/配色/字重），
+ *           不改动任何布局尺寸（宽高/margin/padding），避免破坏既有排版。
+ * ========================================================== */
+:root{
+  /* Q 版圆角：比原版更大更圆 */
+  --r-card:18px; --r-btn:999px; --r-chip:13px;
+  /* 更鲜艳明快的 Q 版配色（原色偏灰暗，与 Q 版立绘不搭） */
+  --bg:#334070; --bg2:#415285; --bg3:#50679e;
+  --acc:#ffa32a;
+  --gold:#ffd34a; --gold2:#ffb020;
+  --orange:#ffa32a; --orange2:#ef7c00;
+  --yel:#ffd34a; --grn:#8ee563; --grn2:#57c243;
+  --red:#ff5f6d; --blue:#54a0ff; --pp:#bb6bff; --green:#35d467;
+  --zombie:#8fd44f; --zombie2:#62a836;
+  --txt:#fff8ec; --txt2:#d3ddf0; --txt3:#9fb0d0;
+  --line:rgba(255,255,255,.20);
+}
+/* 圆润字体：优先系统圆体，回退到默认（不改变字号，只换字形） */
+#app, .card, .btn{
+  font-family:"Yuanti SC","圆体-简","Hiragino Sans GB","PingFang SC",
+              "Microsoft YaHei","Noto Sans CJK SC",system-ui,sans-serif;
+}
+
+/* ① 卡片：大圆角 + 卡通厚描边 + 立体投影 + 顶部高光 */
+.card{
+  border-radius:var(--r-card) !important;
+  border:2px solid rgba(255,255,255,.16) !important;
+  box-shadow:0 3px 0 rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.14) !important;
+}
+
+/* ② 按钮：胶囊形 + 深色描边 + 立体底边（卡通按键质感） */
+.btn{
+  border-radius:var(--r-btn) !important;
+  font-weight:800 !important;
+  letter-spacing:.6px !important;
+  border:2px solid rgba(0,0,0,.24) !important;
+  box-shadow:0 3px 0 rgba(0,0,0,.30) !important;
+  text-shadow:0 1px 0 rgba(255,255,255,.32) !important;
+}
+/* 按下：整体下沉并吃掉立体底边（Q 版按压反馈） */
+.btn:active{
+  transform:translateY(3px) !important;
+  box-shadow:0 0 0 rgba(0,0,0,0) !important;
+}
+.btn:disabled{ opacity:.45 !important; }
+
+/* ③ 面板标题：更粗更卡通 */
+.card-t{
+  font-weight:900 !important;
+  letter-spacing:1.6px !important;
+}
+
+/* ④ 页签 / 小徽章：胶囊化 */
+.tab, .chip, .tag, .badge{
+  border-radius:var(--r-btn) !important;
+}
+
+/* ⑤ 进度条 / 血条：加粗圆润，端点全圆 */
+.bar, .bar > i, .bar > span{
+  border-radius:999px !important;
+}
+
+/* ⑥ 弹窗：大圆角 + 卡通描边 */
+.modal, .pop, .dialog, .mask > div{
+  border-radius:22px !important;
+  border:3px solid rgba(255,255,255,.18) !important;
+}
