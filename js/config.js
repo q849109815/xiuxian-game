@@ -649,7 +649,12 @@ const EX = {
   rollAffixOne(legend) {
     const pool = this.affixes.filter((a) => legend ? a.q === '红' : a.q !== '红');
     const src = pool.length ? pool : this.affixes;
-    const a = src[Math.floor(Math.random() * src.length)];
+    /* 空表兜底：词条表被清空时 src[0] 为 undefined，下面读 a.v 会抛
+     * "Cannot read properties of undefined (reading 'v')" —— 实测连带
+     * 角色 / 武器 / 芯片 / 军团 共 6 个面板整体白屏。这里返回 null，
+     * 由 gunAffixes 跳过、affixBonus 与 affixTxt 各自判空。 */
+    const a = src.length ? src[Math.floor(Math.random() * src.length)] : null;
+    if (!a) return null;
     /* 数值在基础值上下浮动 ±40% */
     const v = a.v * (0.6 + Math.random() * 0.8);
     return { id: a.id, v: a.k === 'pierce' || a.k === 'mag' || a.k === 'extra'
@@ -1508,7 +1513,67 @@ const EX = {
     { k: '火', c: '#ff7a3c' }, { k: '冰', c: '#5cd8ff' },
     { k: '电', c: '#c08cff' }, { k: '风', c: '#7be8a0' }, { k: '物', c: '#ffd76a' },
   ],
+
+  /* =====================================================
+   * 【关键表空表兜底】
+   * 后台「运营配置」可热更 EX 的任意键。若某张表被清空（误操作、
+   * 上传空文件、JSON 结构错乱），此前会让【整个界面白屏】：
+   *   affixes=空 → 角色/武器/芯片/军团 6 个面板崩
+   *   buildings=空 → 基地 4 个页签全崩
+   *   chapters=空 → 关卡选择崩
+   *   tasks=空   → 任务面板崩
+   * 运营一次误操作 = 全体玩家打不开游戏。这里在【覆盖入口】统一拦截：
+   * 关键表被覆盖成空数组/空对象时，保留内置默认值，只记录告警。
+   * =================================================== */
+  CRITICAL_TABLES: ['chars', 'skins', 'guns', 'levels', 'chapters', 'tasks', 'affixes',
+    'buildings', 'items', 'gems', 'titles', 'frames', 'skills', 'turrets', 'mercs',
+    'talents', 'chips', 'zombies', 'bosses', 'achShop', 'eventShop', 'shop', 'shopGoods',
+    'legionShop', 'legions', 'legionActs', 'expeds', 'activities', 'guides', 'dropTable',
+    'equipSlots', 'chipSubStats', 'chipSlots', 'turretSlots', 'patrolRateByCh', 'starCost'],
+
+  /* 判断一份数据是否「有效非空」：数组看长度，对象看自有键数 */
+  _nonEmpty(v) {
+    if (v === null || v === undefined) return false;
+    if (Array.isArray(v)) return v.length > 0;
+    if (typeof v === 'object') return Object.keys(v).length > 0;
+    return true;
+  },
+
+  /* 在云端配置覆盖 EX 之前调用：返回 false 表示这次覆盖应被拒绝 */
+  guardTable(k, v) {
+    if (this.CRITICAL_TABLES.indexOf(k) < 0) return true;      /* 非关键表不拦 */
+    if (this._nonEmpty(v)) return true;                         /* 有效值放行 */
+    if (!this._nonEmpty(this[k])) return true;                  /* 内置本来就是空，无从保留 */
+    console.warn('[cfg] 关键表被覆盖为空，已保留内置值：' + k);
+    return false;
+  },
+
+  /* 启动/覆盖后统一巡检：万一某处绕过上面入口（如后台直接改 cfg.json 后
+   * 从别的路径写入），这里再把已被清空的关键表恢复成内置快照。 */
+  _builtinSnap: null,
+  snapBuiltin() {
+    if (this._builtinSnap) return;
+    const s = {};
+    this.CRITICAL_TABLES.forEach((k) => {
+      const v = this[k];
+      if (this._nonEmpty(v)) s[k] = JSON.parse(JSON.stringify(v));
+    });
+    this._builtinSnap = s;
+  },
+  guardAll() {
+    this.snapBuiltin();
+    const s = this._builtinSnap || {};
+    let n = 0;
+    this.CRITICAL_TABLES.forEach((k) => {
+      if (!this._nonEmpty(this[k]) && s[k]) { this[k] = JSON.parse(JSON.stringify(s[k])); n++; }
+    });
+    return n;
+  },
 };
+
+/* 建号内置快照：必须在任何云端配置覆盖【之前】执行，
+ * 否则快照本身就可能是被覆盖后的空值，兜底就失去意义了。 */
+EX.snapBuiltin();
 
 window.EX = EX;
 window.CFG = CFG;
