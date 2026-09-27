@@ -1419,6 +1419,53 @@ function onBattleEnd(res, d) {
 /* =========================================================
  * 输入：键盘（自动瞄准，摇杆已按需求移除）
  * ========================================================= */
+/* =========================================================
+ * 手机左滑返回守卫
+ * 单页应用里浏览器把每一次界面切换都当成一条历史记录，
+ * 手机上从左边缘滑一下 = 触发浏览器后退 = 整个页面被回退，
+ * 由于登录态是「每次打开强制重新输入」，玩家就莫名其妙被踢回登录页。
+ *
+ * 做法：先注入一条历史记录当垫子，用户左滑时 popstate 触发
+ * （同一 URL，页面不会真的重载），立刻把记录补回去 —— 后退被吃掉。
+ * 2 秒内滑第二次才弹确认，避免误触直接掉线。
+ * ======================================================= */
+const BACK_GAP = 2000;
+let __zbLastBack = 0;
+function bindBackGuard() {
+  try { history.pushState({ zbGuard: 1 }, '', location.href); } catch (e) { return; }
+  window.addEventListener('popstate', () => {
+    /* 无论是否放行，先把垫子补回去，否则下一次左滑就真的退出去了 */
+    try { history.pushState({ zbGuard: 1 }, '', location.href); } catch (e) {}
+
+    /* 只在「已经进到游戏里」时拦截；登录/加载页允许正常后退 */
+    const on = document.querySelector('.screen.on');
+    const inGame = !!on && (on.id === 'home' || on.id === 'battle');
+    if (!inGame) return;
+
+    /* 面板打开时先关面板，更符合直觉 */
+    const pn = document.getElementById('panel');
+    if (pn && pn.classList.contains('on')) {
+      try { UI.close(); } catch (e) { pn.classList.remove('on'); }
+      return;
+    }
+
+    const now = Date.now();
+    if (now - __zbLastBack > BACK_GAP) {
+      __zbLastBack = now;
+      try { UI.toast('再滑一次退出游戏', 'warn'); } catch (e) {}
+      return;
+    }
+    __zbLastBack = 0;
+    /* 2 秒内第二次：确认后才退出，避免手滑掉线 */
+    const ok = window.confirm('确定要退出游戏吗？');
+    if (!ok) return;
+    try { if (window.MAIN && MAIN.logout) MAIN.logout(); } catch (e) {
+      try { localStorage.removeItem('zb_uid'); localStorage.removeItem('zb_auto'); } catch (e2) {}
+      try { UI.show('login'); } catch (e2) {}
+    }
+  });
+}
+
 function bindJoystick() { /* 摇杆已移除：自动瞄准射击，无需方向输入 */ }
 
 function bindKeys() {
@@ -1437,6 +1484,7 @@ function bindKeys() {
  * 事件绑定
  * ========================================================= */
 function bindAll() {
+  bindBackGuard();
   let gender = 'm';
   $$('#lgGender .gd').forEach((b) => {
     b.onclick = () => { gender = b.dataset.g; $$('#lgGender .gd').forEach((x) => x.classList.remove('on')); b.classList.add('on'); };
@@ -1445,6 +1493,10 @@ function bindAll() {
    * （登录表单只有 lgUser/lgPwd）→ 一旦执行必然抛 null.value。
    * 它被下方「---- 登录 ----」处的第二次绑定覆盖，所以从未触发，
    * 但属于危险死代码（调整绑定顺序会当场崩溃），已移除。 */
+
+  /* 主界面左上角头像：此前完全没有点击绑定，玩家点不动也换不了 */
+  const hav = document.getElementById('hmAv');
+  if (hav) hav.onclick = () => { try { UI.pickAvatar(); } catch (e) {} };
 
   const hg = document.getElementById('hmGo');
   if (hg) hg.onclick = () => UI.open('level');
