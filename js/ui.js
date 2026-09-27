@@ -7,7 +7,7 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 
 const UI = {
-  P: null, curPanel: null, curTab: {}, selChipSlot: 'c1', curChapter: 1,
+  P: null, curPanel: null, curTab: {}, selChipSlot: 'c1', curChapter: 1, curDiff: 'normal',
 
   show(id) {
     $$('.screen').forEach((s) => s.classList.remove('on'));
@@ -46,7 +46,7 @@ const UI = {
     $('#hmLevel').textContent = E.char(p).n + ' · ' + E.levelName(cur);
     $('#hmLevelName').textContent = E.levelName(cur) + (E.staminaCost(cur) > 1 ? '（体力' + E.staminaCost(cur) + '）' : '');
     const eb = $('#hmEndBest');
-    if (eb) eb.textContent = E.endlessUnlocked(p) ? ('最佳 ' + (p.endlessBest || 0) + ' 层') : ('通关 ' + (EX.ENDLESS_UNLOCK || '10-10') + ' 解锁');
+    if (eb) eb.textContent = '最佳 ' + (p.endlessBest || 0) + ' 层';
     const st = $('#hmStamina');
     if (st) st.textContent = Math.floor(p.stamina || 0) + '/' + EX.STAMINA_MAX;
     const avEl = $('#hmAvIco');
@@ -1259,6 +1259,10 @@ r_tavern(p, tab) {
 
   /* ---------- 商店（截图：每日/武器/宝石/材料 三列网格） ---------- */
   r_shop(p, tab) {
+    /* 标题直接取 tab，而 tab 未传入时是 undefined → 卡片标题显示「undefined」
+     * （实测 render('shop') 不带 tab 时，card-t 输出 undefined）。
+     * 这里兜底取该面板的第一个页签。 */
+    tab = tab || ((this.PANELS.shop && this.PANELS.shop[1] && this.PANELS.shop[1][0]) || '每日');
     const goods = (EX.shopGoods || {})[tab] || [];
     return `<div class="card"><div class="card-t">${tab}
       <span class="sub">🪙 ${E.fmt(p.gold)} · 💎 ${E.fmt(p.diamond)}</span></div>
@@ -1883,32 +1887,60 @@ r_tavern(p, tab) {
       /* 章节表被清空时上面两个都是 undefined，读 cd.icon 直接抛错，
        * 关卡选择页整体白屏。占位后至少能进界面。 */
       || { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️' };
+    /* 当前难度：普通 / 困难 / 恶魔（每关三档，各自独立记录星级与奖励） */
+    const diff = this.curDiff || 'normal';
+    const dm = E.diffMul(diff);
+    const diffs = EX.DIFFS || [{ id: 'normal', n: '普通', icon: '🌱' }];
     const list = E.levels().filter((x) => x.ch === ch);
-    return `<div class="card"><div class="card-t">${cd.icon} ${cd.n}</div>
+    /* 难度切换条 */
+    const diffBar = `<div class="card"><div class="card-t">难度</div>
+      <div class="lvgrid" style="grid-template-columns:repeat(3,1fr)">
+      ${diffs.map((d) => {
+        const cur = d.id === dm.id;
+        const dd = E.diffMul(d.id);
+        return `<button class="lvc ${cur ? 'cur' : ''}" data-df="${d.id}" style="${cur ? 'background:' + (d.color || '#5fd97a') + '22;border-color:' + (d.color || '#5fd97a') : ''}">
+          <i style="font-size:17px;font-style:normal;display:block">${d.icon}</i>
+          <b style="font-size:10.5px">${d.n}</b>
+          <span style="font-size:10px;opacity:.85">奖励×${dd.rw} · 体力+${Math.max(0, dd.stam - 1)}</span></button>`;
+      }).join('')}</div>
+      <div class="sub" style="margin-top:6px">${E.diffDef(dm.id).desc || ''}</div></div>`;
+    return diffBar + `<div class="card"><div class="card-t">${cd.icon} ${cd.n}</div>
       ${list.map((l) => {
         const lock = !E.levelUnlocked(p, l.id);
-        const st = (p.cleared || {})[l.id] || 0;
+        const st = E.diffStars(p, l.id, diff);
         const isBoss = l.cond === 'boss' || l.cond === 'bossAll';
-        const cost = E.staminaCost(l.id);
+        const cost = E.staminaCost(l.id, diff);
+        const dlock = !E.diffUnlocked(p, l.id, diff);
+        /* 奖励按当前难度倍率展示（与实际发放同源，避免面板与实际不符） */
+        const rwv = {};
+        for (const k in (l.rw || {})) rwv[k] = k === 'gold' ? Math.round(l.rw[k] * dm.rw) : Math.round(l.rw[k] * dm.rw);
         return `<div class="item"><div class="ic">${isBoss ? '👹' : '🎯'}</div>
-          <div class="info"><div class="nm">${l.id} ${l.n} ${isBoss ? '<span class="tag r">BOSS</span>' : ''}</div>
-          <div class="sub">${l.waves} 波 · 强度 ×${l.mul} · ${(Array.isArray(l.pool) ? l.pool : []).map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')}</div>
-          <div class="sub">${st ? '★'.repeat(st) : '未通关'} · 体力 ${cost} · 奖励：${this.rwTxt(l.rw)}</div>
-          ${lock ? '<div class="sub" style="color:#ff8fa4">需先通关 ' + l.unlock + '</div>' : ''}</div>
-          <div class="act">${lock ? '<span class="tag r">未解锁</span>' : `<button class="btn c sm" data-lv="${l.id}">挑战</button>`
+          <div class="info"><div class="nm">${l.id} ${l.n} ${isBoss ? '<span class="tag r">BOSS</span>' : ''}
+            ${st ? '<span class="tag" style="background:' + (E.diffDef(diff).color || '#5fd97a') + '33">' + E.diffDef(diff).icon + '★' + st + '</span>' : ''}</div>
+          <div class="sub">${l.waves} 波 · 强度 ×${(Number(l.mul) || 1).toFixed(2)} · ${(Array.isArray(l.pool) ? l.pool : []).map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')}</div>
+          <div class="sub">${st ? '★'.repeat(st) : '未通关'} · 体力 ${cost} · 奖励：${this.rwTxt(rwv)}</div>
+          ${lock ? '<div class="sub" style="color:#ff8fa4">需先通关 ' + l.unlock + '</div>' : ''}
+          ${(!lock && dlock) ? '<div class="sub" style="color:#ff8fa4">需先通关「' + E.diffDef(E.diffDef(diff).unlock).n + '」难度</div>' : ''}</div>
+          <div class="act">${lock ? '<span class="tag r">未解锁</span>'
+            : dlock ? '<span class="tag r">难度未开</span>'
+            : `<button class="btn c sm" data-lv="${l.id}" data-df="${diff}">挑战</button>`
             + (st ? `<button class="btn sm o" data-sw="${l.id}" style="margin-top:4px">扫荡</button>` : '')}</div></div>`;
       }).join('')}</div>
       <div class="card"><div class="card-t">章节</div>
       <div class="lvgrid">${E.chapters().map((c) => `<button class="lvc ${c.id === ch ? 'cur' : ''}" data-ch="${c.id}">
         <i style="font-size:17px;font-style:normal;display:block">${c.icon}</i><b style="font-size:10.5px">${c.n.split(' · ')[0]}</b></button>`).join('')}</div></div>
       <div class="card"><div class="card-t">无尽模式</div>
-      ${E.endlessUnlocked(p)
-        ? `<div class="kv"><span>最佳层数</span><b>${p.endlessBest || 0}</b></div>
-           <button class="btn c blk" data-lv="endless">进入无尽（体力 2）</button>`
-        : '<div class="lbl">通关 ' + (EX.ENDLESS_UNLOCK || '10-10') + ' 后解锁</div>'}</div>`;
+      ${`<div class="kv"><span>最佳层数</span><b>${p.endlessBest || 0}</b></div>
+         <div class="sub">默认解锁 · 掉落/收益随进度章节提升</div>
+         <button class="btn c blk" data-lv="endless" data-df="normal">进入无尽（体力 2）</button>`}</div>`;
   },
   b_level(p) {
     $$('#pnBody [data-ch]').forEach((b) => { b.onclick = () => { this.curChapter = +b.dataset.ch; this.open('level'); }; });
+    /* 难度切换：只切档位并刷新列表，不进战斗 */
+    $$('#pnBody [data-df]').forEach((b) => {
+      if (b.dataset.lv) return;   /* 挑战按钮上的 data-df 由下面统一处理 */
+      b.onclick = () => { this.curDiff = b.dataset.df; this.open('level'); };
+    });
     /* BUG：无尽入口也挂在 [data-lv] 上（data-lv="endless"），此前一律
      *      按普通关调 startBattle('normal', 'endless')，mode 不是 'endless' 带来两处偏差：
      *      ① startBattle 里「无尽模式不播章节 CG」的分支失效 → 进无尽前会先弹
@@ -1917,9 +1949,10 @@ r_tavern(p, tab) {
      *         找不到会回退到 1-1（unlock=null）→ 恒为 true，校验形同虚设。
      *      现在按入口区分 mode。 */
     $$('#pnBody [data-lv]').forEach((b) => { b.onclick = () => {
+      const df = b.dataset.df || this.curDiff || 'normal';
       this.close();
       if (b.dataset.lv === 'endless') startBattle('endless');
-      else startBattle('normal', b.dataset.lv);
+      else startBattle('normal', b.dataset.lv, df);
     }; });
     $$('#pnBody [data-sw]').forEach((b) => { b.onclick = () => this.sweepBox(b.dataset.sw); });
   },
@@ -1929,7 +1962,9 @@ r_tavern(p, tab) {
     const p = this.P; if (!p) return;
     const ck = E.canSweep(p, lvId);
     if (!ck.ok) return this.toast(ck.msg, 'err');
-    const maxBySt = Math.floor((p.stamina || 0) / EX.SWEEP_STAMINA);
+    /* 扫荡体力按「手动打这关」的消耗（随难度变化），不再是固定的 5 点 */
+    const _swOne = E.sweepStamina ? E.sweepStamina(lvId, E.sweepDiff(p, lvId)) : EX.SWEEP_STAMINA;
+    const maxBySt = Math.floor((p.stamina || 0) / _swOne);
     const max = Math.max(1, Math.min(EX.SWEEP_MAX, maxBySt));
     /* 用与 E.sweep 同源的预览，避免「弹窗显示」与「实际到账」对不上 */
     const rw1 = E.sweepPreview ? E.sweepPreview(p, lvId, 1) : EX.sweepRw(parseInt(String(lvId).split('-')[1] || '1', 10), 1);
@@ -1941,11 +1976,12 @@ r_tavern(p, tab) {
     box.innerHTML = `<div class="pn-box"><div class="pn-hd"><b>扫荡 ${lvId}</b>
       <button id="swX">✕</button></div><div class="pn-main"><div class="pn-body">
       <div class="card"><div class="card-t">扫荡设置</div>
-      <div class="sub">单次消耗体力 ${EX.SWEEP_STAMINA} · 当前体力 ${Math.floor(p.stamina || 0)}</div>
+      <div class="sub">单次消耗体力 ${_swOne} · 当前体力 ${Math.floor(p.stamina || 0)}</div>
+      <div class="sub" style="color:${E.diffDef(rw1.diff || 'normal').color}">扫荡难度：${E.diffDef(rw1.diff || 'normal').icon} ${E.diffDef(rw1.diff || 'normal').n}${rw1.diffRw > 1 ? '（奖励 ×' + rw1.diffRw + '）' : ''}</div>
       <div class="sub">单次产出：金币 ${E.fmt(rw1.gold)} · ${matTxt} · 经验 ${rw1.xp} · 体力 ${rw1.stamina}</div>
       <div class="kv"><span>扫荡次数</span><b><input type="number" id="swN" value="${max}" min="1" max="${max}"
         style="width:64px;padding:4px;border-radius:6px;border:1px solid #555;background:#222;color:#fff"></b></div>
-      <button class="btn c blk" id="swGo" ${noSt ? 'disabled style="opacity:.5"' : ''}>${noSt ? '体力不足（需 ' + EX.SWEEP_STAMINA + ' 点）' : '开始扫荡（最多 ' + max + ' 次）'}</button>
+      <button class="btn c blk" id="swGo" ${noSt ? 'disabled style="opacity:.5"' : ''}>${noSt ? '体力不足（需 ' + _swOne + ' 点）' : '开始扫荡（最多 ' + max + ' 次）'}</button>
       <button class="btn d blk" id="swX2">取消</button></div></div></div></div>`;
     box.classList.add('on');
     const g = document.getElementById('swGo');
@@ -2061,6 +2097,7 @@ r_tavern(p, tab) {
 
   /* ---------- 兑换商店（表42成就商店 / 表43活动商店） ---------- */
   r_ashop(p, tab) {
+    tab = tab || ((this.PANELS.ashop && this.PANELS.ashop[1] && this.PANELS.ashop[1][0]) || '成就商店');
     const isAch = tab === '成就商店';
     const list = isAch ? (EX.achShop || []) : (EX.eventShop || []);
     const curName = isAch ? '成就点' : '活动代币';
@@ -2095,6 +2132,7 @@ r_tavern(p, tab) {
 
   /* ---------- 图鉴收集（表29） ---------- */
   r_codex(p, tab) {
+    tab = tab || ((this.PANELS.codex && this.PANELS.codex[1] && this.PANELS.codex[1][0]) || '怪物');
     const kindMap = { '怪物': 'zombie', '武器': 'gun', '皮肤': 'skin' };
     const kind = kindMap[tab] || 'zombie';
     const list = EX.codexOf(kind) || [];
@@ -2977,7 +3015,17 @@ r_tavern(p, tab) {
       + cell(d.kills, '击杀')
       + cell(win ? (d.stars || 0) : 0, '星级')
       + (rw.chip ? cell(rw.chip, '芯片') : '')
+      + (rw.diamond ? cell(rw.diamond, '钻石') : '')
       + mk.map((k) => cell(rw.mat[k], E.itemName ? E.itemName(k) : k)).join('');
+    /* 难度标签：让玩家知道自己打的是哪一档（三档奖励差 6.5 倍，必须可见） */
+    const rsDf = $('#rsDiff');
+    if (rsDf) {
+      const d = E.diffDef((BT.run && BT.run.diff) || 'normal');
+      rsDf.innerHTML = BT.run && BT.run.endless ? '<span class="tag">无尽模式</span>'
+        : `<span class="tag" style="background:${d.color || '#5fd97a'}33">${d.icon || ''} ${d.n}难度</span>`
+          + (rw.firstBonus ? `<span class="tag" style="background:#ffd93d33">🎁 首通 +${rw.firstBonus} 钻石</span>` : '');
+      rsDf.style.display = '';
+    }
     /* 伤害来源统计
      * BUG：hurt() 记录的是【伤害来源/元素】（'物' '火' '电' '冰' 'barrel'），
      *      而这里拿它去 EX.skills 里按 id 查名字 —— 来源键不是技能 id，
