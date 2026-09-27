@@ -96,6 +96,9 @@ const UI = {
     exped: ['远征堡垒', ['远征', '巡逻'], 'side'],
     ashop: ['兑换商店', ['成就商店', '活动商店'], 'side'],
     codex: ['图鉴收集', ['怪物', '武器', '皮肤'], 'side'],
+    /* 公告：后台「公告管理」此前标记"前端未接入"，玩家永远看不到运营发的公告。
+     * 现在作为一个正式面板接入（列表 + 未读标记 + 登录弹窗）。 */
+    notice: ['公告', ['公告'], 'top'],
   },
   tabPos(key) { const d = this.PANELS[key]; return (d && d[2]) || 'top'; },
 
@@ -667,7 +670,7 @@ r_tavern(p, tab) {
           ? `<img src="${g.img}" style="width:30px;height:30px;border-radius:6px;object-fit:cover">`
           : g.icon}</div>
           <div class="info"><div class="nm"><span style="color:${EX.qColor[g.q]}">${g.q}</span> ${g.n} <span class="tag">${g.type}</span></div>
-          <div class="sub">伤害${g.dmg} 射速${g.rate}/s 弹夹${g.mag} 换弹${g.reload}s ${g.pellets > 1 ? '弹丸' + g.pellets : ''} ${g.pierce ? '穿透' + g.pierce : ''}</div>
+          <div class="sub">伤害${g.dmg} 射速${g.rate}/s 弹夹${g.mag} 换弹${g.reload}s 射程${E.gunRange(g)} ${g.pellets > 1 ? '弹丸' + g.pellets : ''} ${g.pierce ? '穿透' + g.pierce : ''}</div>
           <div class="sub">${g.bullet}${ok ? '' : ' · 需通关 ' + g.unlockLv}</div></div>
           <div class="act">${on ? '<span class="tag g">使用中</span>' : ok ? `<button class="btn c sm" data-gun="${g.id}">装备</button>` : '<span class="tag r">未解锁</span>'}</div></div>`;
       }).join('')}`).join('')}</div>`;
@@ -698,6 +701,7 @@ r_tavern(p, tab) {
       <div class="kv"><span>弹夹容量</span><b>${a.mag} 发</b></div>
       <div class="kv"><span>换弹时间</span><b>${_rlBase} → <span style="color:var(--gold)">${_rlReal.toFixed(2)}</span> 秒</b></div>
       <div class="kv"><span>弹丸 / 穿透</span><b>${a.pellets || 1} / ${a.pierce}</b></div>
+      <div class="kv"><span>射程</span><b>${a.range || 380} <span class="sub">（${(a.range || 380) >= 620 ? '覆盖全场' : '近身压制'}</span>）</b></div>
       <div class="kv"><span>子弹类型</span><b>${g.bullet}</b></div>
       <button class="btn c blk" id="gunUp" ${p.gold < c ? 'disabled' : ''}>强化 · ${E.fmt(c)} 金币</button>
       <div class="lbl">每级 +${(E.GUN_GROW * 100).toFixed(0)}% 伤害；每 5 级进阶一次（${adv.q}→${nextAdv.q}），进阶解锁词条槽。</div></div>
@@ -2471,6 +2475,27 @@ r_tavern(p, tab) {
     this._talkT = setTimeout(() => el.classList.remove('on'), ms || 4200);
   },
 
+  /* ---------- 表04 配音字幕 ----------
+   * 全项目此前没有任何台词/字幕通道，VO 表也不存在。
+   * 现在 VO.say() 统一走这里出字幕：即使美术还没给到人声素材，
+   * 台词信息也不会丢失。战斗内复用 btTalk，战斗外用 toast，
+   * 都不会因为缺 DOM 而报错。 */
+  subtitle(text, dur) {
+    if (!text) return;
+    try {
+      const inBt = !!(window.BT && BT.run && !BT.run.over);
+      if (inBt && document.getElementById('btTalk')) {
+        this.btTalk('🎙️ ' + text, Math.max(1600, (dur || 1.6) * 1000));
+        return;
+      }
+      if (document.getElementById('btTalk') && window.BT && BT.on) {
+        this.btTalk('🎙️ ' + text, Math.max(1600, (dur || 1.6) * 1000));
+        return;
+      }
+      this.toast('🎙️ ' + text, 'ok');
+    } catch (e) {}
+  },
+
   /* 开局台词（截图45/46） */
   /* =========================================================
    * 维护模式拦截（后台「服务器运维 → 启停维护」）
@@ -2493,6 +2518,74 @@ r_tavern(p, tab) {
       box.style.display = 'flex';
     }
   },
+  /* ---------- 公告（后台「公告管理」接入前端） ----------
+   * 此前 notice.json 不在 CFG_FILES 内，后台页面自己都标着"待开发"，
+   * 运营发布的公告玩家一条都看不到。现在：
+   *   ① 登录时若有未读公告 → 弹窗（按 id 记已读，不重复骚扰）
+   *   ② 「公告」面板可随时回看全部（含已读）
+   * 过期公告（endAt < 现在）在 main.applyCloudCfg 里已过滤。 */
+  noticeUnread() {
+    const list = (typeof EX !== 'undefined' && Array.isArray(EX.NOTICE)) ? EX.NOTICE : [];
+    const p = window.P; if (!p || !list.length) return [];
+    p.noticeRead = Array.isArray(p.noticeRead) ? p.noticeRead : [];
+    return list.filter((x) => p.noticeRead.indexOf(x.id) < 0);
+  },
+  noticeMarkRead(id) {
+    const p = window.P; if (!p) return;
+    p.noticeRead = Array.isArray(p.noticeRead) ? p.noticeRead : [];
+    if (id && p.noticeRead.indexOf(id) < 0) p.noticeRead.push(id);
+    if (p.noticeRead.length > 200) p.noticeRead = p.noticeRead.slice(-200);
+    try { if (window.MAIN && MAIN.save) MAIN.save(); } catch (e) {}
+  },
+  showNotice() {
+    const un = this.noticeUnread();
+    if (!un.length) return;
+    const x = un[0];
+    const KIND = { info: ['📢', '普通'], warn: ['⚠️', '重要'], hot: ['🎉', '活动'] };
+    const k = KIND[x.kind] || KIND.info;
+    const box = document.getElementById('maintMask');
+    if (!box) return;
+    const esc = (v) => String(v == null ? '' : v).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const more = un.length > 1 ? '<div class="mt-s" style="opacity:.75">还有 ' + (un.length - 1) + ' 条未读公告，可在「公告」面板查看</div>' : '';
+    box.innerHTML = '<div class="mt-box">' +
+      '<div class="mt-ico">' + k[0] + '</div>' +
+      '<div class="mt-t">' + esc(x.title) + '</div>' +
+      '<div class="mt-s" style="white-space:pre-wrap;text-align:left;max-height:200px;overflow:auto">' + esc(x.body || '') + '</div>' +
+      more +
+      '<button class="mt-btn" onclick="UI.noticeMarkRead(\'' + String(x.id).replace(/'/g, '') + '\');document.getElementById(\'maintMask\').style.display=\'none\';UI.showNotice()">知道了</button>' +
+      '<button class="mt-btn" style="margin-top:8px;background:rgba(255,255,255,.1)" onclick="UI.noticeMarkRead(\'' + String(x.id).replace(/'/g, '') + '\');document.getElementById(\'maintMask\').style.display=\'none\';UI.open(\'notice\')">查看全部公告</button>' +
+      '</div>';
+    box.style.display = 'flex';
+  },
+  r_notice(p, tab) {
+    const list = (typeof EX !== 'undefined' && Array.isArray(EX.NOTICE)) ? EX.NOTICE : [];
+    p.noticeRead = Array.isArray(p.noticeRead) ? p.noticeRead : [];
+    const esc = (v) => String(v == null ? '' : v).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    if (!list.length) {
+      return '<div class="card"><div class="empty">暂无公告</div>' +
+        '<div class="lbl">运营在后台「公告管理」发布后，这里会显示。</div></div>';
+    }
+    const KIND = { info: ['📢', '普通', '#7fd0ff'], warn: ['⚠️', '重要', '#ffb74d'], hot: ['🎉', '活动', '#ff6fae'] };
+    return '<div class="card"><div class="card-t">公告<span class="sub">共 ' + list.length + ' 条</span></div>' +
+      list.map((x) => {
+        const k = KIND[x.kind] || KIND.info;
+        const read = p.noticeRead.indexOf(x.id) >= 0;
+        const dt = x.at ? new Date(Number(x.at)).toLocaleString('zh-CN', { hour12: false }) : '';
+        return '<div style="border-left:3px solid ' + k[2] + ';padding:8px 10px;margin:8px 0;background:rgba(255,255,255,.04);border-radius:6px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+          '<b style="color:' + k[2] + '">' + k[0] + ' ' + esc(x.title) + '</b>' +
+          '<span class="sub">' + (read ? '已读' : '<span style="color:#ff6f6f">未读</span>') + '</span></div>' +
+          (x.body ? '<div style="margin:6px 0;opacity:.9;white-space:pre-wrap">' + esc(x.body) + '</div>' : '') +
+          '<div class="sub">' + dt + (x.endAt ? ' · 展示至 ' + new Date(Number(x.endAt)).toLocaleDateString('zh-CN') : '') + '</div>' +
+          '</div>';
+      }).join('') + '</div>';
+  },
+  b_notice(p) {
+    /* 打开面板即全部标记已读 */
+    const list = (typeof EX !== 'undefined' && Array.isArray(EX.NOTICE)) ? EX.NOTICE : [];
+    list.forEach((x) => this.noticeMarkRead(x.id));
+  },
+
   /* 云端推送了新版本：提示玩家刷新拿新代码
    * 此前版本号只写死在 index.html 的 ?v= —— 后台「推送到云端」后
    * 玩家不强制刷新就拿不到新代码，反复出现"修好了但你看不到"。 */
