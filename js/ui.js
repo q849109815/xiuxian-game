@@ -2084,14 +2084,16 @@ r_tavern(p, tab) {
     }
     /* ---------- 多语言（表39） ---------- */
     if (tab === '语言') {
-      const cur = (window.OPS ? OPS.getLang() : 'zh');
+      /* 单语言版本：仅简体中文，不再提供语种切换入口。
+       * 文案预览保留 —— 运营可在后台改文案，这里能看到改后的中文。 */
+      const only = (EX.LANGS || [{ k: 'zh', n: '简体中文' }])[0];
       return `<div class="card"><div class="card-t">语言 <span class="sub">表39 本地化</span></div>
-        <div class="sub">当前：${((EX.LANGS || []).find((x) => x.k === cur) || { n: cur }).n}</div>
-        ${(EX.LANGS || []).map((l) => `<div class="zrow">
+        <div class="zrow">
           <div class="zav">🌐</div>
-          <div class="zi"><b>${l.n}</b><span>${l.k}</span></div>
-          ${l.k === cur ? '<span class="st on">使用中</span>'
-            : `<button class="btn sm" data-lang="${l.k}">切换</button>`}</div>`).join('')}
+          <div class="zi"><b>${only.n}</b><span>${only.k}</span></div>
+          <span class="st on">使用中</span>
+        </div>
+        <div class="sub">本游戏仅支持简体中文，无需切换。</div>
       </div>
       <div class="card"><div class="card-t">文本预览 <span class="sub">TXT_001~008</span></div>
         ${Object.keys(EX.I18N || {}).map((id) => `<div class="kv">
@@ -2342,10 +2344,12 @@ r_tavern(p, tab) {
       this.toast(r.msg, r.ok ? 'ok' : 'err');
       if (r.ok) { if (window.SND) SND.play('pick'); this.home(); }
     };
-    /* 表39 多语言切换 */
+    /* 表39 多语言：单语言版本，界面已不再输出 [data-lang] 切换按钮。
+     * 这里保留一段兜底 —— 若缓存的旧 HTML 里还残留该按钮，点了只会提示，
+     * 不会真的切到其它语种。 */
     $$('#pnBody [data-lang]').forEach((b) => { b.onclick = () => {
-      if (window.OPS) OPS.setLang(b.dataset.lang);
-      this.toast('语言已切换为 ' + b.dataset.lang, 'ok');
+      if (window.OPS) OPS.setLang('zh');
+      this.toast('本游戏仅支持简体中文', 'warn');
       this.open('set', '语言'); this.home();
     }; });
     /* 表37 清空埋点 */
