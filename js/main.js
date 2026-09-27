@@ -923,6 +923,24 @@ const MAIN = {
              * 这里拒绝「用空值覆盖非空表」，保留内置默认值，避免运营误操作
              * 导致全体玩家打不开游戏。 */
             if (EX.guardTable && !EX.guardTable(k, src[k])) return;
+            /* 单语言版本：云端 cfg.json 里可能还存着旧的多语言文案
+             * （{ zh, en, zhTW, ja, ru }）。若不裁剪就直接覆盖 EX.I18N，
+             * 已下线的外语会复活、后台改过的中文也可能被旧值盖回去。
+             * 这里统一裁成只保留 zh —— 无论云端存什么，游戏里只有简体中文。 */
+            if (k === 'I18N' && src[k] && typeof src[k] === 'object') {
+              const cl = {};
+              Object.keys(src[k]).forEach((id) => {
+                const e = src[k][id];
+                if (e && typeof e === 'object') cl[id] = { zh: e.zh || '' };
+                else if (typeof e === 'string') cl[id] = { zh: e };
+              });
+              EX.I18N = cl;
+              return;
+            }
+            /* 语种表同样单独锁死：云端若还存着旧的多语列表，
+             * 覆盖后又会在界面冒出 English/日本語 之类的选项。
+             * 单独拦一道，与 I18N 的裁剪互不依赖遍历顺序。 */
+            if (k === 'LANGS') { EX.LANGS = [{ k: 'zh', n: '简体中文' }]; return; }
             EX[k] = src[k];
           }
         });
