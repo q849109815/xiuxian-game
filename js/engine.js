@@ -57,6 +57,25 @@ const E = {
   itemName(id) {
     const t = this.item(id);
     if (t) return t.n;
+    /* 带前缀的复合 id（军团商店 / 后台热更会用到）
+     * BUG：军团商店 LS06「红宝石」的 item 写的是 'gem_G_R'
+     *   （发放时靠 `slice(4)` 取真实宝石 id G_R，发放本身是对的），
+     *   但卡片上直接调 E.itemName(g.item) —— 别名表里没有这个键，
+     *   fallback 原样返回 → 界面显示【gem_G_R ×1】，
+     *   玩家看到一串内部 id，不知道自己买的是什么。
+     * 现在按前缀查真实表，找不到再退回原名。 */
+    if (typeof id === 'string' && id.indexOf('gem_') === 0) {
+      const g = (EX.gems || []).find((x) => x.id === id.slice(4));
+      if (g) return g.n;
+    }
+    if (typeof id === 'string' && id.indexOf('gun_') === 0) {
+      const w = (EX.guns || []).find((x) => x.id === id.slice(4));
+      if (w) return w.n;
+    }
+    if (typeof id === 'string' && id.indexOf('sk_') === 0) {
+      const s = (EX.skins || []).find((x) => x.id === id);
+      if (s) return s.n;
+    }
     const ALIAS = {
       gold: '金币', diamond: '钻石', ach: EX.ACH_POINT || '成就点',
       evToken: '活动代币', ev: '活动代币', evScore: '活动积分',
@@ -2321,7 +2340,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   gunAffixes(p) {
     p.gunAffix = p.gunAffix || {};
     const gid = p.gunId || (this.gun(p) || {}).id || 'W01';
-    if (!p.gunAffix[gid]) p.gunAffix[gid] = [];
+    /* 结构兜底：必须是数组。
+     * 若存档里的 gunAffix[gid] 被写成对象（旧档残留 / 后台改档 / 传输截断），
+     * 下面 .length / .push / .forEach 会直接抛错 ——
+     * 实测会连带 role(装备/宝石/皮肤) / gun(强化) / legion 共 5 个面板
+     * 渲染时整体抛异常、界面一片空白，且没有任何提示。
+     * 非数组时直接重置为空数组并重新生成，不让一个坏字段拖垮整个面板。 */
+    if (!Array.isArray(p.gunAffix[gid])) p.gunAffix[gid] = [];
     const sl = this.gunSlots(p);
     /* 槽位变化时补齐/裁剪 */
     while (p.gunAffix[gid].length < sl) p.gunAffix[gid].push(EX.rollAffixOne(false));
