@@ -1950,8 +1950,8 @@ const BT = {
       const y1 = hz + Math.pow(t1, 1.9) * (wall - hz);
       const a = 0.028 + t0 * 0.052;
       c.fillStyle = (i % 2)
-        ? 'rgba(140,190,240,' + a.toFixed(3) + ')'
-        : 'rgba(6,12,22,' + (a * 1.6).toFixed(3) + ')';
+        ? 'rgba(90,225,255,' + (a * 1.5).toFixed(3) + ')'
+        : 'rgba(48,14,86,' + (a * 1.7).toFixed(3) + ')';
       c.fillRect(0, y0, W, Math.max(1, y1 - y0));
     }
 
@@ -1960,8 +1960,8 @@ const BT = {
       const t = i / 14;
       const y = hz + Math.pow(t, 1.9) * (wall - hz);
       const a = 0.05 + t * 0.26;
-      c.strokeStyle = 'rgba(120,175,225,' + a.toFixed(3) + ')';
-      c.lineWidth = t < 0.25 ? 0.6 : (t < 0.6 ? 1.0 : 1.6);
+      c.strokeStyle = 'rgba(110,240,255,' + Math.min(0.55, a * 1.7).toFixed(3) + ')';
+      c.lineWidth = t < 0.25 ? 0.8 : (t < 0.6 ? 1.2 : 2.0);
       c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
     }
 
@@ -1969,14 +1969,15 @@ const BT = {
     for (let i = -8; i <= 8; i++) {
       const xT = vpx + i * 4;
       const xB = vpx + i * (W / 5.0);
-      c.strokeStyle = 'rgba(120,175,225,' + (0.10 + Math.min(0.10, Math.abs(i) * 0.012)).toFixed(3) + ')';
-      c.lineWidth = 1;
+      c.strokeStyle = 'rgba(190,110,255,' + (0.16 + Math.min(0.16, Math.abs(i) * 0.016)).toFixed(3) + ')';
+      c.lineWidth = 1.2;
       c.beginPath(); c.moveTo(xT, hz); c.lineTo(xB, wall); c.stroke();
     }
 
     /* 5) 消失点辉光：远处光源，强化纵深 */
     const gl = c.createRadialGradient(vpx, hz, 0, vpx, hz, Math.max(40, W * 0.55));
-    gl.addColorStop(0, 'rgba(150,200,255,0.15)');
+    gl.addColorStop(0, 'rgba(120,235,255,0.30)');
+    gl.addColorStop(0.5, 'rgba(150,120,255,0.12)');
     gl.addColorStop(1, 'rgba(150,200,255,0)');
     c.fillStyle = gl;
     c.fillRect(0, hz - H * 0.08, W, (wall - hz) * 0.55 + H * 0.08);
@@ -2820,12 +2821,12 @@ const BT = {
   matG(c, x0, x1, base, hi, amb) {
     try {
       const g = c.createLinearGradient(x0, 0, x1, 0);
-      g.addColorStop(0, 'rgba(0,0,0,.16)');
-      g.addColorStop(0.15, base);
-      g.addColorStop(0.40, hi);
-      g.addColorStop(0.74, base);
-      g.addColorStop(0.92, 'rgba(0,0,0,.12)');
-      g.addColorStop(1, amb || 'rgba(110,165,235,.28)');
+      g.addColorStop(0, 'rgba(30,18,64,.26)');
+      g.addColorStop(0.13, base);
+      g.addColorStop(0.36, hi);
+      g.addColorStop(0.62, base);
+      g.addColorStop(0.87, 'rgba(24,12,54,.22)');
+      g.addColorStop(1, amb || 'rgba(120,235,255,.62)');
       return g;
     } catch (e) { return base; }
   },
@@ -2835,8 +2836,9 @@ const BT = {
     try {
       const g = c.createLinearGradient(0, y0, 0, y1);
       g.addColorStop(0, hi);
-      g.addColorStop(0.45, base);
-      g.addColorStop(1, 'rgba(0,0,0,.16)');
+      g.addColorStop(0.40, base);
+      g.addColorStop(0.84, 'rgba(22,12,52,.22)');
+      g.addColorStop(1, 'rgba(120,215,255,.34)');
       return g;
     } catch (e) { return base; }
   },
@@ -2875,9 +2877,9 @@ const BT = {
     try {
       const g = c.createRadialGradient(x - r * 0.36, y - r * 0.42, r * 0.08, x, y, r * 1.16);
       g.addColorStop(0, hi);
-      g.addColorStop(0.52, base);
-      g.addColorStop(0.86, 'rgba(0,0,0,.20)');
-      g.addColorStop(1, 'rgba(96,150,220,.30)');
+      g.addColorStop(0.46, base);
+      g.addColorStop(0.84, 'rgba(26,14,56,.20)');
+      g.addColorStop(1, 'rgba(110,230,255,.58)');
       c.fillStyle = g;
     } catch (e) { c.fillStyle = base; }
     c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
@@ -3078,12 +3080,12 @@ const BT = {
     const moving = z && (z.slow || 0) < 0.9;
 
     /* 配色：普通腐绿 / BOSS 冷灰 / 精英紫 / 毒系亮绿 / 火系焦褐 / 装甲铁灰 */
-    let skin = '#86aa78', skinHi = '#c2e6b6', cloth = '#4b6144', clothHi = '#78936d';
-    if (boss)         { skin = '#5d8494'; skinHi = '#a8d2e0'; cloth = '#2e3d49'; clothHi = '#556d84'; }
-    else if (elite)   { skin = '#8575a8'; skinHi = '#c8b5ea'; cloth = '#3a304f'; clothHi = '#61528f'; }
-    else if (toxic)   { skin = '#70a455'; skinHi = '#b0e28b'; cloth = '#37492e'; clothHi = '#62844f'; }
-    else if (fiery)   { skin = '#9a5a40'; skinHi = '#e08f60'; cloth = '#492b20'; clothHi = '#7a4a37'; }
-    else if (armored) { skin = '#93a086'; skinHi = '#d2dcc3'; cloth = '#495248'; clothHi = '#788378'; }
+    let skin = '#6fc44a', skinHi = '#d8ff96', cloth = '#2f6b33', clothHi = '#63c255';
+    if (boss)         { skin = '#38c6f0'; skinHi = '#b4f6ff'; cloth = '#164a78'; clothHi = '#3d94e0'; }
+    else if (elite)   { skin = '#b45cff'; skinHi = '#f0c0ff'; cloth = '#4a1f8c'; clothHi = '#8f4ae8'; }
+    else if (toxic)   { skin = '#93e83a'; skinHi = '#e4ff8a'; cloth = '#2b7024'; clothHi = '#5ec63f'; }
+    else if (fiery)   { skin = '#ff8a34'; skinHi = '#ffd48a'; cloth = '#7a2814'; clothHi = '#cf5c26'; }
+    else if (armored) { skin = '#a8dc86'; skinHi = '#eeffc4'; cloth = '#40583c'; clothHi = '#86b478'; }
 
     /* 形态：驼背程度 / 体宽 —— 这是"种类可辨识"的关键 */
     const hunch  = boss ? 0.10 : (armored ? 0.01 : (elite ? 0.05 : 0.14));
@@ -3105,6 +3107,19 @@ const BT = {
     /* 接触阴影（抬脚时变小） */
     const shS = 1 - Math.abs(Math.sin(cyc)) * 0.14 * stride;
     this.shadow3d(c, x, y + sz * 0.10, sz * 0.46 * shS * wide, sz / 24);
+    /* 元素辉光：每型僵尸脚下一圈自己的光晕（绚丽 + 远距离辨识） */
+    if (boss || elite || toxic || fiery) {
+      const gc = boss ? '64,214,255' : (elite ? '190,110,255' : (toxic ? '146,236,96' : '255,140,52'));
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      const gg2 = c.createRadialGradient(x, y + sz * 0.06, 0, x, y + sz * 0.06, sz * 1.05 * wide);
+      gg2.addColorStop(0, 'rgba(' + gc + ',.30)');
+      gg2.addColorStop(0.5, 'rgba(' + gc + ',.10)');
+      gg2.addColorStop(1, 'rgba(' + gc + ',0)');
+      c.fillStyle = gg2;
+      c.beginPath(); c.ellipse(x, y + sz * 0.06, sz * 1.05 * wide, sz * 0.44 * wide, 0, 0, 7); c.fill();
+      c.restore();
+    }
 
     const hipY = y - sz * 0.32 - bob;
     const shY  = y - sz * (0.74 - hunch) - bob;
@@ -3332,17 +3347,30 @@ const BT = {
     const cx = x - recoil * 0.5;
 
     /* 军绿制服配色 */
-    const uniform = '#6b8253', uniformHi = '#a8c184';
-    const vest = '#53643f', vestHi = '#8aa061';
-    const skin = '#e0b58a', skinHi = '#ffd8ac';
-    const gear = '#49543a', gearHi = '#8b9a68';
+    const uniform = '#4f9a3e', uniformHi = '#c8f78a';
+    const vest = '#33692c', vestHi = '#8ce05a';
+    const skin = '#f2b478', skinHi = '#ffe4bc';
+    const gear = '#2f5a26', gearHi = '#a2dc6a';
 
     c.save();
     /* 接触阴影 */
     this.shadow3d(c, x, y + sz * 0.10, sz * 0.46, sz / 24);
+    /* 主角辉光：暖金 + 青边，让主角从暗场里亮出来 */
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    const hg2 = c.createRadialGradient(x, y - sz * 0.42, 0, x, y - sz * 0.42, sz * 1.25);
+    hg2.addColorStop(0, 'rgba(255,214,110,.20)');
+    hg2.addColorStop(0.42, 'rgba(90,230,255,.10)');
+    hg2.addColorStop(1, 'rgba(90,230,255,0)');
+    c.fillStyle = hg2;
+    c.beginPath(); c.ellipse(x, y - sz * 0.42, sz * 1.25, sz * 1.05, 0, 0, 7); c.fill();
+    c.restore();
     /* 脚下金色选中光环（表示玩家） */
-    c.strokeStyle = 'rgba(255,201,60,.50)'; c.lineWidth = 2;
+    c.save();
+    c.strokeStyle = 'rgba(255,214,80,.95)'; c.lineWidth = 2.4;
+    c.shadowColor = 'rgba(255,196,40,.95)'; c.shadowBlur = 10;
     c.beginPath(); c.ellipse(x, y + sz * 0.10, sz * 0.44, sz * 0.17, 0, 0, 7); c.stroke();
+    c.restore();
 
     /* —— 远侧腿（压暗） —— */
     c.save(); c.globalAlpha = 0.66;
@@ -3464,11 +3492,23 @@ const BT = {
     const bg = this.img(this.scene);
     if (bg && bg.complete && bg.naturalWidth) {
       try { c.drawImage(bg, 0, 0, W, H); } catch (e) {}
-      c.fillStyle = 'rgba(10,16,28,0.42)'; c.fillRect(0, 0, W, H);
+      c.fillStyle = 'rgba(10,16,28,0.20)'; c.fillRect(0, 0, W, H);
+      /* 氛围光：左上青 / 右下品红，让画面有色彩倾向而不是一片灰 */
+      let ag = c.createRadialGradient(W * 0.16, H * 0.12, 0, W * 0.16, H * 0.12, Math.max(W, H) * 0.78);
+      ag.addColorStop(0, 'rgba(64,214,255,0.20)');
+      ag.addColorStop(1, 'rgba(64,214,255,0)');
+      c.fillStyle = ag; c.fillRect(0, 0, W, H);
+      ag = c.createRadialGradient(W * 0.88, H * 0.86, 0, W * 0.88, H * 0.86, Math.max(W, H) * 0.72);
+      ag.addColorStop(0, 'rgba(255,74,168,0.18)');
+      ag.addColorStop(1, 'rgba(255,74,168,0)');
+      c.fillStyle = ag; c.fillRect(0, 0, W, H);
     } else {
       const g = c.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, '#1a2637'); g.addColorStop(1, '#232f42');
+      g.addColorStop(0, '#12203c'); g.addColorStop(0.55, '#1b2a52'); g.addColorStop(1, '#2a1c46');
       c.fillStyle = g; c.fillRect(0, 0, W, H);
+      let ag = c.createRadialGradient(W * 0.18, H * 0.14, 0, W * 0.18, H * 0.14, Math.max(W, H) * 0.8);
+      ag.addColorStop(0, 'rgba(64,214,255,0.22)'); ag.addColorStop(1, 'rgba(64,214,255,0)');
+      c.fillStyle = ag; c.fillRect(0, 0, W, H);
     }
 
     /* 2.5D 透视地面网格（产生纵深） */
@@ -3669,8 +3709,8 @@ const BT = {
       c.translate(b.x, b.y);
       c.rotate(ang);
       const tg = c.createLinearGradient(0, 0, -tl, 0);
-      tg.addColorStop(0, 'rgba(' + c0 + ',.85)');
-      tg.addColorStop(0.28, 'rgba(' + c1 + ',.52)');
+      tg.addColorStop(0, 'rgba(' + c0 + ',1)');
+      tg.addColorStop(0.28, 'rgba(' + c1 + ',.80)');
       tg.addColorStop(1, 'rgba(' + c2 + ',0)');
       c.fillStyle = tg;
       c.beginPath();
@@ -3680,9 +3720,10 @@ const BT = {
       c.closePath(); c.fill();
       c.restore();
       /* ② 外辉光（柔和光晕，让弹丸在暗场里"发亮"） */
-      const hr = 3.0 * bs;
-      const gg = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, hr * 2.6);
-      gg.addColorStop(0, 'rgba(' + c1 + ',.55)');
+      const hr = 3.4 * bs;
+      const gg = c.createRadialGradient(b.x, b.y, 0, b.x, b.y, hr * 3.4);
+      gg.addColorStop(0, 'rgba(' + c1 + ',.80)');
+      gg.addColorStop(0.45, 'rgba(' + c2 + ',.34)');
       gg.addColorStop(1, 'rgba(' + c2 + ',0)');
       c.fillStyle = gg;
       c.beginPath(); c.arc(b.x, b.y, hr * 2.6, 0, 7); c.fill();
@@ -3696,7 +3737,7 @@ const BT = {
       c.restore();
       /* ④ 地面光斑反射：子弹在地面投下一小片元素色光 */
       const gl = c.createRadialGradient(b.x, b.y + 7 * bs, 0, b.x, b.y + 7 * bs, 7 * bs);
-      gl.addColorStop(0, 'rgba(' + c1 + ',.22)');
+      gl.addColorStop(0, 'rgba(' + c1 + ',.42)');
       gl.addColorStop(1, 'rgba(' + c1 + ',0)');
       c.fillStyle = gl;
       c.beginPath(); c.ellipse(b.x, b.y + 7 * bs, 7 * bs, 3 * bs, 0, 0, 7); c.fill();
