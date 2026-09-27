@@ -533,6 +533,24 @@ const E = {
     return Math.max(240, Math.min(680, px));
   },
 
+  /* 武器后坐力换算（表44 recoil 低/中/高 → 倍率）
+   * 【BUG 修复】此前 recoil 字段全项目零消费：
+   *   config.js 里每把枪都写了 recoil:'低'/'中'/'高'，
+   *   但 battle.js drawHeroShape 用的是写死的 `fire * sz * 0.030`，
+   *   与配表毫无关系 —— 狙击枪和加特林的开火后坐、屏幕震动完全一致，
+   *   "高后坐力枪更难压"的手感差异彻底失效（全项目 grep .recoil 只有定义处）。
+   * 现在按配表返回倍率，battle.js 直接乘用。 */
+  gunRecoil(g) {
+    const v = (g && g.recoil) ? String(g.recoil) : '';
+    if (v === '低') return 0.55;
+    if (v === '高') return 1.60;
+    if (v === '中') return 1.00;
+    const n = Number(v);
+    /* 数值型兜底（后台改配时填数字）：按 0.5~2 收敛 */
+    if (isFinite(n) && n > 0) return Math.max(0.4, Math.min(2.0, n));
+    return 1.00;
+  },
+
   gunUnlocked(p, id) {
     const g = EX.guns.find((x) => x.id === id); if (!g) return false;
     if (!g.unlockLv) return true;
@@ -571,7 +589,13 @@ const E = {
     for (let i = 0; i < EX.gunAdvance.length; i++) if (lv >= EX.gunAdvance[i].lv) a = i;
     return a;
   },
-  advInfo(lv) { return EX.gunAdvance[this.advOf(lv)]; },
+  advInfo(lv) {
+    /* 兜底：表被清空/损坏时不得返回 undefined，否则 UI 读 adv.q 直接抛错、
+     * 整个武器面板白屏（实测：清空 gunAdvance → 武器页渲染崩溃）。
+     * 这里返回一个合法的白品占位，界面照常显示，只是不显示进阶名。 */
+    const t = EX.gunAdvance && EX.gunAdvance.length ? EX.gunAdvance[this.advOf(lv)] : null;
+    return t || { lv: 1, q: '白', n: '普通', mul: 1 };
+  },
   /* 升级：金币，线性 +20% */
   /* 武器升级费用：300 × 1.16^(lv-1)
    * 原 1.28 增长过快：Lv80 需 1170亿、Lv84 金币不足永久卡死 */
@@ -1059,6 +1083,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
        * 全项目零消费 —— 所有武器的弹幕扇形由 battle.js 写死的 0.13 弧度决定，
        * 与配表无关，武器之间的"精准/散射"差异完全失效。现在按武器表返回。 */
       pellets: (g.pellets || 1) + af.extra, range: this.gunRange(g), spread: (Number(g.spread) || 0),
+      /* 后坐力倍率：此前全项目零消费，所有枪开火反馈一致。见 gunRecoil 注释。 */
+      recoil: this.gunRecoil(g),
       crit: Math.min(0.85, crit + this.gemBonus(p).crit),
       critDmg: critDmg + this.gemBonus(p).critDmg,
       rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gemBonus(p).ratePct),
