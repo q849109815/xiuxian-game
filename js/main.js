@@ -1299,8 +1299,10 @@ function onBattleEnd(res, d) {
           for (let i = 0; i < lr[k]; i++) P.bag.push(E.rollChipById('CH01'));
           rw.chip = (rw.chip || 0) + lr[k];
         } else {
-          P.mat[k] = (P.mat[k] || 0) + lr[k];
-          rw.mat[k] = (rw.mat[k] || 0) + lr[k];
+          /* 关卡掉落材料同样过 safeAmt：热更把数量写成字符串/NaN 时，
+           * 旧行为会把整个 p.mat 背包写进非数字（读档后材料全变 0 或 NaN）。 */
+          const n = E.safeAmt(lr[k]);
+          if (n > 0) { P.mat[k] = (P.mat[k] || 0) + n; rw.mat[k] = (rw.mat[k] || 0) + n; }
         }
       }
     }
@@ -1317,6 +1319,9 @@ function onBattleEnd(res, d) {
   /* 关卡掉落金币（仅胜利时叠加：胜利分支的 rw.gold 是关卡奖励，
    * 局内击杀金币在 d.rw.gold 里，两者相加；失败/退出分支 d.rw.gold 已含折算） */
   if (res === 'win') rw.gold += Math.round((d.rw && d.rw.gold) || 0);
+  /* 结算写入前过一遍 safeAmt：rw.gold 若因关卡配置异常算成 NaN/负数，
+   * 玩家打完一局【金币直接归零 / 倒扣】，且结算面板还会显示"获得 NaN"。 */
+  rw.gold = E.safeAmt(rw.gold); rw.diamond = E.safeAmt(rw.diamond);
   P.gold += rw.gold; P.diamond += rw.diamond;
   /* 玩家操作日志：击杀
    * 后台「日志查询 → 玩家操作」页头写着「拾取/击杀/升级/合成/兑换」，
