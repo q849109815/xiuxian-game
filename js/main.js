@@ -5,7 +5,7 @@
  * ========================================================= */
 
 let P = null, UID = null, saveT = null, hudT = null, MAINT = null;
-let battleMode = 'normal', battleLevel = '1-1';
+let battleMode = 'normal', battleLevel = '1-1', battleDiff = 'normal';
 
 const MAIN = {
   savePath: null,
@@ -1203,18 +1203,24 @@ const MAIN = {
 /* =========================================================
  * 战斗流程（资料 08 跳转流程）
  * ========================================================= */
-function startBattle(mode, levelId) {
+function startBattle(mode, levelId, diff) {
   if (!P) return;
   /* 维护模式守卫：后台开启后一律不放行（此前完全没拦截） */
   if (window.UI && UI.guardBattle && !UI.guardBattle()) return;
   battleMode = mode;
+  battleDiff = diff || 'normal';
   let id = levelId;
   if (mode === 'endless') {
-    if (!E.endlessUnlocked(P)) { UI.toast('无尽模式需通关 ' + (EX.ENDLESS_UNLOCK || '10-10') + ' 解锁', 'err'); return; }
+    /* 无尽默认解锁，不再要求通关 10-10 */
     id = 'endless';
   } else {
     id = levelId || E.curLevel(P);
     if (!E.levelUnlocked(P, id)) { UI.toast('该关卡尚未解锁', 'err'); return; }
+    /* 难度解锁：困难需先通关普通，恶魔需先通关困难 */
+    if (!E.diffUnlocked(P, id, battleDiff)) {
+      const d = E.diffDef(battleDiff), pv = E.diffDef(d.unlock);
+      UI.toast('需先通关「' + pv.n + '」难度', 'err'); return;
+    }
   }
   /* 挑战次数：改为纯体力判断，不再有「每日 3 次」上限。
    * 此前在体力之外还叠了一道每日次数闸门（E.useRun），玩家体力明明是满的，
@@ -1224,7 +1230,7 @@ function startBattle(mode, levelId) {
    * BUG：此前此处直接 spendStamina 扣费，而章节 CG 分支随后 return，
    *      玩家关掉 CG 弹窗（不点「进入战区」）时战斗根本没开始，体力却已扣掉。
    *      现在扣费下沉到 battleGo（真正进入战斗时），CG 取消不再白扣。 */
-  const sp = E.checkStamina(P, id);
+  const sp = E.checkStamina(P, id, battleDiff);
   if (!sp.ok) { UI.toast(sp.msg, 'err'); return; }
   battleLevel = id;
 
@@ -1237,19 +1243,20 @@ function startBattle(mode, levelId) {
     if (cg) {
       const cd = (EX.chapters || []).find((x) => x.id === ch);
       E.save(P);
-      UI.showCG(cg, ch, cd ? cd.n : '', () => battleGo(id, mode));
+      UI.showCG(cg, ch, cd ? cd.n : '', () => battleGo(id, mode, battleDiff));
       return;
     }
   }
 
-  battleGo(id, mode);
+  battleGo(id, mode, battleDiff);
 }
 
 /* 实际进入战斗（CG 播放完 / 无需 CG 时调用） */
-function battleGo(id, mode) {
+function battleGo(id, mode, diff) {
   if (!P) return;
+  const df = diff || 'normal';
   /* 真正进入战斗时才扣体力（CG 取消不扣，避免白扣） */
-  const sp = E.spendStamina(P, id);
+  const sp = E.spendStamina(P, id, df);
   if (!sp.ok) { UI.toast(sp.msg, 'err'); UI.show('home'); return; }
   UI.show('battle');
   /* 音频：战斗 BGM
@@ -1266,7 +1273,7 @@ function battleGo(id, mode) {
     SND.bgm(id === 'endless' ? 'endless' : isBoss ? 'boss' : 'battle');
   }
   BT.attach(document.getElementById('C'));
-  BT.start(P, id, { endless: id === 'endless', cb: onBattleEnd });
+  BT.start(P, id, { endless: id === 'endless', diff: df, cb: onBattleEnd });
   /* HUD 初始化失败也不能影响战斗本体 */
   try { UI.btInit(P, id, id === 'endless'); }
   catch (e) { console.error('btInit:', e); }
@@ -1299,6 +1306,9 @@ function onBattleEnd(res, d) {
   const r = BT.run;
   const kills = d.kills || 0;
   const endless = r.endless;
+  /* 难度收益倍率（结算通用，失败/撤离也按同一口径计角色经验） */
+  const dRwMulSafe = (r && r.diffRw != null && isFinite(r.diffRw)) ? r.diffRw
+    : ((r && r.diffMul && r.diffMul.rw) || 1);
   /* 统一口径：p.stats.runs 此前在 newPlayer 里初始化后就再没人写过，
    * 全项目零读取 —— 后台想看留存/活跃度拿不到"打了几局"这个最基本的数。
    * 现在在唯一的结算入口累加，并由 E.stats 对外暴露。 */
@@ -1318,10 +1328,14 @@ function onBattleEnd(res, d) {
       P.evScore = (P.evScore || 0) + tk;
     } else {
       const lr = def.rw || {};
+      /* 难度收益倍率（普通 1 / 困难 2.6 / 恶魔 6.5）
+       * 关卡表 rw 是「普通难度」的基准值，高难度按倍率放大后发放。
+       * 只作用于【结算】，局内经济不放大（详见 battle.js start 里的说明）。 */
+      const dRwMul = (r.diffRw != null && isFinite(r.diffRw)) ? r.diffRw : ((r.diffMul && r.diffMul.rw) || 1);
       /* 金币加成天赋此前只作用于「击杀金币」（battle.js kill 里直连 talentVal），
        * 关卡奖励这条占全部金币约 4 成的来源完全不吃加成
        * （attrs().goldMul 定义后全项目零消费，是死字段）。 */
-      rw.gold = Math.round((lr.gold || 0) * (E.attrs(P).goldMul || 1));
+      rw.gold = Math.round((lr.gold || 0) * (E.attrs(P).goldMul || 1) * dRwMul);
       /* 结算面板此前只显示 EXP / 金币 / 击杀 / 「1阶枪械部件」，
        * 而「1阶枪械部件」这个格子是从未赋值的 rw.parts，恒显示 0；
        * 关卡配置真正发的材料（如 1-1 的 M02×5）一行都不显示 ——
@@ -1335,7 +1349,7 @@ function onBattleEnd(res, d) {
         } else {
           /* 关卡掉落材料同样过 safeAmt：热更把数量写成字符串/NaN 时，
            * 旧行为会把整个 p.mat 背包写进非数字（读档后材料全变 0 或 NaN）。 */
-          const n = E.safeAmt(lr[k]);
+          const n = E.safeAmt(Math.round(lr[k] * dRwMul));
           if (n > 0) { P.mat[k] = (P.mat[k] || 0) + n; rw.mat[k] = (rw.mat[k] || 0) + n; }
         }
       }
@@ -1371,7 +1385,8 @@ function onBattleEnd(res, d) {
    * 而 Lv20 升一级需 12302 —— 刷十几关才升 1 级，等于惩罚玩家推进章节。
    * 现在改为读取 battle 累计的 r.killXp（每只怪 xp × 关卡 rwMul），
    * 高关卡收益与难度匹配；取不到时回退旧口径，不会算成 0。 */
-  const baseXp = (r && Number(r.killXp) > 0) ? Number(r.killXp) : kills * 4;
+  /* 角色经验同样乘难度倍率：高风险高回报（局内等级不放大，这里才放大） */
+  const baseXp = ((r && Number(r.killXp) > 0) ? Number(r.killXp) : kills * 4) * dRwMulSafe;
   const xpGain = Math.round(baseXp * (E.attrs(P).xpMul || 1));
   const lvr = E.addXp(P, xpGain);
   /* 结算面板读的是 rw.exp（此前未赋值，界面恒显示兜底值 15 EXP，
@@ -1381,7 +1396,19 @@ function onBattleEnd(res, d) {
   if (lvr.ups > 0) setTimeout(() => { if (window.UI) UI.toast('🎉 ' + lvr.msg, 'ok'); }, 900);
 
   /* 统计与任务推进 */
-  const stars = (res === 'win' && !endless) ? E.clearLevel(P, r.def.id, r.maxHp ? r.hp / r.maxHp : 0) : 0;
+  const cr = (res === 'win' && !endless)
+    ? E.clearLevel(P, r.def.id, r.maxHp ? r.hp / r.maxHp : 0, r.diff) : null;
+  const stars = cr ? cr.stars : 0;
+  /* 首次通关某难度：额外发钻石（按章节递增），并在结算面板显示
+   * 此前三档难度共用一份记录，困难/恶魔通了也毫无额外回报，等于白打。 */
+  if (cr && cr.first) {
+    const fr = E.diffFirstRw(cr.diff, (r.def && r.def.ch) || 1);
+    if (fr && fr.diamond > 0) {
+      rw.diamond += fr.diamond; P.diamond += fr.diamond;
+      rw.firstBonus = fr.diamond;
+      rw.firstDiff = cr.diff;
+    }
+  }
   const isBoss = !endless && (r.def.cond === 'boss' || r.def.cond === 'bossAll');
   E.pushStats(P, {
     kills, clear: res === 'win' ? 1 : 0,
@@ -1589,14 +1616,15 @@ function bindAll() {
   if (cr) cr.onclick = () => { UI.toast('已刷新选项', 'ok'); BT.refreshOffer(); };
 
   const ra = document.getElementById('rsAgain');
-  if (ra) ra.onclick = () => { UI.hideResult(); startBattle(battleMode, battleLevel); };
+  if (ra) ra.onclick = () => { UI.hideResult(); startBattle(battleMode, battleLevel, battleDiff); };
   const rn = document.getElementById('rsNext');
   if (rn) rn.onclick = () => {
     UI.hideResult();
     if (battleMode === 'endless') startBattle('endless');
     else {
       const nx = E.nextLevel(battleLevel);
-      if (nx) startBattle('normal', nx); else { UI.home(); UI.show('home'); }
+      /* 沿用当前难度连打（此前恒按普通，玩家在恶魔难度连推会被打回普通） */
+      if (nx) startBattle('normal', nx, battleDiff); else { UI.home(); UI.show('home'); }
     }
   };
   /* ================= 账号密码登录 / 注册 ================= */
