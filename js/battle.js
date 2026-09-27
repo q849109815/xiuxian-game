@@ -453,9 +453,21 @@ const BT = {
       armor: Number(a.armor) || 0,
       poison: 0, poisonT: 0, hitFlash: 0,
       boss: null, bossPhase: 0, warned: false,
+      /* 难度（普通/困难/恶魔）：倍率在关卡强度 mul 之上再乘一层 */
+      diff: (E.diffDef ? E.diffDef(opt.diff).id : 'normal'),
+      diffMul: (E.diffMul ? E.diffMul(opt.diff) : { id: 'normal', n: '普通', hp: 1, dmg: 1, cnt: 1, spd: 1, rw: 1, stam: 1 }),
     };
     /* 带上基地已招募的佣兵 */
     const _r = this.run;
+    /* 难度收益系数【只作用于结算】，不并入 rwMul
+     * 重要：rwMul 同时是【局内经济】的系数（击杀金币、局内升级奖励、炮台购买力）。
+     * 若把难度 ×6.5 并进去，恶魔难度一局能升到 Lv16、炮台随便买 ——
+     * 玩家实际强度膨胀得比怪物还快，难度越高反而越轻松（实测：恶魔 1-1
+     * 局内升级次数 15 次 vs 普通 8 次）。
+     * 正确切分：
+     *   局内（击杀金币/经验、升级奖励）= 关卡倍率，不随难度放大 → 高难度真的更难
+     *   结算（关卡奖励、材料、角色经验）= 再乘难度倍率 → 高难度回报更高 */
+    _r.diffRw = _r.diffMul.rw || 1;
     for (const mid of (p.mercs || [])) {
       const md = EX.mercs.find((x) => x.id === mid); if (!md) continue;
       _r.mercs.push({ def: md, x: this.W * (0.28 + _r.mercs.length * 0.18), y: this.H - 74, cd: 0 });
@@ -493,7 +505,9 @@ const BT = {
     const [mn, mx] = d.per || [10, 15];
     const t = d.waves > 1 ? (w - 1) / (d.waves - 1) : 1;
     const base = Math.round(mn + (mx - mn) * t);
-    r.spawnLeft = Math.min(60, isBossWave ? Math.round(base * 0.7) : base);
+    /* 难度：每波数量再乘 cntMul（恶魔 ×1.6，封顶放宽到 90 免得倍率被吃掉） */
+    const cnt = (r.diffMul && r.diffMul.cnt) || 1;
+    r.spawnLeft = Math.min(90, Math.round((isBossWave ? base * 0.7 : base) * cnt));
     r.spawnT = 0; r.spawnGap = Math.max(0.18, 0.60 - w * 0.05);
     /* 【表03 FX_WaveStart】波次来袭扫描带：新一波开始时的视觉提示 */
     if (w > 1 && r.efx && r.efx.length < 90) {
@@ -522,10 +536,13 @@ const BT = {
   },
 
   mkZ(d, mul, hpOverride) {
-    const hp = hpOverride != null ? hpOverride : Math.round(d.hp * mul);
+    /* 难度倍率：血量/伤害/移速在关卡强度之上再乘一层
+     * （恶魔 5.5 倍血 + 2.2 倍伤害，靠的是这里，不是改关卡表） */
+    const dm = (this.run && this.run.diffMul) || { hp: 1, dmg: 1, spd: 1 };
+    const hp = hpOverride != null ? Math.round(hpOverride * dm.hp) : Math.round(d.hp * mul * dm.hp);
     return {
       d, id: d.id, n: d.n, icon: d.icon, img: d.img,
-      x: 0, y: 0, hp, maxHp: hp, spd: d.spd, dmg: d.dmg, atkR: d.atkR,
+      x: 0, y: 0, hp, maxHp: hp, spd: d.spd * dm.spd, dmg: d.dmg * dm.dmg, atkR: d.atkR,
       ai: d.ai, def: d.def || 0, front: d.front || 0, fly: !!d.fly,
       slow: 0, slowT: 0, burn: 0, burnT: 0, atkCd: 0, dashT: 0, facing: 0,
       dead: false, boss: false,
@@ -1000,11 +1017,21 @@ const BT = {
       z.x = Math.max(14, Math.min(this.W - 14, z.x));
       z.facing = Math.PI / 2;
 
-      /* 撞上防线：防线掉血，僵尸消失 */
-      if (z.y >= this.wallY) {
+      /* 撞上防线：防线掉血，僵尸消失
+       * 严重BUG：this.wallY 只在 resize()（由 attach(canvas) 触发）里赋值，
+       *   未挂载画布时恒为 undefined → `z.y >= undefined` 恒 false →
+       *   僵尸永远撞不到防线，一路跑出屏幕（实测 y 冲到 5471，屏幕才 640）：
+       *     ① 僵尸永不消失 → r.zombies 恒非空 → 波次只能等 20 秒超时推进
+       *       （实测每波 20.0s，正常清完只要 9.4s，关卡被拖慢一倍）
+       *     ② 玩家全程不掉血（实测防线满血 636/636），难度形同虚设
+       *     ③ 玩家看不见僵尸（已跑出屏幕），只觉得"怪怎么不刷了"
+       *   项目里其它取防线的位置都写了 `this.wallY || this.H` 兜底，
+       *   唯独这一处漏了。这里补上同一套兜底。 */
+      const _wallY = (this.wallY != null && isFinite(this.wallY)) ? this.wallY : (this.H - 96);
+      if (z.y >= _wallY) {
         this.hurtPlayer(z.dmg, z.n, z);
         z.dead = true; z.hp = 0;
-        r.efx.push({ t: 'hitWall', x: z.x, y: this.wallY, life: 0.3, max: 0.3, r: 26 });
+        r.efx.push({ t: 'hitWall', x: z.x, y: _wallY, life: 0.3, max: 0.3, r: 26 });
         if (window.SND) SND.play('hurt');
         continue;
       }
