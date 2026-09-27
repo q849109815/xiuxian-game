@@ -1366,7 +1366,13 @@ function onBattleEnd(res, d) {
     + (res === 'win' ? '通关' : res === 'lose' ? '失败' : '撤离') + ' 击杀 ' + kills); } catch (e) {}
 
   /* 表25 #1 角色等级：按击杀数结算经验（怪物表 xp 字段加权，受天赋/建筑经验加成） */
-  const xpGain = Math.round(kills * 4 * (E.attrs(P).xpMul || 1));
+  /* 按本局实际击杀经验结算（已含关卡倍率与怪物种类差异）。
+   * 旧写法 `kills * 4` 完全无视关卡难度：第 10 章一局 300 杀只有 1200 经验，
+   * 而 Lv20 升一级需 12302 —— 刷十几关才升 1 级，等于惩罚玩家推进章节。
+   * 现在改为读取 battle 累计的 r.killXp（每只怪 xp × 关卡 rwMul），
+   * 高关卡收益与难度匹配；取不到时回退旧口径，不会算成 0。 */
+  const baseXp = (r && Number(r.killXp) > 0) ? Number(r.killXp) : kills * 4;
+  const xpGain = Math.round(baseXp * (E.attrs(P).xpMul || 1));
   const lvr = E.addXp(P, xpGain);
   /* 结算面板读的是 rw.exp（此前未赋值，界面恒显示兜底值 15 EXP，
    * 而玩家实际拿到的是按击杀计算的数百经验 —— 显示与实际严重不符） */
