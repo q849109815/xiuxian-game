@@ -243,7 +243,15 @@ const E = {
          /* gunAffix 此前【不在任何列表里】：它是 { 枪id: 词条数组 }，
           * 被写成字符串/数组时，gunAffixes 里的补齐逻辑与 role/gun/chip
           * 等 6 个面板全部抛错白屏。归入 OBJS 统一重置为 {}。 */
-         'gunAffix'],
+         'gunAffix',
+         /* passClaimed / rankRwGot 是【已领取记录字典】（键=档位/名次，值=1）。
+          * 此前【不在任何列表里】，被后台 GM 误存成字符串/数字时 sanitize
+          * 完全不管，实测后果分两种，且都能刷爆经济：
+          *   passClaimed='xx' → `p.passClaimed[key]=1` 对字符串赋值静默失败
+          *     → 同一档战令【连领 3 次成功 3 次】，金币 1000→4000
+          *   rankRwGot=5      → 排名奖励【连领 3 次成功 3 次】
+          * 归入 OBJS 后污染值一律重置为 {}，领取只能成功一次。 */
+         'passClaimed', 'rankRwGot'],
   sanitize(p) {
     if (!p || typeof p !== 'object') return p;
     const N = (v, d) => { const n = Number(v); return isFinite(n) ? n : (d || 0); };
@@ -272,6 +280,19 @@ const E = {
      * 空集合与"未拥有/未通关"语义等价（如 build 缺失 → 各建筑取默认 1 级）。 */
     this.ARRS.forEach((k) => { if (!Array.isArray(p[k])) p[k] = []; });
     this.OBJS.forEach((k) => { if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {}; });
+    /* p.tasks 是对象，但【内部的已领取数组】此前从不校验。
+     * 实测 mainClaimed 被写成字符串/数字时，claimTask 里
+     *   `p.tasks[key].indexOf(id)` / `.push(id)` 直接抛
+     *   "indexOf is not a function" → 玩家点「领取」整个 JS 崩掉、面板卡死。
+     * 写成嵌套对象时同样抛错。这里逐个子字段规范化。 */
+    if (p.tasks && typeof p.tasks === 'object' && !Array.isArray(p.tasks)) {
+      ['mainClaimed', 'dailyClaimed', 'weeklyClaimed', 'achieveClaimed'].forEach((k) => {
+        if (!Array.isArray(p.tasks[k])) p.tasks[k] = [];
+      });
+      ['dailyProg', 'weeklyProg'].forEach((k) => {
+        if (!p.tasks[k] || typeof p.tasks[k] !== 'object' || Array.isArray(p.tasks[k])) p.tasks[k] = {};
+      });
+    }
     /* 只把【值确实是"数量"】的字典做数值收敛。
      * BUG修复：chips / codex 曾在这个列表里，但它们的值【不是数量】：
      *   chips = { 槽位: 芯片对象 }   → 实测 {s1:{id:'c1',...}} 被 Number() 成 {s1:0}
@@ -1233,7 +1254,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   /* 返回 {ok, msg, left} —— ok 表示还能买 */
   giftCan(p, g) {
     const L = g.limit || { t: 'once', v: 1 };
-    const rec = (p.giftBuy || (p.giftBuy = {}))[g.id] || { n: 0, k: '' };
+    const rec = this.recObj(p, 'giftBuy')[g.id] || { n: 0, k: '' };
     const k = this.giftKey(g);
 
     if (L.t === 'level') {
@@ -1452,13 +1473,20 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (!t) return { ok: false, msg: '档位不存在' };
     if (this.passLevel(p) < t.lv) return { ok: false, msg: '通关 ' + t.lv + ' 关解锁' };
     const key = 'p' + lvIdx + (adv ? 'a' : 'n');
-    const got = ((p.passClaimed || (p.passClaimed = {}))[key]);
+    /* 就地防御（同 claimTask）：污染成字符串/数字时对它的赋值会静默失败，
+     * 实测同一档战令能【连领 3 次】刷走 3000 金币。 */
+    if (!p.passClaimed || typeof p.passClaimed !== 'object' || Array.isArray(p.passClaimed)) p.passClaimed = {};
+    const got = p.passClaimed[key];
     if (got) return { ok: false, msg: '已领取' };
     if (adv && !(p.passAdv)) return { ok: false, msg: '需先购买进阶战令' };
+    /* 同 claimTask：先确认奖励真能发出，再标记已领取。
+     * 旧行为 rw 为 undefined 时照常标已领、金币 0 变化，
+     * 玩家点一次"领取成功"却什么都没拿到，且这一档永久作废。 */
+    if (!this.rwUsable(t.rw)) return { ok: false, msg: '该档位奖励配置异常，暂不可领取' };
     p.passClaimed[key] = 1;
     for (const k in t.rw) {
-      if (k === 'gold') p.gold = (p.gold || 0) + t.rw[k];
-      else if (k === 'diamond') p.diamond = (p.diamond || 0) + t.rw[k];
+      if (k === 'gold') { const n = this.safeAmt(t.rw[k]); if (n > 0) p.gold = (p.gold || 0) + n; }
+      else if (k === 'diamond') { const n = this.safeAmt(t.rw[k]); if (n > 0) p.diamond = (p.diamond || 0) + n; }
       else if (/^chip/.test(k)) {
         /* 此前硬编码：无论档位配的是 chipN(普通)/chipE(精英)/chipL(传说)，
          * 一律 rollChipById('l') 且只 push 1 个 —— 品质和数量都被忽略。
@@ -1469,7 +1497,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
         p.bag = p.bag || [];
         const qmap = { chipN: 'n', chipE: 'e', chipL: 'l', chipRed: 'l', chip: 'n' };
         const q = qmap[k] || 'n';
-        const cnt = Math.max(1, Math.min(20, Number(t.rw[k]) || 1));
+        const cnt = Math.max(1, Math.min(20, this.safeAmt(t.rw[k]) || 1));
         let ok = 0;
         for (let i = 0; i < cnt; i++) {
           try { const c = this.rollChipByQuality(q); if (c) { p.bag.push(c); ok++; } }
@@ -1478,7 +1506,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
         /* 全部失败时兜底：折算成稀有金属，避免「领了等于没领」 */
         if (!ok) p.mat.M03 = (p.mat.M03 || 0) + cnt * 2;
       }
-      else p.mat[k] = (p.mat[k] || 0) + t.rw[k];
+      else { const n = this.safeAmt(t.rw[k]); if (n > 0) p.mat[k] = (p.mat[k] || 0) + n; }
     }
     if (adv) p.diamond = (p.diamond || 0) + 30;         /* 进阶额外奖励 */
     return { ok: true, msg: '战令 Lv.' + t.lv + '：' + t.n };
@@ -1541,7 +1569,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   },
 
   giftMark(p, g) {
-    const rec = (p.giftBuy || (p.giftBuy = {}))[g.id] || { n: 0, k: '' };
+    const rec = this.recObj(p, 'giftBuy')[g.id] || { n: 0, k: '' };
     const k = this.giftKey(g);
     const L = g.limit || { t: 'once', v: 1 };
     if (L.t === 'level' || L.t === 'once' || L.t === 'bossFirst') {
@@ -1631,15 +1659,17 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const lvNum = parseInt(String(lvId).split('-')[1] || '1', 10);
     const ld = (EX.levels || []).find((x) => x.id === lvId) || null;
     const fb = EX.sweepRw(lvNum, t);
-    const gold = Math.floor(((ld && ld.rw && ld.rw.gold) || fb.gold) * t);
+    /* 与 sweep() 同步走 safeAmt，保证「弹窗显示」=「实际到账」 */
+    const gold = E.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || fb.gold) * t));
     const mat = {};
     const src = (ld && ld.rw) ? ld.rw : { M01: fb.M01 };
     Object.keys(src).forEach((k) => {
       if (k === 'gold' || k === 'diamond') return;
-      mat[k] = (Number(src[k]) || 0) * t;
+      const n = E.safeAmt((Number(src[k]) || 0) * t);
+      if (n > 0) mat[k] = n;
     });
     return { times: t, gold: gold, mat: mat,
-      diamond: (ld && ld.rw && ld.rw.diamond) ? ld.rw.diamond * t : 0,
+      diamond: (ld && ld.rw && ld.rw.diamond) ? E.safeAmt(ld.rw.diamond * t) : 0,
       xp: fb.xp, stamina: EX.SWEEP_STAMINA * t };
   },
   sweep(p, lvId, times) {
@@ -1659,15 +1689,22 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 现在改为按【关卡真实奖励】发放，手动通关给什么，扫荡就给什么。 */
     const ld = (EX.levels || []).find((x) => x.id === lvId) || null;
     const rw = EX.sweepRw(lvNum, t);
-    const goldGet = Math.floor(((ld && ld.rw && ld.rw.gold) || rw.gold) * t);
+    /* 关卡奖励同样过 safeAmt：rw.gold 若被热更写成字符串/NaN/负数，
+     * 旧行为会把 gold 算成 NaN（JSON 里变 null，读回即【金币归零】）
+     * 或按负数倒扣。扫荡一次扣 5 体力，出问题玩家很难自查。 */
+    const goldGet = this.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || rw.gold) * t));
     p.gold = (p.gold || 0) + goldGet;
     p.mat = p.mat || {};
     const matGet = (ld && ld.rw) ? ld.rw : { M01: rw.M01 };
     Object.keys(matGet).forEach((k) => {
       if (k === 'gold' || k === 'diamond') return;
-      p.mat[k] = (p.mat[k] || 0) + (Number(matGet[k]) || 0) * t;
+      const n = this.safeAmt((Number(matGet[k]) || 0) * t);
+      if (n > 0) p.mat[k] = (p.mat[k] || 0) + n;
     });
-    if (ld && ld.rw && ld.rw.diamond) p.diamond = (p.diamond || 0) + ld.rw.diamond * t;
+    if (ld && ld.rw && ld.rw.diamond) {
+      const dn = this.safeAmt(ld.rw.diamond * t);
+      if (dn > 0) p.diamond = (p.diamond || 0) + dn;
+    }
     /* 表25 #1：经验走角色等级系统（自动升级） */
     const lr = this.addXp(p, rw.xp);
     /* 扫荡推进任务计数（表29）
@@ -1845,10 +1882,49 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   validGive(g) {
     return !!(g && typeof g === 'object' && Object.keys(g).length);
   },
+  /* 奖励数量校验（上一轮只收紧了【商店价格】，奖励侧漏了）
+   * 实测三类脏数据（旧行为，p.gold += v 裸加）：
+   *   rw:{gold:'100'}      → gold 由 1000 变成字符串 "1000100"
+   *                          JSON 存档里是 "1000100"，读回来一切算术全 NaN
+   *   rw:{gold:NaN}        → gold = NaN → JSON.stringify 写成 null → 读回 0
+   *                          【玩家金币静默归零】
+   *   rw:{gold:-500}       → 领任务【倒扣 500 金币】
+   *   rw:{gold:Infinity}   → 同上，归零
+   * 后台/热更编辑奖励表时填错类型就会中招，且玩家全程看到"领取成功"。
+   * 规则：非有限值、<=0、字符串数字、对象 → 一律按 0 处理（不发也不扣）；
+   *       超大值封顶 1e12（防 1e21 之类撑爆存档与显示）。 */
+  safeAmt(v) {
+    const n = Number(v);
+    if (!isFinite(n) || n <= 0) return 0;
+    return Math.min(Math.floor(n), 1e12);
+  },
+  /* 奖励表是否有【至少一项】能真正发出去的东西
+   * 用途：claimTask / passClaim 在标记"已领取"【之前】先判一次，
+   *       否则 rw 缺失时任务被永久标记为已领、奖励却一分没发，
+   *       运营修好配置后玩家也再也领不到。 */
+  /* 取一个「必须是对象」的存档字段，污染了就重置
+   * 统一入口，供所有"已领取/已购买"记录字段使用。 */
+  recObj(p, k) {
+    if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {};
+    return p[k];
+  },
+  rwUsable(rw) {
+    if (!rw || typeof rw !== 'object' || Array.isArray(rw)) return false;
+    const K = Object.keys(rw);
+    if (!K.length) return false;
+    const STR = { title: 1, skin: 1, frame: 1, gem: 1 };
+    for (const k of K) {
+      if (STR[k]) { if (rw[k]) return true; continue; }
+      if (this.safeAmt(rw[k]) > 0) return true;
+    }
+    return false;
+  },
   achShopBuyItem(p, id) {
     const it = (EX.achShop || []).find((x) => x.id === id);
     if (!it) return { ok: false, msg: '商品不存在' };
-    const b = p.achShopBuy || (p.achShopBuy = {});
+    /* 就地防御：污染成数组/非对象时记录写不进去 → 限购失效，可无限刷 */
+    if (!p.achShopBuy || typeof p.achShopBuy !== 'object' || Array.isArray(p.achShopBuy)) p.achShopBuy = {};
+    const b = p.achShopBuy;
     const k = this.achShopKey(id);
     if (!b[k]) b[k] = { n: 0, t: Date.now() };
     this._perReset(b[k], it.per, it.ev);
@@ -1934,25 +2010,28 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
 
   /* 通用发放 */
   grant(p, give) {
-    if (!give) return;
+    if (!give) return 0;
     /* 类型守卫
      * BUG（会写脏数据）：表22 活动表里 rw 是【描述字符串】如 '活动代币 + 芯片'。
      * Object.keys('活动代币 + 芯片') 返回 ['0','1','2'...]，
      * 于是 grant 会走进 else 分支执行 p.mat['0'] = '活'、p.mat['1'] = '动'……
      * 结果：点领奖什么也拿不到，还往材料背包里塞进一堆汉字垃圾键。
      * 活动表已把描述改到 rwDesc、真正奖励改为 rw 对象；这里再加一层防御。 */
-    if (typeof give !== 'object' || Array.isArray(give)) return;
+    if (typeof give !== 'object' || Array.isArray(give)) return 0;
     p.mat = p.mat || {};
+    /* 返回本次【实际】发出的总量（0 = 一项都没发出去）。
+     * 调用方可用它判断"是否真的发到了"，避免"提示成功但什么都没给"。 */
+    let _got = 0;
     Object.keys(give).forEach((k) => {
-      if (k === 'gold') p.gold = (p.gold || 0) + give[k];
-      else if (k === 'diamond') p.diamond = (p.diamond || 0) + give[k];
-      else if (k === 'stamina') p.stamina = Math.min(EX.STAMINA_MAX, (p.stamina || 0) + give[k]);
+      if (k === 'gold') { const n = this.safeAmt(give[k]); if (n > 0) { p.gold = (p.gold || 0) + n; _got += n; } }
+      else if (k === 'diamond') { const n = this.safeAmt(give[k]); if (n > 0) { p.diamond = (p.diamond || 0) + n; _got += n; } }
+      else if (k === 'stamina') { const n = this.safeAmt(give[k]); if (n > 0) { p.stamina = Math.min(EX.STAMINA_MAX, (p.stamina || 0) + n); _got += n; } }
       /* 成就点（表33）
        * BUG：claimTask 里单独处理了 ach，但 grant() 没有该分支，
        *      于是图鉴解锁奖励 codexRw { gold:100, ach:5 } 经 grant 发放时，
        *      ach 掉进 else 写进 p.mat['ach'] —— 而成就商店读的是 p.ach。
        * 结果：界面写着「解锁奖励 +5 成就点」，实际成就点一分没加。 */
-      else if (k === 'ach') p.ach = (p.ach || 0) + give[k];
+      else if (k === 'ach') { const n = this.safeAmt(give[k]); if (n > 0) { p.ach = (p.ach || 0) + n; _got += n; } }
       /* 活动代币（表43 活动商店的唯一货币）
        * BUG：evToken 全项目只有扣减（活动商店消费 engine.js:1180），
        *      从来没有任何一个地方发放 → 玩家代币恒为 0，
@@ -1962,8 +2041,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
        *      → 表33 的 RK08/RK09/RK10 三个奖励（第1名皮肤、传说芯片、钻石）
        *        判定 inRank 恒为 false，玩家一次都领不到。 */
       else if (k === 'evToken' || k === 'ev') {
-        const n = Number(give[k]) || 0;
-        if (n > 0) { p.evToken = (p.evToken || 0) + n; p.evScore = (p.evScore || 0) + n; }
+        const n = this.safeAmt(give[k]);
+        if (n > 0) { p.evToken = (p.evToken || 0) + n; p.evScore = (p.evScore || 0) + n; _got += n; }
       }
       /* 消耗品别名兼容（防御）
        * 表16 文档里用 U01/U02 编号，而物品表真实 ID 是 I01/I02（急救包/护盾发生器）。
@@ -1973,9 +2052,10 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
        * 配置已改为 I01/I02，这里再加一层别名映射，防止后台/热更再写回 U0x。 */
       else if (k === 'U01' || k === 'U02') {
         const real = 'I' + k.slice(1);
-        p.mat[real] = (p.mat[real] || 0) + give[k];
+        const n = this.safeAmt(give[k]);
+        if (n > 0) { p.mat[real] = (p.mat[real] || 0) + n; _got += n; }
       }
-      else if (k === 'title') { p.titles = p.titles || []; if (p.titles.indexOf(give[k]) < 0) p.titles.push(give[k]); }
+      else if (k === 'title') { const v = give[k]; if (typeof v === 'string' && v) { p.titles = p.titles || []; if (p.titles.indexOf(v) < 0) p.titles.push(v); _got++; } }
       /* 皮肤
        * BUG（会崩溃）：此处原写 `p.skin = p.skin || []; p.skin.push(...)`。
        * 但 p.skin 是【当前穿戴皮肤 ID】的字符串（newPlayer 里 'sk_c01a'），
@@ -1987,19 +2067,19 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
        * 现在写入 p.skins 并自动穿戴。 */
       else if (k === 'skin') {
         const sid = give[k];
-        if (sid) {
+        if (typeof sid === 'string' && sid) {
           p.skins = p.skins || [];
           if (p.skins.indexOf(sid) < 0) p.skins.push(sid);
-          p.skin = sid;
+          p.skin = sid; _got++;
         }
       }
-      else if (k === 'frame') { p.frames = p.frames || []; if (p.frames.indexOf(give[k]) < 0) p.frames.push(give[k]); }
+      else if (k === 'frame') { const v = give[k]; if (typeof v === 'string' && v) { p.frames = p.frames || []; if (p.frames.indexOf(v) < 0) p.frames.push(v); _got++; } }
       /* 可镶嵌宝石：give: { gem: 'G_R' } → p.gems['G_R'] += 1
        * 修复：此前商城「红宝石/蓝宝石/绿宝石/紫宝石」发放的是 M05 材料，
        *       买了之后在宝石页永远显示数量 0，镶嵌/合成功能完全用不了 */
       else if (k === 'gem') {
         const gid = give[k];
-        if (gid) { p.gems = p.gems || {}; p.gems[gid] = (p.gems[gid] || 0) + 1; }
+        if (typeof gid === 'string' && gid) { p.gems = p.gems || {}; p.gems[gid] = (p.gems[gid] || 0) + 1; _got++; }
       }
       /* 芯片包（表32/表35）：chipN 普通 / chipE 精英 / chipL·chipRed 传说
        * BUG：这四个 key 此前会掉进 else 分支写进 p.mat['chipE']，
@@ -2014,16 +2094,21 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
        * （角色靠通关解锁），此处按芯片品质码处理是安全的。 */
       else if (k === 'C01' || k === 'C02' || k === 'C03') {
         const q = k === 'C01' ? '白' : k === 'C02' ? '蓝' : '红';
-        const n = Math.max(1, Math.floor(Number(give[k]) || 1));
+        const n = Math.max(1, Math.min(50, this.safeAmt(give[k]) || 1));
         for (let i = 0; i < n; i++) this.giveChipByQuality(p, q);
+        _got += n;
       }
       else if (k === 'chipN' || k === 'chipE' || k === 'chipL' || k === 'chipRed') {
         const q = (k === 'chipN') ? '白' : (k === 'chipE') ? '蓝' : '红';
-        const n = Math.max(1, Math.floor(Number(give[k]) || 1));
+        const n = Math.max(1, Math.min(50, this.safeAmt(give[k]) || 1));
         for (let i = 0; i < n; i++) this.giveChipByQuality(p, q);
+        _got += n;
       }
-      else p.mat[k] = (p.mat[k] || 0) + give[k];
+      /* 通用材料：同样先过 safeAmt。
+       * 旧行为 p.mat[k] += give[k]，字符串会拼成 "1000abc"、NaN 会毁掉整个背包。 */
+      else { const n = this.safeAmt(give[k]); if (n > 0) { p.mat[k] = (p.mat[k] || 0) + n; _got += n; } }
     });
+    return _got;
   },
 
   /* =========================================================
@@ -2041,7 +2126,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (it.give && it.give.stamina && this.staminaFull(p)) {
       return { ok: false, msg: '体力已满（' + EX.STAMINA_MAX + '），无需兑换' };
     }
-    const b = p.evShopBuy || (p.evShopBuy = {});
+    const b = this.recObj(p, 'evShopBuy');
     const k = 'es_' + id;
     if (!b[k]) b[k] = { n: 0, t: Date.now() };
     this._perReset(b[k], it.per, it.ev);
@@ -2071,7 +2156,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const rw = this.rankRewardFor(board, rank);
     if (!rw) return { ok: false, msg: '该名次无奖励' };
     const key = 'rk_' + board + '_' + rw.id;
-    p.rankRwGot = p.rankRwGot || {};
+    /* 就地防御：污染成字符串/数字时赋值失效 → 排名奖励可重复领取 */
+    if (!p.rankRwGot || typeof p.rankRwGot !== 'object' || Array.isArray(p.rankRwGot)) p.rankRwGot = {};
     if (p.rankRwGot[key]) return { ok: false, msg: '已领取过该奖励' };
     p.rankRwGot[key] = 1;
     this.grant(p, rw.rw);
@@ -2679,17 +2765,31 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const t = list.find((x) => x.id === id); if (!t) return { ok: false, msg: '任务不存在' };
     if (!this.taskDone(p, t)) return { ok: false, msg: '尚未完成' };
     const key = { main: 'mainClaimed', daily: 'dailyClaimed', weekly: 'weeklyClaimed', achieve: 'achieveClaimed' }[type];
-    p.tasks[key] = p.tasks[key] || [];
+    /* 就地防御：sanitize 只在登录时跑，后台 GM 改档/热更覆盖后可能已把
+     * mainClaimed 写成非数组。这里再兜一次，避免点「领取」直接崩 JS。 */
+    p.tasks[key] = Array.isArray(p.tasks[key]) ? p.tasks[key] : [];
     if (p.tasks[key].indexOf(id) >= 0) return { ok: false, msg: '已领取' };
+    /* 奖励表兜底（上一轮只收紧了商店价格，这里漏了）
+     * 旧行为：先 push 进 claimed 再发奖 → rw 缺失/全非法时
+     *   任务被【永久标记已领取】、金币一分没加，
+     *   运营改好配置后玩家也再也领不到（界面永远显示"已领取"）。
+     * 现在：确认这份奖励真能发出东西，才允许标记已领取。 */
+    if (!this.rwUsable(t.rw)) return { ok: false, msg: '该任务奖励配置异常，暂不可领取' };
     p.tasks[key].push(id);
     let txt = [];
     for (const k in t.rw) {
       const v = t.rw[k];
-      if (k === 'gold') p.gold += v;
-      else if (k === 'diamond') p.diamond += v;
-      else if (k === 'ach') p.ach = (p.ach || 0) + v;
-      else p.mat[k] = (p.mat[k] || 0) + v;
-      txt.push(this.itemName(k) + '+' + v);
+      /* 与 rwUsable 保持同一口径：'100' 这类字符串数字按 100 正常发放
+       * （后台表单偶尔把数字存成字符串，直接跳过会变成"领了没东西"）。 */
+      const n = this.safeAmt(v);
+      if (n <= 0) continue;
+      /* 非数值型奖励键（称号/皮肤/头像框/宝石）不走 p.mat，交给 grant 语义 */
+      if (k === 'title' || k === 'skin' || k === 'frame' || k === 'gem') { this.grant(p, { [k]: v }); continue; }
+      if (k === 'gold') p.gold = (p.gold || 0) + n;
+      else if (k === 'diamond') p.diamond = (p.diamond || 0) + n;
+      else if (k === 'ach') p.ach = (p.ach || 0) + n;
+      else p.mat[k] = (p.mat[k] || 0) + n;
+      txt.push(this.itemName(k) + '+' + n);
     }
     return { ok: true, msg: '✅ ' + t.n + '：' + txt.join(' ') };
   },
