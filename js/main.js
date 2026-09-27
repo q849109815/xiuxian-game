@@ -721,7 +721,11 @@ const MAIN = {
         if (EX[x.k] === undefined) return;            /* 键不存在，避免污染 */
         let v = x.v;
         try { v = JSON.parse(v); } catch (e) {}
-        if (v !== null) EX[x.k] = v;
+        if (v !== null) {
+          /* 同上：定时计划也可能把关键表写成空值 */
+          if (EX.guardTable && !EX.guardTable(x.k, v)) return;
+          EX[x.k] = v;
+        }
       });
       /* ② 版本提示：后台「推送到云端」写 ver，此前游戏端版本号写死在
        *    index.html 的 ?v= —— 玩家 Ctrl+F5 也未必拿到新代码。
@@ -752,6 +756,13 @@ const MAIN = {
         try { localStorage.setItem('zb_cfg_' + key, JSON.stringify(db)); } catch (e) {}
       }
       this.applyCloudCfg(key, db);
+    }
+    /* 全部云端配置应用完毕后统一巡检一次：
+     * 万一某条路径绕过了 guardTable（例如后台直接改 cfg.json 后由其它
+     * 分支写入），这里把已被清空的关键表恢复成内置快照，兜住白屏。 */
+    if (EX.guardAll) {
+      const n = EX.guardAll();
+      if (n > 0) console.warn('[cfg] 关键表为空，已恢复内置值：' + n + ' 张');
     }
   },
   /* 后台表 → 游戏端表的字段映射。
@@ -906,7 +917,14 @@ const MAIN = {
         }
         Object.keys(src || {}).forEach((k) => {
           if (k === '_hotfix' || k === 'data') return;
-          if (EX[k] !== undefined && src[k] !== null) EX[k] = src[k];
+          if (EX[k] !== undefined && src[k] !== null) {
+            /* 关键表空表兜底：后台把某张表清空会让整个界面白屏
+             * （此前实测 affixes/buildings/chapters/tasks 四表各崩 1~6 个面板）。
+             * 这里拒绝「用空值覆盖非空表」，保留内置默认值，避免运营误操作
+             * 导致全体玩家打不开游戏。 */
+            if (EX.guardTable && !EX.guardTable(k, src[k])) return;
+            EX[k] = src[k];
+          }
         });
       } else if (key === 'hotfix') {
         this.applyHotfix(db);
