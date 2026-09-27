@@ -85,16 +85,28 @@
       try { localStorage.removeItem(KEY_TRACK); } catch (e) {}
     },
 
-    /* ---------------- 多语言（表39） ---------------- */
+    /* ---------------- 多语言（表39） ----------------
+     * 单语言版本：只支持简体中文。
+     * getLang 恒返回 zh，并顺手把历史遗留的非 zh 值清掉，
+     * 防止老玩家本地存着 en/ja 之类的值导致文案串味。
+     * setLang 保留为 no-op（对旧调用方兼容），但强制写 zh。
+     */
     getLang() {
-      try { return localStorage.getItem(KEY_LANG) || 'zh'; } catch (e) { return 'zh'; }
+      let v = null;
+      try { v = localStorage.getItem(KEY_LANG); } catch (e) { v = null; }
+      if (v && v !== 'zh') {
+        try { localStorage.setItem(KEY_LANG, 'zh'); } catch (e) {}
+      }
+      return 'zh';
     },
     setLang(k) {
-      try { localStorage.setItem(KEY_LANG, k); } catch (e) {}
+      /* 仅简体中文，忽略任何其它语种 */
+      try { localStorage.setItem(KEY_LANG, 'zh'); } catch (e) {}
+      return 'zh';
     },
     t(id) {
       if (!window.EX) return id;
-      return EX.txt(id, this.getLang());
+      return EX.txt(id, 'zh');
     },
 
     /* ---------------- 版本排期（表38） ---------------- */
