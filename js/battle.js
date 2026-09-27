@@ -505,6 +505,8 @@ const BT = {
     const z = this.mkZ(d, mul, bossHp);
     z.isBoss = true; z.bossDef = d; z.phase = 0; z.maxHp = z.hp; z.img = d.img;
     r.boss = z; r.zombies.push(z);
+    /* 表04 VO_003 BOSS出现：此前 BOSS 出场只有画面变化，没有任何语音/字幕提示 */
+    try { if (window.VO) VO.say('VO_003'); } catch (e) {}
   },
 
   mkZ(d, mul, hpOverride) {
@@ -685,8 +687,27 @@ const BT = {
         }
         tg = best;
       }
-      if (!tg) tg = this.nearest(r.px, r.py, null, r.range);
-      if (tg) { r.shootT = 1 / (r.rate * (1 + r.mods.rateMul)); this.shoot(tg); }
+      if (!tg) {
+        const rr = (isFinite(Number(r.range)) && Number(r.range) > 0) ? Number(r.range) : 380;
+        tg = this.nearest(r.px, r.py, null, rr);
+        /* ---- 射程防卡关兜底 ----
+         * 现在射程真正生效后，存在一种极端情况：某只僵尸因 AI 或位置原因
+         * 永远停在射程外（例如远程僵尸 atkR 大于武器射程、或被卡在地图边缘），
+         * 则永远打不到它 → 该波清不完 → 卡死。
+         * 兜底：射程内持续 RANGE_STALL_GUARD 秒无目标时，临时解除射程限制，
+         * 保证任何局面下玩家都打得出去（正常情况根本不会触发）。 */
+        if (!tg) {
+          r.noTgT = (Number(r.noTgT) || 0) + dt;
+          const guard = Number((typeof EX !== 'undefined' && EX.RANGE_STALL_GUARD) || 2.5);
+          if (r.noTgT > guard) tg = this.nearest(r.px, r.py, null, 9999);
+        } else { r.noTgT = 0; }
+      } else { r.noTgT = 0; }
+      if (tg) {
+        /* 寒霜减速：冰霜僵尸接触后我方射速下降（r.chillMul < 1） */
+        const _cm = (r.chillT > 0 && r.chillMul > 0) ? r.chillMul : 1;
+        r.shootT = 1 / Math.max(0.05, r.rate * (1 + r.mods.rateMul) * _cm);
+        this.shoot(tg);
+      }
     }
     if (!r.reloading && r.mag <= 0) this.reload();
 
@@ -879,6 +900,26 @@ const BT = {
       }
     }
 
+    /* --- 火焰僵尸「灼烧」DoT：防线持续掉血 ---
+     * 与 poison 同机制：按秒扣血，不吃护甲减免（持续伤害穿透护甲），
+     * 但单次伤害很小（8/秒），不会导致难度失控。 */
+    if (r.wallBurnT > 0) {
+      r.wallBurnT -= dt;
+      r.wallHp = Math.max(0, (r.wallHp != null ? r.wallHp : r.hp) - (Number(r.wallBurn) || 0) * dt);
+      r.hp = r.wallHp;
+      if (r.wallBurnT <= 0) { r.wallBurn = 0; r._burnToast = 0; }
+      if (r.wallHp <= 0) { r.wallHp = 0; r.hp = 0; this.onLose(); return; }
+    }
+
+    /* --- 冰霜僵尸「寒霜」：我方射速降低 ---
+     * 作用于 r.chillMul，在 shoot() 的射速计算里乘上，效果即时可见。 */
+    if (r.chillT > 0) {
+      r.chillT -= dt;
+      r.chillMul = 1 - (Number(r.chill) || 0);
+      if (r.chillT <= 0) { r.chill = 0; r.chillMul = 1; r._chillToast = 0; }
+    } else if (r.chillMul == null || r.chillMul === 0) { r.chillMul = 1; }
+    else if (Number(r.chill) <= 0) { r.chillMul = 1; }
+
     /* --- 地面腐蚀液池 --- */
     for (const pl of r.pools) {
       pl.life -= dt;
@@ -937,7 +978,7 @@ const BT = {
 
       /* 撞上防线：防线掉血，僵尸消失 */
       if (z.y >= this.wallY) {
-        this.hurtPlayer(z.dmg, z.n);
+        this.hurtPlayer(z.dmg, z.n, z);
         z.dead = true; z.hp = 0;
         r.efx.push({ t: 'hitWall', x: z.x, y: this.wallY, life: 0.3, max: 0.3, r: 26 });
         if (window.SND) SND.play('hurt');
@@ -949,7 +990,7 @@ const BT = {
         z.atkCd -= dt;
         if (z.atkCd <= 0) {
           z.atkCd = 0.9;
-          this.hurtPlayer(z.dmg, z.n);
+          this.hurtPlayer(z.dmg, z.n, z);
           if (z.isBoss) {
             const a = Math.atan2(r.py - z.y, r.px - z.x);
             r.px += Math.cos(a) * 34; r.py += Math.sin(a) * 34;
@@ -1554,9 +1595,32 @@ const BT = {
     if (z.hp <= 0) this.kill(z);
   },
 
-  hurtPlayer(dmg, src) {
+  hurtPlayer(dmg, src, zo) {
     const r = this.run; if (!r || r.over) return;
     if (src === 'poison') { r.poison = dmg; r.poisonT = 4; return; }
+    /* ---- 元素附加：火焰僵尸「灼烧」/ 冰霜僵尸「寒霜」 ----
+     * 此前 zombies 表写了 fire:8 / chill:0.35 两个字段，但全项目零消费：
+     * 火焰僵尸只是「长得红一点」，冰霜僵尸只是「长得蓝一点」，
+     * 和外形完全相同的普通僵尸在数值上没有任何区别。
+     * 现在真正实装：
+     *   fire  → 防线持续灼烧 DoT（每秒掉血，持续 3 秒，刷新不叠加）
+     *   chill → 寒霜减速（我方射速 -35%，持续 2.5 秒，刷新不叠加） */
+    if (zo && !zo.dead) {
+      const fv = Number(zo.d && zo.d.fire);
+      const cv = Number(zo.d && zo.d.chill);
+      if (isFinite(fv) && fv > 0) {
+        r.wallBurn = Math.max(Number(r.wallBurn) || 0, fv);
+        r.wallBurnT = Math.max(Number(r.wallBurnT) || 0, 3);
+        if (!r._burnToast) { r._burnToast = 1; try { if (window.VO) VO.say('VO_005'); } catch (e) {} }
+        if (window.SND) SND.play('burn');
+      }
+      if (isFinite(cv) && cv > 0) {
+        r.chill = Math.max(Number(r.chill) || 0, Math.min(0.6, cv));
+        r.chillT = Math.max(Number(r.chillT) || 0, 2.5);
+        if (!r._chillToast) { r._chillToast = 1; try { if (window.VO) VO.say('VO_006'); } catch (e) {} }
+        if (window.SND) SND.play('chill');
+      }
+    }
     let d = dmg;
     if (r.shield > 0) {
       const ab = Math.min(r.shield, d); r.shield -= ab; d -= ab;
@@ -1577,6 +1641,11 @@ const BT = {
     r.hitFlash = 0.18;
     this.addFloat(r.px, r.py - 26, '-' + Math.round(dmg), 'hurt');
     if (window.SND) SND.play('hurt');
+    /* 表04 VO_004 防线告急：低于 30% 提示一次（此前完全没有预警） */
+    if (!r._lowWarn && r.wallMax && r.wallHp > 0 && r.wallHp / r.wallMax < 0.3) {
+      r._lowWarn = 1;
+      try { if (window.VO) VO.say('VO_004'); } catch (e) {}
+    }
     if (r.wallHp <= 0) { r.wallHp = 0; r.hp = 0; this.onLose(); }
   },
 
@@ -1857,6 +1926,7 @@ const BT = {
   },
 
   win() {
+    try { if (window.VO) VO.say('VO_007'); } catch (e) {}
     const r = this.run; if (r.over) return;
     r.over = true; r.win = true;   /* r.win 此前从未赋值，外部无法判定胜负 */
     /* 表37 埋点：endless_time / level_finish */
@@ -1866,6 +1936,7 @@ const BT = {
     if (this.cb) this.cb('win', { kills: r.kills, time: r.time, rw: { gold: r.gold, diamond: 0 }, lv: r.lv });
   },
   onLose() {
+    try { if (window.VO) VO.say('VO_008'); } catch (e) {}
     const r = this.run; if (r.over) return;
     if (r.reviveLeft > 0) {
       r.reviveLeft--;
@@ -3531,6 +3602,24 @@ const BT = {
     /* 2.5D 透视地面网格（产生纵深） */
     this.drawPerspGround(c);
 
+    /* ---- 射程指示环 ----
+     * 射程真正生效后，玩家必须能看见"我能打到多远"，否则短射程武器
+     * （散弹 259px / 电击棒 253px）在玩家眼里就是"经常不开枪"的 BUG。
+     * 画一条极淡的虚线椭圆，只在射程小于战场纵深时才画（狙击覆盖全场则不画）。 */
+    try {
+      const rr = Number(r.range) || 0;
+      if (rr > 0 && rr < Math.max(W, H) * 0.98) {
+        c.save();
+        c.setLineDash([5, 7]);
+        c.strokeStyle = 'rgba(120,220,255,0.16)';
+        c.lineWidth = 1.2;
+        c.beginPath();
+        c.ellipse(r.px, r.py, rr, rr * 0.34, 0, 0, Math.PI * 2);
+        c.stroke();
+        c.restore();
+      }
+    } catch (e) {}
+
     /* 障碍物：掩体（表28） */
     for (const o of (r.obstacles || [])) {
       if (o.dead) continue;
@@ -3894,6 +3983,61 @@ const BT = {
     }
     if (nz) aim = Math.atan2(nz.y - r.py, nz.x - r.px);
     r.aimA = aim;
+
+    /* ---- 表03 特效帧：灼烧 / 寒霜持续光环 ----
+     * 参数全部取自 EX.VFX（帧数/尺寸/时长），美术把帧序列放进
+     * 对应 dir 后即可替换成真素材；没有素材时用 canvas 图元按同样参数回退，
+     * 保证「表配了就一定看得到东西」。 */
+    try {
+      const t = r.time || 0;
+      if (Number(r.wallBurnT) > 0) {
+        const vd = (typeof EX !== 'undefined' && EX.vfxDef) ? (EX.vfxDef('FX_Burn_Dot') || {}) : {};
+        const sz = Number(vd.size) || 72;
+        const ph = Math.sin(t * 9) * 0.5 + 0.5;
+        c.save();
+        const g2 = c.createRadialGradient(r.px, (this.wallY || H - 96), 0, r.px, (this.wallY || H - 96), sz);
+        g2.addColorStop(0, 'rgba(255,150,60,' + (0.28 + ph * 0.18).toFixed(3) + ')');
+        g2.addColorStop(1, 'rgba(255,90,20,0)');
+        c.fillStyle = g2;
+        c.fillRect(r.px - sz, (this.wallY || H - 96) - sz, sz * 2, sz * 2);
+        c.restore();
+      }
+      if (Number(r.chillT) > 0) {
+        const vd = (typeof EX !== 'undefined' && EX.vfxDef) ? (EX.vfxDef('FX_Chill_Aura') || {}) : {};
+        const sz = Number(vd.size) || 72;
+        const ph = Math.sin(t * 5) * 0.5 + 0.5;
+        c.save();
+        c.strokeStyle = 'rgba(120,220,255,' + (0.30 + ph * 0.22).toFixed(3) + ')';
+        c.lineWidth = 2;
+        c.beginPath();
+        c.ellipse(r.px, r.py, sz * (0.8 + ph * 0.2), sz * 0.34 * (0.8 + ph * 0.2), 0, 0, Math.PI * 2);
+        c.stroke();
+        c.restore();
+      }
+    } catch (e) {}
+
+    /* ---- 元素状态徽标：灼烧 / 寒霜 ----
+     * 火焰/冰霜僵尸的元素效果此前零实装，玩家被打死都不知道为什么。
+     * 这里在主角头顶挂出计时徽标，效果可读、可预期。 */
+    try {
+      let bx = (r.px || 0) - 30, by = (r.py || 0) - 62;
+      const badge = (txt, col, ratio) => {
+        c.save();
+        c.font = 'bold 11px system-ui,sans-serif';
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        const w = 46;
+        c.fillStyle = 'rgba(8,12,20,0.72)';
+        c.fillRect(bx - w / 2, by - 8, w, 16);
+        c.fillStyle = col;
+        c.fillRect(bx - w / 2, by + 6, w * Math.max(0, Math.min(1, ratio)), 2);
+        c.fillStyle = col;
+        c.fillText(txt, bx, by);
+        c.restore();
+        by -= 20;
+      };
+      if (Number(r.wallBurnT) > 0) badge('🔥 灼烧', '#ff9a3c', Number(r.wallBurnT) / 3);
+      if (Number(r.chillT) > 0) badge('❄️ 寒霜', '#5fd8ff', Number(r.chillT) / 2.5);
+    } catch (e) {}
 
     /* 当前外观：优先皮肤立绘 → 角色立绘 → 头像立绘。
      * 这些都是深色底 JPG，统一走 SPR 抠底 + 轮廓光，避免"方纸片"。 */
