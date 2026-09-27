@@ -97,6 +97,8 @@ input,select,textarea,button{font-family:inherit;font-size:13px}
 .btn.warn{background:var(--warn);border-color:var(--warn);color:#3a2400;font-weight:600}
 .btn.sm{padding:4px 9px;font-size:12px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
+/* 无权限按钮：置灰 + 禁止点击（权限不足时看得出来做不了什么） */
+.btn.dis{opacity:.38;cursor:not-allowed;filter:grayscale(1);text-decoration:line-through}
 
 /* 表格 */
 .tw{overflow:auto;border:1px solid var(--line);border-radius:8px}
