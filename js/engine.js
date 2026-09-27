@@ -2152,13 +2152,44 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const hit = list.find((x) => rank >= x.lo && rank <= x.hi);
     return hit || null;
   },
+  /* 小时 key（UTC+8，与 dailyKey/weekKey 同一业务日基准） */
+  hourKey() {
+    const d = new Date(Date.now() + 8 * 36e5);
+    return d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate() + '-' + d.getUTCHours();
+  },
+  /* 【排行榜奖励周期 key】
+   * 严重 BUG 修复：表33 明确写了 cyc='每小时' / '每日' / '活动结束'，
+   * 但领取记录 key 只有 `rk_榜名_奖励id`，完全没有周期维度 ——
+   * cyc 此前只用于显示（「每小时结算」），实际能不能领全看这条一次性标记。
+   * 后果：
+   *   「每小时」结算 → 玩家一天只能领 1 次（而不是每小时 1 次）
+   *   「每日」结算   → 领过一次后永久不能再领，第二天也不会刷新
+   * 「活动结束 / 每期」游戏端无期数概念，保守保持领一次（pk='all'）。
+   * 现在把周期序号拼进 key，到新周期即可重新领取。 */
+  rankRwKey(p, board, rw) {
+    const cyc = String((rw && rw.cyc) || '每期');
+    let pk;
+    if (cyc.indexOf('每小时') >= 0) pk = 'h' + this.hourKey();
+    else if (cyc.indexOf('每日') >= 0 || /^1\s*天$/.test(cyc)) pk = 'd' + this.dailyKey();
+    else if (cyc.indexOf('每周') >= 0) pk = 'w' + this.weekKey();
+    else if (/^(\d+)\s*天$/.test(cyc)) {
+      const n = Number(RegExp.$1) || 1;
+      pk = 'n' + Math.floor((Date.now() + 8 * 36e5) / 864e5 / n);
+    } else pk = 'all';   /* 活动结束 / 每期：不区分周期 */
+    return 'rk_' + board + '_' + rw.id + '_' + pk;
+  },
   claimRankRw(p, board, rank) {
     const rw = this.rankRewardFor(board, rank);
     if (!rw) return { ok: false, msg: '该名次无奖励' };
-    const key = 'rk_' + board + '_' + rw.id;
+    const key = this.rankRwKey(p, board, rw);
     /* 就地防御：污染成字符串/数字时赋值失效 → 排名奖励可重复领取 */
     if (!p.rankRwGot || typeof p.rankRwGot !== 'object' || Array.isArray(p.rankRwGot)) p.rankRwGot = {};
-    if (p.rankRwGot[key]) return { ok: false, msg: '已领取过该奖励' };
+    if (p.rankRwGot[key]) return { ok: false, msg: '本期已领取过该奖励' };
+    /* 清理同一奖励的旧周期记录：避免 rankRwGot 随天数/小时无限膨胀 */
+    const prefix = 'rk_' + board + '_' + rw.id + '_';
+    Object.keys(p.rankRwGot).forEach((k) => {
+      if (k.indexOf(prefix) === 0 && k !== key) delete p.rankRwGot[k];
+    });
     p.rankRwGot[key] = 1;
     this.grant(p, rw.rw);
     return { ok: true, msg: '领取 ' + board + ' ' + rw.rank + ' 奖励成功！' };
