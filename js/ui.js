@@ -50,7 +50,8 @@ const UI = {
     const st = $('#hmStamina');
     if (st) st.textContent = Math.floor(p.stamina || 0) + '/' + EX.STAMINA_MAX;
     const avEl = $('#hmAvIco');
-    if (avEl) avEl.textContent = E.char(p).icon;
+    /* 头像：优先用玩家自己选的，没选过才回退到当前角色图标 */
+    if (avEl) avEl.textContent = p.avatar || E.char(p).icon;
 
     $('#hmBase').innerHTML = EX.buildings.map((b) => {
       const l = p.build[b.id] || 1;
@@ -58,6 +59,39 @@ const UI = {
     }).join('');
     $$('#hmBase .bs').forEach((el) => { el.onclick = () => this.open('base', el.dataset.build); });
     this.navDots();
+  },
+
+  /* ---------- 头像更换 ----------
+   * 主界面左上角头像此前是死 emoji：直接取 E.char(p).icon（当前角色图标），
+   * 且 #hmAv 完全没有点击绑定 —— 玩家点不动，也换不了。
+   * 这里给一组头像供选择，选完写进 p.avatar 并同步云端。 */
+  AVATARS: ['👨‍🚀', '👩‍🚀', '🧑‍🎤', '👩‍🍳', '🕵️', '👮', '🧙', '🥷',
+            '🦸', '🧟', '🤖', '💀', '🐱', '🐶', '🦊', '🐼'],
+  pickAvatar() {
+    const p = this.P; if (!p) return;
+    const old = document.getElementById('avPick'); if (old) old.remove();
+    const box = document.createElement('div');
+    box.id = 'avPick'; box.className = 'modal on';
+    box.innerHTML = `<div class="pn-mask"></div>
+      <div class="avp-box">
+        <div class="pn-hd"><span class="pn-back" id="avpX">✕</span><b>选择头像</b><span class="avp-sp"></span></div>
+        <div class="avp-grid">
+          ${this.AVATARS.map((a) => `<button class="avp-c${p.avatar === a ? ' on' : ''}" data-av="${a}">${a}</button>`).join('')}
+        </div>
+        <div class="lbl" style="text-align:center;margin-top:8px">点选即换，自动保存</div>
+      </div>`;
+    document.body.appendChild(box);
+    const close = () => { const e = document.getElementById('avPick'); if (e) e.remove(); };
+    const mk = box.querySelector('.pn-mask'); if (mk) mk.onclick = close;
+    const xb = box.querySelector('#avpX'); if (xb) xb.onclick = close;
+    box.querySelectorAll('[data-av]').forEach((btn) => {
+      btn.onclick = () => {
+        p.avatar = btn.dataset.av;
+        try { E.save(p); } catch (e) {}
+        this.home(); close();
+        try { this.toast('头像已更换', 'ok'); } catch (e) {}
+      };
+    });
   },
 
   /* 主界面导航红点：有可领奖励 / 未读邮件时，在对应入口上打点。
