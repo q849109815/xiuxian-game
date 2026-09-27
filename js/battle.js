@@ -366,6 +366,23 @@ const BT = {
      *        必须挪到 run 创建之后（见下方 start 末尾）。 */
     this.charImg = (E.char(p) || {}).img || null;
     this.P = p; this._heroImg = undefined;
+    /* Q 版贴图预载：进关立即拉齐本关怪物池 + 当前武器的图，
+     * 避免开局先画几帧矢量骨骼、再突变成立绘（视觉上像"变形"）。
+     * 预载失败/超时一律自动退回原来的画法，不影响任何玩法。 */
+    try {
+      if (typeof CHIBI !== 'undefined' && CHIBI && def) {
+        const ks = [];
+        const pool = def.pool || [];
+        const ztab = (typeof EX !== 'undefined' && EX.zombies) ? EX.zombies : [];
+        for (const id of pool) {
+          for (const z of ztab) if (z.id === id && z.chibi && ks.indexOf(z.chibi) < 0) ks.push(z.chibi);
+        }
+        const gk = CHIBI.keyOfGun((p && (p.gunId || p.gun)) || null);
+        if (gk) ks.push(gk);
+        ks.push('hero_base');
+        CHIBI.preload(ks);
+      }
+    } catch (e) { /* 预载失败不影响战斗 */ }
     /* 场景：优先用关卡表逐关配置的 scene
      * BUG：此前恒用 sceneFor(def.ch)（按章节号一刀切），
      * 关卡表里 100 关逐个配的 scene 字段从未被消费 —— 实测 86/100 关场景与配置不符
