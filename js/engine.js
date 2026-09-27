@@ -201,11 +201,85 @@ const E = {
     p.cgSeen[cg.id] = 1;
     return cg;
   },
-  /* 体力消耗：普通 1 / BOSS 3 / 无尽 2 */
-  staminaCost(id) {
-    if (id === 'endless') return 2;
+  /* 体力消耗：普通 1 / BOSS 3 / 无尽 2，高难度【递增】而不是相乘
+   * 相乘的后果实测过：BOSS 关 ×3 → 恶魔难度 9 点体力，
+   * 而体力上限 100、每 5 分钟才回 1 点 = 打一关要等 45 分钟，直接劝退。
+   * 改为 基础 + (难度档 - 1)：普通 1 / 困难 2 / 恶魔 3，BOSS 关 3/4/5。
+   * diff 为空时按普通算，老存档/其他调用点不受影响。 */
+  staminaCost(id, diff) {
+    const dm = this.diffMul(diff);
+    const add = Math.max(0, Math.round(dm.stam) - 1);
+    if (id === 'endless') return 2 + add;
     const d = this.levelDef(id);
-    return d.cond === 'boss' || d.cond === 'bossAll' ? 3 : 1;
+    const base = (d.cond === 'boss' || d.cond === 'bossAll') ? 3 : 1;
+    return base + add;
+  },
+  /* ---------- 难度（普通 / 困难 / 恶魔） ---------- */
+  diffDef(id) {
+    const t = (EX.DIFFS || []);
+    if (!t.length) return { id: 'normal', n: '普通', hpMul: 1, dmgMul: 1, cntMul: 1, spdMul: 1, rwMul: 1, stam: 1 };
+    return t.find((x) => x.id === id) || t[0];
+  },
+  /* 取难度倍率（非法值一律退化为普通，绝不让 undefined 参与乘法） */
+  diffMul(diff) {
+    const d = this.diffDef(diff);
+    const num = (v, dft) => (isFinite(Number(v)) ? Number(v) : dft);
+    return {
+      id: d.id, n: d.n,
+      hp: num(d.hpMul, 1), dmg: num(d.dmgMul, 1), cnt: num(d.cntMul, 1),
+      spd: num(d.spdMul, 1), rw: num(d.rwMul, 1), stam: num(d.stam, 1),
+    };
+  },
+  /* 该关卡某难度是否已解锁：
+   *   普通 → 关卡本身解锁即可
+   *   困难 → 通关该关普通
+   *   恶魔 → 通关该关困难
+   * 旧存档只有 p.cleared（无难度记录），视为已通关普通，不会把老玩家卡死。 */
+  diffUnlocked(p, lvId, diff) {
+    const d = this.diffDef(diff);
+    if (!d.unlock) return true;
+    const rec = (p.diffCleared || {})[d.unlock] || {};
+    if (rec[lvId]) return true;
+    /* 兼容旧档：cleared 里有的关视为已通普通 */
+    return d.unlock === 'normal' ? !!(p.cleared || {})[lvId] : false;
+  },
+  /* 单次扫荡消耗体力
+   * BUG：此前恒取 EX.SWEEP_STAMINA = 5，与关卡/难度完全脱钩。
+   *   手动打 1-1 普通只要 1 点体力，扫荡同样这关却要 5 点，
+   *   拿的是一模一样的奖励 —— 扫荡花 5 倍体力，性价比只有手动的 1/5。
+   *   玩家算过账就不会再点扫荡，这个功能等于废掉。
+   * 现在改为「= 手动打这关的体力」（按难度 1/2/3…），
+   *   扫荡的定位回归为【省时间】而不是【多收税】。 */
+  sweepStamina(lvId, diff) {
+    const d = this.diffDef(diff).id;
+    const c = Number(this.staminaCost(lvId, d));
+    if (!isFinite(c) || c <= 0) return Math.max(1, Number(EX.SWEEP_STAMINA) || 5);
+    return c;
+  },
+  /* 扫荡取哪一个难度？取该关【已通关的最高难度】。
+   * BUG：扫荡此前完全不看难度，恒按关卡表原始奖励（= 普通难度）发放。
+   *   玩家辛苦打通恶魔难度（怪物血量 ×5.5），回头扫荡却只拿 1/6.5 的奖励，
+   *   扫荡次数越多亏得越多 —— 高难度通关的正反馈被扫荡直接抹平。
+   * 现在按已通关最高难度放大，让「手动打高难度」的付出能在扫荡里兑现。 */
+  sweepDiff(p, lvId) {
+    const dc = p.diffCleared || {};
+    for (const d of ['hell', 'hard']) {
+      if (dc[d] && dc[d][lvId]) return d;
+    }
+    return 'normal';
+  },
+  /* 某难度通关星级（0 = 未通关） */
+  diffStars(p, lvId, diff) {
+    const rec = (p.diffCleared || {})[this.diffDef(diff).id] || {};
+    return rec[lvId] || 0;
+  },
+  /* 首次通关某难度的额外奖励：按章节递增，越后期越值钱 */
+  diffFirstRw(diff, ch) {
+    const d = this.diffDef(diff);
+    if (d.id === 'normal') return null;
+    const c = Math.max(1, Number(ch) || 1);
+    if (d.id === 'hard') return { diamond: 10 + c * 6, gold: 0 };
+    return { diamond: 40 + c * 25, gold: 0 };
   },
   /* 体力：每 5 分钟 +1，上限 100 */
   /* =========================================================
@@ -348,15 +422,15 @@ const E = {
    * BUG：此前 startBattle 一开始就扣体力，而章节 CG 分支随后 return，
    *      玩家若关掉 CG 弹窗而不点「进入战区」，战斗根本没开始，体力却已被扣 —— 白扣。
    *      现在检查与扣除分离：startBattle 只检查，battleGo 真正进战斗时才扣。 */
-  checkStamina(p, id) {
+  checkStamina(p, id, diff) {
     this.tickStamina(p);
-    const c = this.staminaCost(id);
+    const c = this.staminaCost(id, diff);
     if ((p.stamina || 0) < c) return { ok: false, msg: EX.tip('popup.noStaminaCur', { v: c, n: Math.floor(p.stamina) }) };
     return { ok: true, cost: c };
   },
-  spendStamina(p, id) {
+  spendStamina(p, id, diff) {
     this.tickStamina(p);
-    const c = this.staminaCost(id);
+    const c = this.staminaCost(id, diff);
     if ((p.stamina || 0) < c) return { ok: false, msg: EX.tip('popup.noStaminaCur', { v: c, n: Math.floor(p.stamina) }) };
     p.stamina -= c; p.staminaAt = Date.now();
     return { ok: true, cost: c };
@@ -1122,10 +1196,17 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 关卡结算 / 星级
    * ================================================ */
   starsFor(hpRatio) { return hpRatio > 0.6 ? 3 : hpRatio > 0.3 ? 2 : 1; },
-  clearLevel(p, id, hpRatio) {
+  clearLevel(p, id, hpRatio, diff) {
     const st = this.starsFor(hpRatio);
     /* 首次通关判定必须在写入 p.cleared 之前取快照 */
     const firstEver = Object.keys(p.cleared || {}).length === 0;
+    /* 难度通关记录：p.diffCleared[难度][关卡] = 星级
+     * 只升不降（回头重打打崩了不会把高星洗掉）。 */
+    const did = this.diffDef(diff).id;
+    p.diffCleared = p.diffCleared || {};
+    p.diffCleared[did] = p.diffCleared[did] || {};
+    const firstOfDiff = !p.diffCleared[did][id];
+    p.diffCleared[did][id] = Math.max(p.diffCleared[did][id] || 0, st);
     p.cleared[id] = Math.max(p.cleared[id] || 0, st);
     /* 解锁下一关（关卡表 unlock 链自动生效）
      * BUG：此处原为无条件 `p.curLevel = nx`，会把进度【打回过去】——
@@ -1148,7 +1229,15 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (firstEver) {
       try { this.grantTitle(p, 'first_clear'); } catch (e) {}
     }
-    return st;
+    /* 恶魔难度全 100 关通关 → 发限定称号（此前称号表无任何获取途径） */
+    if (did === 'hell') {
+      const all = (EX.levels || []).length;
+      if (all && Object.keys(p.diffCleared.hell || {}).length >= all) {
+        try { this.grantTitle(p, 'hell_clear'); } catch (e) {}
+      }
+    }
+    /* 返回对象：调用方要拿 first 判断「首次通关该难度」以发放额外奖励 */
+    return { stars: st, first: firstOfDiff, diff: did };
   },
   /* 称号/头像框发放（去重，返回是否新获得） */
   grantTitle(p, id) {
@@ -1170,15 +1259,15 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     return true;
   },
   totalStars(p) { return Object.values(p.cleared || {}).reduce((s, v) => s + v, 0); },
-  /* 无尽解锁：通关 3-3 */
-  endlessUnlocked(p) { return !!p.cleared[EX.ENDLESS_UNLOCK]; },
+  /* 无尽解锁：默认解锁（此前要求通关 10-10，新手前期没有稳定刷材料的出口） */
+  endlessUnlocked(p) { return true; },
   /* 各系统解锁（资料 05 表） */
   sysUnlocked(p, k) {
     switch (k) {
       case 'gun': return !!p.cleared['1-2'];      // 武器养成 通关1-2
       case 'chip': return !!p.cleared['1-4'];     // 芯片装配 通关1-4
       case 'talent': return !!p.cleared['1-3'];   // 永久天赋 通关1-3
-      case 'endless': return !!p.cleared['3-3'];  // 无尽 通关3-3
+      case 'endless': return true;                // 无尽 默认解锁
       default: return true;
     }
   },
@@ -1663,8 +1752,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 导致已通关关卡也判定"需先通关该关卡"，扫荡功能完全不可用 */
     const st = (p.cleared || {})[lvId] || 0;
     if (!st) return { ok: false, msg: '需先通关该关卡' };
-    if ((p.stamina || 0) < EX.SWEEP_STAMINA) return { ok: false, msg: EX.tip('popup.noStamina', { v: EX.SWEEP_STAMINA }) };
-    return { ok: true };
+    const one = this.sweepStamina(lvId, this.sweepDiff(p, lvId));
+    if ((p.stamina || 0) < one) return { ok: false, msg: EX.tip('popup.noStamina', { v: one }) };
+    return { ok: true, cost: one };
   },
   /* 扫荡预览：必须与 sweep() 走同一套算法，否则「弹窗显示」与「实际到账」对不上。
    * BUG：UI 此前直接用 EX.sweepRw（旧独立公式）显示单次产出，而 sweep() 已改为
@@ -1675,26 +1765,31 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const lvNum = parseInt(String(lvId).split('-')[1] || '1', 10);
     const ld = (EX.levels || []).find((x) => x.id === lvId) || null;
     const fb = EX.sweepRw(lvNum, t);
+    /* 难度倍率：与 sweep() 同源，保证「弹窗显示」=「实际到账」 */
+    const dId = this.sweepDiff(p, lvId);
+    const dRw = (this.diffMul(dId).rw) || 1;
     /* 与 sweep() 同步走 safeAmt，保证「弹窗显示」=「实际到账」 */
-    const gold = E.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || fb.gold) * t));
+    const gold = E.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || fb.gold) * t * dRw));
     const mat = {};
     const src = (ld && ld.rw) ? ld.rw : { M01: fb.M01 };
     Object.keys(src).forEach((k) => {
       if (k === 'gold' || k === 'diamond') return;
-      const n = E.safeAmt((Number(src[k]) || 0) * t);
+      const n = E.safeAmt(Math.floor((Number(src[k]) || 0) * t * dRw));
       if (n > 0) mat[k] = n;
     });
-    return { times: t, gold: gold, mat: mat,
-      diamond: (ld && ld.rw && ld.rw.diamond) ? E.safeAmt(ld.rw.diamond * t) : 0,
-      xp: fb.xp, stamina: EX.SWEEP_STAMINA * t };
+    return { times: t, gold: gold, mat: mat, diff: dId, diffRw: dRw,
+      diamond: (ld && ld.rw && ld.rw.diamond) ? E.safeAmt(Math.floor(ld.rw.diamond * t * dRw)) : 0,
+      xp: Math.floor((fb.xp || 0) * dRw), stamina: this.sweepStamina(lvId, dId) * t };
   },
   sweep(p, lvId, times) {
     const lvNum = parseInt(String(lvId).split('-')[1] || '1', 10);
     const ck = this.canSweep(p, lvId);
     if (!ck.ok) return ck;
     const t = Math.max(1, Math.min(EX.SWEEP_MAX, times || 1));
-    const cost = EX.SWEEP_STAMINA * t;
-    if ((p.stamina || 0) < cost) return { ok: false, msg: EX.tip('popup.noStaminaMax', { v: Math.floor((p.stamina || 0) / EX.SWEEP_STAMINA) }) };
+    const dId0 = this.sweepDiff(p, lvId);
+    const one = this.sweepStamina(lvId, dId0);
+    const cost = one * t;
+    if ((p.stamina || 0) < cost) return { ok: false, msg: EX.tip('popup.noStaminaMax', { v: Math.floor((p.stamina || 0) / one) }) };
     p.stamina -= cost;
     /* 严重 BUG 修复：此前的扫荡奖励走 EX.sweepRw 的独立公式
      *   gold = (120 + ch*60) × times
@@ -1708,21 +1803,25 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* 关卡奖励同样过 safeAmt：rw.gold 若被热更写成字符串/NaN/负数，
      * 旧行为会把 gold 算成 NaN（JSON 里变 null，读回即【金币归零】）
      * 或按负数倒扣。扫荡一次扣 5 体力，出问题玩家很难自查。 */
-    const goldGet = this.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || rw.gold) * t));
+    /* 难度倍率：按该关【已通关的最高难度】放大（扫荡不看难度是 BUG，
+     * 会导致打通恶魔后扫荡只拿 1/6.5） */
+    const dId = this.sweepDiff(p, lvId);
+    const dRw = (this.diffMul(dId).rw) || 1;
+    const goldGet = this.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || rw.gold) * t * dRw));
     p.gold = (p.gold || 0) + goldGet;
     p.mat = p.mat || {};
     const matGet = (ld && ld.rw) ? ld.rw : { M01: rw.M01 };
     Object.keys(matGet).forEach((k) => {
       if (k === 'gold' || k === 'diamond') return;
-      const n = this.safeAmt((Number(matGet[k]) || 0) * t);
+      const n = this.safeAmt(Math.floor((Number(matGet[k]) || 0) * t * dRw));
       if (n > 0) p.mat[k] = (p.mat[k] || 0) + n;
     });
     if (ld && ld.rw && ld.rw.diamond) {
-      const dn = this.safeAmt(ld.rw.diamond * t);
+      const dn = this.safeAmt(Math.floor(ld.rw.diamond * t * dRw));
       if (dn > 0) p.diamond = (p.diamond || 0) + dn;
     }
-    /* 表25 #1：经验走角色等级系统（自动升级） */
-    const lr = this.addXp(p, rw.xp);
+    /* 表25 #1：经验走角色等级系统（自动升级）—— 同步乘难度倍率 */
+    const lr = this.addXp(p, Math.floor((rw.xp || 0) * dRw));
     /* 扫荡推进任务计数（表29）
      * BUG：sweep() 此前只发奖励，从不调用 pushStats ——
      *   每日任务 D02「通关1次关卡」/ D03「击杀50僵尸」、
