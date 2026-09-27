@@ -57,6 +57,48 @@ const UI = {
       return `<button class="bs" data-build="${b.id}"><i>${b.icon}</i><b>${b.n} Lv.${l}</b><span>${b.desc}</span></button>`;
     }).join('');
     $$('#hmBase .bs').forEach((el) => { el.onclick = () => this.open('base', el.dataset.build); });
+    this.navDots();
+  },
+
+  /* 主界面导航红点：有可领奖励 / 未读邮件时，在对应入口上打点。
+   * 此前 22 个面板里「任务」根本没有导航入口，玩家只能领奖后被被动弹出；
+   * 且所有入口都没有状态提示，玩家不知道该去哪领东西。 */
+  navDots() {
+    const p = this.P; if (!p) return;
+    const set = (key, n) => {
+      const btn = document.querySelector(`.hm-nav .hn[data-p="${key}"],.hm-nav2 .hn2[data-p="${key}"]`);
+      if (!btn) return;
+      let d = btn.querySelector('.nv-dot');
+      if (n > 0) {
+        if (!d) { d = document.createElement('i'); d.className = 'nv-dot'; btn.appendChild(d); }
+        d.textContent = n > 99 ? '99+' : n;
+        d.style.display = '';
+      } else if (d) { d.style.display = 'none'; }
+    };
+    /* 任务：已完成但未领取的数量（主线/每日/每周/成就四档）
+     * 字段取自 claimTask：p.tasks.{main,daily,weekly,achieve}Claimed */
+    let tn = 0;
+    try {
+      const T = EX.tasks || {};
+      const tk = (p.tasks || {});
+      const pairs = [['main', T.main, tk.mainClaimed], ['daily', T.daily, tk.dailyClaimed],
+                     ['weekly', T.weekly, tk.weeklyClaimed], ['achieve', T.achieve, tk.achieveClaimed]];
+      pairs.forEach(([, arr, got]) => {
+        (arr || []).forEach((t) => {
+          if (!t) return;
+          if (Array.isArray(got) && got.indexOf(t.id) >= 0) return;
+          if (E.taskDone(p, t)) tn++;
+        });
+      });
+    } catch (e) { tn = 0; }
+    set('task', tn);
+    /* 邮件：未领取的数量 */
+    let mn = 0;
+    try {
+      const ml = (p.mail || []);
+      mn = ml.filter((m) => m && !m.got).length;
+    } catch (e) { mn = 0; }
+    set('mail', mn);
   },
 
   /* ================= 面板 ================= */
