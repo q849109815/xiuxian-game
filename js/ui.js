@@ -760,7 +760,9 @@ r_tavern(p, tab) {
     const _rlBase = Number(g.reload) || 0;
     const _rlReal = Math.max(0.3, _rlBase * (1 - Math.min(0.4, ((p.build && p.build.armory) || 0) * 0.01)) - (Number(a.reloadCut) || 0));
     const adv = E.advInfo(p.gunLv);
-    const nextAdv = EX.gunAdvance[Math.min(EX.gunAdvance.length - 1, E.advOf(p.gunLv) + 1)];
+    /* 兜底：表被清空时索引为 -1 → undefined，读 .q 会让整个武器面板白屏 */
+    const _ga = (EX.gunAdvance && EX.gunAdvance.length) ? EX.gunAdvance : [{ lv: 1, q: '白', n: '普通' }];
+    const nextAdv = _ga[Math.min(_ga.length - 1, E.advOf(p.gunLv) + 1)] || { q: '白' };
     return `<div class="card"><div class="card-t">当前武器</div>
       <div style="text-align:center;padding:6px 0">
         ${g.img ? `<img src="${g.img}" style="width:96px;height:96px;object-fit:contain;border-radius:10px"
