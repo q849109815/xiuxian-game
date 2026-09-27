@@ -385,6 +385,14 @@ const BT = {
         }
         const gk = CHIBI.keyOfGun((p && (p.gunId || p.gun)) || null);
         if (gk) ks.push(gk);
+        /* 四种 Q 版炮台一并预载：局内随时可能建造，
+         * 若不预载会出现先画矢量色块、再突变成立绘的"变形" */
+        if (EX.turrets) {
+          for (const td of EX.turrets) {
+            const tk = CHIBI.keyOfTurret(td.id);
+            if (tk && ks.indexOf(tk) < 0) ks.push(tk);
+          }
+        }
         ks.push('hero_base');
         CHIBI.preload(ks);
       }
@@ -757,11 +765,24 @@ const BT = {
     /* --- 炮台自动开火 --- */
     for (const t of r.turrets) {
       t.cd -= dt;
+      if (t.fire > 0) t.fire -= dt;   /* 开火后坐动画计时（Q 版炮台） */
       if (t.cd > 0) continue;
       const tz = this.nearest(t.x, t.y, null, t.def.rng + t.lv * 12,
         { preferElite: t.def.preferElite });
       if (!tz) continue;
       t.cd = 1 / (t.def.rate * (1 + t.lv * 0.12));
+      /* 开火表现：后坐动画 + 炮口元素闪光。
+       * 此前炮台开火只飞出一枚子弹，画面上没有任何开火反馈，
+       * 玩家分不清炮台到底有没有在工作。 */
+      t.fire = 0.22;
+      t.ang = Math.atan2(tz.y - t.y, tz.x - t.x);
+      if (r.efx && r.efx.length < 90) {
+        const mx = t.x + Math.cos(t.ang) * 20, my = t.y - 13 + Math.sin(t.ang) * 20;
+        r.efx.push({
+          t: 'tfire', x: mx, y: my, a: t.ang, el: t.def.el,
+          r: 14 + t.lv * 1.5, life: 0.24, max: 0.24
+        });
+      }
       /* 炮台伤害此前完全不随章节缩放：
        * 火焰炮台固定 22 伤害，而第 10 章普通僵尸血量 3953（关卡倍率 131.75）
        * → 杀一只要 180 发 / 约 200 秒，后期炮台等于纯装饰，
@@ -1636,7 +1657,15 @@ const BT = {
         el: g.el || '物',
         stun: g.stun || 0, stunT: g.stun || 0,
         burn: g.burn || 0, burnT: g.burn ? 3 : 0,
-        slow: g.slow || 0, slowT: g.slowT || 0,
+        /* 严重BUG：武器表的减速字段叫 chill（冰冻枪 W11 chill:0.55 /
+         * 烟雾弹 S06 chill:0.5），而这里读的是 g.slow —— 武器表里
+         * 【没有任何一把枪有 slow 字段】，于是命中减速恒为 0。
+         * 实测（5-5 实战，307 次僵尸采样）：冰冻枪全程减速出现 0 次，
+         * 烟雾弹 521 次采样同样 0 次 —— 冰冻枪就是一把换了蓝色子弹
+         * 皮肤的普通枪，"冰霜弹/行动迟缓"的描述完全是装饰。
+         * 现在 slow 取 g.slow || g.chill，并给冰元素一个兜底时长。 */
+        slow: Number(g.slow || g.chill || 0) || 0,
+        slowT: Number(g.slowT || (g.chill ? 2.0 : 0)) || 0,
         chain: g.chain || 0, chainN: g.chainN || 0,
       });
     }
@@ -2350,42 +2379,181 @@ const BT = {
     }
   },
 
-  /* 炮台：底座 + 炮管指向目标 */
+  /* 炮台：Q 版贴塔 + 元素氛围 + 开火后坐
+   * 重做要点（此前炮台是几何色块，玩家反馈"太难看"）：
+   *   ① 四种炮台改用二头身 Q 版立绘 assets/chibi/t_*.png，与主角/僵尸同一套画风
+   *   ② 待机呼吸浮动 + 开火后坐位移：以前是纯静态色块，看不出炮台是否在工作
+   *   ③ 底座元素光环 + 常驻氛围粒子（雪花/火苗/电弧/蓄能），静止也能分辨属性
+   *   ④ 贴图未就绪 / 该种类无图时退回原矢量画法，绝不开天窗 */
   drawTurrets(c) {
     const r = this.run;
+    const CB = (typeof window !== 'undefined') ? window.CHIBI : null;
+    const T = r.time || 0;
     for (const t of r.turrets) {
+      if (!isFinite(t.x) || !isFinite(t.y)) continue;
       const el = EX.elements.find((x) => x.k === t.def.el) || { c: '#ffd76a' };
-      const tg = this.nearest(t.x, t.y, null, t.def.rng + t.lv * 12);
+      const tg = this.nearest(t.x, t.y, null, t.def.rng + t.lv * 12,
+        { preferElite: t.def.preferElite });
       const a = tg ? Math.atan2(tg.y - t.y, tg.x - t.x) : -Math.PI / 2;
       const sc = this.depthScale(t.y);
-      const R = 15 * sc;
+      /* 元素色转 rgb 串（统一用于光环/粒子/徽章） */
+      const _hx = String(el.c || '#ffd76a').replace('#', '');
+      const _r = parseInt(_hx.slice(0, 2), 16) || 255;
+      const _g = parseInt(_hx.slice(2, 4), 16) || 255;
+      const _b = parseInt(_hx.slice(4, 6), 16) || 255;
+      const rgb = _r + ',' + _g + ',' + _b;
+      /* 开火后坐：fire 由 update 递减，fk 呈 0→1→0 的一次脉冲 */
+      const fire = Math.max(0, Math.min(0.22, t.fire || 0));
+      const fk = fire > 0 ? Math.sin((fire / 0.22) * Math.PI) : 0;
+      const bob = Math.sin(T * 2 + (t.x || 0) * 0.03) * 1.3 * sc;
+      const kx = -Math.cos(a) * fk * 4.4 * sc;
+      const ky = -Math.sin(a) * fk * 1.8 * sc;
+      const px = t.x + kx, py = t.y + bob + ky * 0.35;
+
       /* 接地投影 */
-      c.fillStyle = 'rgba(0,0,0,.38)';
-      c.beginPath(); c.ellipse(t.x + 3 * sc, t.y + 3 * sc, R * 1.05, R * 0.42, 0, 0, 7); c.fill();
-      /* 底座：立体圆柱（俯视可见顶面椭圆） */
-      this.cylinder(c, t.x, t.y - R * 0.55, R * 1.7, R * 0.62, '#1b2434', '#3d4a63', R * 0.30);
-      c.fillStyle = '#2b3650';
-      c.beginPath(); c.ellipse(t.x, t.y - R * 0.55, R * 0.85, R * 0.34, 0, 0, 7); c.fill();
-      c.strokeStyle = el.c; c.lineWidth = 2;
-      c.beginPath(); c.ellipse(t.x, t.y - R * 0.55, R * 0.85, R * 0.34, 0, 0, 7); c.stroke();
-      /* 炮管：带厚度与高光，指向目标 */
-      c.save(); c.translate(t.x, t.y - R * 0.35); c.rotate(a);
-      const bg = c.createLinearGradient(0, -4 * sc, 0, 4 * sc);
-      bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.42, el.c); bg.addColorStop(1, 'rgba(0,0,0,.55)');
-      c.fillStyle = bg;
+      c.fillStyle = 'rgba(0,0,0,.36)';
+      c.beginPath(); c.ellipse(t.x + 2 * sc, t.y + 2 * sc, 16 * sc, 6.5 * sc, 0, 0, 7); c.fill();
+
+      /* 底座元素光环（贴地椭圆，呼吸 + 开火瞬间增亮） */
+      const gl = 0.30 + Math.sin(T * 2.4 + (t.x || 0) * 0.02) * 0.08 + fk * 0.4;
+      c.strokeStyle = 'rgba(' + rgb + ',' + Math.min(0.9, gl).toFixed(3) + ')';
+      c.lineWidth = 2;
+      c.beginPath(); c.ellipse(t.x, t.y + 2 * sc, (14 + t.lv * 0.5) * sc, 5.6 * sc, 0, 0, 7); c.stroke();
+
+      /* Q 版立绘（优先），失败则退回原矢量画法 */
+      const key = CB ? CB.keyOfTurret(t.def.id) : null;
+      const H = (46 + t.lv * 1.4) * sc;
+      let drew = false;
+      if (key) drew = CB.draw(c, key, px, py + 3 * sc, H, {});
+      if (!drew) {
+        const R = 15 * sc;
+        this.cylinder(c, px, py - R * 0.55, R * 1.7, R * 0.62, '#1b2434', '#3d4a63', R * 0.30);
+        c.fillStyle = '#2b3650';
+        c.beginPath(); c.ellipse(px, py - R * 0.55, R * 0.85, R * 0.34, 0, 0, 7); c.fill();
+        c.strokeStyle = el.c; c.lineWidth = 2;
+        c.beginPath(); c.ellipse(px, py - R * 0.55, R * 0.85, R * 0.34, 0, 0, 7); c.stroke();
+        c.save(); c.translate(px, py - R * 0.35); c.rotate(a);
+        const bg2 = c.createLinearGradient(0, -4 * sc, 0, 4 * sc);
+        bg2.addColorStop(0, '#ffffff'); bg2.addColorStop(0.42, el.c); bg2.addColorStop(1, 'rgba(0,0,0,.55)');
+        c.fillStyle = bg2;
+        c.beginPath();
+        if (c.roundRect) c.roundRect(2 * sc, -3.6 * sc, 21 * sc, 7.2 * sc, 2 * sc);
+        else c.rect(2 * sc, -3.6 * sc, 21 * sc, 7.2 * sc);
+        c.fill(); c.restore();
+        c.font = Math.round(13 * sc) + 'px sans-serif';
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(t.def.icon, px, py - R * 0.55);
+      }
+
+      /* 常驻元素氛围粒子（不用开火也能分辨炮台属性） */
+      this.drawTurretAura(c, t, rgb, sc, T, fk, a);
+
+      /* 等级徽章：Q 版胶囊牌 */
+      const bw = 26 * sc, bh = 13 * sc, bx = t.x - bw / 2, by = t.y + 5 * sc;
+      c.fillStyle = 'rgba(26,18,40,.82)';
       c.beginPath();
-      if (c.roundRect) c.roundRect(2 * sc, -3.6 * sc, 21 * sc, 7.2 * sc, 2 * sc);
-      else c.rect(2 * sc, -3.6 * sc, 21 * sc, 7.2 * sc);
+      if (c.roundRect) c.roundRect(bx, by, bw, bh, bh / 2); else c.rect(bx, by, bw, bh);
       c.fill();
-      c.fillStyle = 'rgba(255,255,255,.75)';
-      c.beginPath(); c.arc(23 * sc, 0, 2.2 * sc, 0, 7); c.fill();
-      c.restore();
-      /* 图标与等级 */
-      c.font = Math.round(13 * sc) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText(t.def.icon, t.x, t.y - R * 0.55);
-      c.font = Math.round(9 * sc) + 'px sans-serif'; c.fillStyle = '#ffd76a';
-      c.fillText('Lv' + t.lv, t.x, t.y + 12 * sc);
+      c.strokeStyle = 'rgba(' + rgb + ',.85)'; c.lineWidth = 1.4;
+      c.beginPath();
+      if (c.roundRect) c.roundRect(bx, by, bw, bh, bh / 2); else c.rect(bx, by, bw, bh);
+      c.stroke();
+      c.font = 'bold ' + Math.round(9.5 * sc) + 'px sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillStyle = '#ffe28a';
+      c.fillText('Lv' + t.lv, t.x, by + bh / 2 + 0.5 * sc);
     }
+  },
+
+  /* 炮台开火特效：亮核 + 元素辉光 + 沿炮口方向的星芒 + 扩散环 */
+  drawTurretFire(c, f, al) {
+    const el = EX.elements.find((x) => x.k === f.el) || { c: '#ffd76a' };
+    const _hx = String(el.c || '#ffd76a').replace('#', '');
+    const rgb = (parseInt(_hx.slice(0, 2), 16) || 255) + ',' +
+      (parseInt(_hx.slice(2, 4), 16) || 255) + ',' +
+      (parseInt(_hx.slice(4, 6), 16) || 255);
+    const k = 1 - al;
+    const rr = f.r * (0.45 + k * 0.85);
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    const g1 = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, Math.max(1, rr * 1.9));
+    g1.addColorStop(0, 'rgba(255,255,255,' + (al * 0.95).toFixed(3) + ')');
+    g1.addColorStop(0.35, 'rgba(' + rgb + ',' + (al * 0.8).toFixed(3) + ')');
+    g1.addColorStop(1, 'rgba(' + rgb + ',0)');
+    c.fillStyle = g1;
+    c.beginPath(); c.arc(f.x, f.y, Math.max(1, rr * 1.9), 0, 7); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,' + (al * 0.9).toFixed(3) + ')';
+    c.lineWidth = 2;
+    for (let i = 0; i < 4; i++) {
+      const a0 = (f.a || 0) + i * Math.PI / 2;
+      const len = (i % 2 === 0 ? 1.6 : 0.75) * rr * (1.15 - k * 0.5);
+      c.beginPath(); c.moveTo(f.x, f.y);
+      c.lineTo(f.x + Math.cos(a0) * len, f.y + Math.sin(a0) * len); c.stroke();
+    }
+    c.strokeStyle = 'rgba(' + rgb + ',' + (al * 0.75).toFixed(3) + ')';
+    c.lineWidth = 2;
+    c.beginPath(); c.ellipse(f.x, f.y, Math.max(1, rr * 1.25), Math.max(1, rr * 0.72), 0, 0, 7); c.stroke();
+    c.restore();
+  },
+
+  /* 炮台常驻元素氛围：冰=飘雪 / 火=火苗 / 电=旋转电弧 / 物(狙击)=蓄能环 */
+  drawTurretAura(c, t, rgb, sc, T, fk, aim) {
+    const bx = t.x, by = t.y - 20 * sc;
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    const el = t.def.el;
+    if (el === '冰') {
+      for (let i = 0; i < 4; i++) {
+        const ph = T * 1.1 + i * 1.7;
+        const fx = bx + Math.cos(ph * 0.7 + i) * 15 * sc;
+        const fy = by + ((ph * 14) % 26) * sc - 10 * sc;
+        const al = 0.55 * (1 - (((ph * 14) % 26) / 26)) + fk * 0.4;
+        c.fillStyle = 'rgba(' + rgb + ',' + Math.min(0.85, al).toFixed(3) + ')';
+        c.beginPath(); c.arc(fx, fy, 1.9 * sc, 0, 7); c.fill();
+      }
+    } else if (el === '火') {
+      for (let i = 0; i < 3; i++) {
+        const ph = T * 3 + i * 2.1;
+        const fx = bx + Math.cos(ph * 0.6 + i * 2) * 11 * sc;
+        const fy = by - 4 * sc - ((ph * 9) % 14) * sc;
+        const al = 0.6 * (1 - (((ph * 9) % 14) / 14)) + fk * 0.4;
+        const rr = (2.6 - (((ph * 9) % 14) / 14) * 1.4) * sc;
+        const g2 = c.createRadialGradient(fx, fy, 0, fx, fy, rr * 2);
+        g2.addColorStop(0, 'rgba(255,240,190,' + Math.min(0.9, al).toFixed(3) + ')');
+        g2.addColorStop(1, 'rgba(' + rgb + ',0)');
+        c.fillStyle = g2;
+        c.beginPath(); c.arc(fx, fy, rr * 2, 0, 7); c.fill();
+      }
+    } else if (el === '电') {
+      /* 旋转电弧环：三段锯齿折线绕底座转 */
+      const rot = T * 2.2;
+      for (let i = 0; i < 3; i++) {
+        const a0 = rot + (i / 3) * Math.PI * 2;
+        c.strokeStyle = 'rgba(' + rgb + ',' + (0.5 + fk * 0.45).toFixed(3) + ')';
+        c.lineWidth = 1.6;
+        c.beginPath();
+        for (let k = 0; k < 4; k++) {
+          const aa = a0 + k * 0.28;
+          const rr2 = (13 + (k % 2 ? 3.5 : 0)) * sc;
+          const xx = bx + Math.cos(aa) * rr2, yy = by - 6 * sc + Math.sin(aa) * rr2 * 0.42;
+          if (k === 0) c.moveTo(xx, yy); else c.lineTo(xx, yy);
+        }
+        c.stroke();
+      }
+    } else {
+      /* 狙击（物）：蓄能红环，随冷却进度收缩 —— 快开火时环最小最亮 */
+      const cdMax = 1 / (t.def.rate * (1 + t.lv * 0.12));
+      const pr = 1 - Math.max(0, Math.min(1, (t.cd || 0) / cdMax));
+      const rr2 = (16 - pr * 7) * sc;
+      c.strokeStyle = 'rgba(255,90,90,' + (0.28 + pr * 0.6).toFixed(3) + ')';
+      c.lineWidth = 1.8 + pr * 1.2;
+      c.beginPath(); c.ellipse(bx, by - 4 * sc, rr2, rr2 * 0.4, 0, 0, 7); c.stroke();
+      if (pr > 0.82) {
+        c.fillStyle = 'rgba(255,120,120,' + ((pr - 0.82) / 0.18 * 0.7).toFixed(3) + ')';
+        c.beginPath(); c.arc(bx + Math.cos(aim) * 18 * sc, by - 6 * sc + Math.sin(aim) * 7 * sc, 2.4 * sc, 0, 7); c.fill();
+      }
+    }
+    c.restore();
   },
 
   /* 佣兵 / 召唤物（真 3D）
@@ -3925,6 +4093,11 @@ const BT = {
       } else if (f.t === 'nova') {
         c.strokeStyle = 'rgba(92,216,255,' + al + ')'; c.lineWidth = 2.5;
         c.beginPath(); c.arc(f.x, f.y, f.r * (1.25 - al * 0.4), 0, 7); c.stroke();
+      } else if (f.t === 'tfire') {
+        /* 炮台开火：炮口元素星芒 + 扩散环。
+         * 此前炮台开火只飞出一枚子弹，画面上没有任何开火反馈，
+         * 玩家分不清炮台到底有没有在工作。 */
+        this.drawTurretFire(c, f, al);
       } else if (f.t === 'bolt') {
         c.strokeStyle = 'rgba(192,140,255,' + al + ')'; c.lineWidth = 2;
         c.beginPath(); c.moveTo(f.x1, f.y1); c.lineTo(f.x2, f.y2); c.stroke();
