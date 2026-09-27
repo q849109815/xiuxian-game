@@ -565,7 +565,11 @@ input{font-family:inherit}
 .mc-card .mn{flex:1;min-width:0}
 .mc-card .mn b{display:block;font-size:13px;color:#e6edf7}
 .mc-card .mn span{font-size:11px;color:#7d8ca8;display:block;margin-top:1px}
+/* 佣兵「🪙800」、军团「加入」、远征「挑战」等卡片内按钮实测仅 28px 高，
+ * 属于列表里的高频操作，且彼此上下相邻（间距 7px），手指容易点错行。
+ * min-height 抬到 32px，视觉不变、命中面积更大。 */
 .mc-card button{flex:0 0 auto;padding:6px 11px;border-radius:8px;font-size:11px;border:none;cursor:pointer;
+  min-height:32px;display:flex;align-items:center;justify-content:center;
   background:linear-gradient(135deg,#ffa53c,#ff7a3c);color:#1a1207;font-weight:700}
 .mc-card button.hired{background:rgba(92,216,255,.16);color:#5cd8ff;border:1px solid #5cd8ff44}
 .mc-card button:disabled{opacity:.45}
@@ -704,7 +708,12 @@ input{font-family:inherit}
 .btn.o{background:linear-gradient(180deg,#ffb04d,var(--orange) 45%,#c25e00);
   color:#fff;box-shadow:0 3px 0 #93460a,0 4px 10px rgba(0,0,0,.35)}
 .btn.o:active{box-shadow:0 1px 0 #93460a}
-.btn.sm{padding:6px 12px;font-size:11px}
+/* .btn.sm 实测高仅 25px（11px 字 + 6px 上下内边距 + 2px 描边），
+ * 是商店「🪙3000 购买」、皮肤「💎 980 购买」等高频付费按钮。
+ * 25px 远低于移动端可稳定命中的尺寸，手指容易点空或误触相邻项。
+ * 用 min-height 抬到 32px：只在高度不足时补，不改动已有较宽按钮的布局。 */
+.btn.sm{padding:6px 12px;font-size:11px;min-height:32px;
+  display:inline-flex;align-items:center;justify-content:center}
 
 /* 分类网格（背包/商店/芯片，截图 4 列网格） */
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
@@ -813,12 +822,16 @@ input{font-family:inherit}
 
 /* --- 右侧竖标（芯片） --- */
 #panel[data-tp="right"] .pn-tabs{
-  flex:0 0 40px;flex-direction:column;justify-content:center;gap:14px;padding:14px 4px;
+  /* 竖栏原为 40px：两个中文字（11px×2=22px）加内边距后仅剩 26px 可用，
+   * 配合 word-break:break-all 会把「芯片」「背包」从中间劈断、竖排成单字
+   * （实测页签 19×48px——宽仅 19px，手指点不中，视觉上像两个字被切开）。
+   * 现加宽到 60px 并禁止断字，保证每个页签整体成行。 */
+  flex:0 0 60px;flex-direction:column;justify-content:center;gap:14px;padding:14px 5px;
   border-bottom:none;border-left:1px solid rgba(255,255,255,.12);
   background:linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,.06))}
 #panel[data-tp="right"] .pt{
-  width:100%;padding:10px 2px;font-size:11px;line-height:1.15;
-  white-space:normal;word-break:break-all;text-align:center;
+  width:100%;padding:10px 4px;font-size:12px;line-height:1.2;
+  white-space:normal;word-break:keep-all;text-align:center;
   background:linear-gradient(135deg,var(--orange),var(--orange2));
   color:#fff;font-weight:800;border-color:transparent}
 #panel[data-tp="right"] .pt.on{box-shadow:0 0 0 2px rgba(255,255,255,.5)}
