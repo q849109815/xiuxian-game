@@ -1141,7 +1141,15 @@ const BT = {
           let diff = Math.abs(a - z.facing); while (diff > Math.PI) diff = Math.abs(diff - 2 * Math.PI);
           if (diff < 1.1) dmg *= (1 - z.front);
         }
-        this.hurt(z, dmg, Math.random() < r.crit, b.el === '物' ? '物' : (b.el || '物'));
+        /* 暴击率 = 武器基础（含宝石加成）+ 技能「暴击强化」加成。
+         * 严重BUG：此前只写 `Math.random() < r.crit`，而 r.crit 在 start/切枪时
+         *   直接取自 attrs()，【从不叠加 r.mods.crit】——
+         *   mods.crit 全项目零引用，等于技能「暴击强化（每级+3%暴击率）」
+         *   升到满级 Lv10 也只涨一个数字，实战暴击率纹丝不动。
+         *   实测：Lv0 暴击率 10.3% → Lv10 暴击率 10.3%（应为 40%）。
+         * 这里在使用处叠加（不能写进 r.crit，否则切枪重算会丢失），并封顶 95%。 */
+        const critR = Math.min(0.95, (Number(r.crit) || 0) + (Number(r.mods && r.mods.crit) || 0));
+        this.hurt(z, dmg, Math.random() < critR, b.el === '物' ? '物' : (b.el || '物'));
         /* 元素命中效果（冰=减速 / 火=灼烧 / 电=链式）
          * 此前 b.el 除分裂子弹传递外全项目零消费，炮台四种元素
          * 与燃烧瓶 burn:0.7 都是「写了 desc、没有任何实现」。 */
@@ -1577,7 +1585,13 @@ const BT = {
     if (r.mag <= 0) return;
     r.mag--;
     const base = Math.atan2(tg.y - r.py, tg.x - r.px);
-    const n = Math.max(1, Math.round(Number(r.pellets || 1) + Number(r.spread || 0) + Number(r.mods.spread || 0)));
+    /* 弹丸数 = pellets（武器表 + 词条 extra）。
+     * BUG：此前把 spread 也算进弹丸数 `pellets + spread + mods.spread`
+     *   —— 而 spread 是【散射角度】（单位：度，W01=2 / W02=8 / 狙击=0），
+     *   不是数量。一旦武器表的 spread 真正启用（见下方散布角），
+     *   突击步枪会变成 3 连发、散弹枪变成 13 颗弹丸（实测伤害 ×2.6）。
+     *   这里把数量与角度彻底分开：n 只取 pellets。 */
+    const n = Math.max(1, Math.round(Number(r.pellets || 1)));
     const g = E.gun(this.P);
     const A = E.attrs(this.P) || {};
     let dmg = (Number(r.atk) || 1) * (1 + Number(r.mods.dmgMul) || 0);
@@ -1591,9 +1605,21 @@ const BT = {
     /* 双倍伤害词条 AF11 */
     if (A.doubleChance && Math.random() < A.doubleChance) { dmg *= 2; r._dbl = true; }
     else r._dbl = false;
+    /* 散布角：此前写死 0.13 弧度，与武器表 spread 完全无关
+     *   —— 结果狙击枪（spread 0）和散弹枪（spread 8）的弹幕扇形一模一样，
+     *     单发武器（W01 突击步枪 spread 2 / W05 冲锋枪 3）则完全没有散布，
+     *     「突击步枪打不准」的手感差异彻底丢失。
+     *   现在按武器表 spread（度）转弧度：
+     *     多弹丸 → 弹丸间夹角 = spread（散弹枪 8°×4 ≈ 32° 扇形）
+     *     单  发 → 随机偏移 ±spread（狙击 0° = 绝对精准，火焰喷射器 ±6°）
+     *   散弹枪旧值 0.13 弧度 ≈ 7.4°，新值 8° ≈ 0.1396 弧度，几乎不变，
+     *   所以平衡不被打破，只是差异终于按配表生效。 */
+    const spRad = (Number(r.spread) || 0) * Math.PI / 180;
     for (let i = 0; i < n; i++) {
-      const off = n === 1 ? 0 : (i - (n - 1) / 2) * 0.13;
-      const a = base + off + (Math.random() - 0.5) * 0.05;
+      const off = n === 1 ? 0 : (i - (n - 1) / 2) * spRad;
+      const jit = n === 1 ? (Math.random() - 0.5) * spRad * 2
+        : (Math.random() - 0.5) * Math.min(0.05, spRad * 0.25);
+      const a = base + off + jit;
       /* 子弹速度：武器表字段是 bspd（400~1400），此前写成 g.bulletSpd
        * —— 该字段在配置里根本不存在，结果 vx/vy 全为 NaN。
        * NaN 的两重危害：
