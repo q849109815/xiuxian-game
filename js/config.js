@@ -1676,7 +1676,13 @@ const EX = {
     'buildings', 'items', 'gems', 'titles', 'frames', 'skills', 'turrets', 'mercs',
     'talents', 'chips', 'zombies', 'bosses', 'achShop', 'eventShop', 'shop', 'shopGoods',
     'legionShop', 'legions', 'legionActs', 'expeds', 'activities', 'guides', 'dropTable',
-    'equipSlots', 'chipSubStats', 'chipSlots', 'turretSlots', 'patrolRateByCh', 'starCost'],
+    'equipSlots', 'chipSubStats', 'chipSlots', 'turretSlots', 'patrolRateByCh', 'starCost',
+    /* gunAdvance（武器进阶表）此前漏登记：
+     *   它被清空 → UI.r_gun 里 `EX.gunAdvance[...].q` 读到 undefined
+     *   → 「武器」面板整页渲染抛错，玩家点开武器页直接白屏。
+     *   全表清空实测（72 张逐一清空 + guardAll 巡检）：其他表都被守住了，
+     *   唯独 gunAdvance 仍然崩溃。补登记即可由既有守卫统一兜底。 */
+    'gunAdvance'],
 
   /* 判断一份数据是否「有效非空」：数组看长度，对象看自有键数 */
   _nonEmpty(v) {
