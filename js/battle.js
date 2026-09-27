@@ -489,6 +489,10 @@ const BT = {
     const base = Math.round(mn + (mx - mn) * t);
     r.spawnLeft = Math.min(60, isBossWave ? Math.round(base * 0.7) : base);
     r.spawnT = 0; r.spawnGap = Math.max(0.18, 0.60 - w * 0.05);
+    /* 【表03 FX_WaveStart】波次来袭扫描带：新一波开始时的视觉提示 */
+    if (w > 1 && r.efx && r.efx.length < 90) {
+      r.efx.push({ t: 'wavestart', x: 0, y: (r.py || 400) - 40, w: this.w || 480, life: 0.7, max: 0.7 });
+    }
   },
 
   spawnBoss(id) {
@@ -505,6 +509,8 @@ const BT = {
     const z = this.mkZ(d, mul, bossHp);
     z.isBoss = true; z.bossDef = d; z.phase = 0; z.maxHp = z.hp; z.img = d.img;
     r.boss = z; r.zombies.push(z);
+    /* 【表03 FX_BossRoar】BOSS 出场怒吼：此前只有模型变大，没有任何出场演出 */
+    if (r.efx && r.efx.length < 90) r.efx.push({ t: 'roar', x: z.x, y: z.y, r: 130, life: 0.9, max: 0.9 });
     /* 表04 VO_003 BOSS出现：此前 BOSS 出场只有画面变化，没有任何语音/字幕提示 */
     try { if (window.VO) VO.say('VO_003'); } catch (e) {}
   },
@@ -960,6 +966,16 @@ const BT = {
           z.atkCd = 2.2;
           if (z.d.poison) this.shootEnemy(z, 'poison');
           else r.pools.push({ x: z.x, y: z.y + 30, r: 44, dps: z.dmg, life: 3.2, max: 3.2 });
+          /* 【表03 FX_WindSlash / FX_PoisonCloud】远程僵尸攻击的可见弹道。
+           * 此前风刃僵尸「喷吐」画面上什么都不出现，玩家只看到自己莫名掉血。 */
+          if (r.efx && r.efx.length < 90) {
+            const ang = Math.atan2((r.py || 400) - z.y, (r.px || 240) - z.x);
+            if (z.id === 'fengren' || z.d.wind) {
+              r.efx.push({ t: 'wind', x: z.x, y: z.y, r: 44, a: ang, life: 0.45, max: 0.45 });
+            } else if (z.d.poison || z.id === 'duwu') {
+              r.efx.push({ t: 'poison', x: (z.x + (r.px || 240)) / 2, y: (z.y + (r.py || 400)) / 2, r: 46, life: 0.9, max: 0.9 });
+            }
+          }
         }
       } else if (z.ai === 'rush') {
         z.dashT -= dt;
@@ -1521,12 +1537,16 @@ const BT = {
       r.hp = r.wallHp;
       r.efx.push({ t: 'nova', x: r.px, y: r.py - 20, life: 0.5, max: 0.5, r: 46 });
       try { if (window.UI && UI.toast) UI.toast('🩹 防线回复 ' + Math.round(g.heal)); } catch (e) {}
+      /* 【表03 FX_Heal】治疗光柱：此前回血只有一行 toast，画面上无任何反馈 */
+      if (r.efx && r.efx.length < 90) r.efx.push({ t: 'heal', x: r.px, y: (r.py || 400) - 20, life: 0.7, max: 0.7 });
     }
     if (g.shield > 0) {
       r.shield = (Number(r.shield) || 0) + g.shield;
       r.maxShield = Math.max(Number(r.maxShield) || 0, r.shield);
       r.efx.push({ t: 'nova', x: r.px, y: r.py - 20, life: 0.5, max: 0.5, r: 46 });
       try { if (window.UI && UI.toast) UI.toast('🛡️ 护盾 +' + Math.round(g.shield)); } catch (e) {}
+      /* 【表03 FX_ShieldOn】护盾开启：六边形能量罩 */
+      if (r.efx && r.efx.length < 90) r.efx.push({ t: 'shieldon', x: r.px, y: (r.py || 400) - 20, life: 0.8, max: 0.8 });
     }
     /* 抛壳：开火反馈的写实细节（此前完全没有） */
     if (r.efx && r.gunId !== 'W09' && r.gunId !== 'W12') {
@@ -1613,6 +1633,12 @@ const BT = {
     /* 暴击星芒：暴击此前只有数字变色，画面上与普通命中无异 */
     if (crit && r.efx) r.efx.push({ t: 'crit', x: z.x, y: z.y, life: 0.35, max: 0.35 });
     /* 命中火花：3D 粒子向外飞散（子弹打击感，此前命中只有飘字、无任何特效） */
+    /* 【表03 FX_IceShatter / FX_PoisonCloud】冰/毒命中的专属反馈。
+     * 此前冰霜与毒元素命中在画面上和普通命中完全一样，只有飘字颜色不同。 */
+    if (r.efx && r.efx.length < 90) {
+      if (src === '冰') r.efx.push({ t: 'iceshatter', x: z.x, y: z.y - 8, life: 0.42, max: 0.42, seed: Math.random() * 6 });
+      else if (src === '毒') r.efx.push({ t: 'poison', x: z.x, y: z.y - 6, r: 36, life: 0.75, max: 0.75 });
+    }
     if (r.efx && r.efx.length < 90) {
       const ra0 = Math.random() * Math.PI * 2;
       r.efx.push({
@@ -1684,6 +1710,8 @@ const BT = {
     z.dead = true; r.kills++;
     /* 击杀反馈：此前僵尸是「瞬间消失」，没有任何消散表现 */
     if (r.efx) r.efx.push({ t: 'die', x: z.x, y: z.y, life: 0.45, max: 0.45 });
+    /* 【表03 FX_CoinDrop】金币掉落：击杀后弹起的金币，掉落物可视化 */
+    if (r.efx && r.efx.length < 90) r.efx.push({ t: 'coin', x: z.x + (Math.random() - 0.5) * 10, y: z.y - 6, life: 0.6, max: 0.6 });
     /* 表37 埋点：kill_monster */
     try { OPS.track('kill_monster', { z: z.id || z.n }); } catch (e) {}
     if (r.kills === 1 && window.UI && UI.guideTrigger) UI.guideTrigger('firstKill');
@@ -1761,6 +1789,9 @@ const BT = {
   chain(z, n, dmg) {
     const r = this.run;
     let cur = z, hitSet = [z];
+    /* 【表03 FX_ChainLightning】此前链式只推一条直线 bolt，
+     * 看不出「在目标间跳跃」的链式感。改为收集所有跳跃点后一次绘制。 */
+    const pts = [{ x: z.x, y: z.y }];
     for (let i = 0; i < n; i++) {
       let best = null, bd = 130;
       for (const o of r.zombies) {
@@ -1769,9 +1800,12 @@ const BT = {
         if (d < bd) { bd = d; best = o; }
       }
       if (!best) break;
-      r.efx.push({ t: 'bolt', x1: cur.x, y1: cur.y, x2: best.x, y2: best.y, life: 0.22, max: 0.22 });
+      pts.push({ x: best.x, y: best.y });
       this.hurt(best, dmg, false, '电');
       hitSet.push(best); cur = best;
+    }
+    if (pts.length > 1 && r.efx && r.efx.length < 90) {
+      r.efx.push({ t: 'chain', pts, life: 0.28, max: 0.28 });
     }
   },
 
@@ -1810,6 +1844,8 @@ const BT = {
     while (r.xp >= r.xpNeed) {
       r.xp -= r.xpNeed; r.lv++;
       r.xpNeed = Math.round(r.xpNeed * 1.28 + 6);
+      /* 【表03 FX_LevelUp】升级光柱：此前升级只有弹窗，角色身上没有任何光效 */
+      if (r.efx && r.efx.length < 90) r.efx.push({ t: 'levelup', x: r.px, y: r.py, life: 0.9, max: 0.9 });
       /* 升级弹窗（截图52）+ 奖励 R币 */
       if (window.UI && UI.showLvUp) UI.showLvUp(r.lv, 200);
       if (window.UI && UI.guideTrigger) UI.guideTrigger('firstUpgrade');
@@ -3832,6 +3868,166 @@ const BT = {
         c.fillStyle = 'rgba(255,208,96,' + al.toFixed(3) + ')';
         c.fillRect(-2.5, -1.2, 5, 2.4);
         c.restore();
+      } else if (f.t === 'chain') {
+        /* 【表03 FX_ChainLightning】闪电链：在多个目标间跳跃的锯齿电弧。
+         * 此前电磁类技能只有直线 beam，没有「链式跳跃」的表现。 */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const pts = f.pts || [];
+        for (let i = 0; i + 1 < pts.length; i++) {
+          const a0 = pts[i], a1 = pts[i + 1];
+          c.strokeStyle = 'rgba(190,150,255,' + (al * 0.55).toFixed(3) + ')'; c.lineWidth = 6;
+          c.beginPath(); c.moveTo(a0.x, a0.y);
+          const seg = 5;
+          for (let j = 1; j <= seg; j++) {
+            const tt = j / seg;
+            const jx = (j === seg) ? 0 : (Math.random() - 0.5) * 14 * al;
+            const jy = (j === seg) ? 0 : (Math.random() - 0.5) * 14 * al;
+            c.lineTo(a0.x + (a1.x - a0.x) * tt + jx, a0.y + (a1.y - a0.y) * tt + jy);
+          }
+          c.stroke();
+          c.strokeStyle = 'rgba(245,235,255,' + (al * 0.95).toFixed(3) + ')'; c.lineWidth = 1.8;
+          c.stroke();
+        }
+        c.restore();
+      } else if (f.t === 'heal') {
+        /* 【表03 FX_Heal】治疗：防线处升起绿色十字与回复光柱（医疗包 S07） */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const k = 1 - al, up = 34 * k;
+        const hg = c.createLinearGradient(f.x, f.y - up - 26, f.x, f.y + 6);
+        hg.addColorStop(0, 'rgba(150,255,180,0)');
+        hg.addColorStop(0.5, 'rgba(120,255,160,' + (al * 0.55).toFixed(3) + ')');
+        hg.addColorStop(1, 'rgba(90,230,140,' + (al * 0.2).toFixed(3) + ')');
+        c.fillStyle = hg; c.fillRect(f.x - 13, f.y - up - 26, 26, 32);
+        c.strokeStyle = 'rgba(190,255,205,' + (al * 0.9).toFixed(3) + ')'; c.lineWidth = 3;
+        for (let i = 0; i < 3; i++) {
+          const yy = f.y - up - i * 12;
+          c.beginPath(); c.moveTo(f.x - 9, yy); c.lineTo(f.x + 9, yy); c.stroke();
+        }
+        c.beginPath(); c.moveTo(f.x, f.y - up - 12); c.lineTo(f.x, f.y - up - 36); c.stroke();
+        c.restore();
+      } else if (f.t === 'shieldon') {
+        /* 【表03 FX_ShieldOn】护盾开启：六边形能量罩扩散（护盾发生器 S08） */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const k = 1 - al, rr = 26 + k * 34;
+        c.strokeStyle = 'rgba(120,205,255,' + (al * 0.9).toFixed(3) + ')'; c.lineWidth = 2.6;
+        c.beginPath();
+        for (let i = 0; i <= 6; i++) {
+          const a = i / 6 * Math.PI * 2 - Math.PI / 2;
+          const px = f.x + Math.cos(a) * rr, py = f.y + Math.sin(a) * rr * 0.85;
+          if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+        }
+        c.stroke();
+        const sg = c.createRadialGradient(f.x, f.y, rr * 0.4, f.x, f.y, rr);
+        sg.addColorStop(0, 'rgba(120,205,255,0)');
+        sg.addColorStop(1, 'rgba(140,220,255,' + (al * 0.32).toFixed(3) + ')');
+        c.fillStyle = sg; c.beginPath(); c.arc(f.x, f.y, rr, 0, 7); c.fill();
+        c.restore();
+      } else if (f.t === 'iceshatter') {
+        /* 【表03 FX_IceShatter】冰霜碎裂：冰元素命中的碎片迸裂（冰冻枪 W11） */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const k = 1 - al;
+        for (let i = 0; i < 7; i++) {
+          const a = (i / 7) * Math.PI * 2 + (f.seed || 0);
+          const px = f.x + Math.cos(a) * k * 26, py = f.y + Math.sin(a) * k * 20 - k * 8;
+          c.save(); c.translate(px, py); c.rotate(a + k * 3);
+          c.fillStyle = 'rgba(200,240,255,' + (al * 0.9).toFixed(3) + ')';
+          c.beginPath(); c.moveTo(0, -5 * al - 1); c.lineTo(3 * al + 1, 2); c.lineTo(-3 * al - 1, 3); c.closePath(); c.fill();
+          c.strokeStyle = 'rgba(255,255,255,' + (al * 0.7).toFixed(3) + ')'; c.lineWidth = 0.8; c.stroke();
+          c.restore();
+        }
+        c.strokeStyle = 'rgba(170,235,255,' + (al * 0.8).toFixed(3) + ')'; c.lineWidth = 2;
+        c.beginPath(); c.arc(f.x, f.y - 8, 10 + k * 22, 0, 7); c.stroke();
+        c.restore();
+      } else if (f.t === 'poison') {
+        /* 【表03 FX_PoisonCloud】毒雾扩散：翻滚的绿色毒气团（毒元素/毒僵尸） */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const k = 1 - al, rr = (f.r || 34) * (0.5 + k * 0.8);
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2 + k * 1.4;
+          const px = f.x + Math.cos(a) * rr * 0.55, py = f.y + Math.sin(a) * rr * 0.4 - k * 10;
+          const pg = c.createRadialGradient(px, py, 0, px, py, rr * 0.75);
+          pg.addColorStop(0, 'rgba(150,240,80,' + (al * 0.42).toFixed(3) + ')');
+          pg.addColorStop(0.6, 'rgba(110,200,60,' + (al * 0.2).toFixed(3) + ')');
+          pg.addColorStop(1, 'rgba(80,160,50,0)');
+          c.fillStyle = pg; c.beginPath(); c.arc(px, py, rr * 0.75, 0, 7); c.fill();
+        }
+        c.restore();
+      } else if (f.t === 'wind') {
+        /* 【表03 FX_WindSlash】风刃：横扫的青绿弧形气刃（风刃僵尸） */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const k = 1 - al;
+        for (let i = 0; i < 3; i++) {
+          const off = i * 0.22;
+          c.strokeStyle = 'rgba(' + (i === 1 ? '235,255,250' : '150,240,200') + ',' + (al * (0.85 - off)).toFixed(3) + ')';
+          c.lineWidth = 3.4 - i * 0.9;
+          c.beginPath();
+          const rr = (f.r || 42) * (1 + k * 0.7) + i * 7;
+          c.arc(f.x, f.y, Math.max(1, rr), (f.a || 0) - 0.75 + k * 1.3, (f.a || 0) + 0.75 + k * 1.3);
+          c.stroke();
+        }
+        c.restore();
+      } else if (f.t === 'coin') {
+        /* 【表03 FX_CoinDrop】金币掉落：击杀后弹起的金币（此前击杀只有飘字） */
+        c.save();
+        const k = 1 - al;
+        const cy = f.y - (k * 30 - k * k * 46);
+        c.globalCompositeOperation = 'lighter';
+        const cg2 = c.createRadialGradient(f.x, cy, 0, f.x, cy, 9);
+        cg2.addColorStop(0, 'rgba(255,246,180,' + (al * 0.9).toFixed(3) + ')');
+        cg2.addColorStop(1, 'rgba(255,205,60,0)');
+        c.fillStyle = cg2; c.beginPath(); c.arc(f.x, cy, 9, 0, 7); c.fill();
+        c.globalCompositeOperation = 'source-over';
+        c.fillStyle = 'rgba(255,214,74,' + al.toFixed(3) + ')';
+        c.beginPath(); c.ellipse(f.x, cy, 4.2, 4.2 * Math.abs(Math.cos(k * 9)), 0, 0, 7); c.fill();
+        c.strokeStyle = 'rgba(190,140,20,' + (al * 0.8).toFixed(3) + ')'; c.lineWidth = 0.9; c.stroke();
+        c.restore();
+      } else if (f.t === 'roar') {
+        /* 【表03 FX_BossRoar】BOSS怒吼：地面裂纹式扩散冲击环 + 红色警示 */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const k = 1 - al;
+        for (let i = 0; i < 3; i++) {
+          const rr = (f.r || 120) * (0.25 + (k + i * 0.22) * 1.1);
+          const aa = Math.max(0, al - i * 0.22);
+          if (aa <= 0) continue;
+          c.strokeStyle = 'rgba(255,90,120,' + (aa * 0.7).toFixed(3) + ')';
+          c.lineWidth = 5 - i * 1.2;
+          c.beginPath(); c.ellipse(f.x, f.y, Math.max(1, rr), Math.max(1, rr * 0.36), 0, 0, 7); c.stroke();
+        }
+        const rg = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, (f.r || 120) * 0.8);
+        rg.addColorStop(0, 'rgba(255,120,140,' + (al * 0.35).toFixed(3) + ')');
+        rg.addColorStop(1, 'rgba(255,60,90,0)');
+        c.fillStyle = rg; c.beginPath(); c.arc(f.x, f.y, (f.r || 120) * 0.8, 0, 7); c.fill();
+        c.restore();
+      } else if (f.t === 'wavestart') {
+        /* 【表03 FX_WaveStart】波次来袭：屏幕中上方的斜向扫描警示带 */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const k = 1 - al;
+        const yy = f.y - 40 + k * 26;
+        const lg = c.createLinearGradient(0, yy - 22, 0, yy + 22);
+        lg.addColorStop(0, 'rgba(92,216,255,0)');
+        lg.addColorStop(0.5, 'rgba(92,216,255,' + (al * 0.34).toFixed(3) + ')');
+        lg.addColorStop(1, 'rgba(92,216,255,0)');
+        c.fillStyle = lg; c.fillRect(0, yy - 22, f.w || 480, 44);
+        c.strokeStyle = 'rgba(190,245,255,' + (al * 0.85).toFixed(3) + ')'; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(0, yy); c.lineTo(f.w || 480, yy); c.stroke();
+        c.restore();
+      } else if (f.t === 'levelup') {
+        /* 【表03 FX_LevelUp】升级光效：角色脚下升起的光柱与上升光点 */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const k = 1 - al;
+        const lg2 = c.createLinearGradient(f.x, f.y, f.x, f.y - 90);
+        lg2.addColorStop(0, 'rgba(255,214,90,' + (al * 0.5).toFixed(3) + ')');
+        lg2.addColorStop(1, 'rgba(255,214,90,0)');
+        c.fillStyle = lg2; c.fillRect(f.x - 20, f.y - 90, 40, 90);
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2;
+          const px = f.x + Math.cos(a) * (14 + k * 16), py = f.y - k * (24 + i * 6);
+          c.fillStyle = 'rgba(255,240,170,' + (al * 0.9).toFixed(3) + ')';
+          c.beginPath(); c.arc(px, py, 2.2 * al + 0.6, 0, 7); c.fill();
+        }
+        c.strokeStyle = 'rgba(255,224,120,' + (al * 0.8).toFixed(3) + ')'; c.lineWidth = 2;
+        c.beginPath(); c.ellipse(f.x, f.y, 22 + k * 30, (22 + k * 30) * 0.36, 0, 0, 7); c.stroke();
+        c.restore();
       }
     }
 
@@ -4061,6 +4257,33 @@ const BT = {
     }
     if (nz) aim = Math.atan2(nz.y - r.py, nz.x - r.px);
     r.aimA = aim;
+
+    /* ---- 表03 FX_Stun：眩晕星环 ----
+     * 闪光弹 S05 的 stun 此前只有「不动了」，画面上没有任何标记，
+     * 玩家分不清「僵尸被定住」还是「僵尸卡住了」。现在头顶转星环。 */
+    try {
+      const tt = r.time || 0;
+      for (const z of r.zombies) {
+        if (z.dead || !(Number(z.stunT) > 0)) continue;
+        const sy = z.y - (z.isBoss ? 62 : 40);
+        c.save(); c.globalCompositeOperation = 'lighter';
+        c.translate(z.x, sy); c.rotate(tt * 3.6);
+        const sa = Math.min(1, z.stunT / 0.6) * 0.9;
+        c.strokeStyle = 'rgba(255,226,120,' + sa.toFixed(3) + ')'; c.lineWidth = 2.2;
+        for (let i = 0; i < 3; i++) {
+          const a0 = i * Math.PI * 2 / 3;
+          c.beginPath();
+          c.moveTo(Math.cos(a0) * 4.5, Math.sin(a0) * 3.4);
+          c.lineTo(Math.cos(a0) * 13, Math.sin(a0) * 9.8);
+          c.stroke();
+        }
+        const sg2 = c.createRadialGradient(0, 0, 0, 0, 0, 16);
+        sg2.addColorStop(0, 'rgba(255,236,160,' + (sa * 0.32).toFixed(3) + ')');
+        sg2.addColorStop(1, 'rgba(255,210,90,0)');
+        c.fillStyle = sg2; c.beginPath(); c.arc(0, 0, 16, 0, 7); c.fill();
+        c.restore();
+      }
+    } catch (e) {}
 
     /* ---- 表03 特效帧：灼烧 / 寒霜持续光环 ----
      * 参数全部取自 EX.VFX（帧数/尺寸/时长），美术把帧序列放进
