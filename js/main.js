@@ -705,6 +705,9 @@ const MAIN = {
     shop: 'data/zb/shop.json',
     ad: 'data/zb/ad.json',
     social: 'data/zb/social.json',
+    /* 公告：后台「公告管理」此前标记"待开发、前端未接入"，
+     * 该路径也不在列表内 —— 运营发的公告玩家永远看不到。现在接入。 */
+    notice: 'data/zb/notice.json',
   },
   /* ============ 热更新：版本提示 + 定时计划 ============ */
   applyHotfix(db) {
@@ -757,6 +760,8 @@ const MAIN = {
       }
       this.applyCloudCfg(key, db);
     }
+    /* 公告：全部云端配置同步完成后统一弹出（未读过的才弹） */
+    try { if (window.UI && UI.showNotice) UI.showNotice(); } catch (e) {}
     /* 全部云端配置应用完毕后统一巡检一次：
      * 万一某条路径绕过了 guardTable（例如后台直接改 cfg.json 后由其它
      * 分支写入），这里把已被清空的关键表恢复成内置快照，兜住白屏。 */
@@ -788,6 +793,17 @@ const MAIN = {
     return m ? Math.max(0, parseInt(m[1], 10)) : 0;
   },
   applyCloudCfg(key, db) {
+    /* ---------- 公告（后台「公告管理」→ 前端展示） ----------
+     * 此前 notice.json 不在 CFG_FILES 内，后台发布公告游戏端从不读取，
+     * 该功能自上线起就是"配了不显示"的空壳（后台页面还标着"待开发"）。
+     * 现在登录时拉取：过滤已过期（endAt < 现在）的，按时间倒序。 */
+    if (key === 'notice' && db && Array.isArray(db.list)) {
+      const now = Date.now();
+      EX.NOTICE = db.list
+        .filter((x) => x && x.title && (!x.endAt || Number(x.endAt) >= now))
+        .sort((a, b) => Number(b.at || 0) - Number(a.at || 0));
+      return;
+    }
     try {
       const nm = (id) => { try { return (E.itemName ? E.itemName(id) : id) || id; } catch (e) { return id; } };
       if (key === 'activity' && Array.isArray(db.list)) {
