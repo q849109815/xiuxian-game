@@ -788,6 +788,10 @@ const BT = {
     /* --- 生成 --- */
     /* --- 炮台自动开火 --- */
     for (const t of r.turrets) {
+      /* 等级钳制（防御）：炮台的伤害/射程/射速/绘制尺寸全部随 lv 线性放大，
+       * 若 lv 被写成 NaN、负数或超出上限（热更/改档/旧档），
+       * 会让炮台伤害失控或模型撑爆屏幕。这里统一收紧到 [1, TURRET_MAX_LV]。 */
+      t.lv = Math.min(Math.max(Number(t.lv) || 1, 1), EX.TURRET_MAX_LV != null ? EX.TURRET_MAX_LV : 20);
       t.cd -= dt;
       if (t.fire > 0) t.fire -= dt;   /* 开火后坐动画计时（Q 版炮台） */
       if (t.cd > 0) continue;
@@ -1475,6 +1479,10 @@ const BT = {
     const slot = EX.turretSlots.find((s) => s.k === slotKey); if (!slot) return { ok: false, msg: '槽位不存在' };
     const exist = r.turrets.find((t) => t.k === slotKey);
     if (exist) {
+      /* 等级上限：此前 exist.lv++ 没有封顶，无尽模式可无限升级，
+       * 导致伤害/射程/绘制尺寸失控。详见 config.js TURRET_MAX_LV 注释。 */
+      const MAXLV = EX.TURRET_MAX_LV != null ? EX.TURRET_MAX_LV : 20;
+      if (exist.lv >= MAXLV) return { ok: false, msg: (exist.def && exist.def.n || '炮台') + ' 已达最高 Lv.' + MAXLV };
       /* BUG：升级费用此前按「本次点击的炮台」def.upCost 计算，
        * 但等级加在槽位里已有的那座炮台上 —— 两者不是同一座时，
        * 玩家点火焰炮台，扣的是火焰的价钱，升的却是寒冰的等级。
@@ -1930,7 +1938,18 @@ const BT = {
     if (heal > 0 && r.hp < r.maxHp) r.hp = Math.min(r.maxHp, r.hp + heal);
     const gAdd = Math.round(z.gold * (1 + E.talentVal(this.P, 'gold')));
     r.gold += gAdd;
-    r.coin = (r.coin || 0) + gAdd;   /* 局内金币：用于建造/升级炮台 */
+    /* 局内金币（coin）：只用于建造/升级炮台，【不随章节倍率 rwMul 放大】。
+     * 严重失衡：coin 此前与 r.gold 共用同一个 gAdd，而 z.gold 内含 rwMul，
+     * 于是 coin 也跟着放大，而炮台造价是固定值（120/150/180/220）：
+     *   第 1 章整关 840 金 → 可建  7 座
+     *   第10章整关 106 万 → 可建 8834 座（相差 1262 倍）
+     * 实测后果：后期第 2 波就能建满 4 个槽位并全部升满级，
+     *   此后百万金币再无任何用途，炮台的经济取舍彻底归零。
+     * 现在取僵尸表的【基础金币】（未乘 rwMul），让各章节「一关能建几座」
+     * 保持在同一量级（第1章约 7 座 / 第10章约 22 座，差异只来自波次变多）。 */
+    const _tg = Number(E.talentVal(this.P, 'gold')) || 0;
+    const _base = Number((z.d && z.d.gold) != null ? z.d.gold : (z.gold || 3)) || 3;
+    r.coin = (Number(r.coin) || 0) + Math.round(_base * (1 + _tg));
     /* 经验加成天赋此前只作用于 pick()（拾取掉落），
      * 而击杀这条主要经验来源走的是 gainXp(z.xp)，完全没乘天赋
      * → 实测天赋 Lv0 与 Lv20 击杀经验都是 4，点满 20 级毫无收益。 */
@@ -2440,6 +2459,9 @@ const BT = {
     const T = r.time || 0;
     for (const t of r.turrets) {
       if (!isFinite(t.x) || !isFinite(t.y)) continue;
+      /* 与战斗循环同一道钳制：绘制高度 46+lv*1.4、射程 rng+lv*12 都随 lv 放大，
+       * 首帧绘制可能早于战斗循环，故此处再收紧一次。 */
+      t.lv = Math.min(Math.max(Number(t.lv) || 1, 1), EX.TURRET_MAX_LV != null ? EX.TURRET_MAX_LV : 20);
       const el = EX.elements.find((x) => x.k === t.def.el) || { c: '#ffd76a' };
       const tg = this.nearest(t.x, t.y, null, t.def.rng + t.lv * 12,
         { preferElite: t.def.preferElite });
