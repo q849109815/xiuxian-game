@@ -995,7 +995,14 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   border:2px solid rgba(255,201,60,.55);box-shadow:0 10px 34px rgba(0,0,0,.6)}
 .gd-t{font-size:14px;font-weight:800;color:var(--yel);letter-spacing:1px;margin-bottom:7px}
 .gd-c{font-size:12px;line-height:1.6;color:#e6edf8;margin-bottom:12px}
-.gd-finger{position:absolute;font-size:30px;z-index:2;pointer-events:none;
+/* BUG：#gdFinger（👆）全项目 JS 零引用 —— 从未给它设置过 top/left，
+ * 也没有任何代码控制显示/隐藏。它是 position:absolute 且无定位值，
+ * 于是每次引导弹窗弹出时，这个手指就停在屏幕左上角 (0,-9)、部分露出屏幕外，
+ * 还带 1 秒循环的上下浮动动画，既不指向任何东西、也挡不住操作，
+ * 玩家看到的就是「弹窗左上角莫名多了个跳动的手指」。
+ * 「手指指向目标元素」的功能并未实现，先隐藏；
+ * 后续要真正做指向时，由 JS 定位后再 display:block 启用。 */
+.gd-finger{display:none;position:absolute;font-size:30px;z-index:2;pointer-events:none;
   animation:gdPoint 1s ease-in-out infinite}
 @keyframes gdPoint{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
 
