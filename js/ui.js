@@ -987,6 +987,17 @@ r_tavern(p, tab) {
     };
     return m[(t.cond || {}).t] || '📋';
   },
+  /* 某条任务是否已领取（主线/日常/周常/成就共用）。
+   * 后台 GM 改档、热更覆盖都可能把 tasks[key] 写成字符串/数字/对象，
+   * 直接 .indexOf 会抛 "indexOf is not a function"（实测点领取直接崩面板）。
+   * 这里只对真数组做查询，其它一律按【未领取】处理（宁可再给一次按钮，
+   * 也不能让面板崩掉）。 */
+  _claimed(p, type, id) {
+    const key = { main: 'mainClaimed', daily: 'dailyClaimed', weekly: 'weeklyClaimed', achieve: 'achieveClaimed' }[type];
+    if (!key || !p || !p.tasks) return false;
+    const a = p.tasks[key];
+    return Array.isArray(a) && a.indexOf(id) >= 0;
+  },
 
   /* ---------- 任务（截图：主线/日常/成就 + 黄色「前往任务」） ---------- */
   r_task(p, tab) {
@@ -1000,11 +1011,17 @@ r_tavern(p, tab) {
       return `<div class="card"><div class="card-t">周常任务 <span class="sub">每周刷新</span></div>
         ${(_T.weekly || []).map((t) => {
           const cur = E.taskProg(p, t), need = t.cond.v || t.need || 1, done = cur >= need;
+          /* 【按钮与实际状态不一致 BUG 修复】
+           * 此前只判 done，从不看 weeklyClaimed：领过之后按钮【永远显示"领取"】，
+           * 玩家再点只会弹出"已领取"，看着像按钮坏了。
+           * 现在与成就页一致：已领取 → 显示"已领取"，不再给可点的按钮。 */
+          const got = this._claimed(p, 'weekly', t.id);
           return `<div class="zrow">
             <div class="zav">🏆</div>
             <div class="zi"><b>${t.n}</b><span>${cur}/${need} · ${t.desc || ''}</span></div>
-            ${done ? `<button class="btn sm g" data-wq="${t.id}">领取</button>`
-                   : '<span class="st off">未完成</span>'}</div>`;
+            ${got ? '<span class="st on">已领取</span>'
+              : (done ? `<button class="btn sm g" data-wq="${t.id}">领取</button>`
+                      : '<span class="st off">未完成</span>')}</div>`;
         }).join('') || '<div class="lbl">暂无周常</div>'}
         <div class="sub" style="padding:6px 2px">每周一 0 点刷新，奖励钻石与稀有材料。</div>
       </div>`;
@@ -1014,11 +1031,13 @@ r_tavern(p, tab) {
         ${_T.daily.map((t) => {
           const need = t.need || (t.cond ? t.cond.v : 1);
           const cur = E.taskProg(p, t), done = cur >= need;
+          const got = this._claimed(p, 'daily', t.id);
           return `<div class="zrow">
             <div class="zav">${this.taskIcon(t)}</div>
             <div class="zi"><b>${t.n}</b><span>${cur}/${need}</span></div>
-            ${done ? `<button class="btn sm g" data-dq="${t.id}">领取</button>`
-                   : '<span class="st off">未完成</span>'}</div>`;
+            ${got ? '<span class="st on">已领取</span>'
+              : (done ? `<button class="btn sm g" data-dq="${t.id}">领取</button>`
+                      : '<span class="st off">未完成</span>')}</div>`;
         }).join('')}
       </div>
       <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往任务</button>`;
@@ -1033,7 +1052,7 @@ r_tavern(p, tab) {
         ${_T.achieve.map((a) => {
           const done = E.taskDone(p, a);
           const got = (p.achGot || {})[a.id] || done;
-          const claimed = (p.tasks.achieveClaimed || []).indexOf(a.id) >= 0;
+          const claimed = this._claimed(p, 'achieve', a.id);
           return `<div class="zrow">
             <div class="zav">${this.taskIcon(a)}</div>
             <div class="zi"><b>${a.n}</b><span>${a.desc}</span>
@@ -1049,12 +1068,16 @@ r_tavern(p, tab) {
       ${_T.main.map((t) => {
         const need = t.need || (t.cond && t.cond.t === 'clearLv' ? 1 : (t.cond ? t.cond.v : 1));
         const cur = E.taskProg(p, t), done = cur >= need;
+        /* 主线此前同样不判 mainClaimed：任务完成后按钮【永久停在"领取"】，
+         * 点了永远回"已领取"。这里先判已领取，再判是否完成。 */
+        const got = this._claimed(p, 'main', t.id);
         return `<div class="zrow">
           <div class="zav">${this.taskIcon(t)}</div>
           <div class="zi"><b>${t.n}</b><span>${Math.min(cur, need)}/${need}</span>
             <span>💎${t.rw.diamond || 0} 🪙${t.rw.gold || 0}</span></div>
-          ${done ? `<button class="btn sm g" data-mq="${t.id}">领取</button>`
-                 : '<span class="st off">进行中</span>'}</div>`;
+          ${got ? '<span class="st on">已领取</span>'
+            : (done ? `<button class="btn sm g" data-mq="${t.id}">领取</button>`
+                    : '<span class="st off">进行中</span>')}</div>`;
       }).join('')}
       </div>
       <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往任务</button>`;
@@ -1474,6 +1497,12 @@ r_tavern(p, tab) {
     const gs = EX.gems || [];
     const sel = this.gemSel || (gs[0] && gs[0].id);
     const g = gs.find((x) => x.id === sel) || gs[0];
+    /* 镶嵌按钮按真实可用性出文案：同一颗已镶嵌就别再给"镶 嵌"，
+     * 让玩家一眼看出现在点下去不会有变化。 */
+    const _bag = g ? ((p.gems || {})[g.id] || 0) : 0;
+    const inlayOK = !!(g && _bag > 0 && p.gemOn !== g.id);
+    const inlayTxt = !g ? '请选择宝石'
+      : (p.gemOn === g.id ? '✔ 已镶嵌' : (_bag > 0 ? '镶 嵌' : '数量不足（' + _bag + ' 颗）'));
     return `<div class="stone-panel">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         ${this.zAvatarHTML('gem')}
@@ -1484,19 +1513,21 @@ r_tavern(p, tab) {
         ${gs.map((x) => {
           const n = (p.gems || {})[x.id] || 0;
           const on = x.id === sel;
+          const inlaid = p.gemOn === x.id;
           return `<div class="zrow" data-gsel="${x.id}" style="${on ? 'border-color:var(--yel);background:rgba(255,201,60,.12)' : ''}">
             <div class="gem ${x.c === 'r' ? 'r' : x.c === 'b' ? 'b' : x.c === 'g' ? 'g' : 'p'}">${x.img
               ? `<img src="${x.img}" style="width:26px;height:26px;object-fit:contain">` : (x.icon || '💎')}</div>
             <div class="zi"><b>${x.n}</b><span>${x.desc}</span></div>
-            <span class="st ${on ? 'on' : 'off'}">${n} 颗</span>
+            <span class="st ${inlaid ? 'on' : (n ? 'off' : 'off')}">${inlaid ? '已镶嵌' : n + ' 颗'}</span>
           </div>`;
         }).join('') || '<div class="lbl">暂无宝石</div>'}
       </div>
       <div class="sub" style="margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.2)">
         当前选中：<b style="color:var(--yel)">${g ? g.n : '—'}</b>
         ${g ? ' · ' + g.desc : ''}
+        ${g && p.gemOn === g.id ? '<span class="st on" style="margin-left:6px">已镶嵌</span>' : ''}
       </div>
-      <button class="btn" id="gemInlay" style="width:100%;margin-top:10px">镶 嵌</button>
+      <button class="btn ${inlayOK ? '' : 'd'}" id="gemInlay" style="width:100%;margin-top:10px">${inlayTxt}</button>
       <button class="btn g" id="gemOff" style="width:100%;margin-top:6px">卸 下（返还背包）</button>
       <button class="btn o" id="gemFuse" style="width:100%;margin-top:6px">🔨 宝石合成（3 颗 → 升一级）</button>
       <div class="sub" style="margin-top:6px">当前宝石等级：<b style="color:var(--yel)">Lv.${p.gemOn ? E.gemLvOf(p, p.gemOn) : 0}</b>
