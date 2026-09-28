@@ -1153,6 +1153,15 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 #sweepBox .pn-box{position:relative;inset:auto;width:min(92vw,360px);
   max-height:82vh;height:auto;border-radius:26px !important;
   border-bottom:3px solid var(--q-ink) !important}
+/* 扫荡/通用弹层的关闭钮（#swX / #shX）：此前没有任何样式定义，
+ * 实测只有 21px 高 —— 手指很难点中。这里按其它面板的圆钮规格补齐到 32×32。 */
+#sweepBox .pn-hd button,#swX,#shX{
+  width:32px;height:32px;flex:0 0 auto;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:900;line-height:1;padding:0;
+  background:linear-gradient(180deg,#ff8a8a,#ff3b5c);color:#fff;
+  border:2.5px solid var(--q-ink);box-shadow:0 3px 0 var(--q-ink2)}
+#sweepBox .pn-hd button:active,#swX:active,#shX:active{transform:translateY(3px);box-shadow:0 0 0 var(--q-ink2)}
 #cgModal .cg-box { position:relative; width:min(88vw,420px); border-radius:14px;
   overflow:hidden; background:#0d1420; border:2px solid rgba(255,201,60,.5);
   box-shadow:0 12px 40px rgba(0,0,0,.8); animation:cgIn .35s ease-out; }
