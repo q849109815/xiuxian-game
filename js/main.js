@@ -1354,6 +1354,16 @@ function onBattleEnd(res, d) {
         }
       }
     }
+    /* 合并【局内掉落】的材料/芯片到结算面板。
+     * 此前面板只统计关卡表 rw，战斗中实际捡到的掉落一行都不显示：
+     * 实测 1-1 通关实发 158 合金 + 8 零件，面板却只写「5 合金」，
+     * 玩家打完完全不知道自己捞了多少。 */
+    rw.mat = rw.mat || {};
+    if (r.matGain) for (const k in r.matGain) {
+      const n = E.safeAmt(r.matGain[k]);
+      if (n > 0) rw.mat[k] = (rw.mat[k] || 0) + n;
+    }
+    if (r.chipGain) rw.chip = (rw.chip || 0) + E.safeAmt(r.chipGain);
   } else {
     /* 失败 / 中途退出
      * BUG：battle 回调里的 rw.gold 已经是「按比例折算后」的局内金币
