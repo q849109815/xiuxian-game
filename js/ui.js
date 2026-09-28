@@ -2972,9 +2972,12 @@ r_tavern(p, tab) {
         this.chTime--;
         if (tm) tm.textContent = Math.max(0, this.chTime);
         if (this.chTime <= 0) {
-          clearInterval(this._chIv);
-          /* 超时自动选第一个 */
-          if (picks[0]) BT.pickSkill(picks[0].id);
+          clearInterval(this._chIv); this._chIv = null;
+          /* 超时自动选第一个
+           * 兜底：若战斗已结束/已退出（run 为空或 over），
+           * 倒计时仍会触发（此前点击卡片只 remove('on') 没清 timer），
+           * 此时 pickSkill 会往已作废的 run 里写技能、并对 null 取属性报错。 */
+          if (picks[0] && BT.run && !BT.run.over) BT.pickSkill(picks[0].id);
           this.hideChoice();
         }
       }, 1000);
@@ -3011,11 +3014,16 @@ r_tavern(p, tab) {
     $$('#chCards .ccard').forEach((b) => {
       /* 表37 埋点：skill_select */
       try { OPS.track('skill_select', { sk: b.dataset.pick }); } catch (e) {}
-      b.onclick = () => { $('#choice').classList.remove('on'); BT.pickSkill(b.dataset.pick); };
+      /* 严重BUG：此前只 remove('on') 收起面板，却没有 clearInterval(this._chIv)。
+       * 15 秒倒计时仍在后台跑，到点后会执行「超时自动选第一个」——
+       * 玩家手动选完技能，15 秒后被白送 picks[0] 一级（实测 lianfa Lv.1 → Lv.2）。
+       * 连升多级时每次选择都会额外白送，局内技能等级失控。
+       * 现在点击即走 hideChoice()，与超时路径一样清掉计时器。 */
+      b.onclick = () => { BT.pickSkill(b.dataset.pick); this.hideChoice(); };
     });
     $('#choice').classList.add('on');
   },
-  hideChoice() { clearInterval(this._chIv); $('#choice').classList.remove('on'); },
+  hideChoice() { clearInterval(this._chIv); this._chIv = null; $('#choice').classList.remove('on'); },
 
   /* ---------- 结算 ---------- */
   /* 章节 CG 过场（首次进入该章节播放一次） */
