@@ -1839,8 +1839,15 @@ const BT = {
      * 此前怪物表无 armor 字段，护甲减伤完全未生效 */
     const armor = Number((z.d && z.d.armor) || 0);
     if (armor > 0) d = Math.max(1, d - armor);
-    /* 表20 公式5：吸血 = 最终伤害 × 吸血% */
-    const ls = Number(r.ls || 0);
+    /* 表20 公式5：吸血 = 最终伤害 × 吸血%
+     * 局内技能「吸血」（xixue）描述写的是「造成伤害时回复防线血量，
+     *   每级 +1.5% 吸血」，但它的 mods.healOnKill 【只在 kill() 里被读】，
+     *   而且是按固定值加血：Lv8 = 0.015×8 = 0.12 点 —— 防线血量动辄
+     *   几百上千，杀一只怪回 0.12 血，点满 8 级与没点完全没区别
+     *   （实测：Lv0 与 Lv8 的防线血量变化均为 0）。
+     * 现在与天赋/芯片吸血（r.ls）同口径，按「造成伤害的百分比」在命中时回血，
+     *   与技能描述一致，且等级成长才真正有效。 */
+    const ls = Number(r.ls || 0) + Number((r.mods && r.mods.healOnKill) || 0);
     if (ls > 0 && r.wallHp != null && r.wallMax) {
       r.wallHp = Math.min(r.wallMax, r.wallHp + d * ls);
       r.hp = r.wallHp;
@@ -1938,8 +1945,8 @@ const BT = {
     /* 表37 埋点：kill_monster */
     try { OPS.track('kill_monster', { z: z.id || z.n }); } catch (e) {}
     if (r.kills === 1 && window.UI && UI.guideTrigger) UI.guideTrigger('firstKill');
-    const heal = r.mods.healOnKill;
-    if (heal > 0 && r.hp < r.maxHp) r.hp = Math.min(r.maxHp, r.hp + heal);
+    /* 吸血技能（xixue）的回血已移到 hurt() 按「造成伤害的百分比」结算，
+     * 此处不再按固定值加血（原写法 Lv8 只回 0.12 点，等同无效，且会重复回血）。 */
     const gAdd = Math.round(z.gold * (1 + E.talentVal(this.P, 'gold')));
     r.gold += gAdd;
     /* 局内金币（coin）：只用于建造/升级炮台，【不随章节倍率 rwMul 放大】。
@@ -2177,8 +2184,14 @@ const BT = {
     UI.showSkillChoice(picks);
   },
   refreshOffer() {
-    if (!this._picks) return;
+    if (!this._picks) return false;
+    /* 候选池为空（技能已全满 / 全互斥）时 offerSkills 直接 return，
+     * _picks 保持旧值、界面上的三张卡不会有任何变化。
+     * 此时若照常扣掉刷新次数，玩家就是「点了没反应还白扣一次」。
+     * 返回布尔值，让调用方据此决定要不要扣。 */
+    const before = this._picks;
     this.offerSkills();
+    return this._picks !== before;
   },
   pickSkill(id) {
     const r = this.run;
