@@ -757,7 +757,7 @@ r_tavern(p, tab) {
           <div class="info"><div class="nm"><span style="color:${EX.qColor[g.q]}">${g.q}</span> ${g.n} <span class="tag">${g.type}</span></div>
           <div class="sub wrap">${g.heal ? '治疗 ' + g.heal : g.shield ? '护盾 ' + g.shield : '伤害 ' + g.dmg} · 射速${g.rate}/s · 弹夹${g.mag} · 换弹${g.reload}s${g.range ? ' · 射程 ' + E.gunRange(g) : ''}${g.pellets > 1 ? ' · 弹丸' + g.pellets : ''}${g.pierce ? ' · 穿透' + g.pierce : ''}</div>
           <div class="sub">${g.bullet}${ok ? '' : ' · 需通关 ' + g.unlockLv}</div></div>
-          <div class="act">${on ? '<span class="tag g">使用中</span>' : ok ? `<button class="btn c sm" data-gun="${g.id}">装备</button>` : '<span class="tag r">未解锁</span>'}</div></div>`;
+          <div class="act">${!E.gunCanFight(g) ? '<span class="tag">支援</span>' : on ? '<span class="tag g">使用中</span>' : ok ? `<button class="btn c sm" data-gun="${g.id}">装备</button>` : '<span class="tag r">未解锁</span>'}</div></div>`;
       }).join('')}`).join('')}</div>`;
     }
     const g = E.gun(p), a = E.attrs(p), c = E.gunUpgradeCost(p);
