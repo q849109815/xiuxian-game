@@ -356,6 +356,16 @@ const E = {
     /* 后台 GM 可把 gunLv 设成任意值，不钳制会让 1.078^lv 溢出成 Infinity，
      * 进而让战斗内的 coin 与结算金币一起溢出。上限取 GUN_MAX_LV。 */
     p.gunLv = Math.max(1, Math.min(this.GUN_MAX_LV, p.gunLv || 1));
+    /* 出战武器兜底：旧存档/后台改档可能把 p.gun 指向支援武器（S07 医疗包 / S08 护盾）。
+     * 这类武器 dmg=0，战斗中 atk=0 → 永远杀不死怪 → 波次只能超时推进 → 必败卡死。
+     * 登录即纠正为第一把有伤害的武器，让已中招的玩家能直接恢复，不必手动换枪。 */
+    if (p.gun) {
+      const _cg = ((typeof EX !== 'undefined' && EX.guns) || []).find((g) => g.id === p.gun);
+      if (_cg && !this.gunCanFight(_cg)) {
+        const _fb = ((typeof EX !== 'undefined' && EX.guns) || []).find((g) => this.gunCanFight(g));
+        if (_fb) p.gun = _fb.id;
+      }
+    }
     if (!p.lv || p.lv < 1) p.lv = 1;   /* 等级最小 1，补 0 会让升级/经验计算异常 */
     if (p.charStar != null) p.charStar = Math.min(5, Math.max(0, p.charStar));
     /* BUG修复（旧存档/损坏存档白屏）：
@@ -587,10 +597,26 @@ const E = {
     if (!g.unlockLv) return true;
     return !!p.cleared[g.unlockLv];
   },
+  /* 该武器能否作为【出战武器】造成伤害
+   * 严重BUG：武器库按「主/副」分组只是 UI 标签，战斗里【只有 p.gun 一把枪生效】
+   *   （battle.js 全程 E.gun(this.P)，没有任何副武器槽）。
+   *   而新增的支援武器 S07 医疗包 / S08 护盾发生器 dmg=0 ——
+   *   玩家在武器库点「装备」→ p.gun='S07' → attrs().atk=0 →
+   *   实测跑满 25 秒击杀 0 只，波次只能靠超时推进，最终防线必破 = 100% 卡死，
+   *   界面却照常提示「已装备 医疗包」，玩家完全不知道为什么打不死怪。
+   * 这里给出统一判定：dmg<=0 的纯支援武器不得作为出战武器。 */
+  gunCanFight(g) {
+    if (!g || typeof g !== 'object') return false;
+    return (Number(g.dmg) || 0) > 0;
+  },
   switchGun(p, id) {
     if (!this.gunUnlocked(p, id)) {
       const g = EX.guns.find((x) => x.id === id);
       return { ok: false, msg: '需通关 ' + (g ? g.unlockLv : '?') + ' 解锁' };
+    }
+    const _g = EX.guns.find((x) => x.id === id);
+    if (!this.gunCanFight(_g)) {
+      return { ok: false, msg: (_g ? _g.n : '该武器') + ' 是支援武器（无伤害），不能作为出战武器' };
     }
     if ((p.gunOwn || []).indexOf(id) < 0) p.gunOwn.push(id);
     p.gun = id;
@@ -610,8 +636,15 @@ const E = {
     p.gunOwn = Array.isArray(p.gunOwn) ? p.gunOwn : ['W01'];
     const isNew = p.gunOwn.indexOf(id) < 0;
     if (isNew) p.gunOwn.push(id);
-    p.gun = id;
+    /* 支援武器照常解锁进图鉴，但【不顶替出战武器】——
+     * 否则买/领到 S07 就会把 p.gun 换成无伤害武器，直接卡死（见 gunCanFight 注释）。 */
+    if (this.gunCanFight(g)) p.gun = id;
     try { this.codexUnlock(p, 'gun', id); } catch (e) {}
+    /* 提示必须与事实一致：支援武器并未顶替出战武器，
+     * 否则会出现「提示已装备护盾发生器，实际手里还是步枪」的假成功。 */
+    if (!this.gunCanFight(g)) {
+      return { ok: true, msg: (isNew ? '已解锁 ' : '已有 ') + g.n + '（支援武器，不出战）', isNew: isNew };
+    }
     return { ok: true, msg: isNew ? ('已解锁并装备 ' + g.n) : ('已装备 ' + g.n), isNew: isNew };
   },
   /* 进阶等级：每 5 级一次 */
