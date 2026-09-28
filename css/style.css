@@ -1144,8 +1144,17 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
  * 现按 #choice 的既有写法补齐：容器默认 display:none，加 .on 才 flex 居中显示。 */
 #cgModal{position:absolute;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.72)}
 #cgModal.on{display:flex}
-#lvup{position:absolute;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.72)}
 #lvup.on{display:flex}
+/* 局内升级提示：此前与 #cgModal 一样是全屏遮罩（inset:0 + 72% 黑底），
+ * 但 showLvUp 只做 2.2 秒自动消失、【从不暂停战斗】——
+ * 实测：弹出瞬间屏幕中心点击命中 .lvup-box（操作全被挡），
+ * 背景 rgba(0,0,0,.72) 盖住整个战场，而战斗照常推进了 1.7 秒。
+ * 局内一局能升十几级，等于反复「黑屏 2.2 秒 + 完全失控」，僵尸还在啃防线。
+ * 与「引导弹窗」不同：升级是高频事件，每级都暂停会把战斗切得支离破碎。
+ * 改为顶部横幅：背景透明、不拦截点击，看得见战场也点得动操作。 */
+#lvup{position:absolute;inset:0;z-index:1000;display:none;align-items:flex-start;justify-content:center;padding:16px;background:transparent;pointer-events:none}
+#lvup>*{pointer-events:none}
+#lvup .lvup-box{margin:10% auto auto}
 /* 扫荡弹窗：与 #cgModal / #lvup 同一类问题 —— .modal 本身没有显隐与定位规则，
  * #sweepBox 此前也未声明，于是保持 div 默认的 display:block 常驻文档流：
  *   ① 空容器时是一条 393×6 的横条（带 3px 边框）挂在屏幕最顶端；
