@@ -493,6 +493,10 @@ const BT = {
     /* 战斗外预置的消耗品：必须在 run 创建【之后】才生效
      * （此前放在 start() 开头，被 this.run = {...} 覆盖，等于白用） */
     try { if (E.applyPendingItems) E.applyPendingItems(p); } catch (e) {}
+    /* 局内「刷新选项」次数必须在开局重置。
+     * 此前 UI.rfLeft 只在首次为 null 时赋 1（`this.rfLeft == null ? 1 : this.rfLeft`），
+     * 于是上一局用掉后值停在 0，之后每一局都永远没有刷新机会（按钮恒灰）。 */
+    if (window.UI) UI.rfLeft = 1;
     this.on = true; this.paused = false;
     this.startWave(1);
     this.startLoop();
