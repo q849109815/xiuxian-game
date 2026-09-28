@@ -39,14 +39,23 @@ input{font-family:inherit}
 #stage::before{left:calc(50% - 8px)}
 #stage::after{right:calc(50% - 8px)}
 
+/* --vvh：软键盘弹出时由 JS 写入可视高度（见 index.html 的 _kbFit）。
+ * 未写入时回落 100vh，与旧行为一致。 */
+:root{--vvh:100vh}
 #app{position:relative;overflow:hidden;background:var(--bg);
-  width:100%;height:100%;
+  width:100%;height:var(--vvh);
   box-shadow:0 0 60px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.06)}
-/* PC 端：锁定 9:16，按高度自适应 */
-@media (min-aspect-ratio: 9/16){
+/* PC 端：锁定 9:16，按高度自适应。
+ * 【手机软键盘 BUG 修复】
+ * 此前只按【宽高比】判断：手机 393×852 竖屏比例 0.46 < 9/16，走"铺满"分支；
+ * 一旦点输入框弹出软键盘，可视高度被压到 490/400，比例变成 0.80/0.98，
+ * 反而 > 9/16 → 误判成 PC，套用 width:calc(100vh*9/16) = 276px/225px，
+ * 游戏框从 393 直接缩到 276（实测），玩家看到的就是"一打字界面就变窄"。
+ * 现在加 (min-width:700px) 闸门：真手机宽度恒 < 700，永远不会误判成 PC。 */
+@media (min-aspect-ratio: 9/16) and (min-width:700px){
   #app{
-    height:100vh;
-    width:calc(100vh * 9 / 16);
+    height:var(--vvh);
+    width:calc(var(--vvh) * 9 / 16);
     max-width:100vw;
     border-radius:14px;
   }
@@ -56,12 +65,14 @@ input{font-family:inherit}
   }
 }
 /* 超宽屏再收一点，保证完整可见 */
-@media (min-aspect-ratio: 3/2){
-  #app{height:96vh;width:calc(96vh * 9 / 16);max-width:100vw}
+@media (min-aspect-ratio: 3/2) and (min-width:700px){
+  #app{height:calc(var(--vvh) * .96);width:calc(var(--vvh) * .96 * 9 / 16);max-width:100vw}
 }
-/* 手机竖屏：铺满 */
-@media (max-aspect-ratio: 9/16){
-  #app{width:100vw;height:100vh;border-radius:0}
+/* 手机竖屏：铺满。
+ * 这里额外用 (max-width:699px) 兜住"键盘弹出后比例失真"的情况，
+ * 保证手机任何时候都是满宽。 */
+@media (max-aspect-ratio: 9/16), (max-width:699px){
+  #app{width:100vw;height:var(--vvh);border-radius:0}
 }
 .screen{position:absolute;inset:0;width:100%;height:100%;display:none;flex-direction:column}
 .screen.on{display:flex}
@@ -82,7 +93,11 @@ input{font-family:inherit}
 .ld-txt{margin-top:10px;font-size:11px;color:var(--txt3)}
 
 /* ============ 登录 ============ */
-#login{align-items:center;justify-content:center;padding:20px}
+#login{align-items:center;justify-content:center;padding:20px;
+  overflow-y:auto;-webkit-overflow-scrolling:touch}
+/* 软键盘弹出时可视区骤减：登录框比可视区还高，居中会上下同时溢出且滚不到，
+ * 改为顶部对齐，保证标题→输入框→按钮从头到尾都能滚到。 */
+html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 .lg-bg{position:absolute;inset:0;
   background:radial-gradient(ellipse at 50% 30%,rgba(90,120,170,.28),transparent 60%),
              linear-gradient(180deg,#1a2637,#0d131c)}
