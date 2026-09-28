@@ -1071,15 +1071,15 @@ const BT = {
         z.atkCd -= dt;
         if (z.atkCd <= 0 && dist < z.atkR) {
           z.atkCd = 2.2;
-          if (z.d.poison) this.shootEnemy(z, 'poison');
+          if (z.d && z.d.poison) this.shootEnemy(z, 'poison');
           else r.pools.push({ x: z.x, y: z.y + 30, r: 44, dps: z.dmg, life: 3.2, max: 3.2 });
           /* 【表03 FX_WindSlash / FX_PoisonCloud】远程僵尸攻击的可见弹道。
            * 此前风刃僵尸「喷吐」画面上什么都不出现，玩家只看到自己莫名掉血。 */
           if (r.efx && r.efx.length < 90) {
             const ang = Math.atan2((r.py || 400) - z.y, (r.px || 240) - z.x);
-            if (z.id === 'fengren' || z.d.wind) {
+            if (z.id === 'fengren' || (z.d && z.d.wind)) {
               r.efx.push({ t: 'wind', x: z.x, y: z.y, r: 44, a: ang, life: 0.45, max: 0.45 });
-            } else if (z.d.poison || z.id === 'duwu') {
+            } else if ((z.d && z.d.poison) || z.id === 'duwu') {
               r.efx.push({ t: 'poison', x: (z.x + (r.px || 240)) / 2, y: (z.y + (r.py || 400)) / 2, r: 46, life: 0.9, max: 0.9 });
             }
           }
@@ -1941,20 +1941,20 @@ const BT = {
      * 实测第 10 章通关 300 杀只给 1200 经验，而 Lv20 升一级要 12302，
      * 等于刷十几关才升 1 级，玩家完全没有推进高关卡的动力。 */
     r.killXp = (r.killXp || 0) + Math.max(1, Math.round(z.xp || 0));
-    if (z.d.split) {
+    if (z.d && z.d.split) {
       const dd = EX.zombies.find((x) => x.id === 'xiaozombie');
-      for (let i = 0; i < z.d.split; i++) {
+      for (let i = 0; i < (z.d ? z.d.split : 0); i++) {
         const nz = this.mkZ(dd, (r.def && r.def.mul) || 1);
         nz.x = z.x + (Math.random() - 0.5) * 30; nz.y = z.y + (Math.random() - 0.5) * 30;
         r.zombies.push(nz);
       }
     }
-    if (z.ai === 'boomer' && z.d.id !== 'zibao') this.boom(z);
+    if (z.ai === 'boomer' && (!z.d || z.d.id !== 'zibao')) this.boom(z);
     /* 表45 全局掉落掉率明细：按怪物来源精确掉落
      * 新增章节阶梯：globalDrops 的 ch 字段是「第几章起才掉」，此前全项目零引用
      * → 第 1 章打精英僵尸也会掉后期才该出现的稀有金属/角色碎片。
      * 现在按当前章节过滤，同一 item 取「已解锁的最高档」，低档自动被覆盖。 */
-    const srcName = z.isBoss ? ('BOSS' + (z.bossDef ? z.bossDef.n : (z.d.n || ''))) : (z.d.n || '');
+    const srcName = z.isBoss ? ('BOSS' + (z.bossDef ? z.bossDef.n : ((z.d && z.d.n) || ''))) : ((z.d && z.d.n) || '');
     const curCh = (r.def && r.def.ch) || (r.ch || 1);
     const table = EX.dropFor(srcName, curCh);
     const got = [];
@@ -4504,14 +4504,14 @@ const BT = {
     const zs = r.zombies.filter((z) => !z.dead).sort((a, b) => a.y - b.y);
     for (const z of zs) {
       const sc = this.depthScale(z.y);
-      const sz = (z.isBoss ? 58 : (z.d.elite ? 38 : 32)) * sc;
+      const sz = (z.isBoss ? 58 : ((z.d && z.d.elite) ? 38 : 32)) * sc;
       this._cardH = 0;
       if (this.card3d) {
-        const big1 = !!z.isBoss || !!z.d.elite;
+        const big1 = !!z.isBoss || !!(z.d && z.d.elite);
         const cw = sz * 1.14, ch = sz * 1.50;
         this._cardH = ch;
         this.drawCard(c, z.x, z.y + sz * 0.30, cw, ch,
-          z.isBoss ? 'boss' : (z.d.elite ? 'elite' : 'zombie'),
+          z.isBoss ? 'boss' : ((z.d && z.d.elite) ? 'elite' : 'zombie'),
           { t: r.time || 0, ph: ((z.id || z.x || 0) % 17) * 0.37,
             sw: z.isBoss ? 1 : 0.5, gloss: big1, glow: big1 });
       } else {
