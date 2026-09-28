@@ -80,10 +80,19 @@ const EX = {
       bullet: '普通弹', pierce: 0, pellets: 1, range: 35, spread: 2, recoil: '高', bspd: 850, icon: '⚙️', q: '紫', unlockLv: '3-1', slots: 3, crit: 0.05, critDmg: 1.5, dmgMin: 17, dmgMax: 23},
     { id: 'S01', n: '手雷', img: 'assets/icon/w_handgrenade.jpg', kind: '副', type: '投掷', dmg: 150, rate: 0.6, mag: 2, reload: 2.0,
       bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 0.8, er: 78, range: 30, icon: '🧨', q: '蓝', unlockLv: '1-3', slots: 2, crit: 0.08, critDmg: 1.5, dmgMin: 120, dmgMax: 180},
-    { id: 'S02', n: '燃烧瓶', img: 'assets/icon/w_molotov.jpg', kind: '副', type: '投掷', dmg: 80, rate: 0.6, mag: 2, reload: 2.0,
-      bullet: '燃烧弹', pierce: 0, pellets: 1, burn: 0.7, range: 28, icon: '🔥', q: '蓝', unlockLv: '2-2', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 60, dmgMax: 100},
-    { id: 'S03', n: '地雷', img: 'assets/icon/w_mine.jpg', kind: '副', type: '布置', dmg: 200, rate: 0.3, mag: 3, reload: 3.0,
-      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 1.0, er: 70, range: 20, icon: '💣', q: '紫', unlockLv: '3-2', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 160, dmgMax: 240},
+    /* S02/S03/S06 副武器输出校准
+     * 实测（1-1 普通、枪 10 级、逐把跑满 20 波）：
+     *   S02 燃烧瓶 → 第18波防线破    S03 地雷 → 第19波防线破
+     *   S06 烟雾弹 → 第18波防线破
+     * 而同为副武器的 S01 手雷 / S04 电击棒 / S05 闪光弹均能通关。
+     * 根因：这三把射速极低（0.3~0.6）且射程偏短（range 20~28 → 288~335px），
+     *   清怪速度跟不上刷怪，僵尸逐波堆积直到破防线。
+     *   玩家花金币解锁并升级它们，装备上反而必输 —— 属于"陷阱选项"。
+     * 现在上调射速与射程（S02/S03 同步补伤害），使其能撑满 20 波。 */
+    { id: 'S02', n: '燃烧瓶', img: 'assets/icon/w_molotov.jpg', kind: '副', type: '投掷', dmg: 150, rate: 1.0, mag: 6, reload: 1.8,
+      bullet: '燃烧弹', pierce: 0, pellets: 1, burn: 0.7, range: 32, icon: '🔥', q: '蓝', unlockLv: '2-2', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 115, dmgMax: 185},
+    { id: 'S03', n: '地雷', img: 'assets/icon/w_mine.jpg', kind: '副', type: '布置', dmg: 240, rate: 0.5, mag: 3, reload: 3.0,
+      bullet: '爆炸弹', pierce: 0, pellets: 1, explode: 1.0, er: 70, range: 28, icon: '💣', q: '紫', unlockLv: '3-2', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 190, dmgMax: 290},
     { id: 'S04', n: '电击棒', img: 'assets/icon/w_taser.jpg', kind: '副', type: '近战', dmg: 90, rate: 1.2, mag: 1, reload: 0.5,
       bullet: '近战', pierce: 0, pellets: 1, range: 14, icon: '⚡', q: '绿', unlockLv: '2-3', slots: 2, crit: 0.08, critDmg: 2.0, dmgMin: 70, dmgMax: 110},
     { id: 'W07', n: '轻机枪', img: 'assets/chibi/w07.png', kind: '主', type: '自动', dmg: 18, rate: 12, mag: 100, reload: 3.5,
@@ -104,8 +113,8 @@ const EX = {
       bullet: '近战', pierce: 1, pellets: 1, range: 16, spread: 0, recoil: '高', bspd: 300, icon: '🪚', q: '紫', unlockLv: '4-3', slots: 3, crit: 0.12, critDmg: 1.8, dmgMin: 95, dmgMax: 125},
     { id: 'S05', n: '闪光弹', img: 'assets/chibi/s05.png', kind: '副', type: '投掷', dmg: 25, rate: 0.5, mag: 3, reload: 2.5,
       bullet: '闪光弹', pierce: 0, pellets: 1, explode: 0.5, er: 70, stun: 1.2, range: 26, icon: '💫', q: '蓝', unlockLv: '3-1', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 15, dmgMax: 35},
-    { id: 'S06', n: '烟雾弹', img: 'assets/chibi/s06.png', kind: '副', type: '投掷', dmg: 18, rate: 0.5, mag: 3, reload: 2.5,
-      bullet: '烟雾弹', pierce: 0, pellets: 1, explode: 0.4, er: 80, chill: 0.5, range: 28, icon: '🌫️', q: '蓝', unlockLv: '3-2', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 10, dmgMax: 26},
+    { id: 'S06', n: '烟雾弹', img: 'assets/chibi/s06.png', kind: '副', type: '投掷', dmg: 45, rate: 0.8, mag: 3, reload: 2.5,
+      bullet: '烟雾弹', pierce: 0, pellets: 1, explode: 0.4, er: 80, chill: 0.5, range: 30, icon: '🌫️', q: '蓝', unlockLv: '3-2', slots: 2, crit: 0.05, critDmg: 1.5, dmgMin: 25, dmgMax: 65},
     { id: 'S07', n: '医疗包', img: 'assets/chibi/s07.png', kind: '副', type: '支援', dmg: 0, rate: 0.4, mag: 2, reload: 6.0,
       bullet: '治疗', pierce: 0, pellets: 1, heal: 260, range: 0, icon: '🩹', q: '紫', unlockLv: '4-1', slots: 2, crit: 0, critDmg: 1.0, dmgMin: 0, dmgMax: 0},
     { id: 'S08', n: '护盾发生器', img: 'assets/chibi/s08.png', kind: '副', type: '支援', dmg: 0, rate: 0.3, mag: 1, reload: 8.0,
