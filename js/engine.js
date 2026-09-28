@@ -326,6 +326,20 @@ const E = {
           *   rankRwGot=5      → 排名奖励【连领 3 次成功 3 次】
           * 归入 OBJS 后污染值一律重置为 {}，领取只能成功一次。 */
          'passClaimed', 'rankRwGot'],
+  /* 【昵称 / 他人名字安全化】补的是「长度 + 不可见字符」这一层。
+   * XSS 由 UI.esc 挡（实测 15 种 payload 全部未执行，无需再改），
+   * 但实测发现两处真实破坏：
+   *   ① 后台改档 / 云端下发可绕过前端 chkNick 的「2-8 字」校验，
+   *      500 字昵称把设置页「代号」一行撑到 3762px，整行溢出面板；
+   *   ② 控制字符（\u0000 \u0007）与换行会打断 DOM 文本排版。
+   * 所以这里统一：去控制字符 → 压空白 → 超长截断。 */
+  cleanName(v, max) {
+    let s = String(v == null ? '' : v);
+    s = s.replace(/[\u0000-\u001F\u007F]/g, '').replace(/\s+/g, ' ').trim();
+    const lim = max || 24;
+    if (s.length > lim) s = s.slice(0, lim) + '…';
+    return s;
+  },
   sanitize(p) {
     if (!p || typeof p !== 'object') return p;
     const N = (v, d) => { const n = Number(v); return isFinite(n) ? n : (d || 0); };
@@ -394,7 +408,9 @@ const E = {
     ['uid','name','char','skin','curLevel','gun'].forEach((k) => {
       const t = typeof p[k];
       if (p[k] == null) { p[k] = STRDEF[k] !== undefined ? STRDEF[k] : ''; return; }
-      if (t === 'string') return;
+      /* 只对【昵称】做清理。uid 是账号名、要用于登录与云端路径，
+       * 截断或改空白会直接让人登不上号，绝不能动。 */
+      if (t === 'string') { if (k === 'name') p[k] = this.cleanName(p[k], 24); return; }
       if (t === 'number' && isFinite(p[k])) { p[k] = String(p[k]); return; }
       p[k] = STRDEF[k] !== undefined ? STRDEF[k] : '';
     });
