@@ -873,8 +873,8 @@ r_tavern(p, tab) {
       <div style="display:flex;align-items:center;gap:8px">
         <div class="zav">🧟</div>
         <div class="grid4" style="flex:1">${(p.bag || []).filter((c)=>c&&c.id).slice(0, 4).map((c) =>
-          `<div class="gcell"><div class="gi" style="color:${EX.qColor[c.q]}">🔲</div>
-           <div class="gn" style="color:${EX.qColor[c.q]}">${c.q}品</div></div>`).join('')
+          `<div class="gcell"><div class="gi" style="color:${EX.qColor[this.chipQ(c)]}">🔲</div>
+           <div class="gn" style="color:${EX.qColor[this.chipQ(c)]}">${this.chipQ(c)}品</div></div>`).join('')
           || '<div class="lbl">未装芯片</div>'}</div>
         <div class="zav" style="background:linear-gradient(160deg,#78909c,#455a64)">🔫</div>
       </div></div>
@@ -883,23 +883,32 @@ r_tavern(p, tab) {
         const c = p.chips[s.k];
         return `<button class="lvc ${this.selChipSlot === s.k ? 'cur' : ''}" data-slot="${s.k}">
           <i style="font-size:18px;font-style:normal;display:block">${c ? '🔲' : '➕'}</i>
-          <b style="font-size:11px;color:${c ? EX.qColor[c.q] : '#6b7899'}">${c ? c.q + '品' : '空'}</b></button>`;
+          <b style="font-size:11px;color:${c ? EX.qColor[this.chipQ(c)] : '#6b7899'}">${c ? this.chipQ(c) + '品' : '空'}</b></button>`;
       }).join('')}</div>
       ${(() => { const c = (p.chips || {})[this.selChipSlot || EX.chipSlots[0].k];
         return c ? `<button class="btn n sm" data-chipoff="1" style="width:100%;margin-top:8px">卸下当前槽位芯片</button>`
                  : '<div class="lbl" style="margin-top:8px">选中槽位为空，无需卸下</div>'; })()}</div></div>
       <div class="card"><div class="card-t">可装备芯片</div>
       ${(p.bag || []).length ? (p.bag || []).filter((c) => c && c.id).map((c) => `<div class="item">
-        <div class="ic" style="border:1.5px solid ${EX.qColor[c.q] || '#b9c4d4'}">
+        <div class="ic" style="border:1.5px solid ${EX.qColor[this.chipQ(c)] || '#b9c4d4'}">
           <img src="assets/icon/i_chip.jpg" style="width:30px;height:30px;border-radius:6px;object-fit:cover"
                onerror="this.outerHTML='🔲'"></div>
-        <div class="info"><div class="nm" style="color:${EX.qColor[c.q]}">${E.chipName(c)}</div></div>
+        <div class="info"><div class="nm" style="color:${EX.qColor[this.chipQ(c)]}">${E.chipName(c)}</div></div>
         <div class="act"><button class="btn c sm" data-wear="${c.id}">装上</button></div></div>`).join('')
         : '<div class="lbl">背包内暂无芯片</div>'}</div>
       <button class="btn o" id="chipEquip" style="width:100%;margin:8px 0">装 备 芯 片</button>
       <div class="card"><div class="card-t">芯片图鉴 <span class="sub">资料 8 种</span></div>
       ${EX.chips.map((d) => `<div class="kv"><span style="color:${EX.qColor[d.q]}">${d.n}</span>
         <b style="font-size:11px">主+${(d.main.v * 100).toFixed(0)}%${d.subPool.length ? ' · 词条' + d.subPool.length : ''} · ${d.src}</b></div>`).join('')}</div>`;
+  },
+  /* 芯片品质：实例上若没有 q（老存档 / 后台改档 / 热更写入的芯片对象
+   * 常常只有 def），界面会直接显示「undefined品」并且品质色失效
+   * （EX.qColor[undefined] → undefined）。这里回退到芯片定义表的品质。 */
+  chipQ(c) {
+    if (!c) return '白';
+    if (c.q) return c.q;
+    const d = (window.E && E.chipDef) ? E.chipDef(c.def) : null;
+    return (d && d.q) || '白';
   },
   b_chip(p, tab) {
     const ce = $('#chipEquip');
@@ -1387,7 +1396,16 @@ r_tavern(p, tab) {
         /* 走 E.addStamina（带 STAMINA_MAX 钳制）而不是直接相加。
          * BUG：直接 `p.stamina + 60` 会突破上限（实测体力 50 买体力包 → 110/100），
          *      而其它所有体力来源都被钳在 100，界面上会出现「110/100」这种越界显示。 */
-        else if (k === 'stamina') { try { E.addStamina(p, g.give[k]); } catch (e) { p.stamina = Math.min(EX.STAMINA_MAX || 100, (p.stamina || 0) + g.give[k]); } }
+        /* 兜底分支此前与主分支同病：`(p.stamina||0) + g.give[k]` 在 g.give[k]
+         * 是字符串时做的是拼接（50 + '60' → '5060' → 被钳成 100 满体力）。
+         * 这里同样先过 Number 再相加，保证与 addStamina 同一口径。 */
+        else if (k === 'stamina') {
+          try { E.addStamina(p, g.give[k]); }
+          catch (e) {
+            const sv = Math.max(0, Number(g.give[k]) || 0);
+            p.stamina = Math.min(EX.STAMINA_MAX || 100, Math.max(0, Number(p.stamina) || 0) + sv);
+          }
+        }
         else if (k === 'gem') {
           /* 可镶嵌宝石：give: { gem: 'G_R' }
            * 修复：此前没有该分支，宝石类商品会落到 p.mat['gem']，
@@ -2580,6 +2598,11 @@ r_tavern(p, tab) {
       const r = E.useAd(p, 'AD03');
       if (!r.ok) return this.toast(r.msg, 'err');
       const got = E.addStamina(p, 10);
+      /* 与「广告」页签里同一个功能（#setAdStam2）此前不一致：那边调了 E.save(p)、
+       * 这边没调。看广告扣掉的 AD03 次数与加到的体力都只停在内存里，
+       * 玩家看完广告若未触发自动存档就退出/刷新，体力回退、等于白看一次。
+       * 两个入口必须同步落盘。 */
+      E.save(p);
       this.toast('体力 +' + got + '（今日剩余 ' + E.adLeft(p, 'AD03') + ' 次）', 'ok');
       this.open('set', '账号'); this.home();
     };
@@ -3162,6 +3185,10 @@ r_tavern(p, tab) {
         const rv = BT.revive ? BT.revive() : { ok: false, msg: '复活失败' };
         if (!rv.ok) return this.toast(rv.msg, 'err');
         this.hideResult();
+        /* 与同弹窗的「双倍奖励」(#rsAd2x) 不一致：那边结尾调了 MAIN.save()，
+         * 这边没有。AD01 的每日次数扣减只留在内存里，玩家复活后若未触发
+         * 自动存档就退出，次数回退 —— 与 addStamina 同类的「扣了没落盘」。 */
+        try { MAIN.save(); } catch (e) {}
         this.toast('💚 ' + rv.msg + '（今日剩 ' + E.adLeft(this.P, 'AD01') + ' 次）', 'ok');
         if (window.SND) SND.play('upgrade');
       };
