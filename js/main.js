@@ -1592,6 +1592,10 @@ function bindAll() {
 
   const px = document.getElementById('pnX'); if (px) px.onclick = () => UI.close();
   const pm = document.getElementById('pnMask'); if (pm) pm.onclick = () => UI.close();
+  /* BUG：面板左上角「◀」(#pnBack) 全项目 0 处绑定 onclick —— 实测 22 个面板里
+   * 它都可见（32×32、可命中、无遮挡），但点了【完全没反应】，玩家只能去找右上角的 ✕。
+   * 这里补上：行为与 ✕ 一致（关闭面板回到主界面）。 */
+  const pb = document.getElementById('pnBack'); if (pb) pb.onclick = () => UI.close();
 
   const bp = document.getElementById('btPause');
   if (bp) bp.onclick = () => { BT.paused = true; document.getElementById('pause').classList.add('on'); };
