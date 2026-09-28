@@ -244,6 +244,15 @@ const UI = {
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
   },
+  /* 他人名字 / 聊天文本的安全显示。
+   * esc() 已经能挡住 XSS（实测 15 种 payload 全部未执行），
+   * 但【超长与控制字符】挡不住：好友昵称、聊天消息、军团名都来自别的玩家
+   * 或后台下发，不走本机 sanitize(p.name)，实测 500 字昵称会把
+   * 设置页「代号」一行撑到 3762px 溢出面板。所以这里再叠一层 cleanName。 */
+  nm(v, max) {
+    const s = (window.E && E.cleanName) ? E.cleanName(v, max || 16) : String(v == null ? '' : v);
+    return this.esc(s);
+  },
 r_tavern(p, tab) {
     const hired = p.mercs || [];
     return `<div class="card"><div class="card-t">🍺 酒馆 · 雇佣兵
@@ -310,7 +319,7 @@ r_tavern(p, tab) {
       if (!lg) return '<div class="empty">尚未加入军团</div>';
       const mem = lg.members || [];
       return `<div class="card"><div class="card-t">成员 <span class="sub">${mem.length} 人</span></div>
-        ${mem.map((m) => `<div class="kv"><span>${this.esc(m.role || '成员')} ${this.esc(m.n)}</span><b>战力 ${E.fmt(m.pw || 0)}</b></div>`).join('')}
+        ${mem.map((m) => `<div class="kv"><span>${this.nm(m.role || '成员', 8)} ${this.nm(m.n)}</span><b>战力 ${E.fmt(m.pw || 0)}</b></div>`).join('')}
       </div>`;
     }
     if (lg) {
@@ -319,7 +328,7 @@ r_tavern(p, tab) {
       const totalPw = mem.reduce((s, m) => s + (m.pw || 0), 0);
       return `<div class="card" style="text-align:center">
         ${this.zAvatarHTML(lg.id, '')}
-        <div style="font-size:15px;font-weight:800;margin-top:6px;color:var(--yel)">${this.esc(lg.n)}</div>
+        <div style="font-size:15px;font-weight:800;margin-top:6px;color:var(--yel)">${this.nm(lg.n, 16)}</div>
         <div class="sub">${lg.lv || 1}级 · 成员 ${mem.length}/${lg.cap || 50} · 战力 ${E.fmt(Math.max(totalPw, E.power(p)))}</div>
       </div>
       <div class="card"><div class="card-t">战团</div>
@@ -1535,14 +1544,14 @@ r_tavern(p, tab) {
        * 对方发一句 <img src=x onerror=...> 你打开聊天就执行了。全部转义。 */
       return `<div class="card"><div class="card-t">聊天</div>
         ${msgs.length ? msgs.map((m) => `<div class="zrow">${this.zAvatarHTML(m.n)}
-          <div class="zi"><b>${this.esc(m.n || '匿名')}</b><span>${this.esc(m.t || '')}</span></div></div>`).join('')
+          <div class="zi"><b>${this.nm(m.n || '匿名')}</b><span>${this.nm(m.t || '', 40)}</span></div></div>`).join('')
         : '<div class="lbl">暂无消息</div>'}</div>`;
     }
     if (tab === '申请') {
       const reqs = p.friendReq || [];
       return `<div class="card"><div class="card-t">好友申请 <span class="sub">${reqs.length}</span></div>
         ${reqs.length ? reqs.map((r) => `<div class="zrow">${this.zAvatarHTML(r.id)}
-          <div class="zi"><b>${this.esc(r.n)}</b><span>战力 ${E.fmt(r.pw || 0)}</span></div>
+          <div class="zi"><b>${this.nm(r.n)}</b><span>战力 ${E.fmt(r.pw || 0)}</span></div>
           <button class="btn g sm" data-accept="${this.esc(r.id)}">接受</button></div>`).join('')
         : '<div class="lbl">暂无申请</div>'}</div>`;
     }
@@ -1551,7 +1560,7 @@ r_tavern(p, tab) {
       <span class="sub">${fs.length} 人 · 每个 +0.5% 攻击</span></div>
       ${fs.length ? fs.map((f) => `<div class="zrow">
         ${this.zAvatarHTML(f.id || f)}
-        <div class="zi"><b>${this.esc((f && f.n) || f.id || '未知')}</b><span>战力 ${E.fmt((f && f.pw) || 0)} · 可发送体力</span></div>
+        <div class="zi"><b>${this.nm((f && f.n) || f.id || '未知')}</b><span>战力 ${E.fmt((f && f.pw) || 0)} · 可发送体力</span></div>
         ${(function () {
           const today = E.dailyKey();   /* UTC+8 业务日，与签到/礼包限购同一基准（原为本地时区） */
           const sent = (p.sendStDate === today) ? (p.sendStTo || []) : [];
