@@ -754,9 +754,9 @@ r_tavern(p, tab) {
         return `<div class="item"><div class="ic" style="border:1.5px solid ${EX.qColor[g.q]}">${g.img
           ? `<img src="${g.img}" style="width:30px;height:30px;border-radius:6px;object-fit:cover">`
           : g.icon}</div>
-          <div class="info"><div class="nm"><span style="color:${EX.qColor[g.q]}">${g.q}</span> ${g.n} <span class="tag">${g.type}</span></div>
+          <div class="info"><div class="nm wrap"><span style="color:${EX.qColor[g.q]}">${g.q}</span> ${g.n} <span class="tag">${g.type}</span></div>
           <div class="sub wrap">${g.heal ? '治疗 ' + g.heal : g.shield ? '护盾 ' + g.shield : '伤害 ' + g.dmg} · 射速${g.rate}/s · 弹夹${g.mag} · 换弹${g.reload}s${g.range ? ' · 射程 ' + E.gunRange(g) : ''}${g.pellets > 1 ? ' · 弹丸' + g.pellets : ''}${g.pierce ? ' · 穿透' + g.pierce : ''}</div>
-          <div class="sub">${g.bullet}${ok ? '' : ' · 需通关 ' + g.unlockLv}</div></div>
+          <div class="sub wrap">${g.bullet}${ok ? '' : ' · 需通关 ' + g.unlockLv}</div></div>
           <div class="act">${!E.gunCanFight(g) ? '<span class="tag">支援</span>' : on ? '<span class="tag g">使用中</span>' : ok ? `<button class="btn c sm" data-gun="${g.id}">装备</button>` : '<span class="tag r">未解锁</span>'}</div></div>`;
       }).join('')}`).join('')}</div>`;
     }
@@ -1316,7 +1316,7 @@ r_tavern(p, tab) {
             const ga = (p.passClaimed || {})['p' + i + 'a'];
             return `<div class="zrow" style="${un ? '' : 'opacity:.5'}">
               <div class="zav">${un ? '🎖️' : '🔒'}</div>
-              <div class="zi"><b>Lv.${t.lv} ${t.n}</b><span>${un ? '可领取' : '通关 ' + t.lv + ' 关解锁'}</span></div>
+              <div class="zi"><b class="wrap">Lv.${t.lv} ${t.n}</b><span>${un ? '可领取' : '通关 ' + t.lv + ' 关解锁'}</span></div>
               <div style="display:flex;flex-direction:column;gap:3px">
                 <button class="btn sm" data-psn="${i}" ${(un && !gn) ? '' : 'disabled'}>${gn ? '已领' : '普通'}</button>
                 <button class="btn sm" data-psa="${i}" ${(un && !ga && p.passAdv) ? '' : 'disabled'} style="font-size:11px">${ga ? '已领' : '进阶'}</button>
@@ -1959,8 +1959,8 @@ r_tavern(p, tab) {
         return `<div class="item"><div class="ic">${isBoss ? '👹' : '🎯'}</div>
           <div class="info"><div class="nm">${l.id} ${l.n} ${isBoss ? '<span class="tag r">BOSS</span>' : ''}
             ${st ? '<span class="tag" style="background:' + (E.diffDef(diff).color || '#5fd97a') + '33">' + E.diffDef(diff).icon + '★' + st + '</span>' : ''}</div>
-          <div class="sub">${l.waves} 波 · 强度 ×${(Number(l.mul) || 1).toFixed(2)} · ${(Array.isArray(l.pool) ? l.pool : []).map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')}</div>
-          <div class="sub">${st ? '★'.repeat(st) : '未通关'} · 体力 ${cost} · 奖励：${this.rwTxt(rwv)}</div>
+          <div class="sub wrap">${l.waves} 波 · 强度 ×${(Number(l.mul) || 1).toFixed(2)} · ${(Array.isArray(l.pool) ? l.pool : []).map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')}</div>
+          <div class="sub wrap">${st ? '★'.repeat(st) : '未通关'} · 体力 ${cost} · 奖励：${this.rwTxt(rwv)}</div>
           ${lock ? '<div class="sub" style="color:#ff8fa4">需先通关 ' + l.unlock + '</div>' : ''}
           ${(!lock && dlock) ? '<div class="sub" style="color:#ff8fa4">需先通关「' + E.diffDef(E.diffDef(diff).unlock).n + '」难度</div>' : ''}</div>
           <div class="act">${lock ? '<span class="tag r">未解锁</span>'
@@ -2288,7 +2288,7 @@ r_tavern(p, tab) {
       <div class="card"><div class="card-t">后端接口 <span class="sub">表40 → GitHub 实现</span></div>
         ${(EX.APIS || []).map((a) => `<div class="kv">
           <span style="font-size:11px">${a.id} ${a.n}</span>
-          <b style="font-size:11px;color:var(--txt3)">${a.impl}</b></div>`).join('')}
+          <b class="wrapv" style="font-size:11px;color:var(--txt3)">${a.impl}</b></div>`).join('')}
       </div>
 
       <div class="card"><div class="card-t">资源命名规范 <span class="sub">表36 · 12 类</span></div>
@@ -2332,9 +2332,9 @@ r_tavern(p, tab) {
     }
     if (tab === '数值') {
       return `<div class="card"><div class="card-t">伤害公式 <span class="sub">资料 10 条</span></div>
-        ${EX.formulas.map((f) => `<div class="kv"><span style="font-size:11px">${f.n}</span><b style="font-size:11px">${f.f}</b></div>`).join('')}</div>
+        ${EX.formulas.map((f) => `<div class="kv"><span style="font-size:11px">${f.n}</span><b class="wrapv" style="font-size:11px">${f.f}</b></div>`).join('')}</div>
         <div class="card"><div class="card-t">成长曲线</div>
-        ${EX.growth.map((g) => `<div class="kv"><span style="font-size:11px">${g.n}</span><b style="font-size:11px">${g.curve}</b></div>`).join('')}</div>`;
+        ${EX.growth.map((g) => `<div class="kv"><span style="font-size:11px">${g.n}</span><b class="wrapv" style="font-size:11px">${g.curve}</b></div>`).join('')}</div>`;
     }
     const ac = window.UA ? UA.remembered() : {};
     return `<div class="card"><div class="card-t">账号 <span class="sub">账号密码登录</span></div>
