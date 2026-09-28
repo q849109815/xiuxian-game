@@ -305,6 +305,9 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
  * 这里让右侧值可收缩并省略，左侧标签不被挤掉。 */
 .kv{min-width:0}
 .kv b{max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 公式说明 / 接口路径这类长文本换行显示，别用省略号吞掉后半句
+ * （如"基础伤害 × (1 − 目标剩余护甲%)"、"PUT data/ss/players/{uid}.json"） */
+.kv b.wrapv{max-width:62%;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35;word-break:break-word}
 .empty{text-align:center;padding:26px 10px;color:var(--txt3);font-size:12px}
 .empty .ic{font-size:32px;display:block;margin-bottom:8px;opacity:.5}
 .btn{padding:8px 14px;border-radius:9px;font-size:12px;font-weight:700;
@@ -328,6 +331,8 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 .item .nm{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item .sub{font-size:11px;color:var(--txt3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .item .sub.wrap{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.4}
+/* 名称过长时换行显示，不要省略号吞掉"火焰喷射器"这类名字 */
+.item .nm.wrap{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
 .item .act{flex:0 0 auto}
 .tag{display:inline-block;padding:1px 6px;border-radius:8px;font-size:11px;font-weight:700;margin-right:3px}
 .tag.y{background:rgba(255,215,106,.18);color:var(--gold)}
@@ -791,6 +796,8 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)}
 .zrow .zi{flex:1;min-width:0}
 .zrow .zi b{display:block;font-size:13px;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 战令档位奖励名过长（如"Lv.20 枪械碎片×20"）时换行，不吞掉奖励内容 */
+.zrow .zi b.wrap{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
 .zrow .zi span{display:block;font-size:11px;color:var(--txt3);line-height:1.45}
 .zrow .st{font-size:11px;padding:2px 7px;border-radius:8px;font-weight:700}
 .zrow .st.on{background:rgba(126,217,87,.18);color:var(--grn);border:1px solid rgba(126,217,87,.4)}
@@ -1118,6 +1125,20 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 #cgModal.on{display:flex}
 #lvup{position:absolute;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.72)}
 #lvup.on{display:flex}
+/* 扫荡弹窗：与 #cgModal / #lvup 同一类问题 —— .modal 本身没有显隐与定位规则，
+ * #sweepBox 此前也未声明，于是保持 div 默认的 display:block 常驻文档流：
+ *   ① 空容器时是一条 393×6 的横条（带 3px 边框）挂在屏幕最顶端；
+ *   ② 填入内容后以普通文档流插在页面顶部（实测 top=52、高 800），
+ *      既不居中、没有半透明遮罩，z-index:auto 还会被其它弹窗盖住。
+ * 按同一写法补齐：默认隐藏，加 .on 才居中覆盖显示。 */
+#sweepBox{position:absolute;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.72)}
+#sweepBox.on{display:flex}
+/* 扫荡是"小设置弹窗"，不是底部抽屉：.pn-box 原本是 absolute top:52/bottom:0 的
+ * 全屏抽屉样式，直接复用会让这个只有两三行内容的弹窗被撑满整屏（实测高 794px，
+ * 卡片内容仅 283px，下方空一大片）。这里改回内容自适应的居中卡片。 */
+#sweepBox .pn-box{position:relative;inset:auto;width:min(92vw,360px);
+  max-height:82vh;height:auto;border-radius:26px !important;
+  border-bottom:3px solid var(--q-ink) !important}
 #cgModal .cg-box { position:relative; width:min(88vw,420px); border-radius:14px;
   overflow:hidden; background:#0d1420; border:2px solid rgba(255,201,60,.5);
   box-shadow:0 12px 40px rgba(0,0,0,.8); animation:cgIn .35s ease-out; }
