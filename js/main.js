@@ -1645,9 +1645,12 @@ function bindAll() {
     if ((UI.rfLeft == null ? 1 : UI.rfLeft) <= 0) {
       UI.toast('本局刷新次数已用完', 'warn'); return;
     }
+    /* 先刷新再扣次数：候选池为空时 refreshOffer 返回 false，
+     * 界面不会有任何变化，此时不扣次数、明确提示，避免「白扣一次」。 */
+    const did = BT.refreshOffer ? BT.refreshOffer() : false;
+    if (!did) { UI.toast('暂无其他可选技能', 'warn'); return; }
     UI.rfLeft = (UI.rfLeft == null ? 1 : UI.rfLeft) - 1;
     UI.toast('已刷新选项', 'ok');
-    BT.refreshOffer();
   };
 
   const ra = document.getElementById('rsAgain');
