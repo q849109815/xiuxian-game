@@ -1617,7 +1617,18 @@ function bindAll() {
   if (rl) rl.onclick = () => BT.reload();
 
   const cr = document.getElementById('chRefresh');
-  if (cr) cr.onclick = () => { UI.toast('已刷新选项', 'ok'); BT.refreshOffer(); };
+  /* BUG：此前刷新只调 BT.refreshOffer()，从不扣减 UI.rfLeft。
+   * 面板上写着「当局剩余观看次数 1/1」，实际 rfLeft 恒为 1、按钮永不置灰，
+   * 玩家可以无限刷新直到刷出想要的技能 —— 次数限制形同虚设。
+   * 现在先判余量、再扣减、再刷新，用尽后按钮置灰。 */
+  if (cr) cr.onclick = () => {
+    if ((UI.rfLeft == null ? 1 : UI.rfLeft) <= 0) {
+      UI.toast('本局刷新次数已用完', 'warn'); return;
+    }
+    UI.rfLeft = (UI.rfLeft == null ? 1 : UI.rfLeft) - 1;
+    UI.toast('已刷新选项', 'ok');
+    BT.refreshOffer();
+  };
 
   const ra = document.getElementById('rsAgain');
   if (ra) ra.onclick = () => { UI.hideResult(); startBattle(battleMode, battleLevel, battleDiff); };
