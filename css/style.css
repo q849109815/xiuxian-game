@@ -304,7 +304,13 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
  * 只对注册生效，云端下发与后台改档都能绕过），会把这一行撑到 3762px 溢出面板。
  * 这里让右侧值可收缩并省略，左侧标签不被挤掉。 */
 .kv{min-width:0}
-.kv b{max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* BUG：单行 nowrap + 省略号会把右侧值整段吞掉半句，实测
+ *   「看广告 +10 体力（剩 5）」130px 只显示 130/171、「每周击杀1000僵尸」79/110、
+ *   运营页 8 条版本说明全被截断 —— 玩家看不到这按钮到底给什么。
+ * 改为最多 3 行后省略：短数值不受影响，长说明完整显示，同时仍挡住
+ *   后台改档写进来的几百字昵称（不会撑破面板）。 */
+.kv b{max-width:62%;white-space:normal;word-break:break-word;line-height:1.35;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
 /* 公式说明 / 接口路径这类长文本换行显示，别用省略号吞掉后半句
  * （如"基础伤害 × (1 − 目标剩余护甲%)"、"PUT data/ss/players/{uid}.json"） */
 .kv b.wrapv{max-width:62%;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35;word-break:break-word}
@@ -328,8 +334,12 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 .item .ic{width:38px;height:38px;border-radius:9px;flex:0 0 auto;display:flex;
   align-items:center;justify-content:center;font-size:20px;background:rgba(10,16,28,.7)}
 .item .info{flex:1;min-width:0}
-.item .nm{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.item .sub{font-size:11px;color:var(--txt3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 名称/副标题：单行省略号会吞掉「1-10 BOSS·巨型丧尸 BOSS」（160→184）这类
+ * 关键信息，改为最多 2 行完整显示（内容够短时仍是单行，视觉不受影响）。 */
+.item .nm{font-size:12.5px;font-weight:700;white-space:normal;line-height:1.35;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.item .sub{font-size:11px;color:var(--txt3);margin-top:2px;white-space:normal;line-height:1.35;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .item .sub.wrap{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.4}
 /* 名称过长时换行显示，不要省略号吞掉"火焰喷射器"这类名字 */
 .item .nm.wrap{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
@@ -795,7 +805,11 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 .zrow{display:flex;align-items:center;gap:9px;padding:9px;border-radius:12px;margin-bottom:7px;
   background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)}
 .zrow .zi{flex:1;min-width:0}
-.zrow .zi b{display:block;font-size:13px;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 列表行标题：单行省略号吞掉「每周击杀1000僵尸」(79/110)、「限定称号-百人斩」
+ * (77/96)、运营页 8 条版本说明等 —— 改为最多 2 行完整显示。 */
+.zrow .zi b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  font-size:13px;color:var(--txt);overflow:hidden;white-space:normal;
+  word-break:break-word;line-height:1.35}
 /* 战令档位奖励名过长（如"Lv.20 枪械碎片×20"）时换行，不吞掉奖励内容 */
 .zrow .zi b.wrap{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
 .zrow .zi span{display:block;font-size:11px;color:var(--txt3);line-height:1.45}
@@ -1568,7 +1582,13 @@ input:focus,select:focus{outline:none;border-color:var(--q-y2) !important}
   position:static !important;right:auto !important;top:auto !important;
   background:none !important;border:none !important;box-shadow:none !important;
   padding:0 !important;font-size:14.5px !important;
+  /* BUG：上面那条旧规则里带了 z-index:2，而标题现在是 flex:1 的整行元素，
+   * 于是它盖在 ◀ / ✕ 两个圆钮之上 —— 真实手指点击时命中的是标题（纯文本，
+   * 点了没反应），关闭按钮等于失效。这里把层级还给按钮。 */
+  z-index:auto !important;
 }
+/* 头部两个圆钮必须高于标题层，否则点不到 */
+#pnX,.pn-back{position:relative;z-index:6}
 
 /* ---------- 主导航「战斗」：突出主行动（更大的糖果橙圆钮） ---------- */
 .hm-nav{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;
@@ -1593,17 +1613,25 @@ input:focus,select:focus{outline:none;border-color:var(--q-y2) !important}
 .hm-nav .hn.main i{font-size:27px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
 .hm-nav .hn.main span{color:#4a2100;font-size:11px;font-weight:900}
 .hm-nav .hn.main:active{transform:translateY(4px);box-shadow:0 1px 0 var(--q-o3)}
-/* 副导航：糖果紫气泡 */
-.hm-nav2{gap:5px;padding:6px 7px}
+/* 副导航：糖果紫气泡
+ * BUG：17 个入口原本是单行 flex + 横向滚动（总宽 876px），
+ *   而手机屏只有 360~430px —— 实测 360/393 屏有 10 个入口（背包/公告/邮件/
+ *   好友/宝石/活动/兑换/图鉴/排行/设置）完全在屏幕外，430 屏也有 9 个，
+ *   且界面上没有任何"可以滑动"的提示，玩家根本找不到这些功能。
+ * 改为 6 列自动换行网格，17 个入口全部一屏可见，不再依赖横向滑动。 */
+.hm-nav2{gap:5px;padding:6px 7px;
+  display:grid !important;grid-template-columns:repeat(6,1fr);
+  overflow:visible !important;flex-wrap:wrap}
 .hm-nav2 .hn2{
-  padding:5px 6px;border-radius:14px;
+  flex:1 1 auto !important;min-width:0 !important;width:100%;
+  padding:4px 2px;border-radius:14px;
   background:linear-gradient(180deg,#584a8f,#362c63);
   border:2.5px solid var(--q-ink);
   box-shadow:0 3px 0 var(--q-ink2),inset 0 2px 0 rgba(255,255,255,.14);
-  display:flex;flex-direction:column;align-items:center;gap:1px;
+  display:flex;flex-direction:column;align-items:center;gap:0;
 }
-.hm-nav2 .hn2 i{font-size:16px;font-style:normal}
-.hm-nav2 .hn2 span{font-size:11px;color:var(--q-txt2);font-weight:800}
+.hm-nav2 .hn2 i{font-size:15px;font-style:normal;line-height:18px}
+.hm-nav2 .hn2 span{font-size:11px;color:var(--q-txt2);font-weight:800;line-height:14px}
 .hm-nav2 .hn2:active{transform:translateY(3px);box-shadow:0 0 0 var(--q-ink2)}
 
 /* ---------- 导航红点：可领奖励 / 未读邮件提示 ---------- */
@@ -1673,7 +1701,7 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 /* 名称与描述改为完整显示：此前 line-clamp:2 把「金币2000+金属50+枪械碎片10+急救包3」
    这类描述砍掉一半（内容 58px / 可视 29px），玩家看不到商品到底给什么。
    格子已是 aspect-ratio:auto + min-height 自适应，去掉截断不会把布局顶坏。 */
-.gcell .gn{white-space:normal;overflow:visible;display:block;
+.gcell .gn{white-space:normal;overflow:visible;display:block;text-overflow:clip;
   -webkit-line-clamp:unset;text-align:center}
 .gcell .lbl{display:block;-webkit-line-clamp:unset;-webkit-box-orient:vertical;
   overflow:visible;text-align:center;line-height:1.35}
