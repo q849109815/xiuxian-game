@@ -285,6 +285,11 @@ input{font-family:inherit}
 .kv:last-child{border-bottom:none}
 .kv span{color:var(--txt2)}
 .kv b{font-weight:700}
+/* 超长文本兜底：昵称/代号若被后台改档写成几百字（前端 chkNick 的「2-8 字」
+ * 只对注册生效，云端下发与后台改档都能绕过），会把这一行撑到 3762px 溢出面板。
+ * 这里让右侧值可收缩并省略，左侧标签不被挤掉。 */
+.kv{min-width:0}
+.kv b{max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .empty{text-align:center;padding:26px 10px;color:var(--txt3);font-size:12px}
 .empty .ic{font-size:32px;display:block;margin-bottom:8px;opacity:.5}
 .btn{padding:8px 14px;border-radius:9px;font-size:12px;font-weight:700;
@@ -770,7 +775,7 @@ input{font-family:inherit}
 .zrow{display:flex;align-items:center;gap:9px;padding:9px;border-radius:12px;margin-bottom:7px;
   background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)}
 .zrow .zi{flex:1;min-width:0}
-.zrow .zi b{display:block;font-size:13px;color:var(--txt)}
+.zrow .zi b{display:block;font-size:13px;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .zrow .zi span{display:block;font-size:11px;color:var(--txt3);line-height:1.45}
 .zrow .st{font-size:11px;padding:2px 7px;border-radius:8px;font-weight:700}
 .zrow .st.on{background:rgba(126,217,87,.18);color:var(--grn);border:1px solid rgba(126,217,87,.4)}
