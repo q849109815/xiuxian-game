@@ -478,8 +478,18 @@ const E = {
   },
   addStamina(p, v) {
     this.tickStamina(p);
-    const before = p.stamina || 0;
-    const after = Math.min(EX.STAMINA_MAX, before + v);
+    /* 入参收紧：v 此前直接参与 `before + v`，而商店/热更/后台表单里的
+     * 数量经常是【字符串】—— 此时 `+` 做的是拼接而不是加法：
+     *   实测 stamina=50、v='10' → '5010' → Math.min(100, 5010) = 100
+     *   玩家花 50 钻买「体力包 +60」，结果【直接被灌满 100】。
+     * 非数字（'CH01' / {} / NaN / undefined）则算出 NaN，
+     * 体力永久损坏、此后任何扣减都失败（进不了关）。
+     * 负数会把体力减成负值（实测 -999 → -949）。
+     * 现在统一按 safeAmt 取正，并同时钳住上下限。 */
+    const raw = Number(p.stamina);
+    const before = Math.max(0, isFinite(raw) ? raw : 0);
+    const add = this.safeAmt(v);
+    const after = Math.min(EX.STAMINA_MAX, before + add);
     p.stamina = after;
     /* 返回【实际增加量】而不是增加后的总量
      * BUG：此前返回 p.stamina（总量），调用方无从判断到底加没加。
@@ -2728,8 +2738,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   },
 
   openChest(p, times) {
-    const t = Math.max(1, Math.min(10, times || 1));
-    const have = (p.mat || {}).I04 || 0;   /* 宝箱道具 I04 */
+    /* 入参收紧：times 非数字时 `Math.min(10,'CH01')` 得 NaN，
+     * 而下面的守卫写的是 `if (have < t)` —— NaN 参与比较恒为 false，
+     * 于是检查【永远通过】，紧接着 `p.mat.I04 = have - t` 把宝箱数量写成 NaN。
+     * 实测：宝箱数变 NaN 后再点开箱，守卫依旧放行（NaN<NaN 也为 false），
+     * 每次都弹「开启 N 个宝箱」却什么也开不出来，宝箱道具彻底报废。
+     * 这里统一按 1~10 取整，非法值按 1 次处理。 */
+    const t = Math.max(1, Math.min(10, this.safeAmt(times) || 1));
+    const have = this.safeAmt((p.mat || {}).I04);   /* 宝箱道具 I04 */
     if (have < t) return { ok: false, msg: '宝箱不足（现有 ' + have + '）' };
     p.mat.I04 = have - t;
     const got = {};
@@ -2750,11 +2766,16 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     return r;
   },
   grantByMap(p, map) {
+    /* 类型守卫：与 grant() 同一类坑。Object.keys('CH01') 返回 ['0','1',...]，
+     * 会把字符串逐字符写进 p.mat（实测 p.mat['0']='C'、p.mat['1']='H'），
+     * 往材料背包里塞垃圾键。当前调用点只传对象，但 grant() 之前正是
+     * 被表22 的 rw 描述字符串击穿过，这里补上同一道防线。 */
+    if (!map || typeof map !== 'object' || Array.isArray(map)) return 0;
     p.mat = p.mat || {};
-    Object.keys(map || {}).forEach((k) => {
-      if (k === 'gold') p.gold = (p.gold || 0) + map[k];
-      else if (k === 'diamond') p.diamond = (p.diamond || 0) + map[k];
-      else p.mat[k] = (p.mat[k] || 0) + map[k];
+    Object.keys(map).forEach((k) => {
+      if (k === 'gold') p.gold = (p.gold || 0) + this.safeAmt(map[k]);
+      else if (k === 'diamond') p.diamond = (p.diamond || 0) + this.safeAmt(map[k]);
+      else p.mat[k] = (this.safeAmt(p.mat[k])) + this.safeAmt(map[k]);
     });
   },
 
