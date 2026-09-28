@@ -470,6 +470,8 @@ const BT = {
        * 而 hurtPlayer() 也不读它 → 护甲养成线（天赋/芯片/皮肤/角色表）全废 */
       armor: Number(a.armor) || 0,
       poison: 0, poisonT: 0, hitFlash: 0,
+      /* 麻痹（电磁僵尸「电弧」）：命中后玩家短暂无法开火 */
+      paraT: 0,
       boss: null, bossPhase: 0, warned: false,
       /* 难度（普通/困难/恶魔）：倍率在关卡强度 mul 之上再乘一层 */
       diff: (E.diffDef ? E.diffDef(opt.diff).id : 'normal'),
@@ -1013,6 +1015,9 @@ const BT = {
       }
     }
 
+    /* --- 麻痹（电磁僵尸电弧）：期间玩家无法开火 --- */
+    if (Number(r.paraT) > 0) { r.paraT -= dt; if (r.paraT <= 0) r.paraT = 0; }
+
     /* --- 中毒 --- */
     if (r.poisonT > 0) {
       r.poisonT -= dt;
@@ -1079,8 +1084,18 @@ const BT = {
         z.atkCd -= dt;
         if (z.atkCd <= 0 && dist < z.atkR) {
           z.atkCd = 2.2;
-          if (z.d && z.d.poison) this.shootEnemy(z, 'poison');
-          else r.pools.push({ x: z.x, y: z.y + 30, r: 44, dps: z.dmg, life: 3.2, max: 3.2 });
+          /* 远程僵尸的投射物此前一律「在自己脚下生成液池」或发出 dmg:0 的弹，
+           * 而玩家在屏幕下方、僵尸停在 120~150px 外 —— 液池永远够不到玩家，
+           * 毒弹 dmg 为 0 且没有任何与玩家的碰撞判定。
+           * 实测：6 种远程僵尸（含精英「毒僵尸」「护士僵尸」）打满 14 秒，
+           *   防线掉血全部为 0 —— 它们的攻击完全无效。
+           * 现在统一改为：朝玩家发射真实投射物，命中后按类型结算。 */
+          const _zd = z.d || {};
+          let _kind = 'acid';
+          if (_zd.para || z.id === 'dianci') _kind = 'shock';
+          else if (_zd.wind || z.id === 'fengren') _kind = 'wind';
+          else if (_zd.poison) _kind = 'poison';
+          this.shootEnemy(z, _kind, z.dmg, _zd.pool);
           /* 【表03 FX_WindSlash / FX_PoisonCloud】远程僵尸攻击的可见弹道。
            * 此前风刃僵尸「喷吐」画面上什么都不出现，玩家只看到自己莫名掉血。 */
           if (r.efx && r.efx.length < 90) {
@@ -1154,6 +1169,14 @@ const BT = {
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.x < -20 || b.x > this.W + 20 || b.y < -20 || b.y > this.H + 20) b.life = 0;
       if (b.life <= 0) continue;
+      /* 敌方投射物：只与玩家碰撞（此前完全没有命中判定，dmg 还是 0，
+       *   六种远程僵尸的攻击等于摆设）。命中后按类型结算并销毁。 */
+      if (b.enemy) {
+        if (this.segDist(b.px0, b.py0, b.x, b.y, r.px, r.py) < 30) {
+          this.enemyBulletHit(b); b.life = 0;
+        }
+        continue;                       /* 敌方弹不打僵尸，跳过下面的命中循环 */
+      }
       /* 子弹击中障碍物/油桶（表28） */
       const ob = this.hitObstacle(b.x, b.y);
       if (ob) {
@@ -1662,6 +1685,8 @@ const BT = {
 
   shoot(tg) {
     const r = this.run;
+    /* 电磁僵尸「电弧」命中后短暂麻痹：期间完全无法开火，到期自动恢复 */
+    if (Number(r.paraT) > 0) return;
     if (r.mag <= 0) return;
     r.mag--;
     const base = Math.atan2(tg.y - r.py, tg.x - r.px);
@@ -1790,13 +1815,39 @@ const BT = {
     r.reloadT = _rt;
   },
 
-  shootEnemy(z, kind) {
+  shootEnemy(z, kind, dmg, poolDur) {
     const r = this.run;
     const a = Math.atan2(r.py - z.y, r.px - z.x);
     r.bullets.push({
-      x: z.x, y: z.y, vx: Math.cos(a) * 240, vy: Math.sin(a) * 240,
-      dmg: 0, pierce: 0, life: 2.4, hit: [], enemy: true, kind,
+      x: z.x, y: z.y, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300,
+      dmg: Number(dmg) || 0, pierce: 0, life: 2.4, hit: [], enemy: true,
+      kind: kind || 'acid', pool: Number(poolDur) || 0,
+      dot: Number((z.d && z.d.poison) || 0), src: (z.d && z.d.n) || '',
     });
+  },
+
+  /* 敌方投射物命中玩家：按类型结算（毒 / 腐蚀液池 / 风刃 / 电弧麻痹） */
+  enemyBulletHit(b) {
+    const r = this.run;
+    if (Number(b.dmg) > 0) this.hurtPlayer(b.dmg, b.src || '远程');
+    if (b.kind === 'poison') {
+      /* 中毒 DoT：与 hurtPlayer('poison') 同口径 */
+      r.poison = Math.max(Number(r.poison) || 0, Number(b.dot) || 4);
+      r.poisonT = Math.max(Number(r.poisonT) || 0, 4);
+    } else if (b.kind === 'shock') {
+      r.paraT = Math.max(Number(r.paraT) || 0, 0.8);
+      if (!r._paraToast) { r._paraToast = 1; try { if (window.SND) SND.play('hit'); } catch (e) {} }
+      setTimeout(() => { r._paraToast = 0; }, 1200);
+    } else if (b.kind === 'acid') {
+      /* 腐蚀液：在玩家脚下留下液池（此前生在僵尸自己脚下，永远打不到人） */
+      const dur = Number(b.pool) || 3.2;
+      r.pools.push({ x: r.px + (Math.random() * 40 - 20), y: r.py + 20,
+        r: 46, dps: (Number(b.dmg) || 8) * 0.6, life: dur, max: dur });
+    }
+    if (r.efx && r.efx.length < 90) {
+      const t = b.kind === 'shock' ? 'shock' : b.kind === 'wind' ? 'wind' : b.kind === 'poison' ? 'poison' : 'explode';
+      r.efx.push({ t, x: r.px, y: r.py, r: 42, life: 0.45, max: 0.45 });
+    }
   },
 
   /* 线段 (x1,y1)-(x2,y2) 到点 (px,py) 的最短距离
@@ -2317,6 +2368,7 @@ const BT = {
   clearDoT(r) {
     if (!r) return;
     r.wallBurn = 0; r.wallBurnT = 0; r._burnToast = 0;
+    r.paraT = 0;
     r.poison = 0; r.poisonT = 0;
     r.chill = 0; r.chillT = 0; r.chillMul = 1; r._chillToast = 0;
     if (Array.isArray(r.pools)) {
@@ -4820,6 +4872,7 @@ const BT = {
       };
       if (Number(r.wallBurnT) > 0) badge('🔥 灼烧', '#ff9a3c', Number(r.wallBurnT) / 3);
       if (Number(r.chillT) > 0) badge('❄️ 寒霜', '#5fd8ff', Number(r.chillT) / 2.5);
+      if (Number(r.paraT) > 0) badge('⚡ 麻痹', '#c79bff', Number(r.paraT) / 0.8);
     } catch (e) {}
 
     /* 当前外观：优先皮肤立绘 → 角色立绘 → 头像立绘。
