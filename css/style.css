@@ -373,6 +373,14 @@ input{font-family:inherit}
 
 /* ============ 结算 ============ */
 #result{position:absolute;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
+/* 小屏（≤360×640）结算框内容可达 788px，高于可视区：
+ * 原来 align-items:center 且无可滚动，导致上下同时被裁 ——
+ * 顶部标题被切、「再挑战 / 返回」按钮跑到屏幕外点不到。
+ * 改为 flex-start + 子块 margin:auto：有空间时仍居中，超高时可滚动。 */
+#result,#pause,#choice,#cgModal,#lvup,#sweepBox{align-items:flex-start;overflow-y:auto;overscroll-behavior:contain}
+#result>*,#pause>*,#choice>*,#cgModal>*,#lvup>*,#sweepBox>*{margin:auto}
+#result::-webkit-scrollbar,#pause::-webkit-scrollbar,#choice::-webkit-scrollbar{width:0}
+
 #result.on{display:flex}
 .rs-mask{position:absolute;inset:0;background:rgba(4,8,16,.85)}
 .rs-box{position:relative;width:100%;max-width:320px;padding:22px 18px;border-radius:16px;
@@ -1044,11 +1052,13 @@ input{font-family:inherit}
   color:var(--txt3);padding:0 2px}
 .lg-keep{display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none}
 .lg-keep input{width:14px;height:14px;accent-color:var(--gold);margin:0}
-.lg-row a{color:var(--yel);text-decoration:none}
+.lg-row a{color:var(--yel);text-decoration:none;
+  display:inline-flex;align-items:center;min-height:32px;padding:0 6px;margin:-6px -6px}
 .lg-row a:hover{text-decoration:underline}
 .lg-tip{min-height:16px;font-size:11.5px;color:#ff8fa4;text-align:center;line-height:1.5}
 .lg-reg{font-size:12px;color:var(--txt3);text-align:center;margin-top:2px}
-.lg-reg a{color:var(--gold);text-decoration:none;font-weight:700}
+.lg-reg a{color:var(--gold);text-decoration:none;font-weight:700;
+  display:inline-flex;align-items:center;min-height:32px;padding:0 8px}
 .lg-reg a:hover{text-decoration:underline}
 .lg-gender{display:flex;gap:8px}
 .lg-gender .gd{flex:1;padding:9px 0;border-radius:9px;border:1px solid var(--line);
@@ -1626,3 +1636,18 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
   -webkit-line-clamp:unset;text-align:center}
 .gcell .lbl{display:block;-webkit-line-clamp:unset;-webkit-box-orient:vertical;
   overflow:visible;text-align:center;line-height:1.35}
+
+/* 矮屏（≤700px 高，如 360×640 的小屏手机）结算页内容比可视区高约 200px，
+ * 不压缩就得滚动才能点到「下一关 / 再挑战 / 返回」。整体收紧一档。 */
+@media (max-height:700px){
+  .rs-box{padding:14px 14px}
+  .rs-t{font-size:19px;letter-spacing:2px}
+  .rs-lv{margin:4px 0 9px;font-size:11px}
+  .rs-grid{gap:6px;margin-bottom:10px}
+  .rs-i{padding:6px 7px}
+  .rs-i .v{font-size:13px}
+  .rs-i .l{font-size:11px;margin-top:1px}
+  .rs-dmg{margin-top:8px}
+  .rs-btns{gap:6px}
+  .rs-b{padding:9px;font-size:12.5px}
+}
