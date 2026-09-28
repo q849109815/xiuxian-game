@@ -2067,10 +2067,19 @@ const BT = {
         const qmap = { C01: '白', C02: '蓝', C03: '红' };
         if (qmap[it.item] && window.E && E.giveChipByQuality) {
           for (let i = 0; i < it.n; i++) E.giveChipByQuality(this.P, qmap[it.item]);
+          /* 局内芯片收获累计：结算面板此前只显示关卡表配的 chip，
+           * 战斗中打出来的芯片一行都不显示 */
+          r.chipGain = (r.chipGain || 0) + it.n;
           txt.push('芯片+' + it.n);
           return;
         }
         this.P.mat[it.item] = (this.P.mat[it.item] || 0) + it.n;
+        /* 局内材料收获累计：拾取时背包立刻 +n（有飘字），
+         * 但结算面板的 rw.mat 只统计【关卡表奖励】——
+         * 实测 1-1 通关实际拿到 158 合金 + 8 零件，面板却只显示 5 合金，
+         * 玩家打完不知道自己捞了多少。这里累计供结算面板合并显示。 */
+        r.matGain = r.matGain || {};
+        r.matGain[it.item] = (r.matGain[it.item] || 0) + it.n;
         txt.push((E.itemName ? E.itemName(it.item) : it.item) + '+' + it.n);
       });
       this.addFloat(d.x, d.y - 12, txt.join(' '), 'gold');
@@ -2091,10 +2100,24 @@ const BT = {
        * 第 10 章 rwMul≈131，击杀一只普通僵尸已有 395 金币，
        * 升一级却只给 200 —— 后期「升级」奖励还不如杀半只怪，
        * 局内升级的正反馈完全消失。现在按本关 rwMul 同步缩放。 */
-      const lvRw = Math.round(200 * Math.max(1, Number(r.rwMul) || 1));
+      /* 升级奖励进【局内炮台金币】r.coin，且刻意【不随章节倍率 rwMul 放大】。
+       *
+       * 此前直接写进 P.gold（永久金币）且按 rwMul 放大，实测三个后果：
+       *   ① 结算面板只统计 r.gold + 关卡奖励，这笔钱一行都不显示 ——
+       *      1-1 通关实测：面板 1130，实际到账 3230，差的 2100
+       *      全部来自这里（局内升 10 级 × 200），玩家看到的与拿到的是两个数；
+       *   ② 变成一条绕过结算的刷币通道：第 10 章 rwMul≈131，
+       *      一次升级给 26200 永久金币，一局升 15 级 ≈ 39 万 ——
+       *      比该关 26 万的关卡奖励还高，且完全不出现在结算上；
+       *   ③ 破坏刚调平的局内经济：coin（建炮台用）是不放大的，
+       *      升级奖励却按 rwMul 放大，各章节「一关能建几座」的一致性被打破。
+       *
+       * 现在与击杀 coin 同口径：不放大、只吃金币天赋，升级当场就能拿去建塔，
+       * 既保住「局内升级 → 立刻变强」的正反馈，也不再偷偷灌永久金币。 */
+      const lvRw = Math.round(200 * (1 + (E.talentVal(this.P, 'gold') || 0)));
       if (window.UI && UI.showLvUp) UI.showLvUp(r.lv, lvRw);
       if (window.UI && UI.guideTrigger) UI.guideTrigger('firstUpgrade');
-      if (this.P) { this.P.gold = (this.P.gold || 0) + lvRw; }
+      r.coin = (Number(r.coin) || 0) + lvRw;
       /* 严重BUG：此前每升一级立刻 offerSkills()，
        * 一次吃掉大量经验连升 5 级就会连调 5 次：
        *  ① this._picks 被后一次覆盖 → 玩家只能看到最后 1 组候选，
