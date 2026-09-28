@@ -2887,6 +2887,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 现统一为：镶嵌占用 1 颗（背包 -1），卸下/更换时完整返还。 */
   setGem(p, id) {
     const prev = p.gemOn;
+    /* 【一颗宝石无限镶嵌 BUG 修复】
+     * 旧逻辑：先无条件把已镶嵌宝石【退回背包】，再扣 1 颗重新镶嵌。
+     * 于是当 id === prev（同一颗）时：退回 +1 → 再扣 -1，数量永远守恒，
+     * 每次都返回 ok —— 玩家手里只有 1 颗宝石，却可以【永远点下去】，
+     * 每次都弹"镶嵌成功"，看起来像在无限镶嵌。
+     * 现在同颗重复镶嵌直接拒绝，并给出明确提示。 */
+    if (id && prev === id) return { ok: false, msg: '该宝石已经镶嵌在装备上' };
     if (prev) { p.gems = p.gems || {}; p.gems[prev] = (p.gems[prev] || 0) + 1; p.gemOn = null; }
     if (!id) { E.save && E.save(p); return { ok: true, msg: '已卸下宝石' }; }
     if (!((p.gems || {})[id] > 0)) return { ok: false, msg: '该宝石数量不足' };
