@@ -2195,18 +2195,40 @@ const BT = {
   },
   pickSkill(id) {
     const r = this.run;
-    r.skills[id] = (r.skills[id] || 0) + 1;
+    const def = EX.skills.find((s) => s.id === id);
+    if (!def) return { ok: false, msg: '技能不存在' };
+    /* 防连点：选项必须在「当前打开的这一组」里，且选完立刻作废。
+     * 此前玩家在同一张卡上快速点两下（手机上手快很常见），两次调用都会
+     * 走进来，技能直接 +2 级、升级次数却只消耗 1 次 —— 白拿一级。
+     * 现在：没有打开的选项 / 选项已失效 → 直接拒绝。 */
+    if (!this._picks || !this._picks.length) return { ok: false, msg: '当前没有可选的升级' };
+    if (!this._picks.some((s) => s.id === id)) return { ok: false, msg: '该选项已失效' };
+    /* 防御：等级不得越过 def.max。
+     * 实测把技能先设成满级再选一次，等级会变成 max+1（10→11），
+     * applyMods 随后按 11 级计算加成，超出技能设计上限。
+     * 正常流程里 UI 只展示未满级的卡、点不到满级项，但：
+     *   ① 快速连点（卡片 on 移除前的几十毫秒窗口）可能连调两次；
+     *   ② 后台改档/热更把 max 改小后，旧存档等级会悬在上限之上。
+     * 这里统一钳住，并把等级回落到上限。 */
+    const cur = Number(r.skills[id]) || 0;
+    if (cur >= def.max) {
+      if (cur > def.max) r.skills[id] = def.max;
+      return { ok: false, msg: def.n + ' 已满级' };
+    }
+    r.skills[id] = cur + 1;
     this.applyMods();
     /* 死代码已移除：原为 `if (id === 'hudun') { r.maxShield += 120; ... }`
      * 但 EX.skills 里根本没有 id 为 'hudun' 的技能（18 个技能见 config），
      * 该判断恒为 false，从未执行过一次。护盾的正规来源是 I02 护盾发生器
      * 与（未来的）stat:'shield' 天赋/芯片，走 applyItem / applyMods。 */
-    UI.toast('✨ ' + EX.skills.find((s) => s.id === id).n + ' Lv.' + r.skills[id], 'ok');
+    UI.toast('✨ ' + def.n + ' Lv.' + r.skills[id], 'ok');
+    this._picks = null;      /* 本组选项作废，杜绝同一张卡被点到第二次 */
     this.paused = false;
     /* 连升多级时，选完这一组后若还有未使用的升级次数，继续弹下一组 */
     if (this._pendingOffers > 0) {
       setTimeout(() => { if (this.run && !this.run.over) this.flushOffers(); }, 60);
     }
+    return { ok: true, lv: r.skills[id], msg: def.n + ' Lv.' + r.skills[id] };
   },
   applyMods() {
     const r = this.run;
@@ -2284,6 +2306,26 @@ const BT = {
     this.on = false; this.stopLoop();
     if (this.cb) this.cb('win', { kills: r.kills, time: r.time, rw: { gold: r.gold, diamond: 0 }, lv: r.lv });
   },
+  /* 复活时统一清除我方身上的持续伤害状态。
+   * 此前 onLose 的天赋复活只回血、不清状态，revive 的广告复活只清 poison：
+   *   ① 灼烧 wallBurn / 中毒 poison / 寒霜 chill 全部残留；
+   *   ② 防线脚下的腐蚀液池 r.pools 也还在；
+   * 结果是玩家（花大量金币点满的复活天赋）复活后血量条照样在掉、
+   * 射速照样被冻着，血量处于临界时会连续触发 onLose，
+   * 把 3 次复活在 1 秒内全部耗光，玩家只会觉得「复活天赋是坏的」。
+   * 现在：血量/护盾回满 + 清 DoT + 清掉压在防线上的腐蚀池。 */
+  clearDoT(r) {
+    if (!r) return;
+    r.wallBurn = 0; r.wallBurnT = 0; r._burnToast = 0;
+    r.poison = 0; r.poisonT = 0;
+    r.chill = 0; r.chillT = 0; r.chillMul = 1; r._chillToast = 0;
+    if (Array.isArray(r.pools)) {
+      const px = r.px != null ? r.px : this.W / 2;
+      const py = r.py != null ? r.py : this.H - 58;
+      r.pools = r.pools.filter((pl) => !(Math.hypot(px - pl.x, py - pl.y) < (pl.r || 0) + 40));
+    }
+  },
+
   onLose() {
     try { if (window.VO) VO.say('VO_008'); } catch (e) {}
     const r = this.run; if (r.over) return;
@@ -2291,6 +2333,7 @@ const BT = {
       r.reviveLeft--;
       r.wallHp = r.wallMax != null ? r.wallMax : r.maxHp;
       r.hp = r.wallHp; r.shield = Number(r.maxShield) || 0;
+      this.clearDoT(r);
       for (const z of r.zombies.slice()) {
         if (Math.hypot(z.x - r.px, z.y - r.py) < 190) z.dead = true;
       }
@@ -2314,7 +2357,8 @@ const BT = {
     r.wallHp = (r.wallMax != null ? r.wallMax : r.maxHp);
     r.hp = r.wallHp;
     r.shield = r.maxShield || 0;
-    r.poison = 0; r.poisonT = 0;
+    /* 此前只清了 poison，灼烧/寒霜/腐蚀池同样残留，改走统一清除 */
+    this.clearDoT(r);
     /* 清掉贴近防线的僵尸，避免复活瞬间再次被秒 */
     for (const z of r.zombies.slice()) {
       if (Math.hypot(z.x - (r.px || this.W / 2), z.y - (r.py || this.H - 58)) < 190) {
