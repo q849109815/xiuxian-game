@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>向僵尸开炮</title>
-<link rel="stylesheet" href="css/style.css?v=20261009a">
+<link rel="stylesheet" href="css/style.css?v=20261010a">
 </head>
 <body>
 
@@ -303,17 +303,48 @@
   align-items:center;justify-content:center;font-family:inherit">
 </div>
 
-<script src="js/net.js?v=20261009a"></script>
-<script src="js/config.js?v=20261009a"></script>
-<script src="js/ops.js?v=20261009a"></script>
-<script src="js/engine.js?v=20261009a"></script>
-<script src="js/chibi.js?v=20261009a"></script>
-<script src="js/battle.js?v=20261009a"></script>
-<script src="js/ui.js?v=20261009a"></script>
+<script>
+/* 手机软键盘适配：把可视高度写进 --vvh，供 #app 使用。
+ * 背景：点输入框弹出软键盘后，可视高度从 852 压到 ~400，
+ * 若仍按 100vh 布局，登录框会被顶到可视区之外看不见；
+ * CSS 侧也据此回落，不依赖具体浏览器对 vh 的实现差异。 */
+(function () {
+  function kbFit() {
+    var st = document.documentElement.style, vv = window.visualViewport;
+    var vh = vv ? vv.height : window.innerHeight;
+    var ih = window.innerHeight;
+    /* 只有"确实被键盘压矮了"才覆盖，桌面端/无键盘时保持 100vh 不动 */
+    if (ih - vh > 60) {
+      st.setProperty('--vvh', Math.round(vh) + 'px');
+      /* 打上标记：登录页改为顶部对齐 + 可滚动。
+       * 否则 524px 高的登录框在 ~400px 的可视区里居中会【上下各溢出 62px】，
+       * 顶部的标题和底部的按钮同时被切掉且滚不到。 */
+      document.documentElement.setAttribute('data-kb', '1');
+    } else {
+      st.removeProperty('--vvh');
+      document.documentElement.removeAttribute('data-kb');
+    }
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', kbFit);
+    window.visualViewport.addEventListener('scroll', kbFit);
+  }
+  window.addEventListener('resize', kbFit);
+  window.addEventListener('orientationchange', function () { setTimeout(kbFit, 300); });
+  kbFit();
+})();
+</script>
+<script src="js/net.js?v=20261010a"></script>
+<script src="js/config.js?v=20261010a"></script>
+<script src="js/ops.js?v=20261010a"></script>
+<script src="js/engine.js?v=20261010a"></script>
+<script src="js/chibi.js?v=20261010a"></script>
+<script src="js/battle.js?v=20261010a"></script>
+<script src="js/ui.js?v=20261010a"></script>
 <!-- qr.js 已移除：登录改为账号密码，扫码功能不再使用（原引用 404） -->
-<script src="js/user.js?v=20261009a"></script>
-<script src="js/audio.js?v=20261009a"></script>
-<script src="js/main.js?v=20261009a"></script>
+<script src="js/user.js?v=20261010a"></script>
+<script src="js/audio.js?v=20261010a"></script>
+<script src="js/main.js?v=20261010a"></script>
 </div>
 </div>
 </body>
