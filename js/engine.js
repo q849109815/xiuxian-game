@@ -377,6 +377,12 @@ const E = {
      * 现在改为【缺失即补齐】：数组补 []、对象补 {}，从源头杜绝。
      * 空集合与"未拥有/未通关"语义等价（如 build 缺失 → 各建筑取默认 1 级）。 */
     this.ARRS.forEach((k) => { if (!Array.isArray(p[k])) p[k] = []; });
+    /* 已领记录的容量上限
+     * mailGot / cdkGot 此前只增不减（写入处没有截断），老存档里已经堆到
+     * 几百上千条也没有任何地方会清理 —— 光靠写入处截断救不了存量数据。
+     * 这里在每次读档时一并收紧，保证存档体积与登录时的线性扫描都可控。 */
+    if (p.mailGot.length > 300) p.mailGot = p.mailGot.slice(-300);
+    if (p.cdkGot.length > 200) p.cdkGot = p.cdkGot.slice(-200);
     this.OBJS.forEach((k) => { if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {}; });
     /* p.tasks 是对象，但【内部的已领取数组】此前从不校验。
      * 实测 mainClaimed 被写成字符串/数字时，claimTask 里
