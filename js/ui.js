@@ -1343,14 +1343,23 @@ r_tavern(p, tab) {
         let lm = null;
         if (g.limit) { try { lm = E.giftCan(p, g); } catch (e) { lm = null; } }
         const blocked = lm && !lm.ok;
+        /* 体力类商品在体力已满时应置灰：
+         * b_shop 里是扣款【前】拦截（不会白扣钱），但按钮此前照常可点，
+         * 玩家点下去只弹一句「体力已满」，看着像按钮坏了。
+         * 这里与拦截口径保持一致，直接禁用并给出文案。 */
+        const stamFull = !!(g.give && g.give.stamina && E.staminaFull && E.staminaFull(p));
+        const noBuy = blocked || stamFull;
+        const btnTxt = stamFull ? '体力已满'
+          : (g.price === 0 ? '免费领取' : (g.cur === 'diamond' ? '💎' : '🪙') + g.price);
         return `<div class="gcell">
           ${g.img ? `<img src="${g.img}">` : `<div class="gi">${g.icon}</div>`}
           <div class="gn">${g.n}${g.rmb ? `<span class="tag y" style="font-size:11px">${g.rmb}</span>` : ''}</div>
           ${g.desc ? `<div class="lbl" style="font-size:11px;line-height:1.3;margin:2px 0">${g.desc}</div>` : ''}
-          <button class="btn sm" data-buy="${g.id}" ${(can && !blocked) ? '' : 'disabled'}
+          <button class="btn sm" data-buy="${g.id}" ${(can && !noBuy) ? '' : 'disabled'}
             style="font-size:11px;padding:3px 6px;margin-top:2px">
-            ${g.price === 0 ? '免费领取' : (g.cur === 'diamond' ? '💎' : '🪙') + g.price}</button>
+            ${btnTxt}</button>
           ${lm ? `<div class="lbl" style="font-size:11px;color:${lm.ok ? '#7ee38a' : '#ff8a8a'}">${lm.msg}</div>` : ''}
+          ${stamFull ? `<div class="lbl" style="font-size:11px;color:#ff8a8a">体力已满 ${Math.floor(p.stamina||0)}/${EX.STAMINA_MAX}</div>` : ''}
         </div>`;
       }).join('') : '<div class="lbl">暂无商品</div>'}</div>
     </div>`;
@@ -1494,7 +1503,17 @@ r_tavern(p, tab) {
       }
       if (g.limit) { try { E.giftMark(p, g); } catch (e) {} }
       E.save(p); if (!g.monthly && !g.pass) this.toast('购买成功', 'ok');
-      if (window.SND) SND.play('get'); this.open('shop', tab); this.home();
+      if (window.SND) SND.play('get');
+      /* 买完不再"钉"在屏幕上：
+       * 此前无论这件商品还能不能买，一律 this.open('shop', tab) 重新把面板铺开，
+       * 玩家点了购买后看不到任何"结束"的反馈，面板一直挂在眼前；
+       * 叠加旧配置里 D2~D6 无限购，就成了「可以一直点、一直买下去」。
+       * 现在：该商品已达限购上限 → 关闭面板回到主界面（直接看到金币/钻石变化）；
+       *       还有剩余次数 → 就地刷新，方便接着买。 */
+      let soldOut = false;
+      if (g.limit) { try { const lm2 = E.giftCan(p, g); soldOut = !!(lm2 && !lm2.ok); } catch (e) { soldOut = false; } }
+      if (soldOut) { this.close(); } else { this.open('shop', tab); }
+      this.home();
     }; });
     /* 月卡每日领取 */
     const mc = $('#shMcClaim'); if (mc) mc.onclick = () => {
@@ -3173,7 +3192,14 @@ r_tavern(p, tab) {
         if (d2) parts.push('钻石 +' + d2);
         if (e2) parts.push('经验 +' + e2);
         this.toast('奖励翻倍！' + (parts.join(' · ') || '已翻倍'), 'ok');
-        b2.disabled = true; b2.textContent = '已领取双倍'; this.home(); MAIN.save();
+        /* BUG修复：结算面板的「下一关 / 再挑战 / 返回」以及「看广告原地复活」
+         * 都会收起 #result，唯独这里只调 home() 刷新了主界面数据、却不移除 on ——
+         * 实测点击后 result.classList 仍含 on：结算面板继续盖在主界面上方，
+         * 面板里的「剩余体力」还是旧值，「下一关 / 再挑战」也仍可点，
+         * 玩家看到的就是「领完奖励界面卡住了」。
+         * 现在与其余出口一致：先收起结算面板，再回主界面并落盘。 */
+        b2.disabled = true; b2.textContent = '已领取双倍';
+        this.hideResult(); this.home(); MAIN.save();
       };
       const br = $('#rsAdRev');
       if (br) br.onclick = () => {
