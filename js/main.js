@@ -1096,6 +1096,14 @@ const MAIN = {
           m.claimed.push(P.uid);
           P.mailGot = P.mailGot || [];
           if (m.id && P.mailGot.indexOf(m.id) < 0) P.mailGot.push(m.id);
+          /* 容量上限：mailGot 此前是全项目唯一【只增不减】的数组
+           * （opsDone 截 300、noticeRead 截 200、logs 截 60，唯独它没有上限）。
+           * 每封全服/定向邮件的 id 都会永久留在这里，运营日更补偿的话
+           * 一年就是 365 条，存档与每次登录的 indexOf 线性扫描同步变长。
+           * 只保留最近 300 条：邮件按时间倒序处理，被截掉的一定是最老的、
+           * 早已过期的那批（过期邮件本来就会被 expireAt 拦下）。
+           * cdkGot 同理，在 redeemCDK 里一并截断。 */
+          if (P.mailGot.length > 300) P.mailGot = P.mailGot.slice(-300);
           touched = true; ch = true;
           this.giveRw(m.rw || {});
           UI.toast('📢 ' + (m.title || '全服邮件') + ' 奖励已发放', 'ok');
@@ -1186,6 +1194,8 @@ const MAIN = {
      * 日志里一律显示「兑换码 XXX（礼包）」，看不出兑的是哪个礼包。 */
     try { E.logAct(P, 'pick', '兑换码 ' + code + '（' + (tpl.name || tpl.n || '礼包') + '）'); } catch (e) {}
     if (P.cdkGot.indexOf(code) < 0) P.cdkGot.push(code);
+    /* 与 mailGot 同类：兑换码记录没有上限，只增不减。截到最近 200 条。 */
+    if (P.cdkGot.length > 200) P.cdkGot = P.cdkGot.slice(-200);
     c.used = (c.used || 0) + 1;
     c.usedBy = c.usedBy || [];
     c.usedBy.push(P.uid);
