@@ -2,10 +2,46 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<script>
+/* localStorage 全局兜底（必须最先执行）
+ * iOS 无痕模式 / 配额写满 / 企业策略禁用第三方存储时，
+ * localStorage.setItem 会直接抛 QuotaExceededError 或 SecurityError。
+ * 实测把 setItem 改成必抛后：
+ *   MAIN.enterWith → 第 54 行裸调 setItem('zb_uid') 抛出 → 登录流程整个中断
+ *   登录按钮  → 已经提示「登录成功，正在进入…」才写 zb_uid，
+ *              抛出后玩家永远停在「正在进入」，按钮不恢复、界面无报错
+ *   注册按钮  → 同上，注册成功却进不去游戏
+ * 全项目有 20 余处裸调 setItem/getItem/removeItem，逐个包 try 易漏，
+ * 这里统一在原型上兜一层：失败静默返回，存储只是退化成「不记住」，
+ * 不影响云端存档（进度本来就存在 GitHub），游戏照常可玩。 */
+(function () {
+  try {
+    var P = window.Storage ? window.Storage.prototype : Object.getPrototypeOf(localStorage);
+    ['setItem', 'getItem', 'removeItem', 'clear', 'key'].forEach(function (m) {
+      if (typeof P[m] !== 'function') return;
+      var orig = P[m];
+      P[m] = function () {
+        try { return orig.apply(this, arguments); }
+        catch (e) { return m === 'getItem' ? null : undefined; }
+      };
+    });
+    /* length 访问在某些浏览器无痕模式下也会抛 */
+    try {
+      var d = Object.getOwnPropertyDescriptor(P, 'length');
+      if (d && d.get) {
+        Object.defineProperty(P, 'length', {
+          configurable: true, enumerable: d.enumerable,
+          get: function () { try { return d.get.call(this); } catch (e) { return 0; } }
+        });
+      }
+    } catch (e) {}
+  } catch (e) {}
+})();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>向僵尸开炮</title>
-<link rel="stylesheet" href="css/style.css?v=20261014a">
+<link rel="stylesheet" href="css/style.css?v=20261014b">
 </head>
 <body>
 
@@ -334,17 +370,17 @@
   kbFit();
 })();
 </script>
-<script src="js/net.js?v=20261014a"></script>
-<script src="js/config.js?v=20261014a"></script>
-<script src="js/ops.js?v=20261014a"></script>
-<script src="js/engine.js?v=20261014a"></script>
-<script src="js/chibi.js?v=20261014a"></script>
-<script src="js/battle.js?v=20261014a"></script>
-<script src="js/ui.js?v=20261014a"></script>
+<script src="js/net.js?v=20261014b"></script>
+<script src="js/config.js?v=20261014b"></script>
+<script src="js/ops.js?v=20261014b"></script>
+<script src="js/engine.js?v=20261014b"></script>
+<script src="js/chibi.js?v=20261014b"></script>
+<script src="js/battle.js?v=20261014b"></script>
+<script src="js/ui.js?v=20261014b"></script>
 <!-- qr.js 已移除：登录改为账号密码，扫码功能不再使用（原引用 404） -->
-<script src="js/user.js?v=20261014a"></script>
-<script src="js/audio.js?v=20261014a"></script>
-<script src="js/main.js?v=20261014a"></script>
+<script src="js/user.js?v=20261014b"></script>
+<script src="js/audio.js?v=20261014b"></script>
+<script src="js/main.js?v=20261014b"></script>
 </div>
 </div>
 </body>
