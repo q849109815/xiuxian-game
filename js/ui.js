@@ -768,6 +768,11 @@ r_tavern(p, tab) {
      * 这里按同一公式算出实战值，与「面板伤害」一样展示为「基础 → 实战」。 */
     const _rlBase = Number(g.reload) || 0;
     const _rlReal = Math.max(0.3, _rlBase * (1 - Math.min(0.4, ((p.build && p.build.armory) || 0) * 0.01)) - (Number(a.reloadCut) || 0));
+    /* 等级显示兜底：gunLv 在 E.attrs / E.advOf 内部都按数字处理，
+     * 唯独这里直接拼进模板。后台 GM 改档若写入非数字（如对象/字符串），
+     * 实测会原样渲染成「Lv.[object Object]」「Lv.NaN」——玩家看着像存档坏了。
+     * 统一取成 1~GUN_MAX_LV 的整数再显示。 */
+    const _gLvNum = Math.max(1, Math.min(E.GUN_MAX_LV || 999, Math.floor(Number(p.gunLv)) || 1));
     const adv = E.advInfo(p.gunLv);
     /* 兜底：表被清空时索引为 -1 → undefined，读 .q 会让整个武器面板白屏 */
     const _ga = (EX.gunAdvance && EX.gunAdvance.length) ? EX.gunAdvance : [{ lv: 1, q: '白', n: '普通' }];
@@ -782,7 +787,7 @@ r_tavern(p, tab) {
       </div></div>
       <div class="card"><div class="card-t">武器属性</div>
       <div class="kv"><span>品质</span><b style="color:${EX.qColor[adv.q]}">${adv.q}品</b></div>
-      <div class="kv"><span>等级</span><b>Lv.${p.gunLv}</b></div>
+      <div class="kv"><span>等级</span><b>Lv.${_gLvNum}</b></div>
       <div class="kv"><span>面板伤害</span><b>${g.dmg} → <span style="color:var(--gold)">${E.fmt(a.gunBase)}</span></b></div>
       <div class="kv"><span>射速</span><b>${a.rate.toFixed(2)} /秒</b></div>
       <div class="kv"><span>弹夹容量</span><b>${a.mag} 发</b></div>
@@ -2104,11 +2109,28 @@ r_tavern(p, tab) {
     if (t) t.textContent = g.n;
     if (c) c.textContent = g.txt || g.desc || '';
     box.classList.add('on');
+    /* BUG：引导是全屏模态遮罩（.guide z-index 999），玩家必须点「知道了」才能继续操作，
+     * 但此前【不暂停战斗】—— 实测引导弹窗开着的那 2.9 秒里，战斗计时照跑、
+     * 僵尸前进了 134px（y 53→187），paused 始终为 false。
+     * enter（移动）/ moved（射击）/ firstKill（拾取）三个节点都在战斗中触发，
+     * 正是新手最需要看清屏幕的时候，读完文案防线已经被啃。
+     * 现在按技能三选一的既有做法：弹出即暂停，关闭时恢复。
+     * 若技能三选一此时已打开（BT.paused 已为 true），这里就不登记为「因引导而暂停」，
+     * 关闭引导后不会错误地提前恢复战斗、把未完成的技能选择跳过去。
+     * 注意：这里【不能】先把 _guidePaused 无条件清成 false —— 同一引导可能被
+     * 重复触发（battle.start 内的 enter 与 guideTrigger 的延迟回调），第二次进来
+     * 时 BT.paused 已是 true，条件不满足，若此时清掉第一次登记的 true，
+     * 关闭后就再也没人把战斗恢复 → 实测卡死（时间停在 0.34 秒不动）。 */
+    if (window.BT && BT.on && BT.run && !BT.run.over && !BT.paused) {
+      BT.paused = true;
+      this._guidePaused = true;
+    }
     this._curGuide = id;
     const ok = document.getElementById('gdOk');
     if (ok) ok.onclick = () => {
       E.guideDone(p, id);
       box.classList.remove('on');
+      if (this._guidePaused && window.BT) { BT.paused = false; this._guidePaused = false; }
       this._curGuide = null;
       if (window.MAIN && MAIN.save) MAIN.save();
     };
