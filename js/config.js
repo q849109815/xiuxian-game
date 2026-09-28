@@ -1208,11 +1208,21 @@ const EX = {
        * 汇率参考：D3 100钻→2000金+材料、GP03 10钻→500金，此处取 200钻→5000金（1:25）。 */
       { id: 'D1', n: '金币袋', icon: '🪙', img: 'assets/icon/d1_gold.jpg', price: 200, cur: 'diamond',
         give: { gold: 5000 }, limit: { t: 'daily', v: 1 }, desc: '金币×5000 · 每日1次' },
-      { id: 'D2', n: '体力包', icon: '⚡', price: 50, cur: 'diamond', give: { stamina: 60 } },
-      { id: 'D3', n: '宝箱', icon: '🎁', img: 'assets/icon/d3_box.jpg', price: 100, cur: 'diamond', give: { M01: 50, gold: 2000 } },
-      { id: 'D4', n: '武器箱', icon: '🔫', price: 200, cur: 'diamond', give: { M02: 30 } },
-      { id: 'D5', n: '宝石礼包', icon: '💎', price: 300, cur: 'diamond', give: { M03: 20 } },
-      { id: 'D6', n: '招募令', icon: '📜', price: 150, cur: 'diamond', give: { M04: 10 } },
+      /* BUG（无限刷取）：D2~D6 此前【完全没有 limit 字段】。
+       *   b_shop 里 `if (g.limit)` 才校验限购 → 这 5 件商品永远不进入校验，
+       *   只要钻石够就能连点到底（实测连点 5 次，5 次全部扣款成功）。
+       *   「每日」页签语义上就是每日刷新，却只有 D1 一件真正限购。
+       *   现在按商品价值配每日限购次数，并同步 desc 文案。 */
+      { id: 'D2', n: '体力包', icon: '⚡', price: 50, cur: 'diamond', give: { stamina: 60 },
+        limit: { t: 'daily', v: 3 }, desc: '体力×60 · 每日3次' },
+      { id: 'D3', n: '宝箱', icon: '🎁', img: 'assets/icon/d3_box.jpg', price: 100, cur: 'diamond',
+        give: { M01: 50, gold: 2000 }, limit: { t: 'daily', v: 2 }, desc: '金属50+金币2000 · 每日2次' },
+      { id: 'D4', n: '武器箱', icon: '🔫', price: 200, cur: 'diamond', give: { M02: 30 },
+        limit: { t: 'daily', v: 2 }, desc: '合金×30 · 每日2次' },
+      { id: 'D5', n: '宝石礼包', icon: '💎', price: 300, cur: 'diamond', give: { M03: 20 },
+        limit: { t: 'daily', v: 1 }, desc: '稀有晶体×20 · 每日1次' },
+      { id: 'D6', n: '招募令', icon: '📜', price: 150, cur: 'diamond', give: { M04: 10 },
+        limit: { t: 'daily', v: 2 }, desc: '火药×10 · 每日2次' },
     ],
     '武器': [
       /* BUG：这三件商品名叫「突击步枪 / 霰弹枪 / 狙击枪」，价格 3000~8000 金币，
@@ -1221,15 +1231,27 @@ const EX = {
        *      到手的是 10 个稀有金属，武器列表一把都没多。
        *      现在补上 gun 字段，购买即真正解锁并装备该武器（材料奖励保留）。
        *      注意：商店是后台可热更的配置，购买逻辑里也做了同名兜底。 */
-      { id: 'W1', n: '突击步枪', icon: '🔫', img: 'assets/icon/w1_rifle.jpg', price: 3000, cur: 'gold', gun: 'W01', give: { M01: 20 } },
-      { id: 'W2', n: '霰弹枪', icon: '💥', img: 'assets/icon/w2_shotgun.jpg', price: 5000, cur: 'gold', gun: 'W02', give: { M02: 15 } },
-      { id: 'W3', n: '狙击枪', icon: '🎯', img: 'assets/icon/w3_sniper.jpg', price: 8000, cur: 'gold', gun: 'W04', give: { M03: 10 } },
+      /* 同理：这三件此前也无 limit → 枪已解锁后仍可反复购买，
+       *   每次照扣 3000~8000 金币，只重复给材料（金币无限换材料通道）。
+       *   武器是「解锁型」商品，买一次即售罄。 */
+      { id: 'W1', n: '突击步枪', icon: '🔫', img: 'assets/icon/w1_rifle.jpg', price: 3000, cur: 'gold', gun: 'W01',
+        give: { M01: 20 }, limit: { t: 'once', v: 1 }, desc: '解锁突击步枪+金属20 · 限购1次' },
+      { id: 'W2', n: '霰弹枪', icon: '💥', img: 'assets/icon/w2_shotgun.jpg', price: 5000, cur: 'gold', gun: 'W02',
+        give: { M02: 15 }, limit: { t: 'once', v: 1 }, desc: '解锁霰弹枪+合金15 · 限购1次' },
+      { id: 'W3', n: '狙击枪', icon: '🎯', img: 'assets/icon/w3_sniper.jpg', price: 8000, cur: 'gold', gun: 'W04',
+        give: { M03: 10 }, limit: { t: 'once', v: 1 }, desc: '解锁狙击枪+稀有晶体10 · 限购1次' },
     ],
     '宝石': [
-      { id: 'GB1', n: '红宝石', icon: '🔴', price: 200, cur: 'diamond', give: { gem: 'G_R' } },
-      { id: 'GB2', n: '蓝宝石', icon: '🔵', price: 200, cur: 'diamond', give: { gem: 'G_B' } },
-      { id: 'GB3', n: '绿宝石', icon: '🟢', price: 200, cur: 'diamond', give: { gem: 'G_G' } },
-      { id: 'GB4', n: '紫宝石', icon: '🟣', price: 300, cur: 'diamond', give: { gem: 'G_P' } },
+      /* 同上：宝石此前无限购，钻石可无限换宝石 → 镶嵌/合成系统失去约束。
+       * 每日 3 次，够正常合成又不至于一次刷满。 */
+      { id: 'GB1', n: '红宝石', icon: '🔴', price: 200, cur: 'diamond', give: { gem: 'G_R' },
+        limit: { t: 'daily', v: 3 }, desc: '红宝石×1 · 每日3次' },
+      { id: 'GB2', n: '蓝宝石', icon: '🔵', price: 200, cur: 'diamond', give: { gem: 'G_B' },
+        limit: { t: 'daily', v: 3 }, desc: '蓝宝石×1 · 每日3次' },
+      { id: 'GB3', n: '绿宝石', icon: '🟢', price: 200, cur: 'diamond', give: { gem: 'G_G' },
+        limit: { t: 'daily', v: 3 }, desc: '绿宝石×1 · 每日3次' },
+      { id: 'GB4', n: '紫宝石', icon: '🟣', price: 300, cur: 'diamond', give: { gem: 'G_P' },
+        limit: { t: 'daily', v: 3 }, desc: '紫宝石×1 · 每日3次' },
     ],
     /* ===== 表35 礼包内容明细表 GP01~GP06 =====
      * limit: {t:'once'|'daily'|'weekly'|'monthly'|'level'|'bossFirst', v}
