@@ -344,6 +344,9 @@ r_tavern(p, tab) {
       <div class="card" style="margin-top:8px"><div class="card-t">军团贡献
         <span class="sub">捐献获得，可在军团商店消费</span></div>
         <div class="kv"><span>当前贡献</span><b>${E.fmt(p.legionExp || 0)}</b></div>
+        <div class="kv"><span>累计贡献</span><b>${E.fmt(E.legionContribOf(p))}</b></div>
+        <div class="kv"><span>属性加成</span><b>攻/血 +${Math.round((E.legionBonus(p).atkPct || 0) * 100)}%</b></div>
+        <div class="sub" style="padding:4px 2px">每累计 1000 贡献 +1% 攻击与生命（上限 10%）。加成按【累计】计算，在军团商店消费不会降低。</div>
       </div>`;
     }
     return `<div class="card"><div class="card-t">加入军团</div>
@@ -383,6 +386,8 @@ r_tavern(p, tab) {
       const ctb = Number(LC.donateContrib) || 100;
       if (p.gold < cost) return this.toast('金币不足（需 ' + E.fmt(cost) + '）', 'err');
       p.gold -= cost; p.legionExp = (p.legionExp || 0) + ctb;
+      /* 累计贡献同步增加：属性加成按累计算，否则花掉贡献就会掉属性 */
+      p.legionContrib = (p.legionContrib || 0) + ctb;
       E.save(p); this.toast('捐献成功 +' + ctb + ' 贡献', 'ok'); this.open('legion'); this.home();
     };
     /* 军团活动：此前写死「开发中」，点了没反应。
@@ -409,6 +414,7 @@ r_tavern(p, tab) {
         p.stamina -= a.cost;
         p.gold = (p.gold || 0) + a.gold;
         p.legionExp = (p.legionExp || 0) + a.contrib;
+        p.legionContrib = (p.legionContrib || 0) + a.contrib;
         (a.mats || []).forEach((m) => { p.mat = p.mat || {}; p.mat[m.k] = (p.mat[m.k] || 0) + m.n; });
         E.save(p);
         this.toast('挑战成功：贡献 +' + a.contrib, 'ok');
