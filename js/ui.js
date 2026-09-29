@@ -1261,19 +1261,23 @@ r_tavern(p, tab) {
     }; });
 
     const c1 = $('#bagChest1'), c10 = $('#bagChest10');
+    /* 落盘：这四个入口此前都【没有保存】——宝箱数量、金币扣了/加了，
+     * 只改内存，全靠 30 秒一次的自动存档兜底。此时被系统杀进程、强关 App
+     * 或立刻换设备登录，这一笔就整体丢失（开箱得的材料凭空消失、
+     * 分解得的金币不翼而飞）。统一补 saveSoon。 */
     if (c1) c1.onclick = () => {
       const r = E.openChest(p, 1); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('pick'); this.open('bag', '材料'); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('pick'); E.saveSoon(p); this.open('bag', '材料'); this.home(); }
     };
     if (c10) c10.onclick = () => {
       const r = E.openChest(p, 10); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('pick'); this.open('bag', '材料'); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('pick'); E.saveSoon(p); this.open('bag', '材料'); this.home(); }
     };
     /* 表05 第9项：分解碎片 */
     $$('#pnBody [data-dec2]').forEach((b) => { b.onclick = () => {
       const r = E.dismantleMat(p, b.dataset.dec2, 1);
       this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('coin'); this.open('bag', '材料'); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('coin'); E.saveSoon(p); this.open('bag', '材料'); this.home(); }
     }; });
     /* 芯片分解按钮（此前 C01/C02/C03 显示的是三个角色名且按钮永远灰着） */
     $$('#pnBody [data-decq]').forEach((b) => { b.onclick = () => {
@@ -1285,7 +1289,7 @@ r_tavern(p, tab) {
     $$('#pnBody [data-bu]').forEach((el) => { el.onclick = () => {
       const r = E.useItem(p, el.dataset.bu);
       this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('pickup'); this.open('bag', '材料'); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('pickup'); E.saveSoon(p); this.open('bag', '材料'); this.home(); }
     }; });
     const da = $('#bagDecAll');
     if (da) da.onclick = () => {
