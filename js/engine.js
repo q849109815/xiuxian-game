@@ -295,9 +295,14 @@ const E = {
    * 做法：登录后统一把关键字段强制成正确类型，从源头杜绝脏值扩散，
    *   而不是逐个渲染点加保护（UI 里有 18 处同类写法）。
    * ========================================================= */
+  /* endlessTime / offBase / offlineAt / created / lastSeen 此前【不在任何清洗列表】：
+   * 后台 GM 改档写入 -999 / 'CORRUPT' / NaN 时 sanitize 原样保留，
+   * 其中 offlineAt 还是 main.js 回档守卫的判据（虽然下游有 Number()||0 兜底，
+   * 但语义上会退化成「从未活跃过」）。这里统一纳入数值清洗。 */
   NUMS: ['gold','diamond','stamina','lv','xp','tp','ach','evToken','evScore',
          'patrolAcc','patrolT','patrolFast','legionExp','legionContrib',
-         'charStar','gunLv','gunAdv','endlessBest','adTotal','staminaAt'],
+         'charStar','gunLv','gunAdv','endlessBest','adTotal','staminaAt',
+         'endlessTime','offBase','offlineAt','created','lastSeen'],
   /* mailGot / cdkGot 是【数组】（存已领邮件ID、已兑换码），
    * 此前误列进 OBJS → sanitize 把数组改写成对象 {}，
    * 实测：登录后 mailGot=['m1','m2'] → {}，接着执行
@@ -347,10 +352,15 @@ const E = {
      *   patrolT=0 → 巡逻算成「离线 8 小时」白送金币（此前已修的 BUG 会复活）
      *   staminaAt=0 → 体力瞬间回满
      * 缺失一律补当前时间。 */
-    const TS = { patrolT: 1, staminaAt: 1, offlineAt: 1, created: 1, lastSeen: 1 };
+    const TS = { patrolT: 1, staminaAt: 1, offlineAt: 1, created: 1, lastSeen: 1, offBase: 1 };
     this.NUMS.forEach((k) => {
       if (p[k] == null) { p[k] = TS[k] ? Date.now() : 0; return; }
-      p[k] = Math.max(0, N(p[k], 0));
+      const _n = N(p[k], 0);
+      /* 时间戳字段：脏值（负数/0/NaN）此前只被 Math.max(0,…) 钳成 0，
+       * 语义上等于 1970 年「从未活跃过」，让离线基准与回档判据失去意义。
+       * 这里与「字段缺失」同等处理，一律补当前时刻。 */
+      if (TS[k] && (!isFinite(_n) || _n <= 0)) { p[k] = Date.now(); return; }
+      p[k] = Math.max(0, _n);
     });
     p.stamina = Math.min(EX.STAMINA_MAX || 100, p.stamina);
     /* 后台 GM 可把 gunLv 设成任意值，不钳制会让 1.078^lv 溢出成 Infinity，
@@ -405,8 +415,20 @@ const E = {
      * 现在移出该列表（保留 mat/gems/cleared 等真正的数量字典）。 */
     ['mat','gems','cleared','evShopBuy','achShopBuy','lgShopBuy','giftBuy'].forEach((k) => {
       if (!p[k]) return;
-      Object.keys(p[k]).forEach((i) => { const n = Number(p[k][i]); p[k][i] = isFinite(n) ? n : 0; });
+      /* 下限钳 0：此前只做 Number() 转换、没有 Math.max(0,…)，
+       * 后台 GM 改档写入负数时残留（实测材料 -5、宝石 -2、已通关星级 -2），
+       * 界面直接显示「金属 -5」「持有宝箱 -1」，且负数会让
+       * `mat[id] >= cost` 之外的判断（如累加、分解单价×数量）算出负收益。 */
+      Object.keys(p[k]).forEach((i) => { const n = Number(p[k][i]); p[k][i] = isFinite(n) ? Math.max(0, n) : 0; });
     });
+    /* p.stats 在 OBJS 里只校验了「是对象」，内部数值从不收敛。
+     * 实测注入 {kills:-100, runs:-5, bossKill:-3} 后 sanitize 原样保留，
+     * 设置页「累计击杀」直接显示 -100。统计类字段恒 >= 0，这里统一钳制。 */
+    if (p.stats && typeof p.stats === 'object' && !Array.isArray(p.stats)) {
+      ['kills','runs','bossKill','noHitBest','endlessBest'].forEach((k) => {
+        const n = Number(p.stats[k]); p.stats[k] = isFinite(n) ? Math.max(0, n) : 0;
+      });
+    }
     /* 字符串字段：此前一律 String(p[k])，对象会被转成 "[object Object]"
      * 直接显示在设置页账号栏（实测 uid/name 被写成对象 → 界面显示
      * [object Object]）。现在只有 string / number 才转换，其它一律
@@ -421,6 +443,26 @@ const E = {
         if (!st || typeof st !== 'object' || Array.isArray(st)) delete p.gunStats[s];
       });
     }
+    /* gender / avatar / avatarImg / adDate 此前【不在任何清洗列表】：
+     * 后台改档写入数字/对象时 sanitize 原样保留，头像与性别栏显示异常
+     * （实测 gender=-999、avatarImg={x:1} 均透到界面）。
+     * adDate 是 'YYYY-MM-DD' 日期键，用于每日广告次数重置，非字符串会让重置失效。 */
+    const STRDEF2 = { gender: 'm', avatar: '🧑‍🚀', avatarImg: 'assets/char/hero_m.jpg', adDate: '' };
+    Object.keys(STRDEF2).forEach((k) => {
+      const t = typeof p[k];
+      /* NaN 的 typeof 也是 'number'，直接 String() 会得到字面量 "NaN"
+       * 并透到界面上，这里先判有限性再转换。 */
+      if (p[k] == null || (t !== 'string' && t !== 'number') || (t === 'number' && !isFinite(p[k]))) {
+        p[k] = STRDEF2[k]; return;
+      }
+      p[k] = String(p[k]);
+    });
+    /* use / guide 是对象字典，此前只在 newPlayer 里初始化，
+     * 被改档写成数字/数组时 sanitize 不管，后续读 p.guide.step 会静默失败。
+     * （p.use 已废弃——消耗品统一存 p.mat，main.js 会清空它，这里只兜底类型。） */
+    ['use','guide'].forEach((k) => {
+      if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {};
+    });
     ['uid','name','char','skin','curLevel','gun'].forEach((k) => {
       const t = typeof p[k];
       if (p[k] == null) { p[k] = STRDEF[k] !== undefined ? STRDEF[k] : ''; return; }
