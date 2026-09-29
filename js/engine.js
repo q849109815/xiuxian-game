@@ -1813,6 +1813,23 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     } catch (e) { return false; }
   },
 
+  /* 防抖落盘：面板按钮高频点击时（武器连点强化、装备连点锻造）
+   * 每次都直接 save 会瞬间打出几十次 API 请求，反而更容易触发配额失败。
+   * 这里做 800ms 尾部防抖：连点只在最后一次真正写一次。
+   * 【为什么需要它】实测 26 处「扣费 / 发奖」按钮只改内存里的 p，不调 save，
+   * 全靠 30 秒一次的自动存档兜底。玩家操作完若在 30 秒内被系统杀进程 /
+   * 强关 App（iOS 上不一定触发 pagehide），或立刻换设备登录，
+   * 这笔扣费与奖励就整体丢失，而界面已经提示「成功」。 */
+  saveSoon(p) {
+    try {
+      clearTimeout(this._saveSoonT);
+      this._saveSoonT = setTimeout(() => {
+        try { if (window.MAIN) MAIN.syncSnap(); } catch (e) {}
+        try { this.save(p || window.P); } catch (e) {}
+      }, 800);
+    } catch (e) {}
+  },
+
   taskDone(p, t) {
     if (t.cond.t === 'clearLv') return !!p.cleared[t.cond.v];
     return this.taskVal(p, t.cond.t) >= t.cond.v;
