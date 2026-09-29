@@ -1575,10 +1575,16 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (!def) return { ok: false, msg: '该物品不可使用' };
     if ((p.mat[id] || 0) <= 0) return { ok: false, msg: '数量不足' };
 
-    /* I04 宝箱：直接开（表31 DR11） */
+    /* I04 宝箱：直接开（表31 DR11）
+     * BUG：这里先 p.mat[id]-- 一次，openBox() 内部又 p.mat.I04 -= n 一次，
+     * 用 1 个宝箱实际扣 2 个（实测 3→1）；只剩 1 个时更糟——
+     * 扣到 0 后 openBox 的 `if (p.mat.I04 < n) return '宝箱数量不足'` 命中，
+     * 提示「开启宝箱：宝箱数量不足」且宝箱已消失（1→0），玩家白丢一个。
+     * openBox 自带扣减与不足校验，这里不能再扣。 */
     if (id === 'I04') {
-      p.mat[id]--;
+      if ((p.mat.I04 || 0) < 1) return { ok: false, msg: '宝箱数量不足' };
       const rw = this.openBox(p, 1);
+      if (String(rw).indexOf('不足') >= 0) return { ok: false, msg: String(rw) };
       return { ok: true, msg: '开启宝箱：' + rw };
     }
 
