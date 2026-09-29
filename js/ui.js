@@ -3130,6 +3130,11 @@ r_tavern(p, tab) {
       + cell(win ? (d.stars || 0) : 0, '星级')
       + (rw.chip ? cell(rw.chip, '芯片') : '')
       + (rw.diamond ? cell(rw.diamond, '钻石') : '')
+      /* 无尽模式：核心成绩是「活到第几波」+ 换来的活动代币。
+       * 此前结算面板在无尽里只有 EXP/金币/击杀，波次与代币一格都没有，
+       * 玩家打完只看到一堆数字，不知道自己撑了几波。 */
+      + (BT.run && BT.run.endless ? cell(rw.wave || 0, '波次') : '')
+      + (BT.run && BT.run.endless && rw.evToken ? cell(rw.evToken, '活动代币') : '')
       + mk.map((k) => cell(rw.mat[k], E.itemName ? E.itemName(k) : k)).join('');
     /* 难度标签：让玩家知道自己打的是哪一档（三档奖励差 6.5 倍，必须可见） */
     const rsDf = $('#rsDiff');
