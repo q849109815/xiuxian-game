@@ -126,11 +126,14 @@ const UI = {
       });
     } catch (e) { tn = 0; }
     set('task', tn);
-    /* 邮件：未领取的数量 */
+    /* 邮件：未领取的数量
+     * BUG：此前只过滤 !m.got，把「尚未生效（定时发）」和「已过期」的邮件
+     *   也算进红点 —— 实际点进邮件面板，这些是领不了的（b_mail 有 mailActive 校验）。
+     *   红点显示 3 进去只能领 1，玩家会以为邮件丢了。这里与领取口径统一。 */
     let mn = 0;
     try {
       const ml = (p.mail || []);
-      mn = ml.filter((m) => m && !m.got).length;
+      mn = ml.filter((m) => m && !m.got && (this.mailActive ? this.mailActive(m) : true)).length;
     } catch (e) { mn = 0; }
     set('mail', mn);
   },
@@ -1358,8 +1361,14 @@ r_tavern(p, tab) {
          * 玩家点下去只弹一句「体力已满」，看着像按钮坏了。
          * 这里与拦截口径保持一致，直接禁用并给出文案。 */
         const stamFull = !!(g.give && g.give.stamina && E.staminaFull && E.staminaFull(p));
-        const noBuy = blocked || stamFull;
+        /* 普通战令（SH06 免费档）此前点了只弹一句「已激活」，
+         * 却没有任何字段记录 —— 面板永远还是「免费领取」，
+         * 玩家以为自己没激活成功，反复点也只有同一句提示。
+         * 现在激活后写入 p.passNormal，按钮改为「已激活」。 */
+        const passOn = !!(g.pass === 'normal' && p.passNormal);
+        const noBuy = blocked || stamFull || passOn;
         const btnTxt = stamFull ? '体力已满'
+          : passOn ? '已激活'
           : (g.price === 0 ? '免费领取' : (g.cur === 'diamond' ? '💎' : '🪙') + g.price);
         return `<div class="gcell">
           ${g.img ? `<img src="${g.img}">` : `<div class="gi">${g.icon}</div>`}
@@ -1493,6 +1502,8 @@ r_tavern(p, tab) {
       } else if (g.pass === 'adv') {
         p.passAdv = 1; this.toast('进阶战令已解锁！可领取高级档位', 'ok');
       } else if (g.pass === 'normal') {
+        /* 同上：此前只弹提示、不落状态，激活等于没发生。 */
+        p.passNormal = 1;
         this.toast('普通战令已激活（免费档位可领取）', 'ok');
       }
       if (g.give && g.give.skin) {
@@ -1800,7 +1811,14 @@ r_tavern(p, tab) {
           <div class="ic" style="font-size:15px;background:${i < 3 ? 'linear-gradient(135deg,#ffe9a8,#f0a020)' : 'rgba(10,16,28,.7)'};color:${i < 3 ? '#2a1a00' : '#fff'}">${i + 1}</div>
           <div class="info"><div class="nm">${this.esc(x.n || x.name || '匿名')}</div>
             <div class="sub">${x.lv || '—'} · 无尽 ${x.eb || 0} 层</div></div>
-          <div class="act"><span class="tag y">${board === '活动冲榜' ? E.fmt(x.ev || 0) + ' 积分' : board === '战力榜' ? E.fmt(x.pw || 0) : E.fmt(x.pw || 0)}</span></div></div>`).join('');
+          <div class="act"><span class="tag y">${
+            /* BUG：无尽生存榜此前与战力榜共用 E.fmt(x.pw||0)，
+             *   榜名写着「无尽生存」，主数值列的却是【战力】，
+             *   实测「第1名 甲 无尽120层」旁边显示 5000 —— 玩家会读成 5000 层。
+             *   现在三个榜各显示自己的排名依据：层数 / 战力 / 积分。 */
+            board === '活动冲榜' ? E.fmt(x.ev || 0) + ' 积分'
+              : board === '战力榜' ? E.fmt(x.pw || 0) + ' 战力'
+                : E.fmt(x.eb || 0) + ' 层'}</span></div></div>`).join('');
       }).call(this)}
     </div>`;
   },
