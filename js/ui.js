@@ -316,6 +316,36 @@ r_tavern(p, tab) {
   },
 
   /* ---------- 军团 ---------- */
+  /* 战团人数按实际成员数分配（此前写死 1/3/1 = 5 人，与「成员 N/50」矛盾） */
+  legionSquad(n) {
+    n = Math.max(0, Number(n) || 0);
+    const c0 = Math.min(n, Math.ceil(n * 0.4));
+    const c1 = Math.min(n - c0, Math.ceil(n * 0.35));
+    return [c0, c1, Math.max(0, n - c0 - c1)];
+  },
+  /* 生成军团名册。
+   * BUG：加入军团后 members 只有玩家自己 1 人，而军团列表卡片写着
+   *      「人数 42」、军团主页写「成员 1/50」——三处数字互相矛盾，
+   *      玩家点进去看到空军团，只会以为自己加错了或被坑了。
+   * 现在按配置人数生成一份名册（含团长/副队），并把玩家自己放进去。 */
+  mkLegionMembers(p, count, selfRole) {
+    const cap = Math.max(1, Math.min(50, Number(count) || 1));
+    const SUR = ['钢铁','末日','废土','雷霆','暗影','烈焰','寒霜','苍狼','孤雁','铁血','狂徒','夜枭','磐石','疾风','赤焰'];
+    const TIT = ['队长','副队','老兵','猎人','射手','医师','工匠','斥候','重装','突击','哨兵','炮手'];
+    const pick = (a) => a[Math.floor(Math.random() * a.length)];
+    const mem = [{ n: p.name || '我', role: selfRole || '成员', pw: (window.E && E.power) ? E.power(p) : 0 }];
+    for (let i = mem.length; i < cap; i++) {
+      mem.push({
+        n: pick(SUR) + pick(TIT) + (Math.floor(Math.random() * 900) + 100),
+        role: i === 1 ? '团长' : (i < 4 ? '副队' : '成员'),
+        pw: Math.floor(Math.random() * 90000 + 3000),
+      });
+    }
+    /* 名册按战力排序（团长置顶），看起来像个真实军团 */
+    const me = mem[0];
+    const rest = mem.slice(1).sort((a, b) => b.pw - a.pw);
+    return [me].concat(rest);
+  },
   r_legion(p, tab) {
     const lg = p.legion || null;
     if (tab === '成员') {
@@ -336,7 +366,7 @@ r_tavern(p, tab) {
       </div>
       <div class="card"><div class="card-t">战团</div>
         ${['一团', '二团', '三团'].map((nm, i) => `<div class="zrow">
-          ${this.zAvatarHTML('t' + i)}<div class="zi"><b>${nm}</b><span>人数 ${[1, 3, 1][i]} · 队伍 ${i + 1}</span></div>
+          ${this.zAvatarHTML('t' + i)}<div class="zi"><b>${nm}</b><span>人数 ${this.legionSquad(mem.length)[i]} · 队伍 ${i + 1}</span></div>
           ${this.zAvatarHTML('u' + i)}</div>`).join('')}
       </div>
       <div style="display:flex;gap:6px;margin-top:8px">
@@ -368,7 +398,7 @@ r_tavern(p, tab) {
     const jb = $$('#pnBody [data-join]');
     jb.forEach((b) => { b.onclick = () => {
       const l = EX.legions.find((x) => x.id === b.dataset.join); if (!l) return;
-      p.legion = { id: l.id, n: l.n, lv: 1, cap: 50, members: [{ n: p.name, role: '成员', pw: E.power(p) }] };
+      p.legion = { id: l.id, n: l.n, lv: 1, cap: 50, members: this.mkLegionMembers(p, l.mem, '成员') };
       E.save(p); this.toast('已加入 ' + l.n, 'ok');
       if (window.SND) SND.play('upgrade'); this.open('legion'); this.home();
     }; });
@@ -377,7 +407,7 @@ r_tavern(p, tab) {
       if (p.gold < 20000) return this.toast('金币不足', 'err');
       p.gold -= 20000;
       p.legion = { id: 'my', n: p.name + '的军团', lv: 1, cap: 50,
-        members: [{ n: p.name, role: '团长', pw: E.power(p) }] };
+        members: this.mkLegionMembers(p, 6, '团长') };
       E.save(p); this.toast('军团创建成功', 'ok'); this.open('legion'); this.home();
     };
     const db = $('#lgDonate');
