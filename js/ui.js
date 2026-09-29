@@ -711,7 +711,7 @@ r_tavern(p, tab) {
     $$('#pnBody [data-forge]').forEach((b) => { b.onclick = () => {
       const r = E.forgeEquip(p, b.dataset.forge);
       this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('role', '宝石'); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('upgrade'); E.saveSoon(p); this.open('role', '宝石'); this.home(); }
     }; });
     /* 皮肤购买：4 款付费皮肤此前没有任何购买入口，这里补上 */
     $$('#pnBody [data-skby]').forEach((el) => { el.onclick = (ev) => {
@@ -829,21 +829,21 @@ r_tavern(p, tab) {
     const u = $('#gunUp'); if (u) u.onclick = () => {
       const r = E.upgradeGun(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
       try { OPS.track('weapon_upgrade', { lv: p.gunLv }); } catch (e) {}
-      if (r.ok) { this.open('gun', tab); this.home(); }
+      if (r.ok) { E.saveSoon(p); this.open('gun', tab); this.home(); }
     };
     /* 表30 武器词条洗练 */
     const ar = $('#gunAfReroll');
     if (ar) ar.onclick = () => {
       const r = E.rerollAffix(p, false); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('gun', tab); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('upgrade'); E.saveSoon(p); this.open('gun', tab); this.home(); }
     };
     const arl = $('#gunAfRerollL');
     if (arl) arl.onclick = () => {
       const r = E.rerollAffix(p, true); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('gun', tab); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('upgrade'); E.saveSoon(p); this.open('gun', tab); this.home(); }
     };
     $$('#pnBody [data-gun]').forEach((b) => {
-      b.onclick = () => { const r = E.switchGun(p, b.dataset.gun); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('gun', '武器库'); this.home(); } };
+      b.onclick = () => { const r = E.switchGun(p, b.dataset.gun); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { E.saveSoon(p); this.open('gun', '武器库'); this.home(); } };
     });
   },
 
@@ -1102,20 +1102,20 @@ r_tavern(p, tab) {
     if (asb) asb.onclick = () => this.open('ashop', '成就商店');
     $$('#pnBody [data-aq]').forEach((b) => { b.onclick = () => {
       const r = E.claimTask(p, 'achieve', b.dataset.aq); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('pickup'); this.open('task'); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('pickup'); E.saveSoon(p); this.open('task'); this.home(); }
     }; });
     if (gb) gb.onclick = () => { this.close(); this.open('level', '章节'); };
     $$('#pnBody [data-mq]').forEach((b) => { b.onclick = () => {
       const r = E.claimTask(p, 'main', b.dataset.mq); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { this.open('task'); this.home(); }
+      if (r.ok) { E.saveSoon(p); this.open('task'); this.home(); }
     }; });
     $$('#pnBody [data-wq]').forEach((b) => { b.onclick = () => {
       const r = E.claimTask(p, 'weekly', b.dataset.wq); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('pickup'); this.open('task'); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('pickup'); E.saveSoon(p); this.open('task'); this.home(); }
     }; });
     $$('#pnBody [data-dq]').forEach((b) => { b.onclick = () => {
       const r = E.claimTask(p, 'daily', b.dataset.dq); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { this.open('task'); this.home(); }
+      if (r.ok) { E.saveSoon(p); this.open('task'); this.home(); }
     }; });
   },
 
@@ -1805,7 +1805,7 @@ r_tavern(p, tab) {
       const rank = board === '战力榜' ? (p.rankPower || 0) : board === '活动冲榜' ? (p.rankEv || 0) : (p.rankEndless || 0);
       const r = E.claimRankRw(p, board, rank);
       this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('get'); this.open('rank'); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('get'); E.saveSoon(p); this.open('rank'); this.home(); }
     }; });
   },
 
@@ -1918,7 +1918,7 @@ r_tavern(p, tab) {
     const sb = $('#actSign');
     if (sb) sb.onclick = () => {
       const r = E.sign(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('get'); this.open('act'); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('get'); E.saveSoon(p); this.open('act'); this.home(); }
     };
     /* 表22 EV02 BOSS突袭：每日 3 次 */
     $$('#pnBody [data-raid]').forEach((b) => { b.onclick = () => {
@@ -2119,7 +2119,7 @@ r_tavern(p, tab) {
        * 基地 4 个页签全部白屏。这里给一个占位，保证界面始终可用。 */
       || { id: 'hospital', n: '医疗站', icon: '🏥', stat: 'hp', per: 0.05, max: 20, desc: '建筑表为空' };
     const u = $('#buUp'); if (u) u.onclick = () => {
-      const r = E.upBuild(p, b.id); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('base', tab); this.home(); }
+      const r = E.upBuild(p, b.id); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { E.saveSoon(p); this.open('base', tab); this.home(); }
     };
     const c = $('#buClaim'); if (c) c.onclick = () => {
       /* 此前只取 E.offlineIncome（仅金币）然后手动 +=，
@@ -2128,7 +2128,7 @@ r_tavern(p, tab) {
        * 现在改走完整领取。 */
       const r = E.offlineClaim(p);
       if (!r.ok) return this.toast(r.msg, 'err');
-      this.toast(r.msg, 'ok'); this.open('base', tab); this.home();
+      this.toast(r.msg, 'ok'); E.saveSoon(p); this.open('base', tab); this.home();
     };
   },
 
@@ -2227,7 +2227,7 @@ r_tavern(p, tab) {
       const r = isAch ? E.achShopBuyItem(p, b.dataset.buy) : E.eventShopBuy(p, b.dataset.buy);
       try { E.logAct(p, 'shop', 'achShopBuyItem'); } catch (e) {}
           this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('equip'); this.open('ashop', tab); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('equip'); E.saveSoon(p); this.open('ashop', tab); this.home(); }
     }; });
   },
 
