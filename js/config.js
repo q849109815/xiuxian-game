@@ -1197,6 +1197,9 @@ const EX = {
   frames: [
     { id: 'ev_frame', n: '活动限定框', color: '#ffd166' },
     { id: 'rank_frame', n: '榜首金框', color: '#ff9f43' },
+    /* 战令限定框：SH07「战令(进阶)」desc 承诺「限定皮肤」但实则无任何皮肤，
+     * 这里补一枚真实可得的限定外观，让付费档名副其实。 */
+    { id: 'pass_frame', n: '战令限定框', color: '#b57bff' },
   ],
   shopGoods: {
     '每日': [
@@ -1220,7 +1223,7 @@ const EX = {
       { id: 'D4', n: '武器箱', icon: '🔫', price: 200, cur: 'diamond', give: { M02: 30 },
         limit: { t: 'daily', v: 2 }, desc: '合金×30 · 每日2次' },
       { id: 'D5', n: '宝石礼包', icon: '💎', price: 300, cur: 'diamond', give: { M03: 20 },
-        limit: { t: 'daily', v: 1 }, desc: '稀有晶体×20 · 每日1次' },
+        limit: { t: 'daily', v: 1 }, desc: '稀有金属×20 · 每日1次' },
       { id: 'D6', n: '招募令', icon: '📜', price: 150, cur: 'diamond', give: { M04: 10 },
         limit: { t: 'daily', v: 2 }, desc: '火药×10 · 每日2次' },
     ],
@@ -1239,7 +1242,7 @@ const EX = {
       { id: 'W2', n: '霰弹枪', icon: '💥', img: 'assets/icon/w2_shotgun.jpg', price: 5000, cur: 'gold', gun: 'W02',
         give: { M02: 15 }, limit: { t: 'once', v: 1 }, desc: '解锁霰弹枪+合金15 · 限购1次' },
       { id: 'W3', n: '狙击枪', icon: '🎯', img: 'assets/icon/w3_sniper.jpg', price: 8000, cur: 'gold', gun: 'W04',
-        give: { M03: 10 }, limit: { t: 'once', v: 1 }, desc: '解锁狙击枪+稀有晶体10 · 限购1次' },
+        give: { M03: 10 }, limit: { t: 'once', v: 1 }, desc: '解锁狙击枪+稀有金属10 · 限购1次' },
     ],
     '宝石': [
       /* 同上：宝石此前无限购，钻石可无限换宝石 → 镶嵌/合成系统失去约束。
@@ -1257,8 +1260,15 @@ const EX = {
      * limit: {t:'once'|'daily'|'weekly'|'monthly'|'level'|'bossFirst', v}
      * 单机无支付SDK，故用钻石计价，rmb 字段仅作价值展示 */
     '礼包': [
+      /* BUG（宣传与实发不符，付费商品）：
+       *   desc 写「金币2000+金属50+枪械碎片10+急救包3」，
+       *   而 give 是 { gold, M01, M04, P01 } —— M04 是【火药】不是枪械碎片、
+       *   P01 是【枪械碎片】不是急救包，且急救包(I01)【一件都没给】。
+       *   实测花 60 钻购买：到账 火药×10 + 枪械碎片×3，承诺的急救包 0 个、
+       *   枪械碎片也只有 3/10。玩家按 desc 掏钱，拿到的是另一套东西。
+       *   现在让 give 与 desc 完全对齐（急救包 I01×3、枪械碎片 P01×10）。 */
       { id: 'GP01', n: '新手礼包', icon: '🎁', img: 'assets/icon/gp01.jpg', price: 60, cur: 'diamond', rmb: '6元',
-        give: { gold: 2000, M01: 50, M04: 10, P01: 3 },
+        give: { gold: 2000, M01: 50, P01: 10, I01: 3 },
         limit: { t: 'once', v: 1 }, desc: '金币2000+金属50+枪械碎片10+急救包3' },
       { id: 'GP02', n: '成长礼包', icon: '📦', img: 'assets/icon/gp02.jpg', price: 300, cur: 'diamond', rmb: '30元',
         give: { gold: 8000, M02: 30, diamond: 100 },
@@ -1300,9 +1310,15 @@ const EX = {
         desc: '每日领 钻石50 + 体力60（30天）' },
       { id: 'SH06', n: '战令(普通)', icon: '🎖️', img: 'assets/icon/sh06_pass.jpg', price: 0, cur: 'gold', rmb: '免费',
         give: {}, pass: 'normal', desc: '按等级免费领奖励' },
+      /* BUG（宣传与实发不符，付费商品）：
+       *   desc 写「解锁高级奖励 + 限定皮肤」，但 give 只有 { diamond:300 }，
+       *   PASS_TIERS 九档里也没有任何一条带 skin —— 玩家花 680 钻（68元）
+       *   买进阶战令，承诺的「限定皮肤」根本不存在，属于虚假宣传。
+       *   现在补发一枚真实的限定头像框（pass_frame，已登记进 frames 表），
+       *   并把 desc 改成与实际一致的说法。 */
       { id: 'SH07', n: '战令(进阶)', icon: '🎖️', img: 'assets/icon/sh07_passpro.jpg', price: 680, cur: 'diamond', rmb: '68元',
-        give: { diamond: 300 }, pass: 'adv', limit: { t: 'monthly', v: 1 },
-        desc: '解锁高级奖励 + 限定皮肤' },
+        give: { diamond: 300, frame: 'pass_frame' }, pass: 'adv', limit: { t: 'monthly', v: 1 },
+        desc: '解锁高级奖励（每档额外钻石）+ 钻石300 + 限定头像框' },
       { id: 'SH08', n: '废土战甲皮肤', icon: '🥼', price: 680, cur: 'diamond', rmb: '68元',
         give: { skin: 'sk_c01b' }, limit: { t: 'once', v: 1 },
         desc: '角色皮肤 · 废土战甲' },
@@ -1315,7 +1331,7 @@ const EX = {
     '材料': [
       { id: 'M1', n: '金属', icon: '🔩', price: 500, cur: 'gold', give: { M01: 30 } },
       { id: 'M2', n: '合金', icon: '⚙️', price: 1200, cur: 'gold', give: { M02: 20 } },
-      { id: 'M3', n: '稀有晶体', icon: '💠', price: 3000, cur: 'gold', give: { M03: 10 } },
+      { id: 'M3', n: '稀有金属', icon: '💠', price: 3000, cur: 'gold', give: { M03: 10 } },
       { id: 'M4', n: '火药', icon: '🧨', price: 800, cur: 'gold', give: { M04: 15 } },
     ],
   },
