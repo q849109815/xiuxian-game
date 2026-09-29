@@ -1342,15 +1342,10 @@ function onBattleEnd(res, d) {
   let rw = { gold: 0, diamond: 0 };
   if (res === 'win') {
     const def = r.def;
-    if (endless) {
-      rw.gold = Math.round((100 + r.wave * 20) * (E.attrs(P).goldMul || 1));
-      P.endlessBest = Math.max(P.endlessBest || 0, r.wave);
-      /* 表22 EV01 丧尸围城 = 无尽模式，按存活波次发活动代币
-       * （此前 evToken 全项目零产出，活动商店 12 项商品一件都买不了） */
-      const tk = Math.max(10, r.wave * 3);
-      P.evToken = (P.evToken || 0) + tk;
-      P.evScore = (P.evScore || 0) + tk;
-    } else {
+    /* 无尽模式的波次奖励【不】在这里发 —— 无尽没有「通关」结局，
+     * win() 永远不会被调用，写在 win 分支里等于从未执行。
+     * 统一挪到下方「无尽模式结算（任何结局）」处。 */
+    {
       const lr = def.rw || {};
       /* 难度收益倍率（普通 1 / 困难 2.6 / 恶魔 6.5）
        * 关卡表 rw 是「普通难度」的基准值，高难度按倍率放大后发放。
@@ -1378,17 +1373,20 @@ function onBattleEnd(res, d) {
         }
       }
     }
-    /* 合并【局内掉落】的材料/芯片到结算面板。
-     * 此前面板只统计关卡表 rw，战斗中实际捡到的掉落一行都不显示：
-     * 实测 1-1 通关实发 158 合金 + 8 零件，面板却只写「5 合金」，
-     * 玩家打完完全不知道自己捞了多少。 */
-    rw.mat = rw.mat || {};
-    if (r.matGain) for (const k in r.matGain) {
-      const n = E.safeAmt(r.matGain[k]);
-      if (n > 0) rw.mat[k] = (rw.mat[k] || 0) + n;
-    }
-    if (r.chipGain) rw.chip = (rw.chip || 0) + E.safeAmt(r.chipGain);
-  } else {
+  }
+  /* 合并【局内掉落】的材料/芯片到结算面板（胜负/撤离都合并）。
+   * 此前面板只统计关卡表 rw，战斗中实际捡到的掉落一行都不显示：
+   * 实测 1-1 通关实发 158 合金 + 8 零件，面板却只写「5 合金」，
+   * 玩家打完完全不知道自己捞了多少。
+   * 而且它原本被关在 win 分支里 —— 失败/撤离时面板连这行都不显示，
+   * 玩家打了一整局捡到的材料完全消失在界面上。 */
+  rw.mat = rw.mat || {};
+  if (r.matGain) for (const k in r.matGain) {
+    const n = E.safeAmt(r.matGain[k]);
+    if (n > 0) rw.mat[k] = (rw.mat[k] || 0) + n;
+  }
+  if (r.chipGain) rw.chip = (rw.chip || 0) + E.safeAmt(r.chipGain);
+  if (res !== 'win') {
     /* 失败 / 中途退出
      * BUG：battle 回调里的 rw.gold 已经是「按比例折算后」的局内金币
      *   lose → floor(r.gold * 0.3)
@@ -1401,6 +1399,39 @@ function onBattleEnd(res, d) {
   /* 关卡掉落金币（仅胜利时叠加：胜利分支的 rw.gold 是关卡奖励，
    * 局内击杀金币在 d.rw.gold 里，两者相加；失败/退出分支 d.rw.gold 已含折算） */
   if (res === 'win') rw.gold += Math.round((d.rw && d.rw.gold) || 0);
+
+  /* ============================================================
+   * 无尽模式结算（任何结局都发：lose 被破线 / quit 主动撤离）
+   * ------------------------------------------------------------
+   * 此前波次金币、最佳层数、活动代币全写在 `res === 'win'` 分支里。
+   * 但无尽模式 waves=9999，永远不可能「通关」，win() 全项目零调用 ——
+   * 那几行代码一次都没执行过。实测后果：
+   *   无尽打到第 2 波阵亡 → 金币 0、最佳层数恒 0、
+   *   活动代币 evToken 0（活动商店 12 件商品一件都买不了）、
+   *   无尽排行榜全服恒为空。
+   * 无尽没有胜负概念，只有「活到第几波」，所以三种结局都按波次结算。
+   * ============================================================ */
+  if (endless) {
+    const wvRaw = Number(r.wave);
+    const wv = isFinite(wvRaw) ? Math.max(0, Math.floor(wvRaw)) : 0;
+    rw.wave = wv;
+    /* 波次金币：只按波次与金币加成算，不吃难度倍率
+     *（难度倍率已体现在波次推进难度上，再乘一次会让恶魔档刷币失控） */
+    const wg = Math.round((100 + wv * 20) * (E.attrs(P).goldMul || 1));
+    rw.gold += E.safeAmt(wg);
+    rw.waveGold = E.safeAmt(wg);
+    /* 最佳层数（主界面「最佳 N 层」+ 无尽排行榜都读这个） */
+    P.endlessBest = Math.max(P.endlessBest || 0, wv);
+    /* 表22 EV01 丧尸围城 = 无尽模式：按存活波次发活动代币
+     *（此前 evToken 全项目零产出，活动商店 12 件商品一件都买不了） */
+    const tk = Math.max(10, wv * 3);
+    P.evToken = (P.evToken || 0) + tk;
+    P.evScore = (P.evScore || 0) + tk;
+    rw.evToken = tk;
+    /* 表37 埋点 endless_time：原来挂在 win() 里，无尽永不触发，
+     * 后台「无尽时长」这项数据常年为空。改在唯一结算入口上报。 */
+    try { if (window.OPS) OPS.track('endless_time', { t: Math.floor(r.time || 0), wave: wv }); } catch (e) {}
+  }
   /* 结算写入前过一遍 safeAmt：rw.gold 若因关卡配置异常算成 NaN/负数，
    * 玩家打完一局【金币直接归零 / 倒扣】，且结算面板还会显示"获得 NaN"。 */
   rw.gold = E.safeAmt(rw.gold); rw.diamond = E.safeAmt(rw.diamond);
