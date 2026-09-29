@@ -589,6 +589,8 @@ const BT = {
       x: 0, y: 0, hp, maxHp: hp, spd: d.spd * dm.spd, dmg: d.dmg * dm.dmg * wv, atkR: d.atkR,
       ai: d.ai, def: d.def || 0, front: d.front || 0, fly: !!d.fly,
       slow: 0, slowT: 0, burn: 0, burnT: 0, atkCd: 0, dashT: 0, facing: 0,
+      /* BOSS 近身（contact）技能的独立冷却，见 update 里的派发 */
+      skCd: 0,
       dead: false, boss: false,
       /* 击杀金币/经验随章节缩放：
        * 原为固定值（普通僵尸 3 金币），后期武器升级需数千万，
@@ -1073,7 +1075,10 @@ const BT = {
       const dist = Math.hypot(dx, dy) || 1;
       z.facing = Math.atan2(dy, dx);
 
-      if (z.isBoss) this.bossTick(z, dt, dist);
+      if (z.isBoss) {
+        this.bossTick(z, dt, dist);
+        if (z.skCd > 0) z.skCd -= dt;
+      }
 
       /* 真实玩法：僵尸整体自上而下推进，向防线（屏幕底部）压 */
       /* 掩体减速（表28：障碍物阻挡僵尸推进） */
@@ -1136,6 +1141,23 @@ const BT = {
        *   唯独这一处漏了。这里补上同一套兜底。 */
       const _wallY = (this.wallY != null && isFinite(this.wallY)) ? this.wallY : (this.H - 96);
       if (z.y >= _wallY) {
+        if (z.isBoss) {
+          /* 【BOSS 撞墙自尽】此前 BOSS 撞到防线也是 dead=true 直接消失，
+           * 于是"只要不打它、让它走到防线"BOSS 就会自己没掉 —— BOSS 战
+           * 形同虚设，而且近战型 BOSS（atkR 46/60/55）根本走不到下面的
+           * 接触分支，它的 contact 技能永远零触发。
+           * 现在 BOSS 不会自尽：卡在防线前持续攻击，并按 atkCd 节流。 */
+          z.y = _wallY - 6;
+          z.atkCd -= dt;
+          if (z.atkCd <= 0) {
+            z.atkCd = 0.9;
+            this.hurtPlayer(z.dmg, z.n, z);
+            this.bossContactSkill(z);
+            r.efx.push({ t: 'hitWall', x: z.x, y: _wallY, life: 0.3, max: 0.3, r: 26 });
+            if (window.SND) SND.play('hurt');
+          }
+          continue;
+        }
         this.hurtPlayer(z.dmg, z.n, z);
         z.dead = true; z.hp = 0;
         r.efx.push({ t: 'hitWall', x: z.x, y: _wallY, life: 0.3, max: 0.3, r: 26 });
@@ -1152,6 +1174,7 @@ const BT = {
           if (z.isBoss) {
             const a = Math.atan2(r.py - z.y, r.px - z.x);
             r.px += Math.cos(a) * 34; r.py += Math.sin(a) * 34;
+            this.bossContactSkill(z);
           }
         }
       }
@@ -1375,6 +1398,20 @@ const BT = {
     }
   },
 
+  /* BOSS 近身（trig:'contact'）技能派发
+   * 6 个 BOSS 各有 1 个 contact 技能（巨爪拍击/铲斗横扫/暗影镰斩/吞噬/
+   * 诅咒之杖/巨剑斩击），但 bossTick 只处理数值型 trig（血量阈值），
+   * 全项目没有任何地方派发 contact —— 它们在真实战斗中一次都没触发过。
+   * 加 7 秒冷却，避免近身 BOSS 每 0.9 秒连放。 */
+  bossContactSkill(z) {
+    const r = this.run; if (!r || !z) return;
+    if (z.skCd > 0) return;
+    const csk = ((z.bossDef && z.bossDef.skills) || []).find((s) => s && s.trig === 'contact');
+    if (!csk) return;
+    z.skCd = 7;
+    this.bossCast(z, csk, z.phase || 1);
+  },
+
   /* BOSS 阶段技能的实际效果
    * BUG：8 个 BOSS 共 24 个技能，此前只按名字精确匹配了 3 个
    *（召唤小怪 / 孢子喷吐 / 狂暴），其余 21 个（铲斗横扫、产卵、
@@ -1450,6 +1487,75 @@ const BT = {
         }
       }
       this.hurtPlayer(z.dmg * 0.35, n);
+      return;
+    }
+
+    /* ---- contact 类（近身技能）：一次性爆发，绝不永久叠属性 ----
+     * 此前 contact 技能会落到最下面的通用兜底 z.dmg *= 1.2 / z.atkR *= 1.15，
+     * 而派发后每 7 秒触发一次 → 打一场 BOSS 战能叠到初始伤害的数倍，
+     * BOSS 越打越离谱，且 6 个技能文案各不相同却都只是「给自己加攻」。
+     * 现在按名称各自实现真实效果，且都不做永久属性增长。 */
+    if (sk.trig === 'contact') {
+      const burst = z.dmg * 0.6;
+      /* 修道士「诅咒之杖」：远程诅咒，降低玩家攻速
+       * 复用寒霜减速（r.chill / r.chillT / r.chillMul）同一套射速系数，
+       * 到期由 tick 自动清零，不会永久残留。 */
+      if (/诅咒|迟缓|降攻速/.test(n)) {
+        r.chill = Math.max(Number(r.chill) || 0, 0.4);
+        r.chillT = Math.max(Number(r.chillT) || 0, 8);
+        r.chillMul = 1 - r.chill;
+        r.efx.push({ t: 'nova', x: r.px, y: (r.py || 0) - 30, r: 150, life: 0.8, max: 0.8, el: '暗' });
+        this.addFloat(r.px, (r.py || 0) - 46, '攻速 -40%', 'debuff');
+        return;
+      }
+      /* 铲斗横扫：击退并眩晕 → 短暂无法开火 */
+      if (/铲斗/.test(n)) {
+        r.efx.push({ t: 'nova', x: z.x, y: z.y, r: 200, life: 0.6, max: 0.6, el: '物' });
+        this.hurtPlayer(burst, n);
+        r.chill = Math.max(Number(r.chill) || 0, 0.6);
+        r.chillT = Math.max(Number(r.chillT) || 0, 2.5);
+        r.chillMul = 1 - r.chill;
+        this.addFloat(r.px, (r.py || 0) - 46, '眩晕！', 'debuff');
+        return;
+      }
+      /* 巨爪拍击：大范围近战，击退防线（把玩家往后推并造成额外伤害） */
+      if (/巨爪/.test(n)) {
+        r.efx.push({ t: 'nova', x: z.x, y: z.y, r: 170, life: 0.5, max: 0.5, el: '物' });
+        this.hurtPlayer(burst * 1.2, n);
+        r.py = Math.min(r.py + 26, this.H - 24);
+        this.addFloat(r.px, (r.py || 0) - 46, '被击退！', 'debuff');
+        return;
+      }
+      /* 吞噬：近身大量伤害 */
+      if (/吞噬/.test(n)) {
+        this.hurtPlayer(burst * 2, n);
+        r.efx.push({ t: 'nova', x: r.px, y: (r.py || 0) - 20, r: 120, life: 0.5, max: 0.5, el: '毒' });
+        return;
+      }
+      /* 暗影镰斩 / 巨剑斩击：能量斩击，超大范围 */
+      if (/镰斩|斩击/.test(n)) {
+        const big = /巨剑/.test(n);
+        r.efx.push({ t: 'nova', x: z.x, y: z.y, r: big ? 300 : 210, life: 0.6, max: 0.6, el: '暗' });
+        this.hurtPlayer(burst * (big ? 1.4 : 1), n);
+        /* 斩击顺带击退附近僵尸，形成"清场"观感 */
+        for (const o of r.zombies) {
+          if (o.dead || o === z) continue;
+          if (Math.hypot(o.x - z.x, o.y - z.y) < (big ? 300 : 210)) o.y -= 30;
+        }
+        return;
+      }
+      /* 兜底 contact：只做一次爆发，不改属性 */
+      this.hurtPlayer(burst, n);
+      return;
+    }
+
+    /* 诅咒类（非 contact 触发时的兜底匹配） */
+    if (/诅咒|迟缓|降攻速/.test(n)) {
+      r.chill = Math.max(Number(r.chill) || 0, 0.4);
+      r.chillT = Math.max(Number(r.chillT) || 0, 8);
+      r.chillMul = 1 - r.chill;
+      r.efx.push({ t: 'nova', x: r.px, y: (r.py || 0) - 30, r: 150, life: 0.8, max: 0.8, el: '暗' });
+      this.addFloat(r.px, (r.py || 0) - 46, '攻速 -40%', 'debuff');
       return;
     }
 
