@@ -1275,9 +1275,26 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    *   面板承诺的那份「属性加成」从来不存在。
    *   现在按军团贡献给加成：每 1000 贡献 +1% 攻击与生命，上限 10%。
    *   （捐献 5000 金 = 100 贡献，故满加成约需 5 万金币，作为中后期金币出口。） */
+  /* 累计贡献（纯读，用于面板显示；老存档缺失时按当前余额回退一次） */
+  legionContribOf(p) {
+    if (!p) return 0;
+    if (p.legionContrib == null || !isFinite(Number(p.legionContrib))) {
+      p.legionContrib = Math.max(0, Number(p.legionExp || 0));
+    }
+    return Math.max(0, Number(p.legionContrib || 0));
+  },
   legionBonus(p) {
     if (!p.legion) return { atkPct: 0, hpPct: 0 };
-    const c = Math.max(0, Number(p.legionExp || 0));
+    /* 必须按【累计贡献】算，不能按【当前余额】。
+     * BUG：此前读 p.legionExp，而军团商店消费也扣同一个字段 ——
+     *   玩家捐够 10000 贡献拿到 +10% 攻击/生命后，去商店花掉 360 贡献，
+     *   余额 9640 → 加成立刻掉到 +9%，战力 1346 → 1336、攻击 29.86 → 29.59。
+     *   把贡献花光就等于 +0%，等于白捐 5 万金币，且界面上没有任何提示，
+     *   玩家只会看到「我在军团商店买了点东西，战力怎么掉了」。
+     *   （实测：捐 10000 → 商店消费 6 次 → 战力掉 10、加成 10%→9%）
+     * 现在读 p.legionContrib（累计，只增不减）；老存档该字段缺失时
+     *   用当前余额初始化一次，保证老玩家不会突然掉属性。 */
+    const c = this.legionContribOf(p);
     const v = Math.min(0.10, Math.floor(c / 1000) * 0.01);
     return { atkPct: v, hpPct: v };
   },
