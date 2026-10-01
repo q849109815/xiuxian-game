@@ -330,7 +330,11 @@ const E = {
           *     → 同一档战令【连领 3 次成功 3 次】，金币 1000→4000
           *   rankRwGot=5      → 排名奖励【连领 3 次成功 3 次】
           * 归入 OBJS 后污染值一律重置为 {}，领取只能成功一次。 */
-         'passClaimed', 'rankRwGot'],
+         'passClaimed', 'rankRwGot',
+         /* skinByChar 是 { 角色id: 该角色上次穿的皮肤id }，用于切换角色时
+          * 恢复玩家自己穿的那件皮肤。被改档写成字符串/数组时，
+          * switchChar 读 p.skinByChar[id] 会静默失败（切回来又变回默认款）。 */
+         'skinByChar'],
   /* 【昵称 / 他人名字安全化】补的是「长度 + 不可见字符」这一层。
    * XSS 由 UI.esc 挡（实测 15 种 payload 全部未执行，无需再改），
    * 但实测发现两处真实破坏：
@@ -394,6 +398,19 @@ const E = {
     if (p.mailGot.length > 300) p.mailGot = p.mailGot.slice(-300);
     if (p.cdkGot.length > 200) p.cdkGot = p.cdkGot.slice(-200);
     this.OBJS.forEach((k) => { if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {}; });
+    /* skinByChar 只校验了「是对象」，内部条目从不校验。
+     * 实测被写成 { C01: 123 } 或 { C01: 'sk_c02b' }（别的角色的皮肤）时，
+     * switchChar 会恢复出一个不属于该角色的皮肤 id：
+     * 外观穿错角色，而皮肤加成照常生效。这里逐条剔除无效项。 */
+    {
+      const m = p.skinByChar;
+      Object.keys(m).forEach((cid) => {
+        const sid = m[cid];
+        const sk = typeof sid === 'string' ? (EX.skins || []).find((x) => x.id === sid) : null;
+        if (!sk || sk.char !== cid) delete m[cid];
+        else if ((p.skins || []).indexOf(sid) < 0) delete m[cid];
+      });
+    }
     /* p.tasks 是对象，但【内部的已领取数组】此前从不校验。
      * 实测 mainClaimed 被写成字符串/数字时，claimTask 里
      *   `p.tasks[key].indexOf(id)` / `.push(id)` 直接抛
@@ -586,14 +603,50 @@ const E = {
     return list.find((s) => s.id === p.skin) || list[0];
   },
   skinOf(charId) { return EX.skins.filter((s) => s.char === charId); },
+  /* 穿戴皮肤的唯一入口
+   * BUG（换角色会把你穿的皮肤冲掉）：switchChar 原先取的是
+   *   「该角色第一件【拥有】的皮肤」，而不是玩家【正在穿】的那件。
+   *   实测：C01 穿着 880 钻买的「沙漠突击」(攻击 +8%)，战力 1257 / 攻击 28；
+   *   切到 C02 再切回 C01，皮肤被自动换回默认款 sk_c01a，
+   *   战力掉到 1233、攻击掉到 26 —— 花了钻石买的加成无声失效，
+   *   而且每换一次角色都要手动重穿一次。
+   * 这里按角色记住「上次穿的」，切回来自动恢复。 */
+  setSkin(p, id) {
+    const sk = (EX.skins || []).find((x) => x.id === id);
+    if (!sk) return false;
+    p.skin = id;
+    if (sk.char) {
+      if (!this._sbc(p)) p.skinByChar = {};
+      p.skinByChar[sk.char] = id;
+    }
+    return true;
+  },
+  /* skinByChar 是 { 角色id: 皮肤id } 字典，类型不对时重置（并保留可用项） */
+  _sbc(p) {
+    if (!p.skinByChar || typeof p.skinByChar !== 'object' || Array.isArray(p.skinByChar)) return null;
+    return p.skinByChar;
+  },
   switchChar(p, id) {
     if (!this.charUnlocked(p, id)) {
       const c = EX.chars.find((x) => x.id === id);
       return { ok: false, msg: '需通关 ' + (c ? c.unlockLv : '?') + ' 解锁' };
     }
+    /* 离开前：把当前角色身上穿的记下来（仅当这件皮肤确实属于当前角色） */
+    const cur = (EX.skins || []).find((x) => x.id === p.skin);
+    if (cur && cur.char && cur.char === p.char) {
+      if (!this._sbc(p)) p.skinByChar = {};
+      p.skinByChar[cur.char] = cur.id;
+    }
     p.char = id;
-    const s = this.skinOf(id).find((x) => (p.skins || []).indexOf(x.id) >= 0);
-    p.skin = s ? s.id : this.skinOf(id)[0].id;
+    const owned = (p.skins || []);
+    const mine = this.skinOf(id);
+    const last = this._sbc(p) ? p.skinByChar[id] : '';
+    /* 优先级：该角色上次穿过的（且已拥有、且属于该角色）
+     *        > 第一件拥有的 > 该角色的第一件 */
+    let want = '';
+    if (last && mine.some((x) => x.id === last) && owned.indexOf(last) >= 0) want = last;
+    else { const f = mine.find((x) => owned.indexOf(x.id) >= 0) || mine[0]; if (f) want = f.id; }
+    if (want) p.skin = want;
     return { ok: true, msg: '已切换为 ' + this.char(p).n };
   },
   /* 皮肤购买统一走下方那个 buySkin（带 Array.isArray 守卫 / 价格校验 /
@@ -2308,9 +2361,16 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if ((p.diamond || 0) < price) return { ok: false, msg: '钻石不足（需 ' + price + '）' };
     p.diamond -= price;
     p.skins.push(id);
-    p.skin = id;
+    /* 买的是别的角色的皮肤时【不自动改穿】：否则 C01 身上会出现
+     * sk_c03b 的立绘（外观穿错角色），而皮肤加成照常生效。
+     * 只入库存，切到该角色时由 switchChar 自动穿上。 */
+    if (!sk.char || sk.char === p.char) this.setSkin(p, id);
     /* 同步图鉴（此前靠 codexBackfill 在读档时补，购买后即时补上） */
     try { this.codexUnlock(p, 'skin', id); } catch (e) {}
+    if (sk.char && sk.char !== p.char) {
+      const c = EX.chars.find((x) => x.id === sk.char);
+      return { ok: true, msg: '已购买「' + sk.n + '」，切换到「' + (c ? c.n : sk.char) + '」后自动穿戴' };
+    }
     return { ok: true, msg: '已购买并穿戴「' + sk.n + '」' };
   },
 
@@ -2376,7 +2436,10 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
         if (typeof sid === 'string' && sid) {
           p.skins = p.skins || [];
           if (p.skins.indexOf(sid) < 0) p.skins.push(sid);
-          p.skin = sid; _got++;
+          /* 同上：发放的皮肤若不属于当前角色，只入库不改穿 */
+          const gsk = (EX.skins || []).find((x) => x.id === sid);
+          if (!gsk || !gsk.char || gsk.char === p.char) this.setSkin(p, sid);
+          _got++;
         }
       }
       else if (k === 'frame') { const v = give[k]; if (typeof v === 'string' && v) { p.frames = p.frames || []; if (p.frames.indexOf(v) < 0) p.frames.push(v); _got++; } }
