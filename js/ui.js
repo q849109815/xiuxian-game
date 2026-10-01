@@ -52,6 +52,29 @@ const UI = {
     const avEl = $('#hmAvIco');
     /* 头像：优先用玩家自己选的，没选过才回退到当前角色图标 */
     if (avEl) avEl.textContent = p.avatar || E.char(p).icon;
+    /* 头像框
+     * BUG：equipFrame() 只写 p.frame，而全项目【没有任何一处读取它做渲染】——
+     *   玩家在设置页点「装备」拿到「已装备头像框：活动限定框」的成功提示，
+     *   回到主界面头像却毫无变化（实测装备前后 #hmAv 的 HTML 完全一致）。
+     *   头像框来自活动商店 800 代币 / 进阶战令 680 钻 / 排行榜奖励，
+     *   花了资源却看不到任何外观变化，等于白买。
+     *   这里按 frameDef 的 color 给头像加边框与光晕，让装备结果肉眼可见。 */
+    const avBox = $('#hmAv');
+    if (avBox) {
+      const fd = p.frame ? (E.frameDef ? E.frameDef(p.frame) : null) : null;
+      if (fd) {
+        const c0 = fd.color || '#ffd166';
+        /* 只有标准 6 位 hex 才拼 alpha，避免非法值拼出无效颜色导致样式整条失效 */
+        const c = /^#[0-9a-fA-F]{6}$/.test(c0) ? c0 : '#ffd166';
+        avBox.style.border = '2px solid ' + c;
+        avBox.style.boxShadow = '0 0 12px ' + c + '80, inset 0 0 7px ' + c + '40';
+        avBox.title = fd.n || '头像框';
+      } else {
+        avBox.style.border = '';
+        avBox.style.boxShadow = '';
+        avBox.removeAttribute('title');
+      }
+    }
 
     $('#hmBase').innerHTML = EX.buildings.map((b) => {
       const l = p.build[b.id] || 1;
@@ -644,6 +667,7 @@ r_tavern(p, tab) {
             ? `<img src="${sk.img}">` : `<div class="gi">${sk.icon}</div>`}
             <div class="gn">${sk.n}${on ? '<span class="tag y" style="font-size:11px">穿戴中</span>' : ''}</div>
             <div class="lbl" style="font-size:11px;line-height:1.3">${bt || '无加成'}${own ? '' : ' · 未拥有'}</div>
+            ${(sk.char && sk.char !== p.char) ? `<div class="lbl" style="font-size:11px;color:#ffb4b4">${(((EX.chars)||[]).find((x)=>x.id===sk.char)||{}).n || sk.char} 专属</div>` : ''}
             ${(!own && price > 0) ? `<button class="btn sm" data-skby="${sk.id}"
               style="font-size:11px;padding:3px 6px;margin-top:3px">💎 ${price} 购买</button>` : ''}</div>`;
         }).join('') || '<div class="lbl">暂无外观</div>'}</div>
@@ -762,11 +786,19 @@ r_tavern(p, tab) {
     /* 皮肤穿戴：点击已拥有的皮肤切换（此前死图库，点了没反应） */
     $$('#pnBody [data-skb]').forEach((el) => { el.onclick = () => {
       const id = el.dataset.skb;
+      const sk0 = (EX.skins || []).find((x) => x.id === id);
       if ((p.skins || []).indexOf(id) < 0) {
-        const sk = (EX.skins || []).find((x) => x.id === id);
-        return this.toast('尚未拥有「' + (sk ? sk.n : id) + '」', 'err');
+        return this.toast('尚未拥有「' + (sk0 ? sk0.n : id) + '」', 'err');
       }
-      p.skin = id; E.save(p);
+      /* 外观穿错角色 BUG：外观页列出的是【全部角色的皮肤】，
+       * 此前点谁都能穿 —— 玩家在 C01 身上能穿上 C03 的「装甲骑士」，
+       * 主界面立绘与角色对不上（而皮肤加成照常生效，属性加成与外观脱节）。
+       * 这里拒绝跨角色穿戴，并提示先切换到对应角色。 */
+      if (sk0 && sk0.char && p.char && sk0.char !== p.char) {
+        const c = (EX.chars || []).find((x) => x.id === sk0.char);
+        return this.toast('「' + sk0.n + '」是「' + (c ? c.n : sk0.char) + '」的外观，请先切换到该角色', 'err');
+      }
+      E.setSkin(p, id); E.save(p);
       if (window.SND) SND.play('pickup');
       this.toast('已穿戴 ' + (((EX.skins || []).find((x) => x.id === id)) || {}).n, 'ok');
       this.open('role', '皮肤'); this.home();
@@ -1486,7 +1518,7 @@ r_tavern(p, tab) {
           if (sid) {
             p.skins = p.skins || [];
             if (p.skins.indexOf(sid) < 0) p.skins.push(sid);
-            p.skin = sid;
+            E.setSkin(p, sid);
           }
         }
         else if (k === 'title') { p.titles = p.titles || []; if (p.titles.indexOf(g.give[k]) < 0) p.titles.push(g.give[k]); }
