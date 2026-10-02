@@ -1780,9 +1780,26 @@ r_tavern(p, tab) {
   },
   /* 奖励字典 → 中文文本（用于 toast），如 {gold:100,M01:5} → 「金币×100 合金×5」 */
   rwText(rw) {
-    const ks = Object.keys(rw || {}).filter((k) => (rw[k] || 0) > 0);
+    /* 皮肤 / 宝石 / 称号 / 头像框这类附件的【值是物品 id 字符串】而不是数量。
+     * 原判定 `(rw[k]||0) > 0` 对字符串恒为 false（'sk_c01b' > 0 → false），
+     * 于是这类奖励在领取提示里被整条过滤掉 —— 实测一键领取一封皮肤邮件，
+     * 皮肤确实进了背包，提示却只写「金属×20 金币×500」，玩家不知道自己得了皮肤。
+     * 现在：数字按数量显示，非数字按物品名显示。 */
+    const ks = Object.keys(rw || {}).filter((k) => {
+      const v = rw[k];
+      if (typeof v === 'number') return v > 0;
+      return v != null && String(v).trim() !== '' && String(v) !== '0';
+    });
     if (!ks.length) return '无';
-    return ks.map((k) => E.itemName(k) + '×' + E.fmt(rw[k])).join(' ');
+    return ks.map((k) => {
+      const v = rw[k], n = Number(v);
+      if (typeof v === 'number' || (String(v).trim() !== '' && isFinite(n))) return E.itemName(k) + '×' + E.fmt(n);
+      /* 非数字：值本身就是物品 id（skin:'sk_c01b' / gem:'G_R' / title / frame）
+       * 宝石是裸 id（G_R），itemName 只认带 gem_ 前缀的写法，这里直接查宝石表，
+       * 否则玩家看到的是「G_R」而不是「红宝石」。 */
+      if (k === 'gem') { const g = (EX.gems || []).find((x) => x.id === String(v)); if (g) return g.n; }
+      return E.itemName(String(v)) || E.itemName(k);
+    }).join(' ');
   },
   /* 邮件奖励文案
    * BUG：后台「单发邮件」把附件写在 rw（如 {gold:100}、{M01:5}），
@@ -1939,7 +1956,13 @@ r_tavern(p, tab) {
          * 此前一键领取只算 gold/dia，rw 里的材料、芯片、皮肤全部漏发。 */
         if (m.rw && Object.keys(m.rw).length) {
           E.grant(p, m.rw);
-          Object.keys(m.rw).forEach((k) => { all[k] = (all[k] || 0) + (m.rw[k] || 0); });
+          Object.keys(m.rw).forEach((k) => {
+            const v = m.rw[k], n = Number(v);
+            /* 非数字（皮肤 / 宝石 id）不能做累加 —— 累加结果 NaN，
+             * 会被 rwText 的过滤整条丢掉，提示里就看不见这件奖励。 */
+            if (typeof v === 'number' || (String(v).trim() !== '' && isFinite(n))) all[k] = (all[k] || 0) + n;
+            else all[k] = v;
+          });
         }
       });
       if (g) all.gold = (all.gold || 0) + g;
