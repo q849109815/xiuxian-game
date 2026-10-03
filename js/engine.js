@@ -749,6 +749,17 @@ const E = {
   gunUnlocked(p, id) {
     const g = EX.guns.find((x) => x.id === id); if (!g) return false;
     if (!g.unlockLv) return true;
+    /* 已购买 = 已解锁（付费提前解锁），与 unlockGun 的发放口径保持一致。
+     * BUG：此前只看 p.cleared[unlockLv]，完全不管玩家是否已经花钱买到手。
+     *   商店 4 件带解锁关卡的武器（霰弹枪 1-2 / 狙击枪 2-2 / 医疗包 4-1 /
+     *   护盾发生器 5-1）全部中招 —— 实测新号购买后 gunUnlocked 恒为 false：
+     *     ① 武器库里玩家【正在使用】的霰弹枪显示「需通关 1-2｜未解锁」；
+     *     ② 战斗中 🔄 换枪按 gunUnlocked 过滤列表，买来的枪根本不在列表里；
+     *     ③ 一旦切走，switchGun 被「需通关 1-2」拒绝，再也换不回来 —— 钱白花；
+     *     ④ 支援武器点「卸下」后 switchGun2 同样拒绝，再也装不回去。
+     *   unlockGun 购买时明明已写进 gunOwn 并装备上，这里却说未解锁，自相矛盾。
+     * 未购买的武器仍按通关条件判定，通关解锁的意义不变。 */
+    if (Array.isArray(p.gunOwn) && p.gunOwn.indexOf(id) >= 0) return true;
     return !!p.cleared[g.unlockLv];
   },
   /* 该武器能否作为【出战武器】造成伤害
@@ -797,7 +808,13 @@ const E = {
       let _auto = false;
       if (this.gunIsSupport(g) && !this.gun2(p)) { p.gun2 = id; _auto = true; }
       try { this.codexUnlock(p, 'gun', id); } catch (e) {}
-      const _m = (isNew ? '已解锁 ' : '已有 ') + g.n + (_auto ? '，已自动装入支援槽' : '（支援武器）');
+      /* 支援槽只有一个：已装着医疗包时再买护盾发生器，不会自动顶替。
+       * 原提示「已解锁 护盾发生器（支援武器）」不说去哪切换，
+       * 玩家花了 18000 金币却看不出东西在哪，只会以为钱白花了。
+       * 这里明确指向武器库。 */
+      const _tail = _auto ? '，已自动装入支援槽'
+        : (this.gun2(p) ? '，可在武器库→支援槽切换' : '（支援武器）');
+      const _m = (isNew ? '已解锁 ' : '已有 ') + g.n + _tail;
       return { ok: true, msg: _m, isNew: isNew };
     }
     p.gun = id;
