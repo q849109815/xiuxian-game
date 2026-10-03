@@ -841,7 +841,15 @@ r_tavern(p, tab) {
 
   r_gun(p, tab) {
     if (tab === '武器库') {
+      const _sg = E.gun2(p);
       return `<div class="card"><div class="card-t">武器库 <span class="sub">主武器 6 + 副武器 4</span></div>
+      <div class="item" style="border:1px solid var(--gold);border-radius:8px;margin-bottom:6px">
+        <div class="ic" style="border:1.5px solid ${_sg ? '#ffd166' : '#666'}">${_sg ? (_sg.icon || '🩹') : '➕'}</div>
+        <div class="info"><div class="nm wrap">支援槽 ${_sg ? '<span class="tag g">' + _sg.n + '</span>' : '<span class="tag">空</span>'}</div>
+        <div class="sub wrap">${_sg
+          ? (_sg.heal ? '战斗中每 ' + (1 / _sg.rate).toFixed(1) + 's 治疗防线 ' + _sg.heal + '，弹匣 ' + _sg.mag + ' 发后换弹 ' + _sg.reload + 's' : '战斗中每 ' + (1 / _sg.rate).toFixed(1) + 's 生成护盾 ' + _sg.shield + '，弹匣 ' + _sg.mag + ' 发后换弹 ' + _sg.reload + 's')
+          : '装备医疗包 / 护盾发生器，战斗中自动治疗或加盾，不占出战武器位'}</div></div>
+        <div class="act">${_sg ? `<button class="btn sm" data-gun2="${_sg.id}">卸下</button>` : '<span class="tag">—</span>'}</div></div>
       ${['主', '副'].map((kind) => `<div class="lbl" style="color:var(--gold);margin-top:6px">${kind}武器</div>
       ${EX.guns.filter((g) => g.kind === kind).map((g) => {
         const ok = E.gunUnlocked(p, g.id);
@@ -852,7 +860,11 @@ r_tavern(p, tab) {
           <div class="info"><div class="nm wrap"><span style="color:${EX.qColor[g.q]}">${g.q}</span> ${g.n} <span class="tag">${g.type}</span></div>
           <div class="sub wrap">${g.heal ? '治疗 ' + g.heal : g.shield ? '护盾 ' + g.shield : '伤害 ' + g.dmg} · 射速${g.rate}/s · 弹夹${g.mag} · 换弹${g.reload}s${g.range ? ' · 射程 ' + E.gunRange(g) : ''}${g.pellets > 1 ? ' · 弹丸' + g.pellets : ''}${g.pierce ? ' · 穿透' + g.pierce : ''}</div>
           <div class="sub wrap">${g.bullet}${ok ? '' : ' · 需通关 ' + g.unlockLv}</div></div>
-          <div class="act">${!E.gunCanFight(g) ? '<span class="tag">支援</span>' : on ? '<span class="tag g">使用中</span>' : ok ? `<button class="btn c sm" data-gun="${g.id}">装备</button>` : '<span class="tag r">未解锁</span>'}</div></div>`;
+          <div class="act">${E.gunIsSupport(g)
+            ? (p.gun2 === g.id
+                ? `<button class="btn sm" data-gun2="${g.id}">✔支援中</button>`
+                : ok ? `<button class="btn c sm" data-gun2="${g.id}">装支援槽</button>` : '<span class="tag r">未解锁</span>')
+            : (on ? '<span class="tag g">使用中</span>' : ok ? `<button class="btn c sm" data-gun="${g.id}">装备</button>` : '<span class="tag r">未解锁</span>')}</div></div>`;
       }).join('')}`).join('')}</div>`;
     }
     const g = E.gun(p), a = E.attrs(p), c = E.gunUpgradeCost(p);
@@ -939,6 +951,15 @@ r_tavern(p, tab) {
     };
     $$('#pnBody [data-gun]').forEach((b) => {
       b.onclick = () => { const r = E.switchGun(p, b.dataset.gun); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { E.saveSoon(p); this.open('gun', '武器库'); this.home(); } };
+    });
+    /* 支援武器槽：医疗包 / 护盾发生器。再点一次 = 卸下。 */
+    $$('#pnBody [data-gun2]').forEach((b) => {
+      b.onclick = () => {
+        const id = b.dataset.gun2;
+        const r = E.switchGun2(p, (p.gun2 === id) ? null : id);
+        this.toast(r.msg, r.ok ? 'ok' : 'err');
+        if (r.ok) { if (window.SND) SND.play('upgrade'); E.saveSoon(p); this.open('gun', '武器库'); this.home(); }
+      };
     });
   },
 
