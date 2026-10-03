@@ -1356,6 +1356,16 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const n = Math.min(20, (p.friends || []).length);
     return n * 0.005;
   },
+  /* 好友数上限
+   * BUG：好友列表此前【只增不减、且没有任何上限】。
+   *   「添加好友」按钮每次点击都随机造一个假好友 push 进去，
+   *   实测连点 60 次 → friends.length = 60、战力 1211→1243、攻击 26.25→28.88。
+   *   数值上 friendBonus 有 20 人封顶（+10%）所以没爆表，但：
+   *     ① 存档只增不减，friends 数组可无限膨胀；
+   *     ② 好友面板要渲染几十上百行，滚动卡顿；
+   *     ③ 「每个 +0.5% 攻击」的面板说明会让玩家以为能一直堆。
+   * 现在统一按 20 人封顶（与加成上限一致），超出时提示，不再入库。 */
+  FRIEND_MAX: 20,
 
   /* =========================================================
    * 社交（好友申请 / 聊天）内容供给
@@ -1378,8 +1388,10 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (p.socialDate !== today) { p.socialDate = today; p.socialReqN = 0; p.socialChatN = 0; }
     p.friendReq = Array.isArray(p.friendReq) ? p.friendReq : [];
     p.chat = Array.isArray(p.chat) ? p.chat : [];
-    /* 好友申请：待处理的没消化完就不再堆 */
-    if (p.friendReq.length < this.SOCIAL_REQ_KEEP && (p.socialReqN || 0) < this.SOCIAL_REQ_MAX) {
+    /* 好友申请：待处理的没消化完就不再堆；好友已满则不再产出申请
+     * （否则玩家会看到一堆「接受」按钮，点下去却被上限拦住） */
+    if (p.friendReq.length < this.SOCIAL_REQ_KEEP && (p.socialReqN || 0) < this.SOCIAL_REQ_MAX
+      && (p.friends || []).length < this.FRIEND_MAX) {
       const n = Math.min(2, this.SOCIAL_REQ_MAX - (p.socialReqN || 0));
       for (let i = 0; i < n; i++) {
         p.friendReq.push({
