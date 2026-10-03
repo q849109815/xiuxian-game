@@ -302,12 +302,52 @@ const BT = {
   },
   resize() {
     if (!this.cv) return;
-    const b = this.cv.getBoundingClientRect();
+    const cv = this.cv;
+    /* 缩放挂在【整个战斗层】而不是画布本身：
+     * HUD（暂停/倍速/自动/防线血条…）是 #battle 的绝对定位子元素、按屏幕边缘排版，
+     * 只缩放画布的话画面缩到中间、HUD 仍贴屏幕边 → 横屏下按钮悬在画面外的黑边上。
+     * 整体缩放 #battle，画面与 HUD 始终对齐。
+     * 注：结算/暂停/三选一等 modal 挂在 #app 下、不在 #battle 内，不受缩放影响。 */
+    const layer = document.getElementById('battle') || cv.parentElement;
+    /* 先复位上一轮留下的缩放，否则 getBoundingClientRect 读到的是【缩放后】的尺寸，
+     * 转屏 N 次就会连乘缩小 N 次（画面最后缩成一个点）。
+     * 读取 rect 会强制同步布局，复位后立刻量到的是容器真实尺寸，安全。 */
+    if (layer && layer.style.transform) { layer.style.transform = ''; layer.style.width = ''; layer.style.height = ''; }
+    const b = cv.getBoundingClientRect();
     const d = window.devicePixelRatio || 1;
-    this.W = Math.max(300, b.width || 390); this.H = Math.max(520, b.height || 693);
+    /* 最低可玩区：低于此值防线、血条、按钮会挤成一团 */
+    const MINW = 300, MINH = 520;
+    this.W = Math.max(MINW, b.width || 390); this.H = Math.max(MINH, b.height || 693);
     this.wallY = this.H - 96;
-    this.cv.width = this.W * d; this.cv.height = this.H * d;
+    cv.width = this.W * d; cv.height = this.H * d;
     this.ctx.setTransform(d, 0, 0, d, 0, 0);
+    /* 容器小于最低可玩区时等比缩放整个战斗层。
+     * 典型场景：手机横屏 852×393 —— 容器高 393 < MINH 520。
+     * 修复前：逻辑高度被抬到 520，画布却仍按 CSS 100% 高度（393）显示，
+     *   ① 画面被纵向压扁（逻辑 852×520 挤进 852×393，纵向压缩 0.756）
+     *   ② wallY = 520-96 = 424 落在可视区 393 之外，玩家看不见自己的防线，
+     *      僵尸明明已经推到防线，画面上却还在屏幕外。
+     * 修复后：整层等比缩小并居中，画面完整、比例正确、HUD 对齐。
+     * 战斗无触摸坐标映射（自动射击），缩放不影响任何操作。 */
+    const sx = b.width > 0 ? b.width / this.W : 1;
+    const sy = b.height > 0 ? b.height / this.H : 1;
+    const s = Math.min(1, sx, sy);
+    if (layer) {
+      if (s > 0 && s < 0.999) {
+        /* 战斗层先撑到【逻辑尺寸】，再整体缩放居中。
+         * 只 scale 不撑盒的话：#battle 仍是 852×393，画布 CSS 100% 高 = 393，
+         * 位图 852×520 照样被拉伸进 393 高 → 画面依旧纵向压扁。
+         * 撑盒后画布 = 852×520 与位图同比，HUD 也按同一坐标系排版，再整体缩放。 */
+        layer.style.width = this.W + 'px';
+        layer.style.height = this.H + 'px';
+        layer.style.transformOrigin = 'top left';
+        const ox = (b.width - this.W * s) / 2, oy = (b.height - this.H * s) / 2;
+        layer.style.transform = 'translate(' + ox + 'px,' + oy + 'px) scale(' + s + ')';
+      } else {
+        layer.style.transform = ''; layer.style.width = ''; layer.style.height = '';
+      }
+    }
+    this._cvScale = s > 0 ? s : 1;
   },
 
   /* ---------------- 关卡定义（按章节生成） ---------------- */
