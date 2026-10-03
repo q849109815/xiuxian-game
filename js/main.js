@@ -510,7 +510,25 @@ const MAIN = {
     p.mail.unshift({ id: 'tmp' + Date.now(), t: '限时道具已到期',
       b: '以下限时道具已到期并回收：' + txt, rw: {}, from: '系统',
       got: false, at: Date.now() });
-    if (p.mail.length > 40) p.mail.length = 40;
+    /* 截断保序：优先保留【未领取】的邮件
+     * BUG：原写法 `p.mail.length = 40` 直接砍掉尾部（最老的 40 条之后），
+     *   而邮件是 unshift 入库（新的在前），被砍的正好是最早的那些。
+     *   玩家攒了 50 封未领的奖励邮件时，一次限时回收就无声吞掉 10 封，
+     *   里面的金币/钻石/材料随之消失，邮件里连个说明都没有。
+     *   现在按「未领取优先」保留，实在放不下才丢已领取的。 */
+    if (p.mail.length > 40) {
+      const un = p.mail.filter((m) => m && !m.got);
+      if (un.length >= 40) { p.mail = un.slice(0, 40); }
+      else {
+        const room = 40 - un.length;
+        let c = 0;
+        p.mail = p.mail.filter((m) => {
+          if (!m) return false;
+          if (!m.got) return true;
+          c++; return c <= room;
+        });
+      }
+    }
     try { E.save(p); } catch (e) {}
     return ks.length;
   },
@@ -590,7 +608,29 @@ const MAIN = {
     }
     this.uploadRank();
   },
-  startSave() { if (saveT) clearInterval(saveT); saveT = setInterval(() => { if (P && !window.__zbResetting) this.save(); }, 30000); },
+  startSave() {
+    if (saveT) clearInterval(saveT);
+    saveT = setInterval(() => {
+      if (!P || window.__zbResetting) return;
+      /* 限时道具 / GM 临时增益的到期回收
+       * BUG：tickTempItems / tickTempBuff 此前【只在登录 migrate 时跑一次】，
+       *   玩家连续游玩一整天不重登（打无尽、挂机、不关页面）时，
+       *   限时道具永远不会到期回收 —— 「限时 3 天」实际等于永久。
+       *   而背包角标 tempTag 又是按「剩余时间 ≤0 就不显示」渲染的，
+       *   于是出现：角标已经消失（看起来过期了）→ 道具却还在、加成还在生效
+       *   → 只有下次重新登录才被扣回，玩家只觉得「东西凭空消失了」。
+       *   实测：I01×10 且 tempItems 记 2 秒后回收 5 个，原地等 5 秒不重登，
+       *         结果仍是 10 个、tempItems 仍挂着 1 条（完全没回收）。
+       * 现在随自动存档一并巡检（30 秒一次，对「按天/小时」的限时足够精确），
+       * 到期即扣回并发邮件说明，与登录时同一套语义。 */
+      try {
+        const n = this.tickTempItems(P) || 0;
+        if (n > 0) { try { if (window.UI) UI.toast('⏳ 有 ' + n + ' 类限时道具已到期回收，详情见邮件', 'warn'); } catch (e) {} }
+      } catch (e) {}
+      try { this.tickTempBuff(P); } catch (e) {}
+      this.save();
+    }, 30000);
+  },
   /* 榜单上传节流键：记录上次成功上传时自己的成绩指纹 + 时间戳。
    * BUG：save() 每 30 秒触发一次，uploadRank() 无条件执行，
    *   每次都是「读 leaderboard + 写 leaderboard + 读 endless + 写 endless」= 4 次 API。
