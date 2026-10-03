@@ -1166,6 +1166,18 @@ const EX = {
    * 老存档里已存在的超高等级。 */
   TURRET_MAX_LV: 20,
 
+  /* ===== 全局难度调节（关卡强度之上再乘一层）=====
+   * 背景：100 关全量实测（武器 Lv=章节×10、初始武器 W01、不建炮台）
+   * 通关 98/100 关 —— 后期关卡几乎没有压力，玩家闭眼过。
+   * 这里给出两条随章节递增的曲线，前期只是略微变紧，后期明显吃力：
+   *   血量 × (HARD_HP_BASE + ch * HARD_HP_STEP)
+   *   伤害 × (HARD_DMG_BASE + ch * HARD_DMG_STEP)
+   * 调难度只需改这四个数，不用动 100 关关卡表。 */
+  HARD_HP_BASE: 1.30, HARD_HP_STEP: 0.050,   /* 第1章 ×1.35 … 第10章 ×1.80 */
+  HARD_DMG_BASE: 1.15, HARD_DMG_STEP: 0.035, /* 第1章 ×1.185 … 第10章 ×1.50 */
+  HARD_SPD_BASE: 1.05, HARD_SPD_STEP: 0.020, /* 移速：第1章 ×1.07 … 第10章 ×1.25 */
+  HARD_ON: true,                             /* 一键关掉整条难度曲线（回退用） */
+
   /* 【僵尸 Q 版头像】截图：好友/邮件/军团均为绿皮黄眼僵尸 */
   zAvatars: [
     'assets/char/z_suit.jpg',
@@ -1243,6 +1255,14 @@ const EX = {
         give: { M02: 15 }, limit: { t: 'once', v: 1 }, desc: '解锁霰弹枪+合金15 · 限购1次' },
       { id: 'W3', n: '狙击枪', icon: '🎯', img: 'assets/icon/w3_sniper.jpg', price: 8000, cur: 'gold', gun: 'W04',
         give: { M03: 10 }, limit: { t: 'once', v: 1 }, desc: '解锁狙击枪+稀有金属10 · 限购1次' },
+      /* 支援武器（医疗包 / 护盾发生器）：
+       * 这两把 dmg=0，此前既不能装备、商店也没上架 —— 玩家永远拿不到，
+       * 等于两张废卡。现在支援槽实装，这里同步上架：
+       * 解锁后自动装入支援槽，下一场战斗即可吃到治疗/护盾。 */
+      { id: 'W4', n: '医疗包', icon: '🩹', img: 'assets/chibi/s07.png', price: 12000, cur: 'gold', gun: 'S07',
+        give: { M01: 10 }, limit: { t: 'once', v: 1 }, desc: '支援武器·每场战斗自动治疗防线260 · 限购1次' },
+      { id: 'W5', n: '护盾发生器', icon: '🛡️', img: 'assets/chibi/s08.png', price: 18000, cur: 'gold', gun: 'S08',
+        give: { M02: 10 }, limit: { t: 'once', v: 1 }, desc: '支援武器·每场战斗自动生成护盾420 · 限购1次' },
     ],
     '宝石': [
       /* 同上：宝石此前无限购，钻石可无限换宝石 → 镶嵌/合成系统失去约束。
