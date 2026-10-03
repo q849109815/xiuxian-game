@@ -221,10 +221,34 @@ const UI = {
     $('#pnTabs').style.display = def[1].length > 1 ? '' : 'none';
     $$('#pnTabs .pt').forEach((b) => { b.onclick = () => { this.curTab[key] = b.dataset.t; this.open(key); }; });
     $('#pnBody').innerHTML = this.render(key, this.curTab[key]);
+    const _sig = key + '|' + this.curTab[key];
+    const _needTop = this._pnScrollSig !== _sig;
     $('#panel').classList.add('on');
     this.bind(key, this.curTab[key]);
+    /* BUG：切页签 / 换面板 / 关掉再打开时【不重置滚动位置】。
+     * 实测（393×852）：图鉴「怪物」页滚到底 scrollTop=208，切到「武器」页后仍停在 208；
+     * 武器库滚到底 393，切页签后依旧 393 —— 新页签的顶部内容被跳过，
+     * 玩家看到的是列表中间，还以为内容没加载出来。
+     *
+     * 两个坑（都实测过）：
+     *  ① 复位必须放在 classList.add('on')【之后】—— 面板 display:none 时
+     *     给 pnBody 赋 scrollTop 会被浏览器忽略，等面板重新可见时又弹回旧值；
+     *  ② 只在「面板或页签真的变了」时归零：同一面板购买后原地刷新（open(key)）
+     *     保持原滚动位置，避免刚买完东西就被弹回顶部。 */
+    if (_needTop) {
+      this._pnScrollSig = _sig;
+      const bd = $('#pnBody');
+      if (bd) {
+        bd.scrollTop = 0;
+        /* 首帧布局完成后再兜一次，防图片/懒加载撑高后把位置又顶回去 */
+        requestAnimationFrame(() => { if (this._pnScrollSig === _sig) bd.scrollTop = 0; });
+      }
+    }
   },
-  close() { $('#panel').classList.remove('on'); this.curPanel = null; },
+  close() { $('#panel').classList.remove('on'); this.curPanel = null; this._pnScrollSig = null;
+    /* 关面板时把滚动位置一并归零：下次再打开（哪怕同一个面板同一个页签）
+     * 都从顶部开始，不会残留上一次的滚动偏移。 */
+    const bd = $('#pnBody'); if (bd) bd.scrollTop = 0; },
   /* 通用弹层（军团商店 / 军团副本用）
    * 严重 BUG：b_legion 里两处调用 this.sheet(...)，但 UI 上【根本没有 sheet 方法】
    *   （全项目 0 处定义）——点「军团商店」「军团活动」直接抛
@@ -3286,7 +3310,15 @@ r_tavern(p, tab) {
       const left = E.runLeft ? E.runLeft(this.P) : 0;
       tn.textContent = '剩余体力：' + Math.max(0, left) + '/' + ((window.EX && EX.STAMINA_MAX) || 100);
     }
-    $('#rsNext').style.display = win && !BT.run.endless ? '' : 'none';
+    /* BUG：此前只按「是否胜利 + 是否无尽」决定显隐，没判断【有没有下一关】。
+     * 实测通关末关 10-10（E.nextLevel 返回 null）时，「下一关」按钮照样亮着，
+     * 玩家点下去被直接踢回主界面 —— 按钮写着「下一关」，却不存在下一关，
+     * 玩家只会以为游戏把关卡弄丢了。末关时隐藏该按钮，只留「再挑战 / 返回」。 */
+    /* 注：run 里没有 run.id / run.levelId 这类字段，关卡号在 run.def.id 上
+     * （run 只是把 levelDef() 的返回值整体挂在 def 下）。 */
+    const _curLv = BT.run.endless ? null : ((BT.run.def && BT.run.def.id) || BT.run.id || BT.run.levelId);
+    const _hasNext = win && !BT.run.endless && !!(E.nextLevel && _curLv && E.nextLevel(_curLv));
+    $('#rsNext').style.display = _hasNext ? '' : 'none';
     /* 广告：双倍奖励 / 复活 */
     const adBox = $('#rsAd');
     if (adBox) {
