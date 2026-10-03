@@ -532,6 +532,21 @@ const BT = {
       const md = EX.mercs.find((x) => x.id === mid); if (!md) continue;
       _r.mercs.push({ def: md, x: this.W * (0.28 + _r.mercs.length * 0.18), y: this.H - 74, cd: 0 });
     }
+    /* ===== 支援武器槽（p.gun2）=====
+     * 医疗包 S07 / 护盾发生器 S08 走这条独立链路：不占出战武器、不参与伤害，
+     * 按武器表自己的 rate / mag / reload 自动循环，触发治疗与护盾。
+     * 此前这两把枪只能躺在图鉴里（dmg=0 → 装备即必败，只能禁止装备）。 */
+    const _sg = (typeof E !== 'undefined' && E.gun2) ? E.gun2(p) : null;
+    _r.sup = _sg ? {
+      id: _sg.id, n: _sg.n, icon: _sg.icon || '🩹',
+      heal: Number(_sg.heal) || 0, shield: Number(_sg.shield) || 0,
+      rate: Math.max(0.05, Number(_sg.rate) || 0.5),
+      magMax: Math.max(1, Math.round(Number(_sg.mag) || 1)),
+      reload: Math.max(0.2, Number(_sg.reload) || 3),
+      mag: Math.max(1, Math.round(Number(_sg.mag) || 1)),
+      cd: 1.2, reloadT: 0, reloading: false,
+      /* 开局给 1.2 秒缓冲，避免刚进场就弹治疗提示 */
+    } : null;
     /* 战斗外预置的消耗品：必须在 run 创建【之后】才生效
      * （此前放在 start() 开头，被 this.run = {...} 覆盖，等于白用） */
     try { if (E.applyPendingItems) E.applyPendingItems(p); } catch (e) {}
@@ -623,10 +638,19 @@ const BT = {
     const wv = (this.run && this.run.endless)
       ? Math.min(4, 1 + Math.max(0, (this.run.wave - 1)) * 0.10)
       : 1;
-    const hp = hpOverride != null ? Math.round(hpOverride * dm.hp) : Math.round(d.hp * mul * dm.hp);
+    /* 全局难度曲线（EX.HARD_*）：在「关卡强度 × 难度倍率」之上再乘一层。
+     * 系数只取关卡所属章节，同章 10 关一致，避免难度忽高忽低。 */
+    let _hb = 1, _db = 1, _sb = 1;
+    if (typeof EX !== 'undefined' && EX.HARD_ON) {
+      const _ch = Number((this.run && this.run.def && this.run.def.ch) || 1);
+      _hb = (Number(EX.HARD_HP_BASE) || 1) + _ch * (Number(EX.HARD_HP_STEP) || 0);
+      _db = (Number(EX.HARD_DMG_BASE) || 1) + _ch * (Number(EX.HARD_DMG_STEP) || 0);
+      _sb = (Number(EX.HARD_SPD_BASE) || 1) + _ch * (Number(EX.HARD_SPD_STEP) || 0);
+    }
+    const hp = hpOverride != null ? Math.round(hpOverride * dm.hp) : Math.round(d.hp * mul * dm.hp * _hb);
     return {
       d, id: d.id, n: d.n, icon: d.icon, img: d.img,
-      x: 0, y: 0, hp, maxHp: hp, spd: d.spd * dm.spd, dmg: d.dmg * dm.dmg * wv, atkR: d.atkR,
+      x: 0, y: 0, hp, maxHp: hp, spd: d.spd * dm.spd * _sb, dmg: d.dmg * dm.dmg * wv * _db, atkR: d.atkR,
       ai: d.ai, def: d.def || 0, front: d.front || 0, fly: !!d.fly,
       slow: 0, slowT: 0, burn: 0, burnT: 0, atkCd: 0, dashT: 0, facing: 0,
       /* BOSS 近身（contact）技能的独立冷却，见 update 里的派发 */
@@ -763,6 +787,42 @@ const BT = {
   /* =================================================
    * 主循环
    * ================================================ */
+  /* ===== 支援武器槽：自动循环 =====
+   * 医疗包：按周期治疗防线；护盾发生器：按周期叠护盾。
+   * 用武器表自带的 mag/reload 控制节奏 —— 打完弹匣要换弹，
+   * 所以不是「每秒无限回血」，而是有明确空窗期的续航手段。 */
+  tickSupport(dt) {
+    const r = this.run; if (!r || !r.sup || r.over) return;
+    const s = r.sup;
+    if (s.reloading) {
+      s.reloadT -= dt;
+      if (s.reloadT <= 0) { s.reloading = false; s.mag = s.magMax; }
+      return;
+    }
+    s.cd -= dt;
+    if (s.cd > 0) return;
+    s.cd = 1 / s.rate;
+    s.mag--;
+    /* 治疗：只补防线，不溢出；已满血时不浪费这一发（不扣弹匣） */
+    if (s.heal > 0) {
+      const wm = r.wallMax || r.maxHp || 1;
+      const cur = (r.wallHp != null ? r.wallHp : r.hp);
+      if (cur >= wm - 0.5) { s.mag++; return; }   /* 满血：本次不消耗 */
+      r.wallHp = Math.min(wm, cur + s.heal);
+      r.hp = r.wallHp;
+      if (r.efx && r.efx.length < 90) r.efx.push({ t: 'heal', x: r.px, y: (r.py || 400) - 20, life: 0.7, max: 0.7 });
+      try { if (window.UI && UI.toast) UI.toast('🩹 ' + s.n + ' 防线 +' + Math.round(s.heal)); } catch (e) {}
+    }
+    /* 护盾：叠加，上限同步抬高（否则加了立刻被 maxShield 夹掉） */
+    if (s.shield > 0) {
+      r.shield = (Number(r.shield) || 0) + s.shield;
+      r.maxShield = Math.max(Number(r.maxShield) || 0, r.shield);
+      if (r.efx && r.efx.length < 90) r.efx.push({ t: 'shieldon', x: r.px, y: (r.py || 400) - 20, life: 0.8, max: 0.8 });
+      try { if (window.UI && UI.toast) UI.toast('🛡️ ' + s.n + ' 护盾 +' + Math.round(s.shield)); } catch (e) {}
+    }
+    if (s.mag <= 0) { s.reloading = true; s.reloadT = s.reload; }
+  },
+
   tick(dt) {
     const r = this.run; if (!r || r.over) return;
     r.time += dt;
@@ -777,6 +837,7 @@ const BT = {
     } else { r.shakeX = 0; r.shakeY = 0; }
     for (const z of r.zombies) if (z.hitT > 0) z.hitT = Math.max(0, z.hitT - dt);
     this.tickBuffs(dt);            /* 消耗品增益计时（I03 攻击 +30%） */
+    this.tickSupport(dt);          /* 支援武器槽（医疗包回血 / 护盾发生器加盾） */
 
     /* --- 瞄准 --- 摇杆已移除，改为全自动锁定最近目标（r.aiming 恒为 false） */
     r.aiming = false;
