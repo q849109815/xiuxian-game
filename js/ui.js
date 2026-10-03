@@ -1777,6 +1777,11 @@ r_tavern(p, tab) {
   b_friends(p, tab) {
     const ab = $('#addFriend');
     if (ab) ab.onclick = () => {
+      /* 好友上限：此前无上限，连点即可无限堆好友（详见 E.FRIEND_MAX 注释） */
+      if (((p.friends || []).length) >= E.FRIEND_MAX) {
+        this.toast('好友已达上限 ' + E.FRIEND_MAX + ' 人', 'err');
+        return;
+      }
       const nm = '僵友' + Math.floor(Math.random() * 900 + 100);
       (p.friends || (p.friends = [])).push({ id: 'f' + Date.now(), n: nm,
         pw: Math.floor(Math.random() * 50000 + 5000), online: Math.random() > 0.5 });
@@ -1805,7 +1810,12 @@ r_tavern(p, tab) {
     $$('#pnBody [data-accept]').forEach((b) => { b.onclick = () => {
       const id = b.dataset.accept;
       const r = (p.friendReq || []).find((x) => x.id === id);
-      if (r) { (p.friends || (p.friends = [])).push(r);
+      if (r) {
+        /* 同上：接受申请也要守上限，否则好友满了还是能一直加 */
+        if (((p.friends || []).length) >= E.FRIEND_MAX) {
+          this.toast('好友已达上限 ' + E.FRIEND_MAX + ' 人', 'err'); return;
+        }
+        (p.friends || (p.friends = [])).push(r);
         p.friendReq = p.friendReq.filter((x) => x.id !== id);
         E.save(p); this.toast('已添加 ' + r.n, 'ok'); this.open('friends', '申请'); this.home(); }
     }; });
