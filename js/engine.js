@@ -105,6 +105,7 @@ const E = {
       use: { I01: 0, I02: 0, I03: 0 },
       gun: 'W01', gunLv: 1, gunAdv: 0, gunStats: {},   // 武器等级/进阶/词条
       gunOwn: ['W01'],
+      gun2: null,            // 支援武器槽（医疗包/护盾发生器，战斗中自动生效，不占出战武器）
       chips: {}, bag: [],
       talents: {},
       build: { hospital: 1, armory: 1, lab: 1, warehouse: 1 },
@@ -379,6 +380,14 @@ const E = {
         const _fb = ((typeof EX !== 'undefined' && EX.guns) || []).find((g) => this.gunCanFight(g));
         if (_fb) p.gun = _fb.id;
       }
+    }
+    /* 支援槽清洗：后台改档/热更可能把非支援武器或有伤害的枪写进 gun2，
+     * 战斗里会按支援逻辑处理（只回血不开火）造成「装了枪却不开火」的假象。
+     * 非法值一律清空，玩家重新在武器库里装即可。 */
+    if (p.gun2 != null) {
+      const _g2 = ((typeof EX !== 'undefined' && EX.guns) || []).find((g) => g.id === p.gun2);
+      if (!_g2 || !this.gunIsSupport(_g2)) p.gun2 = null;
+      else if (this.gunCanFight(_g2) && !this.gunIsSupport(_g2)) p.gun2 = null;
     }
     if (!p.lv || p.lv < 1) p.lv = 1;   /* 等级最小 1，补 0 会让升级/经验计算异常 */
     if (p.charStar != null) p.charStar = Math.min(5, Math.max(0, p.charStar));
@@ -669,6 +678,40 @@ const E = {
     if (!list) return this._nullGun();
     return list.find((g) => g.id === p.gun) || list[0];
   },
+  /* ===== 支援武器槽（gun2）=====
+   * 此前 S07 医疗包 / S08 护盾发生器 dmg=0，装备上就是 atk=0 的必败局，
+   * 只能禁止装备 —— 玩家解锁了却永远用不上，等于两张废卡。
+   * 现在给它们独立的「支援槽」：不占出战武器，战斗中按自己的射速/弹匣
+   * 自动触发治疗与护盾。伤害仍是 0，所以不会与出战武器抢输出位。 */
+  gunIsSupport(g) {
+    if (!g || typeof g !== 'object') return false;
+    if (String(g.type) === '支援') return true;
+    return (Number(g.dmg) || 0) <= 0 && ((Number(g.heal) || 0) > 0 || (Number(g.shield) || 0) > 0);
+  },
+  /* 支援槽内当前武器（未装备返回 null） */
+  gun2(p) {
+    if (!p || !p.gun2) return null;
+    const list = (EX.guns && EX.guns.length) ? EX.guns : null;
+    if (!list) return null;
+    const g = list.find((x) => x.id === p.gun2);
+    return (g && this.gunIsSupport(g)) ? g : null;
+  },
+  /* 装备/卸下支援武器。只有支援型武器能进这个槽。 */
+  switchGun2(p, id) {
+    if (!id) { p.gun2 = null; return { ok: true, msg: '已卸下支援武器' }; }
+    const g = (EX.guns || []).find((x) => x.id === id);
+    if (!g) return { ok: false, msg: '武器不存在' };
+    if (!this.gunUnlocked(p, id)) return { ok: false, msg: '需通关 ' + (g.unlockLv || '?') + ' 解锁' };
+    if (!this.gunIsSupport(g)) return { ok: false, msg: g.n + ' 不是支援武器，请装备为出战武器' };
+    if ((p.gunOwn || []).indexOf(id) < 0) {
+      p.gunOwn = Array.isArray(p.gunOwn) ? p.gunOwn : ['W01'];
+      p.gunOwn.push(id);
+    }
+    if (p.gun2 === id) { p.gun2 = null; return { ok: true, msg: '已卸下 ' + g.n, off: true }; }
+    p.gun2 = id;
+    try { this.codexUnlock(p, 'gun', id); } catch (e) {}
+    return { ok: true, msg: '支援槽已装备 ' + g.n };
+  },
 
   /* 武器射程换算（表44 range 15~80 → 像素）
    * 此前硬编码 380（≈全场），导致六把枪射程完全一致：
@@ -747,15 +790,18 @@ const E = {
     p.gunOwn = Array.isArray(p.gunOwn) ? p.gunOwn : ['W01'];
     const isNew = p.gunOwn.indexOf(id) < 0;
     if (isNew) p.gunOwn.push(id);
-    /* 支援武器照常解锁进图鉴，但【不顶替出战武器】——
-     * 否则买/领到 S07 就会把 p.gun 换成无伤害武器，直接卡死（见 gunCanFight 注释）。 */
-    if (this.gunCanFight(g)) p.gun = id;
-    try { this.codexUnlock(p, 'gun', id); } catch (e) {}
-    /* 提示必须与事实一致：支援武器并未顶替出战武器，
-     * 否则会出现「提示已装备护盾发生器，实际手里还是步枪」的假成功。 */
+    /* 支援武器不顶替出战武器（见 gunCanFight 注释），改为落入【支援槽】：
+     * 支援槽为空时自动装上，玩家立刻能在下一场战斗里吃到治疗/护盾，
+     * 不用自己去武器库再点一次（此前解锁了却用不上，等于白解锁）。 */
     if (!this.gunCanFight(g)) {
-      return { ok: true, msg: (isNew ? '已解锁 ' : '已有 ') + g.n + '（支援武器，不出战）', isNew: isNew };
+      let _auto = false;
+      if (this.gunIsSupport(g) && !this.gun2(p)) { p.gun2 = id; _auto = true; }
+      try { this.codexUnlock(p, 'gun', id); } catch (e) {}
+      const _m = (isNew ? '已解锁 ' : '已有 ') + g.n + (_auto ? '，已自动装入支援槽' : '（支援武器）');
+      return { ok: true, msg: _m, isNew: isNew };
     }
+    p.gun = id;
+    try { this.codexUnlock(p, 'gun', id); } catch (e) {}
     return { ok: true, msg: isNew ? ('已解锁并装备 ' + g.n) : ('已装备 ' + g.n), isNew: isNew };
   },
   /* 进阶等级：每 5 级一次 */
