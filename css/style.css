@@ -52,7 +52,7 @@ input{font-family:inherit}
  * 反而 > 9/16 → 误判成 PC，套用 width:calc(100vh*9/16) = 276px/225px，
  * 游戏框从 393 直接缩到 276（实测），玩家看到的就是"一打字界面就变窄"。
  * 现在加 (min-width:700px) 闸门：真手机宽度恒 < 700，永远不会误判成 PC。 */
-@media (min-aspect-ratio: 9/16) and (min-width:700px){
+@media (min-aspect-ratio: 9/16) and (min-width:700px) and (min-height:600px){
   #app{
     height:var(--vvh);
     width:calc(var(--vvh) * 9 / 16);
@@ -65,9 +65,15 @@ input{font-family:inherit}
   }
 }
 /* 超宽屏再收一点，保证完整可见 */
-@media (min-aspect-ratio: 3/2) and (min-width:700px){
+@media (min-aspect-ratio: 3/2) and (min-width:700px) and (min-height:600px){
   #app{height:calc(var(--vvh) * .96);width:calc(var(--vvh) * .96 * 9 / 16);max-width:100vw}
 }
+/* 手机横屏（如 852×393）：高度不足 600，不套 PC 的 9:16 窄框，
+ * 否则宽度按 100vh*9/16 算出来只有 ~221px，登录框被挤成 175 宽、内容高 629
+ * 远超屏高 393，上下同时被切且滚不到（实测 top=-113）。
+ * 铺满由上面的 (max-width:699px) 兜不住，故这里单独处理。
+ * 注意：#login 的对齐/滚动规则必须写在其定义之后才能覆盖，见文件末尾。 */
+
 /* 手机竖屏：铺满。
  * 这里额外用 (max-width:699px) 兜住"键盘弹出后比例失真"的情况，
  * 保证手机任何时候都是满宽。 */
@@ -1597,6 +1603,18 @@ input,select{
 }
 input:focus,select:focus{outline:none;border-color:var(--q-y2) !important}
 
+/* ---------- iOS 聚焦防缩放 ----------
+ * iOS Safari：文本输入类控件字号 < 16px 时，用户点击聚焦会由系统
+ * 自动放大整个页面（viewport 有 user-scalable=no 也会被忽略），
+ * 表现为「点一下输入框，界面整体放大/错位/缩回去」。
+ * 这里统一抬到 16px；checkbox / radio / range 不唤起键盘，不触发缩放，故排除。
+ */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea,select{ font-size:16px !important; }
+/* placeholder 同步放大，避免与 16px 正文落差过大 */
+.lg-form input::placeholder{font-size:14px !important}
+.fld input::placeholder,.fld textarea::placeholder{font-size:14px !important}
+
 /* ---------- 滚动条：Q 版圆点 ---------- */
 .pn-body::-webkit-scrollbar{width:6px}
 .pn-body::-webkit-scrollbar-thumb{background:rgba(255,201,60,.45);border-radius:999px}
@@ -1744,4 +1762,18 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
   .rs-dmg{margin-top:8px}
   .rs-btns{gap:6px}
   .rs-b{padding:9px;font-size:12.5px}
+}
+
+/* =========================================================
+ * 手机横屏（高度 < 600，如 852×393 / 926×428）
+ * ---------------------------------------------------------
+ * 此前 #login 用 justify-content:center，登录框 532px 高于屏高 393px，
+ * 溢出后上下各切一半，且 flex 居中溢出的顶部【滚不到】（scrollTop 最小为 0），
+ * 实测标题 top=-66，玩家看不到游戏名、也可能滚不到登录按钮。
+ * 这里改为顶部对齐 + 禁止收缩，保证从头到尾都能滚到。
+ * 必须放在 #login 基础规则之后才能覆盖。
+ * ========================================================= */
+@media (max-height:599px){
+  #login{justify-content:flex-start !important;padding-top:12px !important}
+  .lg-box{margin:0 auto;flex-shrink:0}
 }
