@@ -787,6 +787,33 @@ const BT = {
   /* =================================================
    * 主循环
    * ================================================ */
+  /* ===== 护盾上限 =====
+   * 严重BUG：护盾此前【完全没有上限】，而 maxShield 记的是【历史最高值】：
+   *   ① 护盾发生器每 11.3s（3.3s 一发 + 8s 换弹）+420 且从不封顶 —— 实测
+   *      1-1 普通打完 111 秒就叠到 4200，是防线血量 636 的 6.6 倍；
+   *      无尽模式能跑 900s，按同速率是 33000+ ≈ 防线的 50 倍。
+   *   ② 更致命：onLose / revive 里写的是 r.shield = r.maxShield，
+   *      一旦护盾曾叠到 30000，之后【每次复活都回满 30000 护盾】，
+   *      而防线血量才 1000 —— 实测复活后 shield=30000 / hp=1000，永久无敌。
+   * 现在统一按「防线最大血量 × SHIELD_CAP_MUL」封顶，护盾只作为一层额外
+   * 防护，不再能靠时间堆成无敌。改这一个常量即可整体调节。 */
+  SHIELD_CAP_MUL: 1.5,
+  shieldCap(r) {
+    const wm = Number(r && (r.wallMax != null ? r.wallMax : r.maxHp)) || 0;
+    const dyn = wm * this.SHIELD_CAP_MUL;
+    /* 天赋/芯片 stat:'shield' 给的是【一次性固定值】，不该被这条持续累积的
+     * 封顶削掉（当前配置里没有，但后台热更可能加），取两者较大值。 */
+    const fixed = Number(r && r.mods && r.mods.shield) || 0;
+    return Math.max(dyn, fixed);
+  },
+  /* 所有加盾/回盾的入口都要过一遍，避免某条路径绕过封顶 */
+  capShield(r) {
+    if (!r) return;
+    const cap = this.shieldCap(r);
+    if (!(cap > 0)) return;
+    r.shield = Math.max(0, Math.min(Number(r.shield) || 0, cap));
+    r.maxShield = Math.max(0, Math.min(Number(r.maxShield) || 0, cap));
+  },
   /* ===== 支援武器槽：自动循环 =====
    * 医疗包：按周期治疗防线；护盾发生器：按周期叠护盾。
    * 用武器表自带的 mag/reload 控制节奏 —— 打完弹匣要换弹，
@@ -813,10 +840,15 @@ const BT = {
       if (r.efx && r.efx.length < 90) r.efx.push({ t: 'heal', x: r.px, y: (r.py || 400) - 20, life: 0.7, max: 0.7 });
       try { if (window.UI && UI.toast) UI.toast('🩹 ' + s.n + ' 防线 +' + Math.round(s.heal)); } catch (e) {}
     }
-    /* 护盾：叠加，上限同步抬高（否则加了立刻被 maxShield 夹掉） */
+    /* 护盾：叠加，上限同步抬高（否则加了立刻被 maxShield 夹掉）
+     * 满盾时不消耗这一发（与治疗一致），避免站着不动也白扔盾。 */
     if (s.shield > 0) {
-      r.shield = (Number(r.shield) || 0) + s.shield;
+      const _cap = this.shieldCap(r);
+      const _curS = Number(r.shield) || 0;
+      if (_cap > 0 && _curS >= _cap - 0.5) { s.mag++; return; }
+      r.shield = _curS + s.shield;
       r.maxShield = Math.max(Number(r.maxShield) || 0, r.shield);
+      this.capShield(r);
       if (r.efx && r.efx.length < 90) r.efx.push({ t: 'shieldon', x: r.px, y: (r.py || 400) - 20, life: 0.8, max: 0.8 });
       try { if (window.UI && UI.toast) UI.toast('🛡️ ' + s.n + ' 护盾 +' + Math.round(s.shield)); } catch (e) {}
     }
@@ -1976,6 +2008,7 @@ const BT = {
     if (g.shield > 0) {
       r.shield = (Number(r.shield) || 0) + g.shield;
       r.maxShield = Math.max(Number(r.maxShield) || 0, r.shield);
+      this.capShield(r);
       r.efx.push({ t: 'nova', x: r.px, y: r.py - 20, life: 0.5, max: 0.5, r: 46 });
       try { if (window.UI && UI.toast) UI.toast('🛡️ 护盾 +' + Math.round(g.shield)); } catch (e) {}
       /* 【表03 FX_ShieldOn】护盾开启：六边形能量罩 */
@@ -2510,6 +2543,7 @@ const BT = {
     /* Number() 兜底：r.shield 为 undefined/NaN 时 Math.max 会再次污染成 NaN */
     r.shield = Math.max(Number(r.shield) || 0, Number(r.mods.shield) || 0);
     r.maxShield = Math.max(Number(r.maxShield) || 0, Number(r.mods.shield) || 0);
+    this.capShield(r);
   },
 
   addFloat(x, y, v, cls) { this.run.floats.push({ x, y, v: String(v), cls, life: 0.7 }); },
@@ -2592,6 +2626,7 @@ const BT = {
       r.reviveLeft--;
       r.wallHp = r.wallMax != null ? r.wallMax : r.maxHp;
       r.hp = r.wallHp; r.shield = Number(r.maxShield) || 0;
+      this.capShield(r);   /* 护盾封顶，否则按历史最高回满 = 复活即无敌 */
       this.clearDoT(r);
       for (const z of r.zombies.slice()) {
         if (Math.hypot(z.x - r.px, z.y - r.py) < 190) z.dead = true;
@@ -2616,6 +2651,7 @@ const BT = {
     r.wallHp = (r.wallMax != null ? r.wallMax : r.maxHp);
     r.hp = r.wallHp;
     r.shield = r.maxShield || 0;
+    this.capShield(r);   /* 同上：护盾按封顶后的值回满，不是历史最高 */
     /* 此前只清了 poison，灼烧/寒霜/腐蚀池同样残留，改走统一清除 */
     this.clearDoT(r);
     /* 清掉贴近防线的僵尸，避免复活瞬间再次被秒 */
