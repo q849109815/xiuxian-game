@@ -1672,15 +1672,40 @@ function bindAll() {
      * 与 window.P 由 MAIN.login 同步维护，这里只读 window.P 避免读到 null。 */
     const pp = window.P;
     if (!pp) { UI.toast('尚未进入战斗', 'err'); return; }
-    const list = (EX.guns || []).filter((g) => E.gunUnlocked(pp, g.id));
+    /* 支援武器（S07 医疗包 / S08 护盾发生器）不占出战武器位，靠 p.gun2 的
+     * 支援槽自动生效。但它们【已购买即已解锁】（见 E.gunUnlocked 注释），
+     * 于是被算进 🔄 的循环列表，而 E.switchGun 会因 gunCanFight=false 拒绝：
+     *   实测新号买医疗包后连点 🔄 8 次，每次都弹「医疗包 是支援武器…」，
+     *   永远停在 W01 切不动；有两把枪时会卡在 W02 再也切不回 W01。
+     * 这里按「能否出战」过滤，把它们排除在换枪循环之外。 */
+    const list = (EX.guns || []).filter((g) => E.gunUnlocked(pp, g.id) && E.gunCanFight(g));
+    /* 自救：出战武器本身不能出战（后台改档把 p.gun 写成支援武器，且未走登录
+     * migrate）时，玩家点 🔄 只会看到「暂无其他可用武器」——因为可出战列表里
+     * 没有当前武器，长度判 <=1 就直接返回了，永远救不回来，整局 atk=0 必败。
+     * 这里先把玩家拉回第一把能出战的武器，再走正常循环。 */
+    if (!list.some((g) => g.id === pp.gun) && list.length) {
+      const r0 = E.switchGun(pp, list[0].id);
+      if (r0.ok) {
+        if (window.BT && BT.refreshGun) BT.refreshGun();
+        UI.toast('🔄 ' + r0.msg, 'ok');
+        if (window.SND) SND.play('click');
+        return;
+      }
+    }
     if (list.length <= 1) { UI.toast('暂无其他可用武器', 'err'); if (window.SND) SND.play('click'); return; }
     const i = list.findIndex((g) => g.id === pp.gun);
-    const nx = list[(i < 0 ? 0 : i + 1) % list.length];
-    const res = E.switchGun(pp, nx.id);
-    if (res.ok) {
+    /* 从当前武器的下一个开始找第一把真正能切过去的，避免单点失败就卡死 */
+    let res = null; let nx = null;
+    for (let k = 1; k <= list.length; k++) {
+      const cand = list[(i < 0 ? 0 : i + k) % list.length];
+      const r = E.switchGun(pp, cand.id);
+      if (r.ok) { res = r; nx = cand; break; }
+      if (!res) res = r; /* 记住第一个失败原因，全部失败时用它提示 */
+    }
+    if (res && res.ok) {
       if (window.BT && BT.refreshGun) BT.refreshGun();
       UI.toast('🔄 ' + res.msg, 'ok');
-    } else UI.toast(res.msg, 'err');
+    } else UI.toast(res ? res.msg : '暂无其他可用武器', 'err');
     if (window.SND) SND.play('click');
   };
 
