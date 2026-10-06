@@ -2986,14 +2986,26 @@ r_tavern(p, tab) {
     if (!box) return;
     const esc = (v) => String(v == null ? '' : v).replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const more = un.length > 1 ? '<div class="mt-s" style="opacity:.75">还有 ' + (un.length - 1) + ' 条未读公告，可在「公告」面板查看</div>' : '';
+    /* 【属性注入漏洞修复】
+     * 此前两个按钮用内联 onclick 拼接后台配置的 x.id：
+     *   onclick="UI.noticeMarkRead('…' + x.id.replace(/'/g,'') + '…')"
+     * 只过滤了单引号，而外层是【双引号】属性 —— id 里放一个双引号就能闭合属性、
+     * 往按钮上挂任意属性（实测 id='a" onmouseover="…' 成功注入 onmouseover）。
+     * 公告 id 由后台配置，等同于把一段可执行 HTML 塞进所有玩家的登录弹窗。
+     * 现在改成先建 DOM、再用 addEventListener 绑定，id 只走 dataset 不进 HTML。 */
     box.innerHTML = '<div class="mt-box">' +
       '<div class="mt-ico">' + k[0] + '</div>' +
       '<div class="mt-t">' + esc(x.title) + '</div>' +
       '<div class="mt-s" style="white-space:pre-wrap;text-align:left;max-height:200px;overflow:auto">' + esc(x.body || '') + '</div>' +
       more +
-      '<button class="mt-btn" onclick="UI.noticeMarkRead(\'' + String(x.id).replace(/'/g, '') + '\');document.getElementById(\'maintMask\').style.display=\'none\';UI.showNotice()">知道了</button>' +
-      '<button class="mt-btn" style="margin-top:8px;background:rgba(255,255,255,.1)" onclick="UI.noticeMarkRead(\'' + String(x.id).replace(/'/g, '') + '\');document.getElementById(\'maintMask\').style.display=\'none\';UI.open(\'notice\')">查看全部公告</button>' +
+      '<button class="mt-btn" id="ntOk">知道了</button>' +
+      '<button class="mt-btn" id="ntAll" style="margin-top:8px;background:rgba(255,255,255,.1)">查看全部公告</button>' +
       '</div>';
+    const hide = () => { box.style.display = 'none'; };
+    const okBtn = box.querySelector('#ntOk');
+    if (okBtn) okBtn.onclick = () => { this.noticeMarkRead(x.id); hide(); this.showNotice(); };
+    const allBtn = box.querySelector('#ntAll');
+    if (allBtn) allBtn.onclick = () => { this.noticeMarkRead(x.id); hide(); this.open('notice'); };
     box.style.display = 'flex';
   },
   r_notice(p, tab) {
@@ -3031,13 +3043,26 @@ r_tavern(p, tab) {
   showUpdate(ver) {
     const box = document.getElementById('maintMask');
     if (!box) return;
+    /* 与 showNotice 同一类属性注入：ver 来自云端推送，却同时被拼进
+     * 正文与内联 onclick（外层双引号）。这里也改成 DOM 绑定 + textContent。 */
+    const esc = (v) => String(v == null ? '' : v).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const sv = String(ver == null ? '' : ver);
     box.innerHTML = '<div class="mt-box">' +
       '<div class="mt-ico">🔄</div>' +
       '<div class="mt-t">发现新版本</div>' +
-      '<div class="mt-s">已发布 ' + String(ver) + '，刷新后即可体验最新内容</div>' +
-      '<button class="mt-btn" onclick="try{var u=location.href.split(\'#\')[0].split(\'?\')[0];location.replace(u+\'?v=' + String(ver) + '\')}catch(e){location.reload()}">立即刷新</button>' +
-      '<button class="mt-btn" style="margin-top:8px;background:rgba(255,255,255,.1)" onclick="document.getElementById(\'maintMask\').style.display=\'none\'">稍后再说</button>' +
+      '<div class="mt-s">已发布 ' + esc(sv) + '，刷新后即可体验最新内容</div>' +
+      '<button class="mt-btn" id="upNow">立即刷新</button>' +
+      '<button class="mt-btn" id="upLater" style="margin-top:8px;background:rgba(255,255,255,.1)">稍后再说</button>' +
       '</div>';
+    const nb = box.querySelector('#upNow');
+    if (nb) nb.onclick = () => {
+      try {
+        const u = location.href.split('#')[0].split('?')[0];
+        location.replace(u + '?v=' + encodeURIComponent(sv));
+      } catch (e) { location.reload(); }
+    };
+    const lb = box.querySelector('#upLater');
+    if (lb) lb.onclick = () => { box.style.display = 'none'; };
     box.style.display = 'flex';
   },
   /* 统一的战斗入口守卫：维护中一律不放行 */
