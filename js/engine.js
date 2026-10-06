@@ -2354,6 +2354,29 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     }
     return false;
   },
+  /* 唯一性奖励「是否已拥有」校验（成就商店 / 活动商店 / 直购共用）
+   *
+   * BUG（白花货币）：这些入口都是「先扣费、后 grant」，而 grant 内部
+   *   对 skin / title / frame 是 indexOf 判重 —— 已拥有就跳过入库，
+   *   但货币早已扣掉，返回值仍是 ok:true +「兑换成功」。
+   *   实测（成就点 / 活动代币都是玩家肝出来的）：
+   *     已拥有 ach_100 称号 → 买 AS12：扣 500 成就点，称号数 0 变化；
+   *     已拥有 sk_c03c 皮肤 → 买 ES09：扣 1500 代币，皮肤数 0 变化；
+   *     已拥有 ev_frame 头像框 → 买 ES12：扣 800 代币，框数 0 变化。
+   *   三处都提示「兑换成功」，玩家以为买到了，实际什么都没多。
+   * 现在在扣费前拒绝。附带校验芯片背包容量，满了同样不扣费。 */
+  ownedGiveMsg(p, give) {
+    const gv = give || {};
+    if (typeof gv !== 'object' || Array.isArray(gv)) return '';
+    if (gv.skin && (p.skins || []).indexOf(gv.skin) >= 0) return '已拥有该皮肤，无需重复兑换';
+    if (gv.title && (p.titles || []).indexOf(gv.title) >= 0) return '已拥有该称号，无需重复兑换';
+    if (gv.frame && (p.frames || []).indexOf(gv.frame) >= 0) return '已拥有该头像框，无需重复兑换';
+    const hasChip = Object.keys(gv).some((k) => /^chip/.test(k) || /^C0[123]$/.test(k));
+    if (hasChip && this.BAG_MAX && (p.bag || []).length >= this.BAG_MAX) {
+      return '芯片背包已满（' + this.BAG_MAX + ' 颗），请先分解或合成';
+    }
+    return '';
+  },
   achShopBuyItem(p, id) {
     const it = (EX.achShop || []).find((x) => x.id === id);
     if (!it) return { ok: false, msg: '商品不存在' };
@@ -2373,6 +2396,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (!this.validGive(it.give)) return { ok: false, msg: '商品奖励配置异常，暂不可兑换' };
     const lim = this.safeLimit(it.limit, 1);
     if (b[k].n >= lim) return { ok: false, msg: '已达限购次数（' + lim + '）' };
+    /* 已拥有 / 芯片背包满：必须在扣成就点之前拦截（见 ownedGiveMsg 注释） */
+    const ownA = this.ownedGiveMsg(p, it.give);
+    if (ownA) return { ok: false, msg: ownA };
     if ((p.ach || 0) < cost) return { ok: false, msg: '成就点不足（需 ' + cost + '）' };
     p.ach -= cost;
     b[k].n++; b[k].t = Date.now();
@@ -2559,14 +2585,19 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       else if (k === 'C01' || k === 'C02' || k === 'C03') {
         const q = k === 'C01' ? '白' : k === 'C02' ? '蓝' : '红';
         const n = Math.max(1, Math.min(50, this.safeAmt(give[k]) || 1));
-        for (let i = 0; i < n; i++) this.giveChipByQuality(p, q);
-        _got += n;
+        /* 按【实际入库】计数：giveChipByQuality 在背包满时返回 null，
+         * 此前 _got += n 无条件累加 —— 实测满 500 时 grant({chipL:3}) 返回 3，
+         *   背包仍是 500，调用方据此认为"3 颗已到账"，提示成功但一颗没给。 */
+        let gotC = 0;
+        for (let i = 0; i < n; i++) if (this.giveChipByQuality(p, q)) gotC++;
+        _got += gotC;
       }
       else if (k === 'chipN' || k === 'chipE' || k === 'chipL' || k === 'chipRed') {
         const q = (k === 'chipN') ? '白' : (k === 'chipE') ? '蓝' : '红';
         const n = Math.max(1, Math.min(50, this.safeAmt(give[k]) || 1));
-        for (let i = 0; i < n; i++) this.giveChipByQuality(p, q);
-        _got += n;
+        let gotC = 0;
+        for (let i = 0; i < n; i++) if (this.giveChipByQuality(p, q)) gotC++;
+        _got += gotC;
       }
       /* 通用材料：同样先过 safeAmt。
        * 旧行为 p.mat[k] += give[k]，字符串会拼成 "1000abc"、NaN 会毁掉整个背包。 */
@@ -2601,6 +2632,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (!this.validGive(it.give)) return { ok: false, msg: '商品奖励配置异常，暂不可兑换' };
     const lim = this.safeLimit(it.limit, 1);
     if (b[k].n >= lim) return { ok: false, msg: '已达限购次数（' + lim + '）' };
+    /* 同上：扣代币之前拦截，避免已拥有的皮肤/头像框重复扣费 */
+    const ownE = this.ownedGiveMsg(p, it.give);
+    if (ownE) return { ok: false, msg: ownE };
     if ((p.evToken || 0) < cost) return { ok: false, msg: '活动代币不足（需 ' + cost + '）' };
     p.evToken -= cost;
     b[k].n++; b[k].t = Date.now();
