@@ -626,7 +626,31 @@ const BT = {
      * 无尽模式保留波次递增。 */
     /* 双 BOSS 关（第3/8章）同时出场两只，总血量翻倍会过难，各按 0.6 折 */
     const multi = Array.isArray(r.def && r.def.boss) ? 0.6 : 1;
-    const bossHp = Math.round(d.hp * multi * (r.endless ? 1 + (r.wave - 1) * 0.35 : 1));
+    /* ===== BOSS 血量的章节难度曲线（本次修复）=====
+     * 逻辑不一致：mkZ 里普通僵尸的血量走 `d.hp * mul * dm.hp * _hb`，
+     *   完整吃到全局难度曲线（HARD_HP_ 系列与章内梯度）；而 BOSS 走 hpOverride
+     *   分支 `hpOverride * dm.hp`，【完全跳过 _hb 与章内梯度】。
+     *   与此同时，BOSS 的伤害和移速却照常吃了 _db / _sb ——
+     *   即"怪变疼了、变快了，唯独 BOSS 没变肉"。
+     * 实测后果（模拟玩家，普通难度，BOSS 从出场到死亡的秒数）：
+     *     3-10 开垦者  12 秒      8-10 修道士   9 秒
+     *     5-10 巢穴之母 17 秒     10-10 尸王    6 秒
+     *   章节越往后 BOSS 反而死得越快（终局 BOSS 只活 6 秒），
+     *   而配置注释写明的设计意图是「对应武器等级 DPS × 25~40 秒」。
+     *   玩家全程剩血 98~100%，终章 BOSS 战毫无存在感。
+     * 这里给 BOSS 补一条独立的章节曲线（不乘关卡 mul，避免 5.4 亿不可通关），
+     * 章内梯度按半权接入。无尽模式不受影响（无章节，仍走波次递增）。 */
+    let _bhb = 1;
+    if (!r.endless && typeof EX !== 'undefined' && EX.BOSS_HP_ON !== false) {
+      const _bch = Number((r.def && r.def.ch) || 1);
+      _bhb = (Number(EX.BOSS_HP_BASE) || 1) + (_bch - 1) * (Number(EX.BOSS_HP_STEP) || 0);
+      if (EX.INCH_ON) {
+        let _bidx = Number(String((r.def && r.def.id) || '').split('-')[1]);
+        if (!isFinite(_bidx) || _bidx < 1 || _bidx > 10) _bidx = 1;
+        _bhb *= 1 + (_bidx - 1) * (Number(EX.INCH_HP_STEP) || 0) * (Number(EX.BOSS_INCH_MUL) || 0.5);
+      }
+    }
+    const bossHp = Math.round(d.hp * multi * _bhb * (r.endless ? 1 + (r.wave - 1) * 0.35 : 1));
     const z = this.mkZ(d, mul, bossHp);
     z.isBoss = true; z.bossDef = d; z.phase = 0; z.maxHp = z.hp; z.img = d.img;
     r.boss = z; r.zombies.push(z);
