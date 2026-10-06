@@ -1322,6 +1322,12 @@ function battleGo(id, mode, diff) {
   /* 真正进入战斗时才扣体力（CG 取消不扣，避免白扣） */
   const sp = E.spendStamina(P, id, df);
   if (!sp.ok) { UI.toast(sp.msg, 'err'); UI.show('home'); return; }
+  /* BUG（进关扣体力不落盘 = 可白嫖刷关）：
+   *   体力扣除后这里既没 save 也没 saveSoon，全靠 30 秒一次的自动存档兜底。
+   *   玩家进关后立刻强关 App / 被系统杀掉进程 / 换设备登录，
+   *   会读回云端旧档 —— 战斗没打成，体力却原样回来了，等于无限体力刷关。
+   *   体力是唯一限制推进速度的硬通货，进战斗是长流程，这里立即落盘。 */
+  E.save(P);
   UI.show('battle');
   /* 音频：战斗 BGM
    * BUG：此处此前读的是 BT.run.def（上一局残留的 run，首次进入时为 undefined），
@@ -1403,8 +1409,11 @@ function onBattleEnd(res, d) {
       for (const k in lr) {
         if (k === 'gold') continue;
         if (k === 'chip') {
-          for (let i = 0; i < lr[k]; i++) P.bag.push(E.rollChipById('CH01'));
-          rw.chip = (rw.chip || 0) + lr[k];
+          /* 芯片背包封顶：满了就不再入库（避免长线玩家 bag 只增不减） */
+          for (let i = 0; i < lr[k]; i++) {
+            if (!E.pushChip(P, E.rollChipById('CH01'))) break;
+            rw.chip = (rw.chip || 0) + 1;
+          }
         } else {
           /* 关卡掉落材料同样过 safeAmt：热更把数量写成字符串/NaN 时，
            * 旧行为会把整个 p.mat 背包写进非数字（读档后材料全变 0 或 NaN）。 */
