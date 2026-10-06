@@ -2095,9 +2095,52 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * BUG：UI 此前直接用 EX.sweepRw（旧独立公式）显示单次产出，而 sweep() 已改为
    *   按关卡真实奖励发放 —— 弹窗恒显示「金币180 / 金属(M01)5」，实际发的却是
    *   关卡配置（如 1-1 金币500 + M02×5，后期关卡差几十倍），材料种类也显示错。 */
+  /* 扫荡用：关卡【全局序号】（1~100），供 EX.sweepRw 的兜底公式使用。
+   * 严重 BUG：此前全项目写的是 String(lvId).split('-')[1]，取到的是
+   *   【章内第几关】(1~10) —— 1-5 / 5-5 / 10-5 算出来全是 5，
+   *   于是 ch = floor((5-1)/10)+1 恒等于 1，sweepRw 的 gold/xp/M01
+   *   全部停在第 1 章水平（xp 恒 125），与关卡彻底脱钩。 */
+  sweepLvNum(lvId) {
+    const a = String(lvId || '').split('-');
+    const ch = parseInt(a[0], 10) || 1;
+    const n = parseInt(a[1], 10) || 1;
+    return (ch - 1) * 10 + n;
+  },
+  /* 扫荡经验：必须与【手动通关】同口径（表25 #1）。
+   * 手动结算：xpGain = 击杀累计 killXp × 难度倍率 × 经验加成(xpMul)，
+   *   其中 killXp = Σ(怪物xp × 关卡倍率 rwMul) 且已含天赋经验加成。
+   * 严重 BUG：扫荡此前直接用 EX.sweepRw 的 xp = 80 + ch*45，
+   *   再叠加上面那个恒为第 1 章的 lvNum —— 任何关卡都只发 125 经验：
+   *     1-5   手动 560    扫荡 125   （差 4.5 倍）
+   *     5-5   手动 10585  扫荡 125   （差 84.7 倍）
+   *     10-5  手动 301622 扫荡 125   （差 2413 倍）
+   *   扫荡刷经验完全不可行，而注释却写着「手动通关给什么扫荡就给什么」。
+   * 现在按击杀估算 × 平均怪物xp × rwMul 计算，与手动同量级。 */
+  sweepXp(p, ld, t, dRw) {
+    const rwMul = Math.max(1, Number(ld && (ld.rwMul != null ? ld.rwMul : ld.mul)) || 1);
+    const pool = (ld && ld.pool) || [];
+    let avgXp = 0; let c = 0;
+    pool.forEach((id) => {
+      const z = (EX.zombies || []).find((x) => x.id === id);
+      if (z) { avgXp += Number(z.xp) || 0; c++; }
+    });
+    if (c <= 0 || avgXp <= 0) avgXp = 4; else avgXp = avgXp / c;
+    const per = (ld && ld.per) || [8, 13];
+    const killEst = Math.round((Number(ld && ld.waves) || 20)
+      * (((Number(per[0]) || 8) + (Number(per[1]) || 13)) / 2)) * t;
+    let xpMul = 1;
+    try { xpMul = (this.attrs(p).xpMul || 1) * (1 + (this.talentVal(p, 'xp') || 0)); } catch (e) { xpMul = 1; }
+    /* 校准系数：击杀估算按「波次 × 每波上限均值」算的是【刷怪总数】，
+     * 而实际击杀受玩家火力与清场机制限制，实测击杀率随章节从 88%(第1章)
+     * 降到 36%(第10章)。再叠加怪物池平均 xp 略高于实战均值，
+     * 直接估算会到手动通关的 2~4 倍（扫荡比手动还划算，反过来没人手动打）。
+     * 乘 SWEEP_XP_K 后各章落在手动的 50%~110%，量级正确且略低于手动。 */
+    const K = (EX.SWEEP_XP_K != null && isFinite(EX.SWEEP_XP_K)) ? EX.SWEEP_XP_K : 0.25;
+    return { xp: Math.max(1, Math.round(killEst * avgXp * rwMul * (dRw || 1) * xpMul * K)), killEst: killEst };
+  },
   sweepPreview(p, lvId, times) {
     const t = Math.max(1, Math.min(EX.SWEEP_MAX, times || 1));
-    const lvNum = parseInt(String(lvId).split('-')[1] || '1', 10);
+    const lvNum = this.sweepLvNum(lvId);
     const ld = (EX.levels || []).find((x) => x.id === lvId) || null;
     const fb = EX.sweepRw(lvNum, t);
     /* 难度倍率：与 sweep() 同源，保证「弹窗显示」=「实际到账」 */
@@ -2112,12 +2155,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       const n = E.safeAmt(Math.floor((Number(src[k]) || 0) * t * dRw));
       if (n > 0) mat[k] = n;
     });
+    const xpO = this.sweepXp(p, ld, t, dRw);
     return { times: t, gold: gold, mat: mat, diff: dId, diffRw: dRw,
       diamond: (ld && ld.rw && ld.rw.diamond) ? E.safeAmt(Math.floor(ld.rw.diamond * t * dRw)) : 0,
-      xp: Math.floor((fb.xp || 0) * dRw), stamina: this.sweepStamina(lvId, dId) * t };
+      xp: xpO.xp, stamina: this.sweepStamina(lvId, dId) * t };
   },
   sweep(p, lvId, times) {
-    const lvNum = parseInt(String(lvId).split('-')[1] || '1', 10);
+    const lvNum = this.sweepLvNum(lvId);
     const ck = this.canSweep(p, lvId);
     if (!ck.ok) return ck;
     const t = Math.max(1, Math.min(EX.SWEEP_MAX, times || 1));
@@ -2155,8 +2199,12 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       const dn = this.safeAmt(Math.floor(ld.rw.diamond * t * dRw));
       if (dn > 0) p.diamond = (p.diamond || 0) + dn;
     }
-    /* 表25 #1：经验走角色等级系统（自动升级）—— 同步乘难度倍率 */
-    const lr = this.addXp(p, Math.floor((rw.xp || 0) * dRw));
+    /* 表25 #1：经验走角色等级系统（自动升级）—— 与手动通关同口径 */
+    const _xpO = this.sweepXp(p, ld, t, dRw);
+    const lr = this.addXp(p, _xpO.xp);
+    /* 返回值同步实际发放的经验（rw 来自兜底公式，xp 与实发不是一回事，
+     * 不改的话 UI/结算页显示的是旧公式值，「弹窗显示」≠「实际到账」） */
+    try { if (rw) rw.xp = _xpO.xp; } catch (e) {}
     /* 扫荡推进任务计数（表29）
      * BUG：sweep() 此前只发奖励，从不调用 pushStats ——
      *   每日任务 D02「通关1次关卡」/ D03「击杀50僵尸」、
@@ -2164,9 +2212,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      *   四条全部不推进。玩家每天花体力扫荡刷材料，这四个任务
      *   永远显示 0/x，成就点一分拿不到，扫荡用得越多亏得越多。
      * 击杀数按「关卡波次 × 每波怪物数区间均值」估算，与手动通关同量级。 */
-    const _per = (ld && ld.per) || [8, 13];
-    const _killEst = Math.round((Number(ld && ld.waves) || 20)
-      * (((Number(_per[0]) || 8) + (Number(_per[1]) || 13)) / 2)) * t;
+    const _killEst = _xpO.killEst;
     try {
       this.pushStats(p, {
         kills: _killEst,
