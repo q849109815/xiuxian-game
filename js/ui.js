@@ -933,7 +933,13 @@ r_tavern(p, tab) {
     const rr = $('#gunReroll');
     if (rr) rr.onclick = () => {
       const r = E.rerollGun(p, p.gun); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('gun', tab); this.home(); }
+      /* BUG（花钻石不落盘）：本按钮按 REROLL_GUN_COST 扣钻石（实测扣 20），
+       *   而这里既没 save 也没 saveSoon —— 同面板的 rerollChip / buySkin /
+       *   rerollAffix 都有保存，唯独这一处漏了。
+       *   钻石是充值货币：洗完立刻强关 / 换设备登录会读回旧档，
+       *   钻石回来了、洗出的词条却没留下，玩家白花一次钱。
+       *   对照实测：rerollAffix 传说档扣 50 钻有保存，本处扣 20 钻无保存。 */
+      if (r.ok) { try { E.save(p); } catch (e) {} if (window.SND) SND.play('upgrade'); this.open('gun', tab); this.home(); }
     };
     const u = $('#gunUp'); if (u) u.onclick = () => {
       const r = E.upgradeGun(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
@@ -1105,7 +1111,10 @@ r_tavern(p, tab) {
   },
   b_talent(p) {
     $$('#pnBody [data-tal]').forEach((b) => {
-      b.onclick = () => { const r = E.upTalent(p, b.dataset.tal); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('talent'); this.home(); } };
+      /* BUG（天赋升级不落盘）：实测花 500 金币升级，这里既没 save 也没
+       *   saveSoon。天赋是不可逆的养成投入，强关 App / 换设备登录会读回旧档，
+       *   金币回来了、天赋等级却没留下，玩家白花一次钱。 */
+      b.onclick = () => { const r = E.upTalent(p, b.dataset.tal); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { try { E.save(p); } catch (e) {} this.open('talent'); this.home(); } };
     });
   },
 
@@ -1734,7 +1743,10 @@ r_tavern(p, tab) {
     if (fb) fb.onclick = () => {
       const id = this.gemSel;
       const r = E.gemFuse(p, id); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('gem'); this.home(); }
+      /* BUG（宝石合成不落盘）：实测消耗 3 颗红宝石（30→27）而这里既没 save
+       *   也没 saveSoon。宝石是稀有资源且合成不可逆，强关 App / 换设备登录
+       *   会读回旧档 —— 宝石回来了、合成出的高阶宝石却没留下。 */
+      if (r.ok) { try { E.save(p); } catch (e) {} if (window.SND) SND.play('upgrade'); this.open('gem'); this.home(); }
     };
     $$('#pnBody [data-gsel]').forEach((el) => { el.onclick = () => {
       this.gemSel = el.dataset.gsel; this.open('gem');
@@ -2267,7 +2279,13 @@ r_tavern(p, tab) {
       const r = E.sweep(p, lvId, n);
       try { E.logAct(p, 'shop', 'sweep'); } catch (e) {}
           this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('pickup'); box.classList.remove('on'); this.open('level'); this.home(); }
+      /* BUG（扫荡不落盘 = 可无限白嫖）：
+       *   扫荡一次最多扣 10 体力、发放上百倍于单关的资源（金币/材料/经验/任务计数），
+       *   而这里既没 save 也没 saveSoon，全靠 30 秒一次的自动存档兜底。
+       *   玩家扫荡完立刻强关 App / 被系统杀进程 / 换设备登录，会读回云端旧档 ——
+       *   体力原样回来、奖励却带走，反复操作即可无限刷金币与材料。
+       *   体力是推进速度的硬通货，扫荡是最大的一次性资源出口，必须立即落盘。 */
+      if (r.ok) { try { E.save(p); } catch (e) {} if (window.SND) SND.play('pickup'); box.classList.remove('on'); this.open('level'); this.home(); }
     };
     const x1 = document.getElementById('swX'), x2 = document.getElementById('swX2');
     if (x1) x1.onclick = () => box.classList.remove('on');
@@ -2275,7 +2293,9 @@ r_tavern(p, tab) {
   },
   sweepQuick(lvId, n) {
     const r = E.sweep(this.P, lvId, n || 1);
-    this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) this.home();
+    this.toast(r.msg, r.ok ? 'ok' : 'err');
+    /* 同 sweepBox 主路径：扫荡扣体力并发大额奖励，必须立即落盘。 */
+    if (r.ok) { try { E.save(this.P); } catch (e) {} this.home(); }
   },
 
   /* ---------- 基地建筑 ---------- */
@@ -2756,7 +2776,11 @@ r_tavern(p, tab) {
       const tip = $('#cdTip');
       if (tip) tip.innerHTML = `<span style="color:${r.ok ? 'var(--green)' : 'var(--red)'}">${this.esc(r.msg)}</span>`;
       this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('pick'); this.home(); }
+      /* BUG（兑换码奖励不落盘）：实测兑换成功发放 1000 金币 + 50 钻石，
+       *   而这里既没 save 也没 saveSoon。兑换码是一次性资源，玩家领完立刻
+       *   强关 App / 换设备登录会读回旧档 —— 码已作废、奖励却没留下。
+       *   本地已兑记录 P.cdkGot 同样需要落盘，否则刷新后本地去重失效。 */
+      if (r.ok) { try { E.save(P || this.P); } catch (e) {} if (window.SND) SND.play('pick'); this.home(); }
     };
     /* 表39 多语言：单语言版本，界面已不再输出 [data-lang] 切换按钮。
      * 这里保留一段兜底 —— 若缓存的旧 HTML 里还残留该按钮，点了只会提示，
