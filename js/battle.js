@@ -646,6 +646,19 @@ const BT = {
       _hb = (Number(EX.HARD_HP_BASE) || 1) + _ch * (Number(EX.HARD_HP_STEP) || 0);
       _db = (Number(EX.HARD_DMG_BASE) || 1) + _ch * (Number(EX.HARD_DMG_STEP) || 0);
       _sb = (Number(EX.HARD_SPD_BASE) || 1) + _ch * (Number(EX.HARD_SPD_STEP) || 0);
+      /* 章内梯度：同一章第 1 关最弱、第 10 关最强。
+       * 关内序号从关卡 id（如 '5-7'）取，解析失败则退化成第 1 关，
+       * 保证任何异常 id 都不会把强度算成 NaN 或 Infinity。 */
+      if (EX.INCH_ON) {
+        const _id = String((this.run && this.run.def && this.run.def.id) || '');
+        const _seg = _id.split('-')[1];
+        let _idx = Number(_seg);
+        if (!isFinite(_idx) || _idx < 1 || _idx > 10) _idx = 1;
+        const _k = _idx - 1;
+        _hb *= 1 + _k * (Number(EX.INCH_HP_STEP) || 0);
+        _db *= 1 + _k * (Number(EX.INCH_DMG_STEP) || 0);
+        _sb *= 1 + _k * (Number(EX.INCH_SPD_STEP) || 0);
+      }
     }
     const hp = hpOverride != null ? Math.round(hpOverride * dm.hp) : Math.round(d.hp * mul * dm.hp * _hb);
     return {
