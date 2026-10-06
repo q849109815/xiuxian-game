@@ -1941,6 +1941,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
         if (!ok) p.mat.M03 = (p.mat.M03 || 0) + cnt * 2;
       }
       else { const n = this.safeAmt(t.rw[k]); if (n > 0) p.mat[k] = (p.mat[k] || 0) + n; }
+      if (n > 0) _given.mat[k] = (_given.mat[k] || 0) + n;
     }
     if (adv) p.diamond = (p.diamond || 0) + 30;         /* 进阶额外奖励 */
     return { ok: true, msg: '战令 Lv.' + t.lv + '：' + t.n };
@@ -2260,6 +2261,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 现在改为按【关卡真实奖励】发放，手动通关给什么，扫荡就给什么。 */
     const ld = (EX.levels || []).find((x) => x.id === lvId) || null;
     const rw = EX.sweepRw(lvNum, t);
+    /* 实际发放累加器：sweep() 的返回值 rw 此前仍走 EX.sweepRw 旧公式，
+     * 与实际发放（关卡真实奖励 + 局内掉落）对不上：
+     *   1-1  返回 gold 180 / M01 5，实际到账 gold 500 / M01 156
+     *   10-10 返回 gold 720 / M01 23，实际到账 gold 9573500 / M01 354
+     * UI 目前只读 r.msg 不读 r.rw，玩家看不到错误数字；但只要有人
+     * 拿 r.rw 去弹结算页，就会显示「获得金币180」而实际发了 957 万。
+     * 这里让返回值与实际发放严格一致。 */
+    const _given = { gold: 0, diamond: 0, mat: {} };
     /* 关卡奖励同样过 safeAmt：rw.gold 若被热更写成字符串/NaN/负数，
      * 旧行为会把 gold 算成 NaN（JSON 里变 null，读回即【金币归零】）
      * 或按负数倒扣。扫荡一次扣 5 体力，出问题玩家很难自查。 */
@@ -2269,6 +2278,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const dRw = (this.diffMul(dId).rw) || 1;
     const goldGet = this.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || rw.gold) * t * dRw));
     p.gold = (p.gold || 0) + goldGet;
+    _given.gold += goldGet;
     p.mat = p.mat || {};
     const matGet = (ld && ld.rw) ? ld.rw : { M01: rw.M01 };
     Object.keys(matGet).forEach((k) => {
@@ -2279,6 +2289,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (ld && ld.rw && ld.rw.diamond) {
       const dn = this.safeAmt(Math.floor(ld.rw.diamond * t * dRw));
       if (dn > 0) p.diamond = (p.diamond || 0) + dn;
+      _given.diamond += dn;
     }
     /* 局内掉落（僵尸掉落 + BOSS 掉落）：手动通关捡得到的东西，扫荡也要给，
      * 否则扫荡就是个亏本按钮（见 sweepDropEst 注释）。
@@ -2287,6 +2298,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const _dr = this.sweepDropEst(p, ld, t, true);
     Object.keys(_dr.mat).forEach((k) => {
       if (_dr.mat[k] > 0) p.mat[k] = (p.mat[k] || 0) + _dr.mat[k];
+      if (_dr.mat[k] > 0) _given.mat[k] = (_given.mat[k] || 0) + _dr.mat[k];
     });
     let _chipN = 0;
     Object.keys(_dr.chip).forEach((q) => {
@@ -2299,7 +2311,17 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const lr = this.addXp(p, _xpO.xp);
     /* 返回值同步实际发放的经验（rw 来自兜底公式，xp 与实发不是一回事，
      * 不改的话 UI/结算页显示的是旧公式值，「弹窗显示」≠「实际到账」） */
-    try { if (rw) rw.xp = _xpO.xp; } catch (e) {}
+    /* 返回值同步实际发放：gold / 材料 / 钻石全部用 _given 覆写，
+     * 使 r.rw 与玩家真正到账的数字一致（此前只有 xp 被同步过）。 */
+    try {
+      if (rw) {
+        rw.xp = _xpO.xp;
+        rw.gold = _given.gold;
+        rw.diamond = _given.diamond;
+        Object.keys(rw).forEach((k) => { if (k !== 'gold' && k !== 'diamond' && k !== 'xp') delete rw[k]; });
+        Object.keys(_given.mat).forEach((k) => { if (_given.mat[k] > 0) rw[k] = _given.mat[k]; });
+      }
+    } catch (e) {}
     /* 扫荡推进任务计数（表29）
      * BUG：sweep() 此前只发奖励，从不调用 pushStats ——
      *   每日任务 D02「通关1次关卡」/ D03「击杀50僵尸」、
