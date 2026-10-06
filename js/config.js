@@ -563,7 +563,7 @@ const EX = {
     ],
     achieve: [
       { id: 'A01', n: '百人斩', cond: { t: 'kills', v: 1000 }, rw: { ach: 100 }, desc: '累计击杀 1000 只僵尸' },
-      { id: 'A02', n: '十连斩', cond: { t: 'noHitKill', v: 10 }, rw: { ach: 50 }, desc: '单场无伤击杀 10 只' },
+      { id: 'A02', n: '十连斩', cond: { t: 'noHitKill', v: 10 }, rw: { ach: 50 }, desc: '单场连续击杀 10 只且期间未掉血' },
       { id: 'A03', n: '首次通关BOSS', cond: { t: 'bossKill', v: 1 }, rw: { ach: 150 }, desc: '通关第一个 BOSS 关' },
       { id: 'A04', n: '无尽达10分钟', cond: { t: 'endlessTime', v: 600 }, rw: { ach: 200 }, desc: '无尽模式存活 10 分钟' },
     ],
