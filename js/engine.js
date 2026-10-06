@@ -2181,9 +2181,11 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       else out.mat[item] = (out.mat[item] || 0) + n;
     };
     const rollSrc = (srcName, count) => {
+      /* 稀缺度口径必须与手动路径 EX.rollDrop() 一致：
+       * 此前这里裸用 d.rate / d.min / d.max，DROP_RATE_MUL / DROP_QTY_MUL
+       * 对扫荡完全不生效，导致扫荡掉落反超手动 1.5~2.7 倍。 */
       (EX.dropFor(srcName, ch) || []).forEach((d) => {
-        const avg = ((Number(d.min) || 0) + (Number(d.max) || 1)) / 2;
-        add(d.item, count * (Number(d.rate) || 0) * avg);
+        add(d.item, count * EX.dropRate(d) * EX.dropAvg(d));
       });
     };
     pool.forEach((id) => {
@@ -2199,7 +2201,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       const bd = (EX.bosses || []).find((x) => x.id === ld.boss);
       const bn = 'BOSS' + ((bd && bd.n) || '');
       (EX.dropFor(bn, ch) || []).forEach((d) => {
-        const avg = ((Number(d.min) || 0) + (Number(d.max) || 1)) / 2;
+        const avg = EX.dropAvg(d);
         const key = bn + d.item;
         const firstKill = d.first && !(p.firstBossDrop || {})[key];
         if (firstKill && commit) {
@@ -2207,7 +2209,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
           p.firstBossDrop[key] = 1;
         }
         /* 首杀必掉（与 battle.kill 同口径）；之后按 rate × 次数 */
-        add(d.item, firstKill ? avg : avg * (Number(d.rate) || 0) * t);
+        add(d.item, firstKill ? avg : avg * EX.dropRate(d) * t);
       });
     }
     Object.keys(out.mat).forEach((k) => { out.mat[k] = this.safeAmt(out.mat[k]); });
