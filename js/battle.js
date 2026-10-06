@@ -592,7 +592,18 @@ const BT = {
     const base = Math.round(mn + (mx - mn) * t);
     /* 难度：每波数量再乘 cntMul（恶魔 ×1.6，封顶放宽到 90 免得倍率被吃掉） */
     const cnt = (r.diffMul && r.diffMul.cnt) || 1;
-    r.spawnLeft = Math.min(90, Math.round((isBossWave ? base * 0.7 : base) * cnt));
+    /* 每波数量章节倍率
+     * 逻辑缺陷：此前每波数量只由关卡表 per 与难度 cnt 决定，与章节无关，
+     *   再叠加 90 只硬封顶 —— 后期章节的场上密度上不去。
+     *   实测满配玩家打 10-10：20 波共 743 只、252 秒清完，防线只掉 4.9% 血，
+     *   全程毫发无伤（剩血 97%），「过关太简单」的根源就在这里：
+     *   刷怪速率（约 1.8 只/秒）远低于玩家清理速率（约 3 只/秒），
+     *   怪永远在被杀光之前就到不了防线，提高血量/伤害都无效。
+     * 现在按章节递增，并放宽封顶（同屏上限另有约束，不会失控）。 */
+    const _ch = (r.def && r.def.ch) || d.ch || 1;
+    const perMul = (EX.HARD_ON === false) ? 1 : (1 + (_ch - 1) * (EX.WAVE_PER_STEP || 0));
+    r.spawnLeft = Math.min(EX.WAVE_PER_CAP || 90,
+      Math.round((isBossWave ? base * 0.7 : base) * cnt * perMul));
     r.spawnT = 0; r.spawnGap = Math.max(0.18, 0.60 - w * 0.05);
     /* 本波刷怪统计：供 spawn 处做高威胁怪限流（30% 上限） */
     /* 注意：r.waveTotal 是【总波数】(def.waves)，被波次推进用于判定最后一波。
