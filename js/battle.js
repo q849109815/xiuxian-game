@@ -505,6 +505,12 @@ const BT = {
       skills: {}, mods: this.emptyMods(),
       lv: 1, xp: 0, xpNeed: 18, killXp: 0,   /* killXp：本局击杀经验基数，结算角色经验用 */
       gold: 0, kills: 0, time: 0, over: false,
+      /* 无伤连杀：成就 A02「十连斩」的记录源。
+       * 此前结算只认「整场满血通关」，然后拿【整场总击杀数】当进度：
+       *   掉 1 点血 → 0；满血通关 → 一次跳到几十/几百（v 只有 10，形同虚设）。
+       * 且无尽永不 win → 恒 0，该成就在无尽里永远拿不到。
+       * 改为按语义记「连续击杀且期间未掉血」的最大段。 */
+      noHitStreak: 0, noHitMax: 0,
       reviveLeft: a.revive, novaT: 0, auraT: 0,
       /* 玩家护甲：此前 run 里根本没有这个字段，
        * 而 hurtPlayer() 也不读它 → 护甲养成线（天赋/芯片/皮肤/角色表）全废 */
@@ -2237,6 +2243,10 @@ const BT = {
     if (ar > 0) d = Math.max(1, d * (1 - Math.min(0.5, ar / (ar + 120))));
     r.wallHp = Math.max(0, (r.wallHp != null ? r.wallHp : r.hp) - d);
     r.hp = r.wallHp;
+    /* 无伤连杀中断：只有【真正掉血】才算受伤，
+     * 被护盾全额吸收（d 已被抵成 0）时防线血量未变，连杀继续 ——
+     * 这与玩家「我没掉血」的直觉一致，也让护盾发生器有存在意义。 */
+    if (d > 0) r.noHitStreak = 0;
     r.hitFlash = 0.18;
     this.addFloat(r.px, r.py - 26, '-' + Math.round(dmg), 'hurt');
     if (window.SND) SND.play('hurt');
@@ -2251,6 +2261,9 @@ const BT = {
   kill(z) {
     const r = this.run; if (z.dead) return;
     z.dead = true; r.kills++;
+    /* 无伤连杀 +1（受伤时在 hurt() 里清零），并刷新本场最大连杀段 */
+    r.noHitStreak = (Number(r.noHitStreak) || 0) + 1;
+    if (r.noHitStreak > (Number(r.noHitMax) || 0)) r.noHitMax = r.noHitStreak;
     /* 击杀反馈：此前僵尸是「瞬间消失」，没有任何消散表现 */
     if (r.efx) r.efx.push({ t: 'die', x: z.x, y: z.y, life: 0.45, max: 0.45 });
     /* 【表03 FX_CoinDrop】金币掉落：击杀后弹起的金币，掉落物可视化 */
