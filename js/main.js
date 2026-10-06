@@ -1527,7 +1527,13 @@ function onBattleEnd(res, d) {
   E.pushStats(P, {
     kills, clear: res === 'win' ? 1 : 0,
     boss: (isBoss && res === 'win') ? 1 : 0,
-    noHit: (res === 'win' && r.hp >= r.maxHp) ? kills : 0,
+    /* 无伤连杀：改为取战斗内维护的「最大连续无伤击杀段」。
+     * 旧写法 (res==='win' && r.hp>=r.maxHp) ? kills : 0 有两处错：
+     *   ① 进度值用的是【整场总击杀数】而不是连杀数 —— v 只有 10，
+     *      满血通关一次直接跳到几十/几百，门槛形同虚设；
+     *   ② 掉 1 点血就归零，且无尽永不 win → 无尽里恒 0。
+     * 难度上调后「整场满血通关」几乎不可能，该成就实际不可达成。 */
+    noHit: Number(r.noHitMax) || 0,
     endlessSec: endless ? r.time : 0,
   });
   if (endless) P.endlessTime = Math.max(P.endlessTime || 0, Math.floor(r.time));
