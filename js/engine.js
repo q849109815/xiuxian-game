@@ -817,9 +817,24 @@ const E = {
       const _m = (isNew ? '已解锁 ' : '已有 ') + g.n + _tail;
       return { ok: true, msg: _m, isNew: isNew };
     }
-    p.gun = id;
+    /* 出战武器切换：只在新枪【更强】时才自动顶替
+     * BUG：此前这里是无条件 p.gun = id —— 实测玩家装备狙击枪(dmg260)
+     *   时花 6500 金买榴弹枪(dmg120)，出战武器被直接切成更弱的一把，
+     *   玩家花金币反而变弱，还得自己去武器库切回来（商店购买走的就是这条路径）。
+     * 现在按理论 DPS（dmg × rate × 弹丸数）比较：
+     *   新枪更强 / 当前枪不存在或不能出战 → 自动装备（买强枪立刻用上，符合预期）
+     *   不如当前出战枪 → 只入库，明确提示去武器库切换，当前枪原样保留
+     * 手动点「装备」走的是 switchGun，不受这里影响，仍是无条件切换。 */
+    const _cur = (EX.guns || []).find((x) => x.id === p.gun);
+    const _dps = (w) => (Number(w && w.dmg) || 0) * (Number(w && w.rate) || 0) * (Number(w && w.pellets) || 1);
+    const _better = !_cur || !this.gunCanFight(_cur) || _dps(g) > _dps(_cur);
     try { this.codexUnlock(p, 'gun', id); } catch (e) {}
-    return { ok: true, msg: isNew ? ('已解锁并装备 ' + g.n) : ('已装备 ' + g.n), isNew: isNew };
+    if (_better) {
+      p.gun = id;
+      return { ok: true, msg: isNew ? ('已解锁并装备 ' + g.n) : ('已装备 ' + g.n), isNew: isNew };
+    }
+    return { ok: true, msg: (isNew ? '已解锁 ' : '已有 ') + g.n
+      + '，可在武器库切换（当前「' + _cur.n + '」更强，已为你保留）', isNew: isNew };
   },
   /* 进阶等级：每 5 级一次 */
   advOf(lv) {
