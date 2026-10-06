@@ -483,7 +483,7 @@ const EX = {
   DIFFS: [
     { id: 'normal', n: '普通', icon: '🌱', color: '#5fd97a', hpMul: 1.0, dmgMul: 1.0, cntMul: 1.0, spdMul: 1.0, rwMul: 1.0, stam: 1, unlock: null, desc: '标准难度，熟悉关卡用' },
     { id: 'hard',   n: '困难', icon: '🔥', color: '#ff9a4d', hpMul: 2.2, dmgMul: 1.5, cntMul: 1.3, spdMul: 1.1, rwMul: 2.6, stam: 2, unlock: 'normal', desc: '血量翻倍、怪更多，奖励 ×2.6' },
-    { id: 'hell',   n: '恶魔', icon: '💀', color: '#b57bff', hpMul: 5.5, dmgMul: 2.2, cntMul: 1.6, spdMul: 1.2, rwMul: 6.5, stam: 3, unlock: 'hard', desc: '极限挑战，奖励 ×6.5' },
+    { id: 'hell',   n: '恶魔', icon: '💀', color: '#b57bff', hpMul: 4.6, dmgMul: 2.0, cntMul: 1.6, spdMul: 1.2, rwMul: 6.5, stam: 3, unlock: 'hard', desc: '极限挑战，奖励 ×6.5' },
   ],
 
   /* =====================================================
@@ -1179,10 +1179,33 @@ const EX = {
    *   血量 × (HARD_HP_BASE + ch * HARD_HP_STEP)
    *   伤害 × (HARD_DMG_BASE + ch * HARD_DMG_STEP)
    * 调难度只需改这四个数，不用动 100 关关卡表。 */
-  HARD_HP_BASE: 1.30, HARD_HP_STEP: 0.050,   /* 第1章 ×1.35 … 第10章 ×1.80 */
-  HARD_DMG_BASE: 1.15, HARD_DMG_STEP: 0.035, /* 第1章 ×1.185 … 第10章 ×1.50 */
-  HARD_SPD_BASE: 1.05, HARD_SPD_STEP: 0.020, /* 移速：第1章 ×1.07 … 第10章 ×1.25 */
+  HARD_HP_BASE: 1.35, HARD_HP_STEP: 0.075,   /* 第1章 ×1.425 … 第10章 ×2.10 */
+  HARD_DMG_BASE: 1.20, HARD_DMG_STEP: 0.045, /* 第1章 ×1.245 … 第10章 ×1.65 */
+  HARD_SPD_BASE: 1.05, HARD_SPD_STEP: 0.022, /* 移速：第1章 ×1.072 … 第10章 ×1.27 */
   HARD_ON: true,                             /* 一键关掉整条难度曲线（回退用） */
+
+  /* ===== 章内梯度（本次新增，修复「章内 10 关强度完全相同」）=====
+   * 逻辑缺陷：levels 表里同一章 10 关的 mul 完全相等（第1章十关全是 1.0）。
+   * 实测后果：打通 1-1 之后，1-2 ~ 1-9 的强度与 1-1 一模一样，
+   *   玩家在同一章里感受不到任何推进，只有第 10 关换了个 BOSS。
+   *   这正是「过关太简单」最直接的来源——第一次过关后就再没变难过。
+   * 这里在章节曲线之上再叠一条「章内序号」曲线：
+   *   第1关 ×1.0 → 第10关 ×(1 + 9*STEP)
+   * 血量涨得最快（怪更肉、更耐打），伤害/移速小幅跟进，
+   * 避免后期「怪一碰玩家就秒杀」的失控感。 */
+  INCH_HP_STEP:  0.060,   /* 第10关血量 ×1.54（相对第1关） */
+  INCH_DMG_STEP: 0.026,   /* 第10关伤害 ×1.234 */
+  INCH_SPD_STEP: 0.012,   /* 第10关移速 ×1.108 */
+  INCH_ON: true,          /* 一键关掉章内梯度（回退用） */
+
+  /* ===== 掉落稀缺度（本次新增）=====
+   * 原掉落表全部按「随便打打就够用」配的：普通僵尸金属掉率 80%，
+   * 一局下来材料溢出，商店里的材料包永远没必要买。
+   * 这里整体收紧：概率 ×0.72、数量 ×0.80，实际产出约为原来的 58%。
+   * 收紧后材料仍有稳定来源（关卡奖励 + 掉落双通道），
+   * 只是不能再「挂机一局刷满仓库」。 */
+  DROP_RATE_MUL: 0.72,
+  DROP_QTY_MUL: 0.80,
 
   /* 【僵尸 Q 版头像】截图：好友/邮件/军团均为绿皮黄眼僵尸 */
   zAvatars: [
@@ -1273,19 +1296,19 @@ const EX = {
        *   （正常要通关 1-4 才拿得到，付费可在 1-1 就用上，dmg120+爆炸）。
        *   用新 id 而非复用 W1 —— 早期买过 W1 的玩家 limit 已记 1 次，
        *   复用会让他们买不了新枪；新 id 对所有人都是可买的。 */
-      { id: 'W2', n: '霰弹枪', icon: '💥', img: 'assets/icon/w2_shotgun.jpg', price: 5000, cur: 'gold', gun: 'W02',
+      { id: 'W2', n: '霰弹枪', icon: '💥', img: 'assets/icon/w2_shotgun.jpg', price: 7250, cur: 'gold', gun: 'W02',
         give: { M02: 15 }, limit: { t: 'once', v: 1 }, desc: '解锁霰弹枪(原需通关1-2)+合金15 · 限购1次' },
-      { id: 'W6', n: '榴弹枪', icon: '🎇', img: 'assets/icon/w_grenade.jpg', price: 6500, cur: 'gold', gun: 'W03',
+      { id: 'W6', n: '榴弹枪', icon: '🎇', img: 'assets/icon/w_grenade.jpg', price: 9400, cur: 'gold', gun: 'W03',
         give: { M01: 20, M02: 10 }, limit: { t: 'once', v: 1 }, desc: '解锁榴弹枪(原需通关1-4)+金属20+合金10 · 限购1次' },
-      { id: 'W3', n: '狙击枪', icon: '🎯', img: 'assets/icon/w3_sniper.jpg', price: 8000, cur: 'gold', gun: 'W04',
+      { id: 'W3', n: '狙击枪', icon: '🎯', img: 'assets/icon/w3_sniper.jpg', price: 11600, cur: 'gold', gun: 'W04',
         give: { M03: 10 }, limit: { t: 'once', v: 1 }, desc: '解锁狙击枪(原需通关2-2)+稀有金属10 · 限购1次' },
       /* 支援武器（医疗包 / 护盾发生器）：
        * 这两把 dmg=0，此前既不能装备、商店也没上架 —— 玩家永远拿不到，
        * 等于两张废卡。现在支援槽实装，这里同步上架：
        * 解锁后自动装入支援槽，下一场战斗即可吃到治疗/护盾。 */
-      { id: 'W4', n: '医疗包', icon: '🩹', img: 'assets/chibi/s07.png', price: 12000, cur: 'gold', gun: 'S07',
+      { id: 'W4', n: '医疗包', icon: '🩹', img: 'assets/chibi/s07.png', price: 17400, cur: 'gold', gun: 'S07',
         give: { M01: 10 }, limit: { t: 'once', v: 1 }, desc: '解锁医疗包(原需通关4-1)·每场自动治疗防线260 · 限购1次' },
-      { id: 'W5', n: '护盾发生器', icon: '🛡️', img: 'assets/chibi/s08.png', price: 18000, cur: 'gold', gun: 'S08',
+      { id: 'W5', n: '护盾发生器', icon: '🛡️', img: 'assets/chibi/s08.png', price: 26000, cur: 'gold', gun: 'S08',
         give: { M02: 10 }, limit: { t: 'once', v: 1 }, desc: '解锁护盾发生器(原需通关5-1)·每场自动护盾420 · 限购1次' },
     ],
     '宝石': [
@@ -1530,12 +1553,23 @@ const EX = {
   dropBySrc(src) {
     return (this.dropTable || []).filter((d) => d.src === src);
   },
-  /* 执行一次掉落判定 */
+  /* 执行一次掉落判定
+   * DROP_RATE_MUL / DROP_QTY_MUL：全局稀缺度（本次新增）。
+   * 此前掉率与数量写死在 globalDrops 每张表上，想整体收紧要改几十行；
+   * 现在统一在这一个入口打折，改两个数即可全局生效。
+   * 概率先钳到 [0,1] 再乘——运营若把 rate 配成 55（百分比写法），
+   * 乘完仍是 >1，Math.random() 恒小于它 → 100% 必掉，稀缺度失效。
+   * 数量至少保底 1 个，否则折扣后 min 变 0 会出现「提示掉落但到账 0」。 */
   rollDrop(list) {
     const got = [];
+    const _rm = (Number(this.DROP_RATE_MUL) > 0) ? Number(this.DROP_RATE_MUL) : 1;
+    const _qm = (Number(this.DROP_QTY_MUL) > 0) ? Number(this.DROP_QTY_MUL) : 1;
     (list || []).forEach((d) => {
-      if (Math.random() < d.rate) {
-        const n = d.min + Math.floor(Math.random() * (d.max - d.min + 1));
+      const _r = Math.min(1, Math.max(0, Number(d.rate) || 0)) * _rm;
+      if (Math.random() < _r) {
+        const _min = Math.max(1, Math.round((Number(d.min) || 0) * _qm));
+        const _max = Math.max(_min, Math.round((Number(d.max) || 0) * _qm));
+        const n = _min + Math.floor(Math.random() * (_max - _min + 1));
         if (n > 0) got.push({ item: d.item, n: n, name: d.n });
       }
     });
