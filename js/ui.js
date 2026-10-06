@@ -833,7 +833,9 @@ r_tavern(p, tab) {
     if (sb) sb.onclick = () => {
       const r = E.starUp(p);
       this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('role', '角色'); this.home(); }
+      /* 升星消耗角色碎片且不可逆，此前不落盘（全量按钮审计 155 个里被抓出），
+       * 强退/换设备会读回旧档：碎片回来了、星级没升。补立即保存。 */
+      if (r.ok) { if (window.SND) SND.play('upgrade'); E.save(p); this.open('role', '角色'); this.home(); }
     };
     const fb = $('#roleForge');
     if (fb) fb.onclick = () => this.open('role', '宝石');
@@ -1413,7 +1415,16 @@ r_tavern(p, tab) {
         + pv.lines.join('\n') + '\n\n注意：芯片类（含传说芯片）也会一并分解，此操作不可撤销。确定继续？';
       if (!window.confirm(tip)) { this.toast('已取消', 'err'); return; }
       const r = E.dismantleAll(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('coin'); this.open('bag', '材料'); this.home(); }
+      /* BUG（大额不可逆操作不落盘）：一键分解实测 29 个物品 → 金币 +4900，
+       *   而这里既没 save 也没 saveSoon，全靠 30 秒一次的自动存档兜底。
+       *   玩家刚分解完（材料已消失）就被系统杀掉进程 / 强关 App / 换设备登录，
+       *   会读回云端旧档：材料原样回来、4900 金币没拿到 —— 等于白分解。
+       *   这是全项目金额最大且不可撤销的一笔操作，改为立即落盘。 */
+      if (r.ok) {
+        if (window.SND) SND.play('coin');
+        E.save(p);
+        this.open('bag', '材料'); this.home();
+      }
     };
     const g1 = $('#goGem'); if (g1) g1.onclick = () => this.open('gem');
     const g2 = $('#goChip'); if (g2) g2.onclick = () => this.open('chip');
@@ -1595,7 +1606,9 @@ r_tavern(p, tab) {
             let ok = 0;
             for (let i = 0; i < cnt; i++) {
               const c = E.rollChipByQuality ? E.rollChipByQuality(q) : null;
-              if (c) { p.bag = p.bag || []; p.bag.push(c); ok++; }
+              /* 芯片背包封顶（与战令/抽奖/掉落同一入口规则），
+               * 满了就不再入库，走下方兜底折算，避免背包无限膨胀 */
+              if (c) { p.bag = p.bag || []; if (E.pushChip(p, c)) ok++; else break; }
             }
             if (!ok) p.mat[k] = (p.mat[k] || 0) + cnt;
           } catch (e) { p.mat[k] = (p.mat[k] || 0) + (Number(g.give[k]) || 1); }
@@ -1604,8 +1617,19 @@ r_tavern(p, tab) {
       }
       /* 直购特殊类型：月卡 / 战令进阶 / 皮肤 */
       if (g.monthly) {
-        p.monthCard = { until: Date.now() + 30 * 86400000, last: '' };
-        this.toast('月卡开通成功！30 天内每日可领 钻石50+体力60', 'ok');
+        /* BUG（续费吞掉已购天数 + 同日重复领取）：
+         *   until 无条件重置为 now+30 天。月卡有效期 30 天，而限购是「每月 1 次」
+         *   —— 玩家 1/31 购买，2 月即可再买，此时旧卡还剩 28 天，
+         *   实测「买前剩 10 天 → 买后剩 30 天」，白白吞掉 10 天已付费时长。
+         *   同时 last 被清成 ''，当天已领过的记录丢失，
+         *   实测同一天可连领两次 50 钻。
+         * 现在：未过期则【叠加】到原到期日之后，并保留当日领取记录。 */
+        const _now = Date.now();
+        const _old = p.monthCard;
+        const _base = (_old && Number(_old.until) > _now) ? Number(_old.until) : _now;
+        const _last = (_old && _old.last) ? _old.last : '';
+        p.monthCard = { until: _base + 30 * 86400000, last: _last };
+        this.toast('月卡开通成功！剩余 ' + E.monthCardLeft(p) + ' 天，每日可领 钻石50+体力60', 'ok');
       } else if (g.pass === 'adv') {
         p.passAdv = 1; this.toast('进阶战令已解锁！可领取高级档位', 'ok');
       } else if (g.pass === 'normal') {
@@ -2558,7 +2582,7 @@ r_tavern(p, tab) {
         <span style="opacity:.75">注意：地址要填域名根（如 https://xxx.workers.dev），不要带 /https://api.github.com 后缀。</span></div></div>`;
     }
     if (tab === '数值') {
-      return `<div class="card"><div class="card-t">伤害公式 <span class="sub">资料 10 条</span></div>
+      return `<div class="card"><div class="card-t">伤害公式 <span class="sub">资料 ${(EX.formulas || []).length} 条</span></div>
         ${EX.formulas.map((f) => `<div class="kv"><span style="font-size:11px">${f.n}</span><b class="wrapv" style="font-size:11px">${f.f}</b></div>`).join('')}</div>
         <div class="card"><div class="card-t">成长曲线</div>
         ${EX.growth.map((g) => `<div class="kv"><span style="font-size:11px">${g.n}</span><b class="wrapv" style="font-size:11px">${g.curve}</b></div>`).join('')}</div>`;
