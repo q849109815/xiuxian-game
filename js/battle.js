@@ -2179,8 +2179,27 @@ const BT = {
      *   与技能描述一致，且等级成长才真正有效。 */
     const ls = Number(r.ls || 0) + Number((r.mods && r.mods.healOnKill) || 0);
     if (ls > 0 && r.wallHp != null && r.wallMax) {
-      r.wallHp = Math.min(r.wallMax, r.wallHp + d * ls);
-      r.hp = r.wallHp;
+      /* BUG修复：吸血此前【无任何上限】，而单次伤害随武器等级指数成长
+       *   （gunLv76 → 单次 ~5.8 万），于是「回血 = 伤害 × 吸血率」在高攻下
+       *   一次命中就把防线回满。实测 10-10：
+       *     吸血生效   → 防线 9693/9693 满血通关
+       *     强制吸血=0 → 防线被打爆判负
+       *   即：仅 1.9%~3.7% 的吸血率就完全决定了胜负，防线血量、护甲、
+       *   医疗包、护盾发生器、生命类天赋/建筑/宝石全部失去意义。
+       * 现在加双重节流（业界通用做法）：单次命中回血 ≤ 防线上限 ×1%，
+       *   每秒累计回血 ≤ 防线上限 ×2%。低攻时不触发、吸血手感不变；
+       *   高攻时不再一击回满，但仍能持续续航。 */
+      const wm = Number(r.wallMax) || 0;
+      const sec = Math.floor(Number(r.time) || 0);
+      if (r._lsSec !== sec) { r._lsSec = sec; r._lsAcc = 0; }
+      let add = Math.min(d * ls, wm * (EX.LS_HIT_CAP != null ? EX.LS_HIT_CAP : 0.01));
+      const room = Math.max(0, wm * (EX.LS_SEC_CAP != null ? EX.LS_SEC_CAP : 0.02) - (Number(r._lsAcc) || 0));
+      add = Math.min(add, room);
+      if (add > 0) {
+        r.wallHp = Math.min(wm, r.wallHp + add);
+        r.hp = r.wallHp;
+        r._lsAcc = (Number(r._lsAcc) || 0) + add;
+      }
     }
     z.hp -= d;
     z.hitT = 0.12;                          /* 受击闪白（立体精灵叠加高光用） */
