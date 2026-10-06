@@ -2138,6 +2138,70 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const K = (EX.SWEEP_XP_K != null && isFinite(EX.SWEEP_XP_K)) ? EX.SWEEP_XP_K : 0.25;
     return { xp: Math.max(1, Math.round(killEst * avgXp * rwMul * (dRw || 1) * xpMul * K)), killEst: killEst };
   },
+  /* 扫荡的【局内掉落】估算：僵尸掉落 + BOSS 掉落。
+   * 严重 BUG：手动通关时 kill() 走 EX.dropFor(怪物名, 章节) 掉材料/芯片，
+   *   而 sweep() 只发关卡表 ld.rw —— 注释明明写着「手动通关给什么扫荡就给什么」，
+   *   实测 10-10 一局：
+   *     手动  金属245 合金321 火药25 稀有金属66 枪械碎片16 角色碎片4
+   *     扫荡  金属28（其余全部为 0）
+   *   1-10 同样：手动 金属175+火药13，扫荡只有 合金5。
+   *   玩家花体力扫荡刷材料，拿到的只有手动通关的零头；
+   *   BOSS 专属掉落（稀有金属 / 芯片 / 角色碎片）在扫荡这条路上根本不存在，
+   *   而角色碎片是升星唯一来源 —— 等于把升星养成从扫荡玩法里整条砍掉。
+   * 现在按同一张 globalDrops 表、同一套 rate 估算，与手动同口径。
+   * commit=false 时不写 firstBossDrop（预览不能产生副作用）。 */
+  sweepDropEst(p, ld, times, commit) {
+    const out = { mat: {}, chip: {} };
+    if (!ld) return out;
+    const t = Math.max(1, Math.min(EX.SWEEP_MAX, times || 1));
+    const ch = Number(ld.ch) || 1;
+    const waves = Number(ld.waves) || 20;
+    const per = ld.per || [8, 13];
+    const spawn = Math.round(waves * (((Number(per[0]) || 8) + (Number(per[1]) || 13)) / 2));
+    const pool = (ld.pool || []).filter(Boolean);
+    if (!pool.length || spawn <= 0) return out;
+    const perType = (spawn * t) / pool.length;
+    /* 掉落表里的芯片写的是品质码 C01/C02/C03（与 battle.pick 同口径） */
+    const qmap = { C01: '白', C02: '蓝', C03: '红' };
+    const add = (item, n) => {
+      n = Math.floor(Number(n) || 0);
+      if (n <= 0) return;
+      if (qmap[item]) out.chip[qmap[item]] = (out.chip[qmap[item]] || 0) + n;
+      else out.mat[item] = (out.mat[item] || 0) + n;
+    };
+    const rollSrc = (srcName, count) => {
+      (EX.dropFor(srcName, ch) || []).forEach((d) => {
+        const avg = ((Number(d.min) || 0) + (Number(d.max) || 1)) / 2;
+        add(d.item, count * (Number(d.rate) || 0) * avg);
+      });
+    };
+    pool.forEach((id) => {
+      const z = (EX.zombies || []).find((x) => x.id === id);
+      if (!z) return;
+      rollSrc(z.n, perType);
+      /* 分裂僵尸死亡后裂出 2 只小僵尸，手动打时这批也掉东西 */
+      const sp = Number(z.split) || 0;
+      if (sp > 0) rollSrc('小僵尸', perType * sp);
+    });
+    /* BOSS：一局只杀一只 → 按【次数】发，不乘击杀数 */
+    if (ld.boss) {
+      const bd = (EX.bosses || []).find((x) => x.id === ld.boss);
+      const bn = 'BOSS' + ((bd && bd.n) || '');
+      (EX.dropFor(bn, ch) || []).forEach((d) => {
+        const avg = ((Number(d.min) || 0) + (Number(d.max) || 1)) / 2;
+        const key = bn + d.item;
+        const firstKill = d.first && !(p.firstBossDrop || {})[key];
+        if (firstKill && commit) {
+          p.firstBossDrop = p.firstBossDrop || {};
+          p.firstBossDrop[key] = 1;
+        }
+        /* 首杀必掉（与 battle.kill 同口径）；之后按 rate × 次数 */
+        add(d.item, firstKill ? avg : avg * (Number(d.rate) || 0) * t);
+      });
+    }
+    Object.keys(out.mat).forEach((k) => { out.mat[k] = this.safeAmt(out.mat[k]); });
+    return out;
+  },
   sweepPreview(p, lvId, times) {
     const t = Math.max(1, Math.min(EX.SWEEP_MAX, times || 1));
     const lvNum = this.sweepLvNum(lvId);
@@ -2155,8 +2219,12 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       const n = E.safeAmt(Math.floor((Number(src[k]) || 0) * t * dRw));
       if (n > 0) mat[k] = n;
     });
+    /* 局内掉落（僵尸掉落 + BOSS 掉落）：必须与 sweep() 同源，
+     * 否则「弹窗显示」的材料与「实际到账」缺一大截（见 sweepDropEst 注释） */
+    const dr = this.sweepDropEst(p, ld, t, false);
+    Object.keys(dr.mat).forEach((k) => { mat[k] = (mat[k] || 0) + dr.mat[k]; });
     const xpO = this.sweepXp(p, ld, t, dRw);
-    return { times: t, gold: gold, mat: mat, diff: dId, diffRw: dRw,
+    return { times: t, gold: gold, mat: mat, chip: dr.chip, diff: dId, diffRw: dRw,
       diamond: (ld && ld.rw && ld.rw.diamond) ? E.safeAmt(Math.floor(ld.rw.diamond * t * dRw)) : 0,
       xp: xpO.xp, stamina: this.sweepStamina(lvId, dId) * t };
   },
@@ -2199,6 +2267,20 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       const dn = this.safeAmt(Math.floor(ld.rw.diamond * t * dRw));
       if (dn > 0) p.diamond = (p.diamond || 0) + dn;
     }
+    /* 局内掉落（僵尸掉落 + BOSS 掉落）：手动通关捡得到的东西，扫荡也要给，
+     * 否则扫荡就是个亏本按钮（见 sweepDropEst 注释）。
+     * 芯片走 giveChipByQuality 入 p.bag（与 battle.pick 同口径），
+     * 直接写 p.mat['C01'] 会掉进芯片页读不到的死字段。 */
+    const _dr = this.sweepDropEst(p, ld, t, true);
+    Object.keys(_dr.mat).forEach((k) => {
+      if (_dr.mat[k] > 0) p.mat[k] = (p.mat[k] || 0) + _dr.mat[k];
+    });
+    let _chipN = 0;
+    Object.keys(_dr.chip).forEach((q) => {
+      for (let i = 0; i < _dr.chip[q]; i++) {
+        try { if (this.giveChipByQuality) this.giveChipByQuality(p, q); _chipN++; } catch (e) { break; }
+      }
+    });
     /* 表25 #1：经验走角色等级系统（自动升级）—— 与手动通关同口径 */
     const _xpO = this.sweepXp(p, ld, t, dRw);
     const lr = this.addXp(p, _xpO.xp);
