@@ -1560,13 +1560,17 @@ const EX = {
    * 概率先钳到 [0,1] 再乘——运营若把 rate 配成 55（百分比写法），
    * 乘完仍是 >1，Math.random() 恒小于它 → 100% 必掉，稀缺度失效。
    * 数量至少保底 1 个，否则折扣后 min 变 0 会出现「提示掉落但到账 0」。 */
-  rollDrop(list) {
+  rollDrop(list, forceItems) {
     const got = [];
     const _rm = (Number(this.DROP_RATE_MUL) > 0) ? Number(this.DROP_RATE_MUL) : 1;
     const _qm = (Number(this.DROP_QTY_MUL) > 0) ? Number(this.DROP_QTY_MUL) : 1;
+    /* forceItems：必掉条目（BOSS 首杀），跳过概率判定但仍过稀缺度的数量口径。
+     * 加这个参数是为了让 battle.js 的击杀掉落也能走同一个入口 ——
+     * 此前 kill() 自己裸算 d.rate / d.min / d.max，全局稀缺度对它完全无效。 */
+    const _f = Array.isArray(forceItems) ? forceItems : [];
     (list || []).forEach((d) => {
       const _r = Math.min(1, Math.max(0, Number(d.rate) || 0)) * _rm;
-      if (Math.random() < _r) {
+      if (_f.indexOf(d.item) >= 0 || Math.random() < _r) {
         const _min = Math.max(1, Math.round((Number(d.min) || 0) * _qm));
         const _max = Math.max(_min, Math.round((Number(d.max) || 0) * _qm));
         const n = _min + Math.floor(Math.random() * (_max - _min + 1));
@@ -1574,6 +1578,30 @@ const EX = {
       }
     });
     return got;
+  },
+
+  /* 单条掉落的【期望数量】（含全局稀缺度）
+   * ------------------------------------------------------------
+   * 给「不需要随机、只算期望」的场合用（扫荡掉落估算 sweepDropEst）。
+   * 必须与 rollDrop() 保持同一口径：概率先钳 [0,1] 再乘 DROP_RATE_MUL，
+   * 数量按 DROP_QTY_MUL 缩放并保底 1，期望 = (_min + _max) / 2。
+   *
+   * BUG：扫荡此前直接用 d.rate / d.min / d.max 裸算期望，完全绕过 rollDrop，
+   *   于是 DROP_RATE_MUL / DROP_QTY_MUL 只对手动通关生效、对扫荡无效。
+   *   实测 10-10 单次：手动金属 271 / 扫荡 518（1.9 倍），
+   *   角色碎片 3 / 8（2.67 倍）—— 扫荡反而比手动划算得多，
+   *   与「扫荡 = 省时间、收益不该更高」的定位完全相反。
+   *   两条路径共用这一个函数后不会再漂移。 */
+  dropAvg(d) {
+    const _qm = (Number(this.DROP_QTY_MUL) > 0) ? Number(this.DROP_QTY_MUL) : 1;
+    const _min = Math.max(1, Math.round((Number(d && d.min) || 0) * _qm));
+    const _max = Math.max(_min, Math.round((Number(d && d.max) || 0) * _qm));
+    return (_min + _max) / 2;
+  },
+  /* 与 rollDrop 同口径的【生效概率】（钳 [0,1] 后乘稀缺度） */
+  dropRate(d) {
+    const _rm = (Number(this.DROP_RATE_MUL) > 0) ? Number(this.DROP_RATE_MUL) : 1;
+    return Math.min(1, Math.max(0, Number(d && d.rate) || 0)) * _rm;
   },
 
   dropPool(ch) {
