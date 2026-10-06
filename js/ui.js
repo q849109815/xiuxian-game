@@ -2302,7 +2302,10 @@ r_tavern(p, tab) {
     const max = Math.max(1, Math.min(EX.SWEEP_MAX, maxBySt));
     /* 用与 E.sweep 同源的预览，避免「弹窗显示」与「实际到账」对不上 */
     const rw1 = E.sweepPreview ? E.sweepPreview(p, lvId, 1) : EX.sweepRw(E.sweepLvNum ? E.sweepLvNum(lvId) : 1, 1);
-    const matTxt = Object.keys(rw1.mat || {}).map((k) => (E.itemName ? E.itemName(k) : k) + ' ×' + rw1.mat[k]).join(' · ') || '无';
+    const matTxt = Object.keys(rw1.mat || {}).map((k) => (E.itemName ? E.itemName(k) : k) + ' ×' + rw1.mat[k]).join(' · ');
+    /* 芯片掉落（BOSS 关特有）：sweep() 会真发进 p.bag，弹窗不显示就是「显示≠到账」 */
+    const chipTxt = Object.keys(rw1.chip || {}).map((q) => q + '品芯片 ×' + rw1.chip[q]).join(' · ');
+    const dropTxt = [matTxt, chipTxt].filter(Boolean).join(' · ') || '无';
     const noSt = maxBySt < 1;
     /* 用通用面板层承载扫荡弹窗 */
     const box = document.getElementById('sweepBox');
@@ -2312,7 +2315,7 @@ r_tavern(p, tab) {
       <div class="card"><div class="card-t">扫荡设置</div>
       <div class="sub">单次消耗体力 ${_swOne} · 当前体力 ${Math.floor(p.stamina || 0)}</div>
       <div class="sub" style="color:${E.diffDef(rw1.diff || 'normal').color}">扫荡难度：${E.diffDef(rw1.diff || 'normal').icon} ${E.diffDef(rw1.diff || 'normal').n}${rw1.diffRw > 1 ? '（奖励 ×' + rw1.diffRw + '）' : ''}</div>
-      <div class="sub">单次产出：金币 ${E.fmt(rw1.gold)} · ${matTxt} · 经验 ${rw1.xp} · 体力 ${rw1.stamina}</div>
+      <div class="sub">单次产出：金币 ${E.fmt(rw1.gold)} · ${dropTxt} · 经验 ${rw1.xp} · 体力 ${rw1.stamina}</div>
       <div class="kv"><span>扫荡次数</span><b><input type="number" id="swN" value="${max}" min="1" max="${max}"
         style="width:64px;padding:4px;border-radius:6px;border:1px solid #555;background:#222;color:#fff"></b></div>
       <button class="btn c blk" id="swGo" ${noSt ? 'disabled style="opacity:.5"' : ''}>${noSt ? '体力不足（需 ' + _swOne + ' 点）' : '开始扫荡（最多 ' + max + ' 次）'}</button>
