@@ -1266,19 +1266,36 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* 等级再钳一次：sanitize 只在登录时跑，后台 GM 热改档后可能绕过 */
     const _gLv = Math.max(1, Math.min(this.GUN_MAX_LV, p.gunLv || 1));
     const gunBase = g.dmg * Math.pow(this.GUN_GROW_RATE || 1.078, _gLv - 1);
-    /* 攻击强化%（天赋 + 军械库 + 芯片 + 武器词条） */
-    const atkUp = this.talentVal(p, 'atk') + this.buildVal(p, 'atk')
-      + this.chipVal(p, 'atk')
+    /* =========================================================
+     * 攻击强化% —— 必须区分「基础层」与「全局层」
+     * 严重BUG：此前天赋/军械库/芯片/皮肤的攻击加成全部塞进同一个 atkUp，
+     *   统一只乘 gunBase（武器基础伤害），而角色等级提供的固定攻击
+     *   （p.lvBonusAtk，表25 每级 +6）完全不参与。
+     *   实测（gunBase 恒为 25，lvBonusAtk = lv×6）：
+     *     宣称             lv1      lv50     lv80
+     *     天赋 全局伤害+3%  2.326%   0.23%    0.148%
+     *     芯片 传说攻击+20% 15.5%    1.533%   0.988%
+     *     皮肤 攻击+8%      6.202%   0.613%   （缩水）
+     *   等级越高越接近 0 —— lv80 时充值产出的「传说攻击 +20%」实际只有 0.988%，
+     *   不到宣称值的 1/20。而作用在总值层的对照组（好友 +0.5%、升星 +8%、
+     *   装备 +0.8%）三档全部精确命中，证明就是这两套口径并存导致的。
+     * 现在按各来源的【文案描述】分口径：
+     *   基础层 = 军械库「提升武器伤害」（只作用于武器基础伤害，符合描述）
+     *   全局层 = 天赋「全局伤害」/ 芯片「攻击」/ 皮肤「攻击 +X%」
+     *           （作用于含等级固定攻击在内的全部攻击）
+     * ========================================================= */
+    const atkUp = this.talentVal(p, 'atk') + this.buildVal(p, 'atk') + this.chipVal(p, 'atk')
       /* 皮肤攻击加成（表：sk_c01c 沙漠突击 880 钻「攻击 +8%」）
        * BUG：sk.bonus 里 hp / armor / crit 三处都有接入，唯独 atk 漏了 ——
        *      花 880 钻买的「攻击 +8%」实际属性纹丝不动，战力也不涨。
        *      现在补上（进阶词条的 dmg 已并入 affixBonus().dmg，勿在此重复相加）。 */
       + ((sk && sk.bonus && sk.bonus.atk) || 0);
-    const atk = gunBase * (1 + atkUp);
-    /* 生命：角色基础 + 天赋 + 医疗站 + 芯片 + 皮肤 */
+    /* 基础层不再单独乘百分比：所有攻击%统一在下面作用于【全部攻击】 */
+    const atk = gunBase;
+    /* 生命：角色基础 + 天赋 + 医疗站 + 芯片 + 皮肤（同样统一到总值层） */
     const hpUp = this.talentVal(p, 'hp') + this.buildVal(p, 'hp') + this.chipVal(p, 'hp')
       + ((sk && sk.bonus && sk.bonus.hp) || 0);
-    const hp = c.hp * (1 + hpUp);
+    const hp = c.hp;
     /* 护甲：角色基础 × (1+天赋) + 芯片；皮肤加成 */
     const armorUp = this.talentVal(p, 'armor') + this.chipVal(p, 'armor')
       + ((sk && sk.bonus && sk.bonus.armor) || 0);
@@ -1323,8 +1340,11 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       /* 好友加成：面板写「每个 +0.5% 攻击」，但 attrs 从不读 p.friends
        * → 实测加 10 个好友攻击纹丝不动（26.25 → 26.25）。
        * 现在接入，并设 20 人上限（否则无限加好友可无限堆攻击）。 */
-      atk: ((atk + (p.lvBonusAtk || 0)) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct + this.equipBonus(p).atkPct + this.friendBonus(p) + lb.atkPct)) * (1 + EX.starBonus(p.charStar)),
-      hp: ((Math.round(hp) + (p.lvBonusHp || 0)) * (1 + this.gemBonus(p).hpPct + this.equipBonus(p).hpPct + lb.hpPct)) * (1 + EX.starBonus(p.charStar)),
+      /* atkUp / hpUp：天赋·建筑·芯片·皮肤的百分比，统一作用于【全部】
+       * （含角色等级提供的固定加成 p.lvBonusAtk / p.lvBonusHp）。
+       * 此前它们被并进只乘基础值的那一层，导致等级越高收益越接近 0，详见上方注释。 */
+      atk: ((atk + (p.lvBonusAtk || 0)) * (1 + atkUp) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct + this.equipBonus(p).atkPct + this.friendBonus(p) + lb.atkPct)) * (1 + EX.starBonus(p.charStar)),
+      hp: ((Math.round(hp) + (p.lvBonusHp || 0)) * (1 + hpUp) * (1 + this.gemBonus(p).hpPct + this.equipBonus(p).hpPct + lb.hpPct)) * (1 + EX.starBonus(p.charStar)),
       gunBase, armor: Math.round(armor),
       /* 护盾（常驻值）
        * 严重BUG：attrs() 此前从不返回 shield，而 battle.js 用
