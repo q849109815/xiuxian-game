@@ -2301,7 +2301,7 @@ r_tavern(p, tab) {
     const maxBySt = Math.floor((p.stamina || 0) / _swOne);
     const max = Math.max(1, Math.min(EX.SWEEP_MAX, maxBySt));
     /* 用与 E.sweep 同源的预览，避免「弹窗显示」与「实际到账」对不上 */
-    const rw1 = E.sweepPreview ? E.sweepPreview(p, lvId, 1) : EX.sweepRw(parseInt(String(lvId).split('-')[1] || '1', 10), 1);
+    const rw1 = E.sweepPreview ? E.sweepPreview(p, lvId, 1) : EX.sweepRw(E.sweepLvNum ? E.sweepLvNum(lvId) : 1, 1);
     const matTxt = Object.keys(rw1.mat || {}).map((k) => (E.itemName ? E.itemName(k) : k) + ' ×' + rw1.mat[k]).join(' · ') || '无';
     const noSt = maxBySt < 1;
     /* 用通用面板层承载扫荡弹窗 */
