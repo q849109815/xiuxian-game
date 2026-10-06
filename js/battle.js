@@ -2300,16 +2300,20 @@ const BT = {
     const srcName = z.isBoss ? ('BOSS' + (z.bossDef ? z.bossDef.n : ((z.d && z.d.n) || ''))) : ((z.d && z.d.n) || '');
     const curCh = (r.def && r.def.ch) || (r.ch || 1);
     const table = EX.dropFor(srcName, curCh);
-    const got = [];
+    /* 首杀必掉的条目先收集，再统一交给 EX.rollDrop ——
+     * 此前这里裸用 d.rate / d.min / d.max 自己判定，
+     * 全局稀缺度 DROP_RATE_MUL / DROP_QTY_MUL 对关卡内击杀掉落完全不生效
+     * （全项目只有宝箱开箱走了 rollDrop），等于「重新定义掉落」只改了宝箱。
+     * 现在与宝箱、扫荡三条路径共用同一入口。 */
+    const force = [];
     for (const d of table) {
-      /* 首杀必掉 */
-      const firstKill = d.first && !(this.P.firstBossDrop || {})[srcName + d.item];
-      if (firstKill || Math.random() < d.rate) {
-        if (firstKill) { this.P.firstBossDrop = this.P.firstBossDrop || {}; this.P.firstBossDrop[srcName + d.item] = 1; }
-        const n = d.min + Math.floor(Math.random() * (d.max - d.min + 1));
-        got.push({ item: d.item, n: n });
+      if (d.first && !(this.P.firstBossDrop || {})[srcName + d.item]) {
+        this.P.firstBossDrop = this.P.firstBossDrop || {};
+        this.P.firstBossDrop[srcName + d.item] = 1;
+        force.push(d.item);
       }
     }
+    const got = EX.rollDrop(table, force);
     if (got.length) {
       r.drops.push({ x: z.x, y: z.y, xp: 0, gold: 0, items: got });
     } else {
