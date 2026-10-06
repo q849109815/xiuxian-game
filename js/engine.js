@@ -1907,10 +1907,11 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
         const cnt = Math.max(1, Math.min(20, this.safeAmt(t.rw[k]) || 1));
         let ok = 0;
         for (let i = 0; i < cnt; i++) {
-          try { const c = this.rollChipByQuality(q); if (c) { p.bag.push(c); ok++; } }
+          try { const c = this.rollChipByQuality(q); if (c) { if (this.pushChip(p, c)) ok++; else break; } }
           catch (e) {}
         }
-        /* 全部失败时兜底：折算成稀有金属，避免「领了等于没领」 */
+        /* 全部失败时兜底：折算成稀有金属，避免「领了等于没领」
+         * （背包已满时同样走这条兜底，玩家至少拿到材料而不是空手） */
         if (!ok) p.mat.M03 = (p.mat.M03 || 0) + cnt * 2;
       }
       else { const n = this.safeAmt(t.rw[k]); if (n > 0) p.mat[k] = (p.mat[k] || 0) + n; }
@@ -1938,7 +1939,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     else if (hit.t === 'chip') {
       p.bag = p.bag || [];
       /* 抽奖产出精英芯片：同样要走品质入口（此前恒回退白色） */
-      try { const c = this.rollChipByQuality('e'); if (c) p.bag.push(c); }
+      try { const c = this.rollChipByQuality('e'); if (c) { if (!this.pushChip(p, c)) { p.mat.M03 = (p.mat.M03 || 0) + 2; } } }
       catch (e) { p.mat.M03 = (p.mat.M03 || 0) + 2; }
     }
     else p.mat[hit.k] = (p.mat[hit.k] || 0) + hit.v;
@@ -2378,6 +2379,24 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     this.grant(p, it.give);
     return { ok: true, msg: '兑换成功：' + it.n };
   },
+  /* 芯片背包容量上限
+   * 存档里「只增不减」的容器此前已逐个封顶：mail 40 / mailGot 300 /
+   * cdkGot 200 / logs 60 / opsDone 300 / noticeRead 200 / chat 与 friendReq
+   * 也有 KEEP 上限。唯独 p.bag（芯片背包）【没有任何上限】：
+   *   战令发、广告抽奖发、关卡掉落发、商店礼包发、兑换码发、GM 后台发，
+   *   全部直接 push，从不判断容量，也从不截断。
+   * 长线玩家每关都掉芯片，bag 只增不减 → 存档持续膨胀，
+   *   且芯片面板按 bag 全量渲染（无分页），堆积后列表越来越长。
+   * 这里统一在「净新增」入口封顶；装备/卸下/合成属于守恒或净减少，不受限制。 */
+  BAG_MAX: 500,
+  /* 统一的芯片入库口：满了返回 false，调用方据此提示玩家先清理 */
+  pushChip(p, c) {
+    if (!c) return false;
+    p.bag = Array.isArray(p.bag) ? p.bag : [];
+    if (p.bag.length >= this.BAG_MAX) return false;
+    p.bag.push(c);
+    return true;
+  },
   /* 按品质随机产出一颗芯片并放入背包
    * 白=普通(CH01~03) / 蓝=精英(CH04~05) / 红=传说(CH06~08) */
   giveChipByQuality(p, q) {
@@ -2386,6 +2405,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const d = pool[Math.floor(Math.random() * pool.length)];
     const c = this.rollChipById(d.id);
     p.bag = p.bag || [];
+    if (p.bag.length >= this.BAG_MAX) return null;
     p.bag.push(c);
     return c;
   },
