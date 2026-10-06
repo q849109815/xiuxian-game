@@ -2469,11 +2469,14 @@ r_tavern(p, tab) {
         const full = bought >= it.limit;
         /* 未达通关门槛时置灰并显示条件（此前 need 从不参与判定） */
         const locked = (it.need || 0) > 0 && Object.keys(p.cleared || {}).length < it.need;
-        const can = curVal >= it.cost && !full && !locked;
+        /* 已拥有 / 芯片背包已满：与扣费前拦截同口径，按钮直接置灰并写明原因
+         * （否则按钮照常可点，玩家点下去只弹一句「已拥有」，看着像按钮坏了） */
+        const ownMsg = E.ownedGiveMsg ? E.ownedGiveMsg(p, it.give) : '';
+        const can = curVal >= it.cost && !full && !locked && !ownMsg;
         return `<div class="zrow">
           <div class="zav">${it.t === '芯片' ? '💠' : it.t === '碎片' ? '🧩' : it.t === '皮肤' ? '👕' : it.t === '称号' ? '🏅' : '📦'}</div>
           <div class="zi"><b>${it.n}</b><span>${it.cost} ${curName} · 限购 ${it.limit}（已兑 ${bought}）${locked ? ' · <span style="color:#ff8fa4">需通关 ' + it.need + ' 关</span>' : ''}</span></div>
-          <button class="btn sm ${can ? '' : 'd'}" data-buy="${it.id}" ${can ? '' : 'disabled'}>兑换</button>
+          <button class="btn sm ${can ? '' : 'd'}" data-buy="${it.id}" ${can ? '' : 'disabled'}>${ownMsg ? (ownMsg.indexOf('背包') >= 0 ? '背包已满' : '已拥有') : '兑换'}</button>
         </div>`;
       }).join('')}
       <div class="sub" style="padding:6px 2px">限购按 ${isAch ? '每日/每周/每月' : '每日/活动期'} 刷新。</div>
