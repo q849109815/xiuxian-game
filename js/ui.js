@@ -1493,8 +1493,12 @@ r_tavern(p, tab) {
          * 玩家以为自己没激活成功，反复点也只有同一句提示。
          * 现在激活后写入 p.passNormal，按钮改为「已激活」。 */
         const passOn = !!(g.pass === 'normal' && p.passNormal);
-        const noBuy = blocked || stamFull || passOn;
+        /* 已拥有 / 芯片背包已满：与「体力已满」同一口径 —— 扣款前就禁用并写明原因，
+         * 否则按钮照常可点，玩家点下去只弹一句提示，看着像按钮坏了。 */
+        const ownMsg = this.shopOwned(p, g, tab);
+        const noBuy = blocked || stamFull || passOn || !!ownMsg;
         const btnTxt = stamFull ? '体力已满'
+          : ownMsg ? (ownMsg.indexOf('背包') >= 0 ? '背包已满' : '已拥有')
           : passOn ? '已激活'
           : (g.price === 0 ? '免费领取' : (g.cur === 'diamond' ? '💎' : '🪙') + g.price);
         return `<div class="gcell">
@@ -1509,6 +1513,45 @@ r_tavern(p, tab) {
         </div>`;
       }).join('') : '<div class="lbl">暂无商品</div>'}</div>
     </div>`;
+  },
+  /* 唯一性商品扣款前校验：已拥有的皮肤 / 武器 / 称号 / 头像框，以及芯片背包已满。
+   *
+   * BUG（白花钱）：b_shop 这条内联路径是「先扣款、后逐项发放」，
+   *   发放时虽然判重（indexOf < 0 才 push）跳过了重复入库，
+   *   但货币早已扣掉，且末尾照样 toast「已获得皮肤」+「购买成功」。
+   *   实测：
+   *     已拥有 W02（通关 1-2 就能解锁）再在商店买「霰弹枪 5000 金」
+   *       → 扣 4800 金、gunOwn 数量 0 变化，只把当前枪切成了 W02；
+   *     已拥有 sk_c01b 再买 SH08「废土战甲皮肤」680 钻（68 元）
+   *       → 扣 680 钻、p.skins 数量 0 变化，却提示「已获得皮肤」。
+   *   芯片背包满（BAG_MAX 500）时买 SH09「传说芯片包」980 钻（98 元）
+   *       → 芯片一颗没到账，反而往材料包写入 chipL 这种玩家永远用不到的垃圾键。
+   * 现在在扣款前拒绝，货币不会被白白扣掉；商品卡片同步置灰并显示原因。 */
+  shopOwned(p, g, tab) {
+    const gv = g.give || {};
+    /* 战令 / 月卡类：皮肤头像框只是附赠，主体是解锁资格，不能据此拒绝购买 */
+    const isPass = !!(g.pass || g.monthly);
+    if (!isPass) {
+      if (gv.skin && (p.skins || []).indexOf(gv.skin) >= 0) return '已拥有该皮肤，无需重复购买';
+      if (gv.title && (p.titles || []).indexOf(gv.title) >= 0) return '已拥有该称号，无需重复购买';
+      if (gv.frame && (p.frames || []).indexOf(gv.frame) >= 0) return '已拥有该头像框，无需重复购买';
+    }
+    /* 武器：玩家通关就解锁，商店再卖一次等于重复收费（give 里的材料也一并拒掉） */
+    let gid = g.gun || '';
+    if (!gid && g.n) {
+      const byName = (EX.guns || []).find((x) => x.n && (x.n === g.n || g.n.indexOf(x.n) >= 0));
+      if (byName) gid = byName.id;
+    }
+    if (gid) {
+      if ((p.gunOwn || []).indexOf(gid) >= 0) return '已拥有该武器，无需重复购买';
+      try { if (E.gunUnlocked && E.gunUnlocked(p, gid)) return '已拥有该武器，无需重复购买'; } catch (e) {}
+    }
+    /* 芯片背包容量：满了就不再入库，避免扣了钱却只落下一个看不见的垃圾键 */
+    const hasChip = Object.keys(gv).some((k) => /^chip/.test(k));
+    if (hasChip && E.BAG_MAX && (p.bag || []).length >= E.BAG_MAX) {
+      return '芯片背包已满（' + E.BAG_MAX + ' 颗），请先分解或合成';
+    }
+    return '';
   },
   b_shop(p, tab) {
     $$('#pnBody [data-buy]').forEach((b) => { b.onclick = () => {
@@ -1534,6 +1577,9 @@ r_tavern(p, tab) {
        * 【NaN】，此后所有购买全部失效；负数则买东西倒赚。这里统一收紧。 */
       const price = E.safePrice(g.price);
       if (price === null) return this.toast('商品价格配置异常，暂不可购买', 'err');
+      /* 唯一性奖励 / 芯片背包容量：必须在【扣款之前】校验（见 shopOwned 注释） */
+      const ownMsg = this.shopOwned(p, g, tab);
+      if (ownMsg) return this.toast(ownMsg, 'err');
       if ((p[cur] || 0) < price) return this.toast('货币不足', 'err');
       p[cur] -= price;
       if (g.give) for (const k in g.give) {
