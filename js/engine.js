@@ -1965,10 +1965,24 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 旧行为 rw 为 undefined 时照常标已领、金币 0 变化，
      * 玩家点一次"领取成功"却什么都没拿到，且这一档永久作废。 */
     if (!this.rwUsable(t.rw)) return { ok: false, msg: '该档位奖励配置异常，暂不可领取' };
+    /* 【严重 BUG 修复】循环末尾 `if (n > 0) _given.mat[k] = …` 里的两个标识符都不存在：
+     *   ① n —— 各分支内是 `const n`，块级作用域，出了 if 分支就访问不到
+     *   ② _given —— passClaim 里【从未定义】（同名变量只存在于 actRwTake 内）
+     * 结果：战令【九档全部】在领完奖励后抛 ReferenceError，函数返回 undefined。
+     *   实测：普通档 Lv1（金币×1000）→ 金币确实 +1000，但
+     *     · UI 层 `this.toast(r.msg)` 不执行 → 玩家点了【完全没有反馈】，
+     *       再点一次才提示「已领取」（passClaimed 已先标记），只会以为按钮坏了
+     *     · `E.save(p)` 不执行 → 不落盘，强关/换设备就丢
+     *     · `this.open/home()` 不执行 → 面板不刷新
+     *     · 进阶档 `p.diamond += 30` 在循环之后 → 【每档少发 30 钻】，九档共 270
+     *       花 680 钻买的进阶战令，额外钻石奖励一次都没发过。
+     * 修法：n 提到循环作用域，_given 就地定义。 */
+    const _given = { gold: 0, diamond: 0, mat: {} };
     p.passClaimed[key] = 1;
     for (const k in t.rw) {
-      if (k === 'gold') { const n = this.safeAmt(t.rw[k]); if (n > 0) p.gold = (p.gold || 0) + n; }
-      else if (k === 'diamond') { const n = this.safeAmt(t.rw[k]); if (n > 0) p.diamond = (p.diamond || 0) + n; }
+      let n = 0;
+      if (k === 'gold') { n = this.safeAmt(t.rw[k]); if (n > 0) p.gold = (p.gold || 0) + n; }
+      else if (k === 'diamond') { n = this.safeAmt(t.rw[k]); if (n > 0) p.diamond = (p.diamond || 0) + n; }
       else if (/^chip/.test(k)) {
         /* 此前硬编码：无论档位配的是 chipN(普通)/chipE(精英)/chipL(传说)，
          * 一律 rollChipById('l') 且只 push 1 个 —— 品质和数量都被忽略。
@@ -1987,9 +2001,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
         }
         /* 全部失败时兜底：折算成稀有金属，避免「领了等于没领」
          * （背包已满时同样走这条兜底，玩家至少拿到材料而不是空手） */
-        if (!ok) p.mat.M03 = (p.mat.M03 || 0) + cnt * 2;
+        if (!ok) {
+          const m = cnt * 2;
+          p.mat.M03 = (p.mat.M03 || 0) + m;
+          _given.mat.M03 = (_given.mat.M03 || 0) + m;
+        }
+        n = ok;                                  /* 实际入库数（背包满时为 0） */
       }
-      else { const n = this.safeAmt(t.rw[k]); if (n > 0) p.mat[k] = (p.mat[k] || 0) + n; }
+      else { n = this.safeAmt(t.rw[k]); if (n > 0) p.mat[k] = (p.mat[k] || 0) + n; }
       if (n > 0) _given.mat[k] = (_given.mat[k] || 0) + n;
     }
     if (adv) p.diamond = (p.diamond || 0) + 30;         /* 进阶额外奖励 */
