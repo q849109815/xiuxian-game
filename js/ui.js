@@ -3478,15 +3478,25 @@ r_tavern(p, tab) {
     /* 广告：双倍奖励 / 复活 */
     const adBox = $('#rsAd');
     if (adBox) {
+      /* BUG（自相矛盾 + 可刷奖励）：此前「撤离」(quit) 与「失守」(lose) 共用复活按钮。
+       * 暂停面板里「放弃本关」的确认文案明写「退出将放弃本关奖励」，
+       * 但撤离后结算面板照样给「看广告原地复活」，玩家复活→再撤离即可重复领奖。
+       * 现在只有「防线失守」才提供复活；主动撤离不给。 */
       if (win) adBox.innerHTML = `<button class="btn c blk" id="rsAd2x">📺 看广告双倍奖励（剩 ${E.adLeft(this.P, 'AD02')} 次）</button>`;
-      else adBox.innerHTML = `<button class="btn c blk" id="rsAdRev">📺 看广告原地复活（剩 ${E.adLeft(this.P, 'AD01')} 次）</button>`;
+      else if (res === 'lose') adBox.innerHTML = `<button class="btn c blk" id="rsAdRev">📺 看广告原地复活（剩 ${E.adLeft(this.P, 'AD01')} 次）</button>`;
+      else adBox.innerHTML = `<div class="sub" style="text-align:center;padding:6px 0">已主动撤离，本局结束</div>`;
       const b2 = $('#rsAd2x');
       if (b2) b2.onclick = () => {
         const r = E.useAd(this.P, 'AD02'); if (!r.ok) return this.toast(r.msg, 'err');
       try { OPS.track('ad_watch', {}); } catch (e) {}
         /* 表24 AD02 配置的 rw 是「通关奖励 ×2」，但此前只补了一份金币，
          * 钻石与经验不翻倍，与按钮文案「双倍奖励」及配置表不符。
-         * 这里按结算包整体再补一份（金币 / 钻石 / 经验）。 */
+         * 这里按结算包整体再补一份（金币 / 钻石 / 经验）。
+         *
+         * BUG（宣传与实发不符，实测）：结算面板明明列出了「金属×50 合金×20 芯片×2」，
+         * 按钮也写着「双倍奖励」，但这三样【一点没翻倍】——只补了金币/钻石/经验。
+         * 实测点击后 M01 100→100（应为 150）、芯片也不变，玩家花一次广告
+         * 只拿到承诺的一半。现在把 rw.mat 与 rw.chip 一并补发。 */
         const g2 = Math.floor((d.rw.gold || 0));
         const d2 = Math.floor((d.rw.diamond || 0));
         const e2 = Math.floor((d.rw.exp || d.rw.xp || 0));
@@ -3497,6 +3507,21 @@ r_tavern(p, tab) {
         if (g2) parts.push('金币 +' + E.fmt(g2));
         if (d2) parts.push('钻石 +' + d2);
         if (e2) parts.push('经验 +' + e2);
+        /* 材料：按结算包里列出的每样再补一份（芯片背包已满时不硬塞） */
+        const m2 = (d.rw && d.rw.mat) || {};
+        this.P.mat = this.P.mat || {};
+        Object.keys(m2).forEach((k) => {
+          const n = Math.floor(Number(m2[k]) || 0);
+          if (n <= 0) return;
+          this.P.mat[k] = (this.P.mat[k] || 0) + n;
+          parts.push((E.itemName ? E.itemName(k) : k) + ' +' + E.fmt(n));
+        });
+        /* 芯片：按品质补发，走与关卡发放同一条入库路径（背包满则跳过） */
+        const c2 = Math.floor(Number((d.rw && d.rw.chip) || 0));
+        for (let i = 0; i < c2; i++) {
+          if (!(window.E && E.pushChip && E.rollChipById && E.pushChip(this.P, E.rollChipById('CH01')))) break;
+          parts.push('芯片 +1');
+        }
         this.toast('奖励翻倍！' + (parts.join(' · ') || '已翻倍'), 'ok');
         /* BUG修复：结算面板的「下一关 / 再挑战 / 返回」以及「看广告原地复活」
          * 都会收起 #result，唯独这里只调 home() 刷新了主界面数据、却不移除 on ——
