@@ -1831,8 +1831,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (id === 'I04') {
       if ((p.mat.I04 || 0) < 1) return { ok: false, msg: '宝箱数量不足' };
       const rw = this.openBox(p, 1);
-      if (String(rw).indexOf('不足') >= 0) return { ok: false, msg: String(rw) };
-      return { ok: true, msg: '开启宝箱：' + rw };
+      /* openBox 现统一返回 {ok,msg}（与 openChest 同构），不再返回裸字符串 */
+      return rw && rw.ok ? { ok: true, msg: rw.msg } : rw;
     }
 
     const inBattle = !!(window.BT && BT.run && !BT.over);
@@ -1900,19 +1900,17 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     return n;
   },
 
-  /* I04 开箱（表31 DR11：合金 70% 3-5 个） */
+  /* I04 开箱（表31 DR11：合金 70% 3-5 个）
+   *
+   * BUG：这里原先【硬编码】0.70 与 3-5，既绕开配置表 DR11，也绕开全局稀缺度
+   *   （DROP_RATE_MUL / DROP_QTY_MUL），而背包「材料」页的 #bagChest1/#bagChest10
+   *   走的是 openChest() → EX.rollDrop()，两处口径完全不同。
+   *   实测 2000 次：本函数每箱期望 2.870 合金，openChest 只有 1.437 ——
+   *   同一颗宝箱，在「消耗」页签点「使用」比在「材料」页签点「开启」多拿一倍。
+   *   而且运营改 DR11 的 rate/min/max、或调全局稀缺度，对这个入口都无效。
+   * 现统一委托给 openChest()，返回 {ok,msg} 与另一个入口完全一致。 */
   openBox(p, n) {
-    n = Math.max(1, Math.min(10, n | 0));
-    if ((p.mat.I04 || 0) < n) return '宝箱数量不足';
-    p.mat.I04 -= n;
-    let total = 0;
-    for (let i = 0; i < n; i++) {
-      if (Math.random() < 0.70) {
-        const c = 3 + Math.floor(Math.random() * 3);      /* 3-5 */
-        p.mat.M02 = (p.mat.M02 || 0) + c; total += c;
-      }
-    }
-    return total > 0 ? ('合金 ×' + total) : '未获得材料（下次再试）';
+    return this.openChest(p, n);
   },
 
   /* =========================================================
@@ -3222,24 +3220,59 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 面板的芯片区显示的是 p.bag 的另一套存储（实测 chipCountByQ 为 0、按钮 disabled），
    * 于是玩家看到「芯片 ×0」，一点「一键分解全部碎片」却把 p.mat 里的
    * 传说芯片（C03，1200 金币/个）全部清空换成金币，且没有任何确认 —— 不可逆。 */
+  /* 一键分解的扫描范围：碎片走 p.mat，芯片走 p.bag。
+   *
+   * BUG：DISMANTLE_RATE 里的 C01/C02/C03 【不是芯片而是角色 ID】
+   *   （C01 幸存者-杰克 / C02 医疗兵-艾拉 / C03 重装兵-雷），芯片真实存放
+   *   在 p.bag 数组里，p.mat 中永远不会有 C0x。于是这两个函数扫描的
+   *   p.mat['C01'..'C03'] 恒为 0 —— 玩家背包里几十颗芯片，点「一键分解
+   *   （碎片 + 芯片）」一颗都分解不掉，金币也没多，而确认弹窗白纸黑字写着
+   *   「注意：芯片类（含传说芯片）也会一并分解，此操作不可撤销」。
+   *   实测：p.bag 有 1 颗芯片 + p.mat.C01=5，分解后 bagLen 仍为 1、芯片纹丝不动。
+   *   面板上那三个「按品质分解」按钮走 dismantleChip(p,q) 能正常分解 p.bag，
+   *   唯独一键分解漏了 —— 属于「提示成功但没做」的假按钮。
+   *
+   * 已装备的芯片在 equipChip 里已从 p.bag 移出到 p.chips[slot]，
+   * 所以扫 p.bag 不会误伤身上的装备。 */
+  CHIP_DIS_RATE: { '白': 200, '蓝': 500, '红': 1200 },
   dismantlePreview(p) {
     const lines = [];
     let gold = 0, cnt = 0;
     Object.keys(this.DISMANTLE_RATE).forEach((id) => {
-      const have = (p.mat || {})[id] || 0;
+      if (/^C0/.test(id)) return;                 /* C0x 是角色 ID，不是芯片 */
+      const have = this.safeAmt((p.mat || {})[id]);
       if (have > 0) {
         const g = this.DISMANTLE_RATE[id] * have;
         gold += g; cnt += have;
         lines.push('· ' + this.itemName(id) + ' ×' + have + ' → ' + this.fmt(g) + ' 金币');
       }
     });
+    Object.keys(this.CHIP_DIS_RATE).forEach((q) => {
+      const n = this.chipCountByQ(p, q);
+      if (n > 0) {
+        const g = this.CHIP_DIS_RATE[q] * n;
+        gold += g; cnt += n;
+        lines.push('· ' + q + '色芯片 ×' + n + ' → ' + this.fmt(g) + ' 金币');
+      }
+    });
     return { cnt: cnt, gold: gold, lines: lines };
   },
   dismantleAll(p) {
     let gold = 0, cnt = 0;
+    const mat = p.mat || {};
     Object.keys(this.DISMANTLE_RATE).forEach((id) => {
-      const have = (p.mat || {})[id] || 0;
-      if (have > 0) { gold += this.DISMANTLE_RATE[id] * have; cnt += have; p.mat[id] = 0; }
+      if (/^C0/.test(id)) return;
+      const have = this.safeAmt(mat[id]);
+      if (have > 0) { gold += this.DISMANTLE_RATE[id] * have; cnt += have; mat[id] = 0; }
+    });
+    /* 芯片：按品质从 p.bag 移除（已装备的在 p.chips 里，不受影响） */
+    Object.keys(this.CHIP_DIS_RATE).forEach((q) => {
+      const keep = [], drop = [];
+      (p.bag || []).forEach((c) => { (c && c.q === q ? drop : keep).push(c); });
+      if (drop.length) {
+        gold += this.CHIP_DIS_RATE[q] * drop.length; cnt += drop.length;
+        p.bag = keep;
+      }
     });
     if (!cnt) return { ok: false, msg: '没有可分解的物品' };
     p.gold = (p.gold || 0) + gold;
