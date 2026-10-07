@@ -1376,7 +1376,10 @@ r_tavern(p, tab) {
     $$('#pnBody [data-use10]').forEach((b) => { b.onclick = () => {
       if ((p.mat[b.dataset.use10] || 0) < 10) return this.toast('宝箱不足 10 个', 'err');
       const rw = E.openBox(p, 10);
-      this.toast('开启 10 个宝箱：' + rw, 'ok');
+      /* 同 openBox 的修复：返回值已是 {ok,msg}，且「未出货」也应算成功
+       * （宝箱已消耗，只是这次没开出东西），但不足 10 个时必须拦下不扣。 */
+      this.toast('开启 10 个宝箱：' + rw.msg, rw.ok ? 'ok' : 'err');
+      if (!rw.ok) return;
       if (window.SND) SND.play('get');
       E.save(p); this.open('bag', tab); this.home();
     }; });
