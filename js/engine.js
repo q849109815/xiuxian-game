@@ -1264,7 +1264,11 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 收益线性 vs 成本指数 → Lv84 永久卡死，且后期越打越轻松。
      * 改复利后收益与成本同为指数，卡关→攒金币→升级→突破 的循环才成立。 */
     /* 等级再钳一次：sanitize 只在登录时跑，后台 GM 热改档后可能绕过 */
-    const _gLv = Math.max(1, Math.min(this.GUN_MAX_LV, p.gunLv || 1));
+    /* Number() 必须在 || 之前：'abc' / {} 是 truthy，
+     * 旧写法 `p.gunLv || 1` 会把它们原样放进来 → Math.min(999,'abc') = NaN
+     * → gunBase NaN → 攻击/战力/伤害全线 NaN，面板显示 "NaN"。
+     * 实测：gunLv='abc' → 战力 NaN（修复后 1147）。 */
+    const _gLv = Math.max(1, Math.min(this.GUN_MAX_LV, Number(p.gunLv) || 1));
     const gunBase = g.dmg * Math.pow(this.GUN_GROW_RATE || 1.078, _gLv - 1);
     /* =========================================================
      * 攻击强化% —— 必须区分「基础层」与「全局层」
@@ -1515,20 +1519,47 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     return { atkPct: v, hpPct: v };
   },
 
+  /* 武器输出当量：把「弹丸数 / 穿透 / 爆炸AOE / 弹匣与换弹」折算成每秒投射强度。
+   * BUG（战力与真实强度倒置，实测）：power() 只取 a.atk，
+   *   而 a.atk 里【不含】pellets / pierce / explode(AOE) / mag / reload ——
+   *   于是「单发高伤 + 极低射速」的武器战力虚高：
+   *     火箭筒 战力 79045（第1）→ 真实持续输出 6095（第7）
+   *     榴弹枪 战力 36525（第7）→ 真实 1722（第18）
+   *     地雷   战力 64801（第3）→ 真实 4165（第9）
+   *   反过来 等离子枪真实第1（13803）战力只排第9、链锯枪真实第3战力第8。
+   *   玩家按战力选枪/判强弱，会一路选到实际最弱的枪，战力榜也因此失真。
+   * 现在按「持续每秒投射当量」加权，并以 W01 突击步枪为基准归一（K=12/5.405），
+   *   保证基准武器的战力数值与改动前保持一致，战力榜不会整体跳变。 */
+  weaponOut(a, g) {
+    const mag = Math.max(1, Number(a.mag) || 1);
+    const rate = Math.max(0.1, Number(a.rate) || 1);
+    const reload = Math.max(0.1, Number(g && g.reload) || 1);
+    const cyc = mag / rate + reload;                 /* 一个弹匣循环的总秒数 */
+    const aoe = 1 + (Number(g && g.explode) || 0) * ((Number(g && g.er) || 0) / 60);
+    const pierceMul = 1 + Math.min(4, Number(a.pierce) || 0) * 0.35;
+    return (Number(a.pellets) || 1) * pierceMul * aoe * (mag / cyc);
+  },
   power(p) {
     const a = this.attrs(p);
     const gb = this.gemBonus(p);
+    const g = this.gun(p);
     const eq = p.equip || {};
     const eqP = Object.values(eq).reduce((s, e) => s + (e.lv || 0) * 45 + (e.adv || 0) * 160, 0);
     /* BUG修复：a.atk / a.hp 里已经乘过宝石百分比，
      * 这里再 `(a.atk * gb.atkPct) * 6` 属于重复计算宝石加成。
      * 同时战力只认攻击/生命，导致镶嵌紫宝石（暴伤+攻速）战力纹丝不动，
      * 与"战力代表强度"的直觉不符 —— 补上暴击/暴伤/攻速/吸血权重 */
-    return Math.round(a.atk * 12 + a.hp * 0.6 + p.gunLv * 60
+    /* 攻击项改为「持续输出当量」：a.atk × weaponOut × 2.22（W01 基准归一）。
+     * a.rate * 15 的单列权重随之移除 —— 射速已折进 weaponOut，否则重复计算。 */
+    /* gunLv 必须走与 attrs 相同的钳制：此前直接用 p.gunLv * 60，
+     * 后台改档写入 NaN / 'abc' / {} 时整个战力算成 NaN，面板与排行榜显示 "NaN"。
+     * 实测：gunLv=NaN → 战力 NaN（钳制后应为 1055）。 */
+    const _pwLv = Math.max(1, Math.min(this.GUN_MAX_LV, Number(p.gunLv) || 1));
+    return Math.round(a.atk * this.weaponOut(a, g) * 2.22 + a.hp * 0.6 + _pwLv * 60
       + Object.keys(p.chips || {}).length * 220
       + Object.values(p.talents || {}).reduce((s, v) => s + v, 0) * 90
       + a.crit * 800 + Math.max(0, a.critDmg - 1.5) * 200
-      + a.rate * 15 + a.ls * 500
+      + a.ls * 500
       /* 护甲此前既不计入战力、也不参与减伤，属于纯装饰属性 */
       + a.armor * 10
       + eqP) * (1 + EX.starBonus(p.charStar));
