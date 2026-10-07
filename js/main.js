@@ -1384,6 +1384,16 @@ function onBattleEnd(res, d) {
    * 现在在唯一的结算入口累加，并由 E.stats 对外暴露。 */
   P.stats = P.stats || {};
   P.stats.runs = (P.stats.runs || 0) + 1;
+  /* 【本局已发放记账】
+   * BUG（可无限刷奖励）：「看广告原地复活」只把 r.over 置回 false、保留波次与击杀，
+   * 而结算是按【累计值】发放的 —— 金币读 r.gold（累计局内金币）、
+   * 经验读 r.killXp（累计击杀经验）、无尽代币读 wv（当前波次）。
+   * 于是玩家可以：撤离（拿一次）→ 广告复活 → 再撤离（再拿一次）→ …
+   * 实测无尽模式：第1次撤离 +136 金币 / +42 经验 / +10 代币，
+   *   复活后再撤离又 +140 金币 / +38 经验 / +10 代币（Lv1→2）。
+   * 每日 10 次广告 = 10 倍代币与经验，活动商店直接被搬空。
+   * 修法：按「本次新增 = 应发 - 已发」发放，复活带来的重复部分不再结算。 */
+  const paid = r.paid || (r.paid = { gold: 0, xp: 0, ev: 0 });
   /* 资料奖励表 */
   let rw = { gold: 0, diamond: 0 };
   if (res === 'win') {
@@ -1474,9 +1484,12 @@ function onBattleEnd(res, d) {
     /* 表22 EV01 丧尸围城 = 无尽模式：按存活波次发活动代币
      *（此前 evToken 全项目零产出，活动商店 12 件商品一件都买不了） */
     const tk = Math.max(10, wv * 3);
-    P.evToken = (P.evToken || 0) + tk;
-    P.evScore = (P.evScore || 0) + tk;
-    rw.evToken = tk;
+    /* 同上记账：只发「本次新增」，复活后重复撤离不再重复给代币 */
+    const evGive = Math.max(0, tk - (paid.ev || 0));
+    paid.ev = (paid.ev || 0) + evGive;
+    P.evToken = (P.evToken || 0) + evGive;
+    P.evScore = (P.evScore || 0) + evGive;
+    rw.evToken = evGive;
     /* 表37 埋点 endless_time：原来挂在 win() 里，无尽永不触发，
      * 后台「无尽时长」这项数据常年为空。改在唯一结算入口上报。 */
     try { if (window.OPS) OPS.track('endless_time', { t: Math.floor(r.time || 0), wave: wv }); } catch (e) {}
@@ -1484,6 +1497,9 @@ function onBattleEnd(res, d) {
   /* 结算写入前过一遍 safeAmt：rw.gold 若因关卡配置异常算成 NaN/负数，
    * 玩家打完一局【金币直接归零 / 倒扣】，且结算面板还会显示"获得 NaN"。 */
   rw.gold = E.safeAmt(rw.gold); rw.diamond = E.safeAmt(rw.diamond);
+  /* 金币按「本次新增」发放（同上记账，防复活后重复撤离刷金币） */
+  rw.gold = Math.max(0, rw.gold - (paid.gold || 0));
+  paid.gold = (paid.gold || 0) + rw.gold;
   P.gold += rw.gold; P.diamond += rw.diamond;
   /* 玩家操作日志：击杀
    * 后台「日志查询 → 玩家操作」页头写着「拾取/击杀/升级/合成/兑换」，
@@ -1501,7 +1517,9 @@ function onBattleEnd(res, d) {
    * 高关卡收益与难度匹配；取不到时回退旧口径，不会算成 0。 */
   /* 角色经验同样乘难度倍率：高风险高回报（局内等级不放大，这里才放大） */
   const baseXp = ((r && Number(r.killXp) > 0) ? Number(r.killXp) : kills * 4) * dRwMulSafe;
-  const xpGain = Math.round(baseXp * (E.attrs(P).xpMul || 1));
+  /* 经验同样只发「本次新增」（r.killXp 是累计值，复活后重复结算会重复给经验） */
+  const xpGain = Math.max(0, Math.round(baseXp * (E.attrs(P).xpMul || 1)) - (paid.xp || 0));
+  paid.xp = (paid.xp || 0) + xpGain;
   const lvr = E.addXp(P, xpGain);
   /* 结算面板读的是 rw.exp（此前未赋值，界面恒显示兜底值 15 EXP，
    * 而玩家实际拿到的是按击杀计算的数百经验 —— 显示与实际严重不符） */
