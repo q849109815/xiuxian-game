@@ -953,11 +953,16 @@ const EX = {
      * BUG：此前 actExtraBtn 用 isBuiltin(/^EV\d+$/) 把内置活动全部排除，
      *   6 个活动配了 rw（代币/芯片/钻石/限定称号）却【没有任何领取入口】，
      *   页面上 data-actrw 按钮数为 0，奖励永远发不出去。 */
-    { id: 'EV01', n: '丧尸围城', type: '限时挑战', time: '每周五~周日', icon: '🏰',
+    /* time 字段此前写的是「每周五~周日 / 每月1-3日 / 每月15-25日」，
+     * 但 actRwTake 只校验 per 周期（week/month），【完全不看日期】——
+     * 玩家在周四打开面板看到「每周五~周日」，照样能领奖；
+     * 而周五来领时可能上一期已领过，反而领不到。
+     * 说明与实装不符，改为按真实周期描述（周期本身不变，收益不受影响）。 */
+    { id: 'EV01', n: '丧尸围城', type: '限时挑战', time: '常驻 · 每周可领 1 次', icon: '🏰',
       desc: '生存限时挑战，波次积分', rwDesc: '活动代币 + 芯片', rule: '按积分领奖',
       per: 'week', cond: { endlessMin: 1 },
       rw: { evToken: 60, chipN: 1 } },
-    { id: 'EV02', n: 'BOSS突袭', type: '限时', time: '每月1-3日', icon: '👹',
+    { id: 'EV02', n: 'BOSS突袭', type: '限时', time: '每日开放 · 每月可领 1 次', icon: '👹',
       desc: '限定 BOSS 战，挑战次数限制', rwDesc: '稀有金属 + 钻石', rule: '每日 3 次',
       per: 'month', cond: { raidToday: 1 },
       rw: { evToken: 80, M03: 3, diamond: 20 } },
@@ -969,7 +974,7 @@ const EX = {
       desc: '首次充值钻石翻倍', rwDesc: '钻石', rule: '仅 1 次', rw: {} },
     { id: 'EV05', n: '限时皮肤', type: '皮肤活动', time: '节日期间', icon: '👗',
       desc: '限定皮肤上架', rwDesc: '皮肤', rule: '限时购买', rw: {} },
-    { id: 'EV06', n: '无尽冲榜', type: '排行榜', time: '每月15-25日', icon: '🏆',
+    { id: 'EV06', n: '无尽冲榜', type: '排行榜', time: '常驻 · 每月可领 1 次', icon: '🏆',
       desc: '无尽模式存活时长排名', rwDesc: '传说芯片 + 限定称号', rule: '按排名发奖',
       per: 'month', cond: { endlessMin: 10 },
       rw: { evToken: 120, chipL: 1, title: 'endless_king' } },
