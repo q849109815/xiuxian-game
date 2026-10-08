@@ -2128,7 +2128,11 @@ r_tavern(p, tab) {
     let h = '';
     if (a.levelId) h += `<button class="btn sm" data-actlv="${a.id}">前往</button>`;
     if (a.rw && Object.keys(a.rw).length) {
+      /* 未开始 / 已结束的活动此前照样渲染出「领奖」按钮（点下去也能领到，
+       * engine.actRwTake 那边已加拦截）。这里同步置灰，避免玩家点了才被拒。 */
+      const off = a.status && a.status !== '运行中';
       h += got ? '<span class="st off">已领</span>'
+        : off ? `<span class="st off">${a.status === '待开启' ? '未开始' : '已结束'}</span>`
         : `<button class="btn sm g" data-actrw="${a.id}" style="margin-left:4px">领奖</button>`;
     }
     return h;
@@ -2142,8 +2146,12 @@ r_tavern(p, tab) {
       if (a.startAt && Date.now() < a.startAt - 864e5 * 30) return false;  /* 一个月后才开始的先不显示 */
       return true;
     });
+    /* 计数此前直接取 acts.length，把「待开启」的后台活动也算成进行中
+     * （实测：6 个内置 + 2 个云端，其中 1 个 3 天后才开始，顶部仍写「8 个进行中」）。
+     * 内置活动无 status 字段（常驻），按运行中计。 */
+    const liveN = acts.filter((a) => !a.status || a.status === '运行中').length;
     return `<div class="card"><div class="card-t">活动
-      <span class="sub">${acts.length} 个进行中</span></div>
+      <span class="sub">${liveN} 个进行中${liveN < acts.length ? '（含 ' + (acts.length - liveN) + ' 个未开始）' : ''}</span></div>
       ${acts.length ? acts.map((a) => `<div class="zrow">
         <div class="zav">${a.icon || '🎪'}</div>
         <div class="zi"><b>${a.n}</b><span>${a.desc || ''}</span>
