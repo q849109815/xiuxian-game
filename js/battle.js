@@ -2457,11 +2457,27 @@ const BT = {
          * 现在按品质码生成真实芯片推进 p.bag。 */
         const qmap = { C01: '白', C02: '蓝', C03: '红' };
         if (qmap[it.item] && window.E && E.giveChipByQuality) {
-          for (let i = 0; i < it.n; i++) E.giveChipByQuality(this.P, qmap[it.item]);
-          /* 局内芯片收获累计：结算面板此前只显示关卡表配的 chip，
-           * 战斗中打出来的芯片一行都不显示 */
-          r.chipGain = (r.chipGain || 0) + it.n;
-          txt.push('芯片+' + it.n);
+          /* BUG（静默丢失）：E.giveChipByQuality 在 p.bag 满（BAG_MAX=500）时
+           * 返回 null、一颗都不入库，而这里此前【无条件】累加 it.n 并飘字
+           * 「芯片+3」——实测满包时飘字说给了 3 颗，bagLen 500→500 纹丝不动。
+           * 玩家全程被蒙在鼓里：既不会收到"背包已满"提示，也无从察觉芯片没到。
+           * 现在按【实际入库数】计数，并在有淘汰时提示玩家去清理。 */
+          let got = 0;
+          for (let i = 0; i < it.n; i++) if (E.giveChipByQuality(this.P, qmap[it.item])) got++;
+          if (got > 0) {
+            /* 局内芯片收获累计：结算面板此前只显示关卡表配的 chip，
+             * 战斗中打出来的芯片一行都不显示 */
+            r.chipGain = (r.chipGain || 0) + got;
+            txt.push('芯片+' + got);
+          }
+          const lost = it.n - got;
+          if (lost > 0) {
+            r.chipFull = (r.chipFull || 0) + lost;
+            if (!r._chipFullTipped) {
+              r._chipFullTipped = true;
+              try { if (window.UI && UI.toast) UI.toast('⚠️ 芯片背包已满，' + lost + ' 颗芯片未获得，请到芯片页分解或合成', 'err'); } catch (e) {}
+            }
+          }
           return;
         }
         this.P.mat[it.item] = (this.P.mat[it.item] || 0) + it.n;
