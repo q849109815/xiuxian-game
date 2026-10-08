@@ -870,15 +870,34 @@ const MAIN = {
            * 此前 live = (status === '运行中') 恒为 false，
            * 导致后台时间到了显示运行中、游戏端却判定为不可参与。 */
           const nowT = Date.now();
+          /* endAt 为 0（后台新建时没填结束日期）此前会被判成「已结束」——
+           * `nowT > 0` 恒真。运营漏填结束日期的活动因此永远处于已结束状态。
+           * 0 应视为「无结束时间 / 长期有效」。 */
           const st = a.status === '强制下架' ? '强制下架'
             : nowT < (a.startAt || 0) ? '待开启'
-            : nowT > (a.endAt || 0) ? '已结束' : '运行中';
+            : (Number(a.endAt) > 0 && nowT > Number(a.endAt)) ? '已结束'
+            : '运行中';
+          /* 后台 actAdd 只写 { id,n,startAt,endAt,rw,at }（见 admin/js/pages.js），
+           * 不带 time / rule / icon / rwDesc —— 而活动面板渲染的正是这四个字段，
+           * 于是后台建的活动在面板上时间那一行只剩一个孤立的「·」，
+           * 玩家完全看不到活动什么时候开始、什么时候结束、奖励是什么。
+           * 这里用已有的 startAt/endAt/rw 现算出来。 */
+          const dstr = (t) => (Number(t) > 0 ? new Date(Number(t) + 8 * 3600000).toISOString().slice(0, 10) : '');
+          const s0 = dstr(a.startAt), e0 = dstr(a.endAt);
+          const timeTxt = (s0 || e0) ? (s0 || '—') + ' ~ ' + (e0 || '长期') : '长期';
+          const rwDescTxt = Object.keys(a.rw || {}).length
+            ? Object.keys(a.rw).map((k) => nm(k) + '×' + a.rw[k]).join(' ')
+            : '';
           const it = {
             id: a.id, n: a.name || a.n || '活动',
             startAt: a.startAt || 0, endAt: a.endAt || 0,
             cond: a.cond || {}, levelId: a.levelId || '',
             live: st === '运行中', status: st,
             rw: a.rw || {}, desc: a.desc || '',
+            time: a.time || timeTxt,
+            rule: a.rule || (st === '待开启' ? '尚未开始' : st === '已结束' ? '已结束' : '进行中'),
+            icon: a.icon || '🎪',
+            rwDesc: a.rwDesc || rwDescTxt,
           };
           const i = base.findIndex((x) => x.id === a.id);
           if (i >= 0) base[i] = it; else base.push(it);
