@@ -2476,6 +2476,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   actRwTake(p, id) {
     const a = this.actOf(id);
     if (!a || !a.rw || !Object.keys(a.rw).length) return { ok: false, msg: '该活动无奖励' };
+    /* 此前只校验「有奖励 / 未领过 / 条件满足」，完全不看活动是否在运行中：
+     * 后台把开始时间定在 3 天后，面板照样渲染出「领奖」按钮，照样发奖。
+     * 内置 EV01~EV06 在 config.js 里没有 status 字段（常驻），不受影响。 */
+    if (a.status && a.status !== '运行中') {
+      const w = a.status === '待开启' ? '尚未开始' : a.status === '强制下架' ? '已下架' : '已结束';
+      return { ok: false, msg: '该活动' + w };
+    }
     if (this.actRwGot(p, id)) return { ok: false, msg: '本期奖励已领取' };
     const c = this.actCondOk(p, a);
     if (!c.ok) return c;
