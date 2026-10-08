@@ -1382,8 +1382,11 @@ function onBattleEnd(res, d) {
   /* 统一口径：p.stats.runs 此前在 newPlayer 里初始化后就再没人写过，
    * 全项目零读取 —— 后台想看留存/活跃度拿不到"打了几局"这个最基本的数。
    * 现在在唯一的结算入口累加，并由 E.stats 对外暴露。 */
+  /* 同一局只算一次：广告复活后 r.paid 仍在（同一个 run 对象），
+   * 若每次结算都 +1，玩家「阵亡→复活→再阵亡」会被记成 2 局，
+   * 后台活跃度/人均局数虚高。 */
   P.stats = P.stats || {};
-  P.stats.runs = (P.stats.runs || 0) + 1;
+  if (!BT.run.paid) P.stats.runs = (P.stats.runs || 0) + 1;
   /* 【本局已发放记账】
    * BUG（可无限刷奖励）：「看广告原地复活」只把 r.over 置回 false、保留波次与击杀，
    * 而结算是按【累计值】发放的 —— 金币读 r.gold（累计局内金币）、
@@ -1393,7 +1396,7 @@ function onBattleEnd(res, d) {
    *   复活后再撤离又 +140 金币 / +38 经验 / +10 代币（Lv1→2）。
    * 每日 10 次广告 = 10 倍代币与经验，活动商店直接被搬空。
    * 修法：按「本次新增 = 应发 - 已发」发放，复活带来的重复部分不再结算。 */
-  const paid = r.paid || (r.paid = { gold: 0, xp: 0, ev: 0 });
+  const paid = r.paid || (r.paid = { gold: 0, xp: 0, ev: 0, kills: 0 });
   /* 资料奖励表 */
   let rw = { gold: 0, diamond: 0 };
   if (res === 'win') {
@@ -1542,8 +1545,18 @@ function onBattleEnd(res, d) {
     }
   }
   const isBoss = !endless && (r.def.cond === 'boss' || r.def.cond === 'bossAll');
+  /* 击杀数同样按「本次新增」记账
+   * BUG：gold / xp / evToken 都做了 paid 去重，唯独 kills 漏了。
+   *   d.kills 是战斗内【累计】击杀，而广告复活（BT.revive）不清零它，
+   *   于是一次「阵亡 → 广告复活 → 再阵亡」会把同一批击杀结算两次：
+   *   实测真实击杀 10 只（首次阵亡时 3、复活后打到 10），
+   *   stats.kills 却是 3+10=13，虚增 3。
+   * 后果：设置页「累计击杀」虚高；每日任务「击杀50」、每周任务
+   *   「击杀1000」、成就 A01「百人斩」都可借反复复活刷进度。 */
+  const killAdd = Math.max(0, (Number(kills) || 0) - (Number(paid.kills) || 0));
+  paid.kills = (Number(paid.kills) || 0) + killAdd;
   E.pushStats(P, {
-    kills, clear: res === 'win' ? 1 : 0,
+    kills: killAdd, clear: res === 'win' ? 1 : 0,
     boss: (isBoss && res === 'win') ? 1 : 0,
     /* 无伤连杀：改为取战斗内维护的「最大连续无伤击杀段」。
      * 旧写法 (res==='win' && r.hp>=r.maxHp) ? kills : 0 有两处错：
