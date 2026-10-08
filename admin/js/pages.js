@@ -742,7 +742,11 @@ const PAGES = {
            * pushOp 每次生成新的 op.id，游戏端靠 opsDone 的去重也拦不住。
            * 现在按「结算周期 + 玩家 + 奖励物品」记账，本期已发过的直接跳过。
            * 之后新增的奖励配置（物品不同）仍会正常发放，不受影响。 */
-          const bk = this.settleKey(b, list);
+          /* 页内互调必须走 this.acts：acts 内 this 是 APP，
+           * settleKey 定义在 acts 里，直接 this.settleKey() 恒为 undefined 会抛
+           * TypeError，且 settle 是 async —— 异常落在 Promise 里，界面连报错提示都没有，
+           * 运营点了「结算发奖」会静默失败、奖励根本没发出去 */
+          const bk = this.acts.settleKey.call(this, b, list);
           const log = Array.isArray(rw.settledLog) ? rw.settledLog : [];
           const has = {};
           log.forEach((x) => { if (x && x.bk === bk) has[x.uid + '|' + x.item] = 1; });
@@ -2022,12 +2026,13 @@ const PAGES = {
      * 14. 待开发 —— 公告管理
      * ================================================================= */
     A.notice = {
-      n: '公告管理', i: '📢', g: '待开发', perm: 'notice.view',
+      n: '公告管理', i: '📢', g: '运营', perm: 'notice.view',
       render() {
         return `<div class="card">
-          <h3>公告管理<span class="tag">前端接口已预留，尚未接入</span></h3>
-          <div class="lbl">当前状态：<span class="bd y">待开发</span>
-            —— 公告内容可在此先配置好并存入 notice.json，等前端接入后即可展示。</div>
+          <h3>公告管理<span class="tag">已接入前端</span></h3>
+          <div class="lbl">当前状态：<span class="bd g">已接入</span>
+            —— 发布后玩家登录即弹窗提示（未读才弹），并可在主页「📢 公告」随时回看。
+            过期（展示至日期已过）的公告不会显示。</div>
           <div class="fr"><label class="wide">公告标题</label><input id="nt_t" placeholder="如：版本更新公告"></div>
           <div class="fr"><label class="wide">内容</label><textarea id="nt_b" placeholder="公告正文"></textarea></div>
           <div class="fr"><label class="wide">类型</label><select id="nt_k">
@@ -2054,7 +2059,7 @@ const PAGES = {
           if (d.list.length > 100) d.list.length = 100;
           if (await DB.set(DBP.notice, d, '发布公告')) {
             AUDIT.log('发布公告', t, '');
-            this.toast('已发布（待前端接入后展示）', 'ok');
+            this.toast('已发布，玩家登录即可看到', 'ok');
             this.acts.ntReload.call(this);
           }
         },
