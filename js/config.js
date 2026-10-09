@@ -1185,7 +1185,17 @@ const EX = {
     { id: 'chuantou', n: '穿透', icon: '➤', img: 'assets/icon/s_chuantou.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
       desc: '子弹穿透更多目标', up: '每级 +1 穿透', mods: { pierce: 1 } },
     { id: 'baoji', n: '暴击强化', icon: '💥', img: 'assets/icon/s_baoji.jpg', kind: 'passive', el: '物', max: 10, cd: 0,
-      desc: '提升暴击率与暴击伤害', up: '每级 +3% 暴击率', mods: { crit: 0.03 } },
+      /* 此前 desc 写「提升暴击率与暴击伤害」，但 mods 里只有 crit（暴击率）：
+       *   mods.critDmg 全项目零赋值，而 hurt() 的暴伤公式只读 r.critDmg
+       *   （来自武器属性），从不叠加 r.mods.critDmg —— 也就是说这个字段
+       *   即便配了也不会生效。
+       * 实测：同一只僵尸、固定 1000 伤害、强制暴击，Lv0 与 Lv10 打出的
+       *   伤害都是 1500（1000 × 武器暴伤 1.5），暴击伤害纹丝不动。
+       * 玩家把暴击强化点到满级（占 8 个技能槽之一），只拿到 desc 承诺的一半。
+       * 现在补上 critDmg（每级 +0.04，满级 +0.4：1.5 → 1.9），
+       *   并在 hurt() 的使用处叠加，与 mods.crit 的处理方式保持一致。
+       * 嫌强就把这里的 0.04 调小，改一个数即可。 */
+      desc: '提升暴击率与暴击伤害', up: '每级 +3% 暴击率 / +4% 暴击伤害', mods: { crit: 0.03, critDmg: 0.04 } },
     { id: 'xixue', n: '吸血', icon: '🩸', img: 'assets/icon/s_xixue.jpg', kind: 'passive', el: '物', max: 8, cd: 0,
       desc: '造成伤害时回复防线血量', up: '每级 +1.5% 吸血', mods: { healOnKill: 0.015 } },
   ],
