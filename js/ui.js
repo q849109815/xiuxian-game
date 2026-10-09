@@ -1991,6 +1991,27 @@ r_tavern(p, tab) {
     return `<span class="gq" style="color:#ffb84d;background:rgba(255,184,77,.18)">⏳${t}</span>`;
   },
   /* 奖励字典 → 中文文本（用于 toast），如 {gold:100,M01:5} → 「金币×100 合金×5」 */
+  /* 单条附件（值是物品 id 字符串）→ 中文名。
+   * 抽成共用函数：此前 rwText 与 mailRwText 各写一份解析，
+   * 上一轮只修了 rwText，邮件列表那条路径漏改 ——
+   * 实测 6 封邮件里 5 封显示「无附件」，运营发的皮肤/宝石补偿玩家根本看不到。
+   * 现在两条路径共用同一份解析，避免再出现修一处漏一处。 */
+  rwItemName(k, v) {
+    const vid = String(v);
+    /* 宝石是裸 id（G_R），itemName 只认 gem_ 前缀，这里直接查宝石表 */
+    if (k === 'gem') { const g = (EX.gems || []).find((x) => x.id === vid); if (g) return g.n; }
+    /* 称号 / 头像框不在物品表里，itemName 会原样返回内部 id
+     * （实测显示「hell_clear」「ev_frame」，玩家看不懂），按 kind 查各自的表 */
+    if (k === 'title' || k === 'frame') {
+      const def = (k === 'title' ? E.titleDef(vid) : E.frameDef(vid));
+      if (def && def.n) return def.n;
+    }
+    const nm = E.itemName(vid);
+    /* nm === vid 说明没查到、原样返回了内部 id → 退回通用类别名（皮肤/称号…），
+     * 绝不把裸 id 显示在玩家面前 */
+    if (nm && nm !== vid) return nm;
+    return E.itemName(k) || nm || vid;
+  },
   rwText(rw) {
     /* 皮肤 / 宝石 / 称号 / 头像框这类附件的【值是物品 id 字符串】而不是数量。
      * 原判定 `(rw[k]||0) > 0` 对字符串恒为 false（'sk_c01b' > 0 → false），
@@ -2006,11 +2027,8 @@ r_tavern(p, tab) {
     return ks.map((k) => {
       const v = rw[k], n = Number(v);
       if (typeof v === 'number' || (String(v).trim() !== '' && isFinite(n))) return E.itemName(k) + '×' + E.fmt(n);
-      /* 非数字：值本身就是物品 id（skin:'sk_c01b' / gem:'G_R' / title / frame）
-       * 宝石是裸 id（G_R），itemName 只认带 gem_ 前缀的写法，这里直接查宝石表，
-       * 否则玩家看到的是「G_R」而不是「红宝石」。 */
-      if (k === 'gem') { const g = (EX.gems || []).find((x) => x.id === String(v)); if (g) return g.n; }
-      return E.itemName(String(v)) || E.itemName(k);
+      /* 非数字：值本身就是物品 id（skin:'sk_c01b' / gem:'G_R' / title / frame） */
+      return this.rwItemName(k, v);
     }).join(' ');
   },
   /* 邮件奖励文案
@@ -2023,9 +2041,40 @@ r_tavern(p, tab) {
     const rw = Object.assign({}, m.rw || {});
     if (m.gold) rw.gold = (rw.gold || 0) + m.gold;
     if (m.dia) rw.diamond = (rw.diamond || 0) + m.dia;
-    const ks = Object.keys(rw).filter((k) => (rw[k] || 0) > 0);
+    /* mats 是「多材料包」的写法（{M01:50}），展开成平铺字段，
+     * 否则它会被当成一个整体渲染成 [object Object]。 */
+    if (rw.mats && typeof rw.mats === 'object') {
+      Object.keys(rw.mats).forEach((k) => {
+        const v = Number(rw.mats[k]) || 0;
+        if (v > 0) rw[k] = (Number(rw[k]) || 0) + v;
+      });
+      delete rw.mats;
+    }
+    /* 与 rwText() 保持同一口径。
+     * BUG（实测 6 封邮件 5 封显示「无附件」）：
+     *   皮肤/宝石/称号/头像框这类附件的【值是物品 id 字符串】，
+     *   原判定 `(rw[k]||0) > 0` 对字符串恒为 false（'sk_c01b' > 0 → false），
+     *   整条奖励被过滤掉 → 只剩数字附件时整封显示「无附件」。
+     *   而领取走 E.grant(m.rw) 是能到账的：玩家看到「无附件」就不会点，
+     *   运营发的皮肤/宝石/称号补偿等于白发。
+     *   上一轮只修了 toast 用的 rwText，漏了邮件列表这条显示路径。 */
+    const ks = Object.keys(rw).filter((k) => {
+      const v = rw[k];
+      if (typeof v === 'number') return v > 0;
+      if (v == null) return false;
+      if (typeof v === 'object') return false;
+      return String(v).trim() !== '' && String(v) !== '0';
+    });
     if (!ks.length) return '<span class="sub">无附件</span>';
-    return ks.map((k) => `<span class="tag y">${this.esc(E.itemName(k))}×${E.fmt(rw[k])}</span>`).join(' ');
+    return ks.map((k) => {
+      const v = rw[k], n = Number(v);
+      if (typeof v === 'number' || (String(v).trim() !== '' && isFinite(n))) {
+        return `<span class="tag y">${this.esc(E.itemName(k))}×${E.fmt(n)}</span>`;
+      }
+      /* 非数字：值本身就是物品 id。宝石是裸 id（G_R），查宝石表拿中文名，
+       * 否则玩家看到的是「G_R」而不是「红宝石」。 */
+      return `<span class="tag y">${this.esc(this.rwItemName(k, v))}</span>`;
+    }).join(' ');
   },
   /* 邮件是否可领（未到生效时间 / 已过期 都不可领）
    * BUG：后台支持设「生效时间」和「有效期」，但面板此前完全不看这两个字段，
