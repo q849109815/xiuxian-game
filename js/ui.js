@@ -591,16 +591,28 @@ r_tavern(p, tab) {
   /* ---------- 远征堡垒 ---------- */
   r_exped(p, tab) {
     if (tab === '巡逻') {
-      const last = p.patrolT || 0;
+      /* 兜底：newPlayer 没有 patrolT 字段，旧写法 `p.patrolT || 0` 让
+       * last=1970 年 → hrs 被 8 小时上限钳住 → 新号一进面板就能白领
+       * 8 小时收益（实测 128 金币，第 5 章档位 1120）。
+       * 无 patrolT 时用【账号创建时间】兜底，老存档不受影响。 */
+      const last = p.patrolT || p.created || Date.now();
       const now = Date.now();
       /* 双重保险：时间回拨时 (now-last) 为负，会让「累计可领」显示负数金币 */
       const hrs = Math.min(8, Math.max(0, (now - last) / 3600000));
-      const gain = Math.floor(hrs * ((p.patrolRate || 16)));
+      /* 零头累积（与下面 b_exped 的领取同口径）
+       * BUG：p.patrolAcc 全项目【只有读取和清零，从未被累加】——
+       *   每次领取都把「不足 1 金币的零头」直接丢弃，patrolAcc 恒为 0。
+       *   实测（第 1 章 rate=16，每 10 分钟领一次）：
+       *     每次 floor(0.1667×16)=2 金币，一小时领 6 次共 12 金币，
+       *     而每小时产出就是 16 —— 频繁领取白白少拿 25%。
+       *   现在把零头存进 patrolAcc 累积到下次，显示与实际领取一致。 */
+      const _ptAcc = Number(p.patrolAcc) || 0;
+      const gain = Math.floor(_ptAcc + hrs * ((p.patrolRate || 16)));
       return `<div class="card"><div class="card-t">🚩 巡逻收益
         <span class="sub">章节越高，收益越大</span></div>
         <div class="kv"><span>当前章节</span><b>第 ${p.ch || 1} 章</b></div>
         <div class="kv"><span>每小时产出</span><b>${p.patrolRate || 16} 金币</b></div>
-        <div class="kv"><span>累计可领</span><b>${E.fmt((p.patrolAcc || 0) + gain)}</b></div>
+        <div class="kv"><span>累计可领</span><b>${E.fmt(gain)}</b></div>
         <div class="sub" style="padding:6px 2px">最长累计 8 小时，离线也会累积。</div>
         <button class="btn" id="ptClaim" style="width:100%;margin-top:6px">领取巡逻收益</button>
         <button class="btn g" id="ptFast" style="width:100%;margin-top:6px">⚡ 快速巡逻（${p.patrolFast || 0}/3）</button>
@@ -650,10 +662,12 @@ r_tavern(p, tab) {
     if (cb) cb.onclick = () => {
       const now = Date.now();
       /* 双重保险：时间回拨时 hrs 为负，gain 变负数被拒且 patrolT 不重置 → 永久卡住 */
-      const hrs = Math.min(8, Math.max(0, (now - (p.patrolT || now)) / 3600000));
-      const gain = Math.floor(hrs * (p.patrolRate || 16)) + (p.patrolAcc || 0);
+      const hrs = Math.min(8, Math.max(0, (now - (p.patrolT || p.created || now)) / 3600000));
+      /* 与上方 r_exped 显示同口径：零头存回 patrolAcc 累积到下次，不再丢弃 */
+      const total = (Number(p.patrolAcc) || 0) + hrs * (p.patrolRate || 16);
+      const gain = Math.floor(total);
       if (gain <= 0) return this.toast('暂无可领收益', 'err');
-      p.gold += gain; p.patrolAcc = 0; p.patrolT = now;
+      p.gold += gain; p.patrolAcc = total - gain; p.patrolT = now;
       E.save(p); this.toast('领取 ' + E.fmt(gain) + ' 金币', 'ok'); this.open('exped', '巡逻'); this.home();
     };
     const fb = $('#ptFast');
