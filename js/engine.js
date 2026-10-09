@@ -946,6 +946,15 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   chipUnlocked(p) { return !!p.cleared['1-4']; },     // 资料：通关1-4解锁
   equipChip(p, chipId, slot) {
     if (!this.chipUnlocked(p)) return { ok: false, msg: '需通关 1-4 解锁芯片系统' };
+    /* 槽位合法性：slot 必须是芯片槽表里真实存在的 key。
+     * 调用方此前可能传进 undefined（玩家没点过槽位），于是
+     * p.chips['undefined'] = 芯片 —— 槽位计数变 7/6、六个格子全空、
+     * 再装只能顶掉自己、卸下按钮还卸不掉。这里统一挡住。 */
+    if (!EX.chipSlots.some((s) => s.k === slot)) {
+      const free = EX.chipSlots.find((s) => !p.chips[s.k]);
+      if (!free) return { ok: false, msg: '芯片槽已满（6/6）' };
+      slot = free.k;
+    }
     const i = (p.bag || []).findIndex((c) => c.id === chipId);
     if (i < 0) return { ok: false, msg: '未找到该芯片' };
     const c = p.bag[i];
