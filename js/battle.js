@@ -2646,8 +2646,13 @@ const BT = {
      * 此时若照常扣掉刷新次数，玩家就是「点了没反应还白扣一次」。
      * 返回布尔值，让调用方据此决定要不要扣。 */
     const before = this._picks;
+    const idsOf = (arr) => (arr || []).map((s) => (s && s.id) || '').join(',');
+    const beforeIds = idsOf(before);
     this.offerSkills();
-    return this._picks !== before;
+    /* 只剩 1 个候选（或随机洗牌后恰好又是同一组）时，offerSkills 会新建一个数组，
+     * 引用变了但三张卡内容一模一样 —— 界面看着毫无变化，却照样扣掉刷新次数。
+     * 改为按「实际给出的技能 id 组合」判断，内容没变就不算刷新成功、不扣次数。 */
+    return idsOf(this._picks) !== beforeIds;
   },
   pickSkill(id) {
     const r = this.run;
