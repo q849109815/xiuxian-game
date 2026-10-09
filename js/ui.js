@@ -745,7 +745,8 @@ r_tavern(p, tab) {
           <div class="gn">${ch2.n}${on2 ? '<span class="tag y" style="font-size:11px">使用中</span>' : ''}</div>
           <div class="lbl" style="font-size:11px;line-height:1.3">${ok2
             ? `生命${ch2.hp} · 护甲${ch2.armor} · 暴击${Math.round((ch2.crit || 0) * 100)}%`
-            : (ch2.unlockTxt || '未解锁')}</div></div>`;
+            : (ch2.unlockTxt || '未解锁')}</div>
+          ${ch2.talent ? `<div class="lbl" style="font-size:10px;line-height:1.25;color:#7dffa8">${ch2.talent.n}</div>` : ''}</div>`;
       }).join('') || '<div class="lbl">暂无角色</div>'}</div>
     </div>
     <div class="card" style="text-align:center">
@@ -763,6 +764,7 @@ r_tavern(p, tab) {
       <div class="kv"><span>护甲</span><b>${a.armor}</b></div>
       <div class="kv"><span>暴击</span><b>${(a.crit * 100).toFixed(1)}%</b></div>
       <div class="kv"><span>吸血</span><b>${(a.ls * 100).toFixed(1)}%</b></div>
+      ${c.talent ? `<div class="kv"><span>天赋</span><b style="font-size:11px">${c.talent.n}：${c.talent.desc || ''}</b></div>` : ''}
     </div>
     <div class="card"><div class="card-t">角色升星
       <span class="sub">${p.charStar || 0} / ${EX.STAR_MAX} 星</span></div>
