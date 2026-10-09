@@ -2201,7 +2201,12 @@ const BT = {
      *   实测：平A 4615 → 暴击 12308（2.67 倍，含浮动），比设计值高约 67%。
      *   玩家看到面板「暴击伤害 150%」，实际却是 250%。
      * 现在改为 dmg * critDmg（1.5 倍）。 */
-    let d = dmg * (crit ? (Number(r.critDmg) || 1.5) : 1);
+    /* 暴伤 = 武器基础倍率 + 技能「暴击强化」的 critDmg 加成。
+     * 此前只读 r.critDmg（武器属性），从不叠加 r.mods.critDmg，
+     * 而 mods.critDmg 又无任何来源赋值 —— 两头都断，技能的
+     * 「提升暴击伤害」等于没写。这里在使用处叠加（与 mods.crit 同口径：
+     * 不能写回 r.critDmg，否则切枪重算会丢失）。 */
+    let d = dmg * (crit ? ((Number(r.critDmg) || 1.5) + (Number(r.mods && r.mods.critDmg) || 0)) : 1);
     /* 单位减伤率（怪物表 def / BOSS def）：对所有伤害来源统一生效。
      * 此前只在"子弹命中"这一条路径上应用 z.def，技能/爆炸/闪电链/
      * 燃烧/毒池/油桶等 10 处伤害来源全部绕过 → BOSS 的 def(0.2~0.4)
