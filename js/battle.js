@@ -1182,8 +1182,25 @@ const BT = {
           continue;
         }
         if (zn.t === 'laser') {
-          const tg = zn.target;
-          if (!tg || tg.dead) { r.zones.splice(i, 1); continue; }
+          /* 锁定目标死亡后【重新锁定】，而不是让整段激光直接消失。
+           * BUG：配置 laserDur=3.0（180 帧），但原实现一旦 target.dead
+           *   就把 zone 整个删掉。而激光 DPS 极高，往往几帧就把锁定目标打死，
+           *   于是"持续灼烧 3 秒"实际只烧了 4 帧（0.07 秒）——
+           *   实测（关闭玩家射击、只统计技能伤害，Lv5）：
+           *     制导激光  存续 4 帧 / 伤害 2,490
+           *     燃油弹    存续 509 帧 / 伤害 14,066
+           *     旋风加农  存续 420 帧 / 伤害 4,162
+           *     冰暴      存续 390 帧 / 伤害 32,428
+           *   同为持续型技能，制导激光的收益只有燃油弹的 1/5.6、冰暴的 1/13，
+           *   而它的 desc 写的是「自动锁定最近僵尸持续激光灼烧」——
+           *   锁定是"自动"的，就应当在目标倒下后自动换下一个。
+           * 现在只有场上真的没有活僵尸时才结束。（激光总时长仍受 life 限制） */
+          let tg = zn.target;
+          if (!tg || tg.dead) {
+            tg = this.nearest(r.px, r.py, null, 9999);
+            if (!tg) { r.zones.splice(i, 1); continue; }
+            zn.target = tg;
+          }
           this.hurt(tg, zn.dps * dt, false, zn.el);
           r.efx.push({ t: 'beam', x: r.px, y: r.py,
             a: Math.atan2(tg.y - r.py, tg.x - r.px),
@@ -1919,7 +1936,13 @@ const BT = {
     if (id === 'zhidaojiguang') {
       /* 制导激光：锁定最近僵尸持续灼烧 */
       const tg = this.nearest(r.px, r.py, null, 9999);
-      if (!tg) return { ok: false, msg: '附近没有目标' };
+      /* 冷却回滚：cd 在本函数开头就已写入，而这里是唯一一个「释放失败」
+       * 却仍返回 false 的分支。实测无目标时 r.cd['zhidaojiguang'] 已被设成
+       * 3.42s，技能压根没放出来 —— 玩家白等一个完整冷却。
+       * 自动战斗（BT.auto 每 0.5s 尝试释放）下更糟：波次间隙反复空放，
+       * 等僵尸真正出现时技能永远在冷却中，等于该技能整局失效。
+       * 这里把 cd 归零，让下次有目标时能立刻释放。 */
+      if (!tg) { r.cd[id] = 0; return { ok: false, msg: '附近没有目标' }; }
       r.zones.push({ t: 'laser', target: tg,
         dps: dmgBase * m.laserDps * (1 + (lv - 1) * 0.15), life: m.laserDur,
         max: m.laserDur, el: '电' });
