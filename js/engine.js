@@ -1775,6 +1775,30 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 表22 活动 EV04 首充双倍：首次充值钻石翻倍（仅 1 次）
    * ========================================================= */
   firstRechargeUsed(p) { return !!p.firstRech; },
+  /* 是否为「充值档位」——只有这类商品才配得上消耗首充双倍资格。
+   *
+   * BUG（玩家权益被静默吃掉）：此前 b_shop 对【任何 give.diamond 的商品】
+   *   都调 applyFirstRecharge，而含钻石的商品远不止充值档：
+   *     GP02 成长礼包(300钻→返100钻) / GP03 每日特惠(10钻→返10钻) /
+   *     GP04 周礼包(300钻→返200钻) / GP05 月度超值(680钻→返800钻) /
+   *     SH07 战令进阶(680钻→返300钻) / SH09 传说芯片包(980钻→返200钻)
+   *   这些都是「花钻石买礼包、礼包里搭一点钻石」，本质是【消费】不是充值。
+   *   实测（新号，钻石 100000）：
+   *     先买 GP03「每日特惠」10 钻 → 触发首充，得 20 钻（净 +10），资格被消耗；
+   *     再买 SH04「钻石大包」980 钻 → 只拿到配置值 1150（净 +170），不再翻倍；
+   *     而直接买 SH04 → 拿到 2300（净 +1320）。
+   *   即：玩家随手买个 10 钻的每日特惠，就把 1150 钻的权益换成了 10 钻，
+   *   净损失 1140 钻（约 114 元），全程只有一个「🎉 首充双倍」的庆祝提示，
+   *   玩家完全意识不到自己吃亏。GP03 还是每日限购，第一天就会撞上。
+   * 现在只有「直购 tab 里只给钻石、不搭任何其它道具」的档位才算充值
+   * （SH02 钻石小包 / SH03 钻石中包 / SH04 钻石大包）。 */
+  isRechargeGoods(g, tab) {
+    if (tab !== '直购') return false;
+    const gv = (g && g.give) || {};
+    const ks = Object.keys(gv);
+    if (ks.length !== 1 || ks[0] !== 'diamond') return false;
+    return Number(gv.diamond) > 0;
+  },
   /* 购买钻石类商品时调用，返回实际发放数量 */
   applyFirstRecharge(p, diamondAmt) {
     if (p.firstRech) return { amt: diamondAmt, doubled: false };
@@ -2167,7 +2191,16 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 现在改成按「真实日期差」判断，跨月跨年都能正确延续。 */
     const cont = (p.signDay && this.dayDiff(p.signDay, today) === 1);
     const cnt = cont ? p.signDays : 0;
-    p.signDays = Math.min(7, (cnt || 0) + 1);
+    /* BUG（签到满 7 天后【每天】白拿 50 钻）：
+     *   此前是 Math.min(7, cnt+1)，signDays 一旦到 7 就永远停在 7，
+     *   而奖励按 signDays 发 → 第 7 天之后的每一天都提示「第7天 🪙700 💎50」。
+     *   实测连续签到 10 次：第 7/8/9/10 次全部是 🪙700 💎50。
+     *   后果：免费签到每天给 50 钻，与 30 元月卡（钻石50+体力60/天）收益等同，
+     *   月卡失去价值；同时「连续签到」永远不可能断（面板 7 格恒亮），
+     *   断签重来的机制形同虚设。
+     * 现在改成 7 天一轮：满 7 后回到第 1 天，每 7 天才拿一次 50 钻。 */
+    const next = (cnt || 0) + 1;
+    p.signDays = next > 7 ? 1 : next;
     p.signDay = today; p.signLast = now;
     const rw = { gold: 100 * p.signDays, diamond: p.signDays >= 7 ? 50 : 0 };
     p.gold += rw.gold; p.diamond += rw.diamond;
@@ -3459,6 +3492,16 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   /* 宝石合成：3 颗同级 → 1 颗高一级（截图「宝石合成」） */
   gemFuse(p, id) {
     const need = 3;
+    /* BUG（满级后每次点合成白吞 2 颗宝石）：
+     *   满级校验此前写在【扣减之后】——先 `- need + 1` 把宝石扣掉，
+     *   再 return「宝石已达最高等级」。等于：操作失败了，材料却已经吃掉。
+     *   实测：满级红宝石 3 颗点合成 → 剩 1 颗，提示「已达最高等级 Lv.10」；
+     *        连点 5 次 → 15 颗只剩 5 颗，白白蒸发 10 颗。
+     *   而 UI 上这个按钮没有任何 disabled 判断，玩家真的点得到。
+     *   红宝石商店 200 钻一颗，10 颗 ≈ 2000 钻。
+     * 现在所有校验都提到扣减之前，与商店「扣款前校验」同一口径。 */
+    /* 生效档位 = 合成次数 + 1，最高 GEM_MAX_LV 档 → 最多合成 GEM_MAX_LV-1 次 */
+    if (this.gemLvOf(p, id) >= this.GEM_MAX_LV - 1) return { ok: false, msg: '宝石已达最高等级 Lv.' + this.GEM_MAX_LV };
     if (!((p.gems || {})[id] >= need)) return { ok: false, msg: '需要 ' + need + ' 颗同色宝石' };
     /* BUG：注释与面板都写「3 颗 → 1 颗高一级」，代码却只 `p.gems[id] -= 3`
      * 从不把合成出来的那 1 颗还回来。实测：3 颗合成后剩 0 颗、9 颗连合三次也剩 0 颗。
@@ -3468,8 +3511,6 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* BUG修复：等级此前是全局单一数字 p.gemLv，4 种宝石共享。
      * 用最便宜的红宝石（200 钻）合成，最贵的紫宝石（300 钻）也跟着升级，
      * 宝石之间的成本差异形同虚设。改为每种宝石各自记等级。 */
-    /* 生效档位 = 合成次数 + 1，最高 GEM_MAX_LV 档 → 最多合成 GEM_MAX_LV-1 次 */
-    if (this.gemLvOf(p, id) >= this.GEM_MAX_LV - 1) return { ok: false, msg: '宝石已达最高等级 Lv.' + this.GEM_MAX_LV };
     const lv = this.gemLvOf(p, id) + 1;
     this.setGemLv(p, id, lv);
     try { this.logAct(p, 'chip', '宝石合成 ' + id + ' → Lv.' + (lv + 1)); } catch (e) {}
