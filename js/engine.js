@@ -886,6 +886,8 @@ const E = {
       extra = ' ⬆进阶至' + EX.gunAdvance[newA].q + '品，解锁词条：' + st.n;
     }
         this.logAct(p, 'gunup', '武器升级 Lv.' + p.gunLv);
+    /* 表04 VO_009 武器升级：台词与合成音效（sfx 'upgrade'）此前零触发 */
+    try { if (window.VO) VO.say('VO_009'); } catch (e) {}
 return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra };
   },
   gunStatVal(p, k) {
@@ -2048,7 +2050,10 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       catch (e) { p.mat.M03 = (p.mat.M03 || 0) + 2; }
     }
     else p.mat[hit.k] = (p.mat[hit.k] || 0) + hit.v;
-    return { ok: true, n: hit.n };
+    /* 表04 VO_010 抽奖稀有：台词与合成音效（sfx 'rare'）此前零触发。
+     * 稀有档 = 钻石 / 芯片 / 稀有金属（权重合计 20%），与奖池定义保持一致。 */
+    const rare = hit.t === 'diamond' || hit.t === 'chip' || hit.k === 'M03';
+    return { ok: true, n: hit.n, rare: rare };
   },
 
   /* 额外宝箱（AD05）：给宝箱道具，可在背包开启 */
@@ -3455,14 +3460,20 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   gemFuse(p, id) {
     const need = 3;
     if (!((p.gems || {})[id] >= need)) return { ok: false, msg: '需要 ' + need + ' 颗同色宝石' };
-    p.gems[id] -= need;
+    /* BUG：注释与面板都写「3 颗 → 1 颗高一级」，代码却只 `p.gems[id] -= 3`
+     * 从不把合成出来的那 1 颗还回来。实测：3 颗合成后剩 0 颗、9 颗连合三次也剩 0 颗。
+     * 后果是宝石被整个吞掉——等级涨了，但数量为 0 既不能镶嵌（提示数量不足）
+     * 也不能继续合成，玩家花掉的宝石一分不剩。现在按 3 换 1 扣减。 */
+    p.gems[id] = (p.gems[id] || 0) - need + 1;
     /* BUG修复：等级此前是全局单一数字 p.gemLv，4 种宝石共享。
      * 用最便宜的红宝石（200 钻）合成，最贵的紫宝石（300 钻）也跟着升级，
      * 宝石之间的成本差异形同虚设。改为每种宝石各自记等级。 */
+    /* 生效档位 = 合成次数 + 1，最高 GEM_MAX_LV 档 → 最多合成 GEM_MAX_LV-1 次 */
+    if (this.gemLvOf(p, id) >= this.GEM_MAX_LV - 1) return { ok: false, msg: '宝石已达最高等级 Lv.' + this.GEM_MAX_LV };
     const lv = this.gemLvOf(p, id) + 1;
     this.setGemLv(p, id, lv);
-    try { this.logAct(p, 'chip', '宝石合成 ' + id + ' → Lv.' + lv); } catch (e) {}
-    return { ok: true, msg: '合成成功！宝石等级提升至 Lv.' + lv };
+    try { this.logAct(p, 'chip', '宝石合成 ' + id + ' → Lv.' + (lv + 1)); } catch (e) {}
+    return { ok: true, msg: '合成成功！宝石等级提升至 Lv.' + (lv + 1) };
   },
   /* 宝石等级：按种类分别记录（旧档 p.gemLv 是数字，迁移到当前镶嵌的种类上） */
   gemLvOf(p, id) {
@@ -3479,6 +3490,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       if (old > 0 && p.gemOn) p.gemLv[p.gemOn] = old;
     }
     p.gemLv[id] = Math.max(0, Math.min(this.GEM_MAX_LV, v));
+  },
+  /* 宝石生效档位（1 ~ GEM_MAX_LV）= 合成次数 + 1
+   * BUG：此前把【合成次数】直接当档位用，未合成时 clamp 到 1、合成 1 次 clamp 后还是 1
+   * → 第一次合成（花 3 颗宝石）加成一动不动：红宝石攻击始终 +6%，白花 3 颗。
+   * （面板显示 Lv.0 却拿 Lv.1 的加成，同样是这一处错位造成的。）
+   * 现在档位与显示统一：未合成 = Lv.1 基础档，每合成一次 +1 档。 */
+  gemTier(p, id) {
+    return Math.max(1, Math.min(this.GEM_MAX_LV, this.gemLvOf(p, id) + 1));
   },
   /* 镶嵌 / 卸下宝石（统一入口）
    * 此前两处逻辑不一致：角色页镶嵌【不扣】数量、宝石页镶嵌【扣 1 颗】，
@@ -3549,7 +3568,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (!id) return zero;
     const base = this.GEM_BASE[id], step = this.GEM_STEP[id];
     if (!base) return zero;
-    const lv = Math.max(1, Math.min(this.GEM_MAX_LV, this.gemLvOf(p, id)));
+    const lv = this.gemTier(p, id);
     const out = {};
     for (const k in zero) {
       const b = base[k] || 0, st = (step && step[k]) || 0;
@@ -3561,7 +3580,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   gemBonusOf(p, id) {
     const base = this.GEM_BASE[id], step = this.GEM_STEP[id];
     if (!base) return '—';
-    const lv = Math.max(1, Math.min(this.GEM_MAX_LV, this.gemLvOf(p, id)));
+    const lv = this.gemTier(p, id);
     const parts = [];
     ['atkPct', 'hpPct', 'critDmg', 'ratePct', 'ls', 'crit'].forEach((k) => {
       const v = (base[k] || 0) + ((step && step[k]) || 0) * (lv - 1);
@@ -3590,9 +3609,12 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   forgeEquip(p, slot) {
     const eq = p.equip || (p.equip = {});
     const cur = eq[slot] || { lv: 0 };
+    /* 满级判定要在金币判定之前：否则满级且金币不足时，
+     * 玩家看到的是「金币不足，需要 6200」，而真正的原因是已经满级，
+     * 会以为再攒点钱还能继续强化。 */
+    if (cur.lv >= 20) return { ok: false, msg: '已达最高强化等级' };
     const cost = 500 + cur.lv * 300;
     if ((p.gold || 0) < cost) return { ok: false, msg: '金币不足，需要 ' + cost };
-    if (cur.lv >= 20) return { ok: false, msg: '已达最高强化等级' };
     p.gold -= cost;
     cur.lv = (cur.lv || 0) + 1;
     /* 每 5 级进阶一次 */
