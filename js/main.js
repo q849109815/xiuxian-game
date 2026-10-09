@@ -380,6 +380,22 @@ const MAIN = {
     p.gun = p.gun || 'W01'; p.gunLv = p.gunLv || 1; p.gunAdv = p.gunAdv || 0;
     p.gunStats = p.gunStats || {}; p.gunOwn = p.gunOwn || ['W01'];
     p.chips = p.chips || {}; p.bag = p.bag || []; p.talents = p.talents || {};
+    /* 非法芯片槽位回收：老存档里可能已存在 p.chips['undefined']
+     * （玩家没点槽位直接点「装上」时写入的，见 E.equipChip 注释）。
+     * 这些槽位在界面上永远显示不出来、也卸不掉，等于芯片被吞。
+     * 这里把它们搬回真实空槽；真实槽全满则退回背包。 */
+    (function () {
+      if (!p.chips || typeof p.chips !== 'object') return;
+      const valid = {}; (EX.chipSlots || []).forEach((s) => { valid[s.k] = 1; });
+      const bad = Object.keys(p.chips).filter((k) => !valid[k]);
+      if (!bad.length) return;
+      bad.forEach((k) => {
+        const c = p.chips[k]; delete p.chips[k];
+        if (!c || !c.id) return;
+        const free = (EX.chipSlots || []).find((s) => !p.chips[s.k]);
+        if (free) p.chips[free.k] = c; else p.bag.push(c);
+      });
+    })();
     p.build = p.build || { hospital: 1, armory: 1, lab: 1, warehouse: 1 };
     p.cleared = p.cleared || {}; p.curLevel = p.curLevel || '1-1';
     p.stamina = p.stamina == null ? 100 : p.stamina;
