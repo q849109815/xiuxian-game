@@ -113,20 +113,46 @@ function allowed(p) {
   return p.startsWith('/repos/' + OWNER + '/' + REPO + '/');
 }
 
-/* 写/删白名单：只放行 data/zb/ 下的数据文件
+/* 写/删白名单：data/zb/ 下的【玩家侧】数据目录，运营目录一律拒绝
  * ---------------------------------------------------------------------
- * 【安全修复】此前 allowed() 只校验路径前缀，对任意路径都允许 PUT/DELETE。
+ * 【安全修复 1】此前 allowed() 只校验路径前缀，对任意路径都允许 PUT/DELETE。
  *   Worker 一旦部署，任何知道地址的人都能：
  *     PUT /repos/.../contents/js/config.js   → 给自己发无限钻石
  *     DELETE /repos/.../contents/index.html  → 整站下线
  *   等于「令牌不下发前端了，但 Worker 自己又变成无鉴权的写入口」。
- * 现在读仍走原白名单（读本来就是公开的），写/删只放行数据目录：
- *   允许 /contents/data/zb/...   （玩家存档、账号、邮件、活动、榜单等）
- *   拒绝 /contents/js|css|admin|assets|index.html 及所有非 contents 路径
- * 这样即使地址泄露，最坏也只是数据被改，网站代码与仓库结构仍安全。 */
+ *
+ * 【安全修复 2】上一版收紧为「只要是 data/zb/ 就放行」，仍留了一条提权路径：
+ *   data/zb/ops/{uid}.json 是后台下发的 GM 指令队列，游戏端 main.js
+ *   consumeOps() 会逐条 applyOp —— 支持 grant（任意物品任意数量）、
+ *   restore（整份回档）、ban。
+ *   玩家自己 PUT 一个 {list:[{id:'x',t:'grant',item:'gold',n:99999999}]}
+ *   到自己 uid 的文件里，下次消费就能凭空刷出任意资源。
+ *   同理 cfg/、hotfix/ 是热更新配置，被改等于改全服数值。
+ *   所以这里改成【显式目录白名单】：只放行玩家端真正需要写的目录，
+ *   运营侧目录（ops/cfg/hotfix/notice/activity/shop/...）一律 403。
+ *
+ * 读仍走原白名单（仓库公开，读本来就没有额外风险）。 */
+const WRITE_DIRS = [
+  'players',      // 玩家存档
+  'users',        // 账号（注册/改密码）
+  'index',        // 账号索引（注册时登记）
+  'leaderboard',  // 战力榜
+  'endless',      // 无尽榜
+  'rankrw',       // 榜单奖励领取记录
+  'social',       // 好友 / 送体力
+  'mail',         // 邮件已读标记
+  'cdkey',        // 兑换码核销
+  'order',        // 订单
+  'stats',        // 统计
+  'bi',           // 埋点
+];
 function allowedWrite(p) {
-  if (!p.startsWith('/repos/' + OWNER + '/' + REPO + '/contents/')) return false;
-  return p.indexOf('/contents/data/zb/') >= 0;
+  const pre = '/repos/' + OWNER + '/' + REPO + '/contents/';
+  if (!p.startsWith(pre)) return false;
+  const rest = p.slice(pre.length);
+  if (!rest.startsWith('data/zb/')) return false;
+  const seg = rest.slice('data/zb/'.length).split('/')[0];
+  return WRITE_DIRS.indexOf(seg) >= 0;
 }
 function addCors(h) {
   h.set('access-control-allow-origin', '*');
