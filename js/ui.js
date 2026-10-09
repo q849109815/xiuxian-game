@@ -1059,7 +1059,22 @@ r_tavern(p, tab) {
     }; });
     $$('#pnBody [data-wear]').forEach((b) => {
       b.onclick = () => {
-        const r = E.equipChip(p, b.dataset.wear, this.selChipSlot);
+        /* BUG修复：selChipSlot 在玩家【没点过任何槽位】时是 undefined，
+         * 这里原样传给 E.equipChip → p.chips['undefined'] = 芯片。
+         * 实测后果（已解锁号、不点槽位直接点「装上」）：
+         *   ① 六个槽位格子全部显示「空」，玩家看不到刚装的芯片在哪；
+         *   ② 面板头部显示「芯片槽 1/6」，与六个空格子自相矛盾；
+         *   ③ 再装第二颗时 key 仍是 'undefined'，直接顶掉第一颗
+         *      （旧的退回背包），于是只能装 1 颗，其余 5 个槽位全浪费；
+         *   ④ 卸下按钮走 selChipSlot||c1，卸的是 c1（空）→ 提示「该槽位为空」，
+         *      玩家永远卸不掉这颗芯片。
+         * 现在与 r_chip 的展示口径一致：未点槽位时默认第一个槽位。 */
+        /* 未点槽位时按【第一个空槽】依次填充：c1 → c2 → c3 …
+         * 若恒回退 c1，连装第二颗会直接顶掉第一颗（旧的退回背包），
+         * 玩家看起来像"装不上"。全满时才回落到 c1（顶替最前一个）。 */
+        const slot = this.selChipSlot
+          || (EX.chipSlots.find((s) => !p.chips[s.k]) || EX.chipSlots[0]).k;
+        const r = E.equipChip(p, b.dataset.wear, slot);
         this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('chip', tab); this.home(); }
       };
     });
