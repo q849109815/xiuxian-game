@@ -701,14 +701,14 @@ r_tavern(p, tab) {
       /* 截图41：宝石属性 tab，三颗宝石 + 绿色「卸下」+ 橙色「装备设造」 */
       const gb = E.gemBonus(p);
       return `<div class="card"><div class="card-t">宝石属性
-        <span class="sub">Lv.${p.gemOn ? E.gemLvOf(p, p.gemOn) : 0}</span></div>
+        <span class="sub">Lv.${p.gemOn ? E.gemTier(p, p.gemOn) : 1}</span></div>
         ${(EX.gems || []).map((g) => {
           const on = p.gemOn === g.id;
           return `<div class="zrow">
             ${g.img ? `<div class="zav"><img src="${g.img}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>`
                     : `<div class="zav">${g.icon}</div>`}
             <div class="zi"><b>${g.n}</b><span>${g.desc}</span>
-              <span style="color:${on ? 'var(--yel)' : 'rgba(255,255,255,.55)'}">Lv.${E.gemLvOf(p, g.id)}：${E.gemBonusOf ? E.gemBonusOf(p, g.id) : '—'}${on ? '（已镶嵌）' : ''}</span></div>
+              <span style="color:${on ? 'var(--yel)' : 'rgba(255,255,255,.55)'}">Lv.${E.gemTier(p, g.id)}：${E.gemBonusOf ? E.gemBonusOf(p, g.id) : '—'}${on ? '（已镶嵌）' : ''}</span></div>
             ${on ? '<button class="btn g sm" data-gemoff="1">卸下</button>'
                  : `<button class="btn sm" data-gemon="${g.id}">镶嵌</button>`}
           </div>`;
@@ -1820,7 +1820,7 @@ r_tavern(p, tab) {
       <button class="btn ${inlayOK ? '' : 'd'}" id="gemInlay" style="width:100%;margin-top:10px">${inlayTxt}</button>
       <button class="btn g" id="gemOff" style="width:100%;margin-top:6px">卸 下（返还背包）</button>
       <button class="btn o" id="gemFuse" style="width:100%;margin-top:6px">🔨 宝石合成（3 颗 → 升一级）</button>
-      <div class="sub" style="margin-top:6px">当前宝石等级：<b style="color:var(--yel)">Lv.${p.gemOn ? E.gemLvOf(p, p.gemOn) : 0}</b>
+      <div class="sub" style="margin-top:6px">当前宝石等级：<b style="color:var(--yel)">Lv.${p.gemOn ? E.gemTier(p, p.gemOn) : 1}</b>
         加成：${E.gemBonusTxt ? E.gemBonusTxt(p) : '—'}
         <span style="opacity:.7">（百分比加成，只随宝石合成等级提升，与角色等级无关）</span></div>
     </div>`;
@@ -2959,6 +2959,8 @@ r_tavern(p, tab) {
       if (!r.ok) return this.toast(r.msg, 'err');
       const got = E.adDraw(p);
       if (window.SND) SND.play('get');
+      /* 表04 VO_010：抽到稀有档（钻石/芯片/稀有金属，合计 20%）才出这句 */
+      if (got && got.rare) { try { if (window.VO) VO.say('VO_010'); } catch (e) {} }
       this.toast('抽奖获得：' + got.n + '（今日剩余 ' + E.adLeft(p, 'AD04') + ' 次）', 'ok');
       E.save(p); this.open('set', '账号'); this.home();
     };
