@@ -2471,7 +2471,11 @@ r_tavern(p, tab) {
        * → 玩家离线 8 小时只拿到金币，金属和经验一直没发。
        * 现在改走完整领取。 */
       const r = E.offlineClaim(p);
-      if (!r.ok) return this.toast(r.msg, 'err');
+      /* 「离线时间太短」分支里 offlineClaim 同样推进了 p.offBase（结算基准），
+       * 属于真实的存档变更 —— 此前 !r.ok 直接 return 不落盘，
+       * 全靠 30 秒定时存档兜底：玩家点完强关/换设备会读回旧基准。
+       * 无论成败都保存，保证基准推进不回退。 */
+      if (!r.ok) { E.saveSoon(p); return this.toast(r.msg, 'err'); }
       this.toast(r.msg, 'ok'); E.saveSoon(p); this.open('base', tab); this.home();
     };
   },
