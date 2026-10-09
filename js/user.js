@@ -316,6 +316,38 @@ const UA = {
     try { if (window.UI && UI.toast) UI.toast('已退出登录', 'ok'); } catch (e) {}
     setTimeout(() => { if (window.location && location.reload) location.reload(); }, 400);
   },
+  /* ---------------------------------------------------------
+   * 榜单条目清理（注销 / 永久删除 共用）
+   * ---------------------------------------------------------
+   * 为什么必须清：三个榜共用 leaderboard.json，无尽榜另有 endless.json，
+   * 且保留集是「各维度 Top100 的并集、上限 200 条」—— 一个占位就是实打实
+   * 挤掉一名真实玩家。
+   * 此前只有 purge（永久删除）清榜单，destroy（注销）完全不动，于是：
+   *   ① 已注销、任何人都登录不了的账号永远挂在全服榜上（幽灵条目）；
+   *   ② 名次被幽灵挤后移，而名次正是表33 排名奖励的领取依据 ——
+   *      真实玩家本该在奖励档内，被挤到档外就领不到；
+   *   ③ 已注销玩家的战力/层数不再更新，却永久占位，越积越多。
+   * 读-过滤-写属尽力而为：失败不影响销户本身，后台「永久删除」会再清一次。
+   * --------------------------------------------------------- */
+  async rankPurge(id) {
+    let n = 0;
+    for (const f of ['data/zb/leaderboard.json', 'data/zb/endless.json']) {
+      try {
+        const r = await Net.read(f);
+        const d = (r && r.data && Array.isArray(r.data.list)) ? r.data : null;
+        if (!d) continue;
+        const before = d.list.length;
+        d.list = d.list.filter((x) => (x.uid || x.u) !== id);
+        if (d.list.length !== before) {
+          d.updated = Date.now();
+          await Net.write(f, d, '销户移除榜单 ' + id);
+          n += before - d.list.length;
+        }
+      } catch (e) {}
+    }
+    return n;
+  },
+
   /* 销户：清本机 + 标记云端已注销 */
   async destroy(name, pwd) {
     const lg = await this.login(name, pwd);
@@ -327,10 +359,12 @@ const UA = {
     /* 指令队列一并删：注销后用同名重新注册会拿到同一个 uid，
      * 残留的历史补发指令会在新档上被全部重发一遍。 */
     try { await Net.del('data/zb/ops/' + id + '.json'); } catch (e) {}
+    /* 榜单条目一并清：否则已注销账号永久占位并挤掉真实玩家的名次 */
+    const lb = await this.rankPurge(id);
     this.idxDel(id);
     this.dropCache(id);
     ['zb_name', 'zb_gender', 'zb_uid', 'zb_auto'].forEach((k) => localStorage.removeItem(k));
-    return { ok: true, msg: '账号已注销，存档已删除' };
+    return { ok: true, msg: '账号已注销，存档与榜单已清除（榜单 ' + lb + ' 条）' };
   },
 
   /* ---------------------------------------------------------
@@ -350,21 +384,9 @@ const UA = {
     try { save = !!(await Net.del('data/zb/players/' + id + '.json')); } catch (e) { save = false; }
     this.idxDel(id);
     this.dropCache(id);
-    /* 三个榜共用 leaderboard.json，无尽榜另有 endless.json */
-    for (const f of ['data/zb/leaderboard.json', 'data/zb/endless.json']) {
-      try {
-        const r = await Net.read(f);
-        const d = (r && r.data && Array.isArray(r.data.list)) ? r.data : null;
-        if (!d) continue;
-        const before = d.list.length;
-        d.list = d.list.filter((x) => (x.uid || x.u) !== id);
-        if (d.list.length !== before) {
-          d.updated = Date.now();
-          await Net.write(f, d, '永久删除移除榜单 ' + id);
-          lb += before - d.list.length;
-        }
-      } catch (e) {}
-    }
+    /* 与注销共用同一份榜单清理实现，避免两处逻辑各自漂移 */
+    lb = await this.rankPurge(id);
+    try { await Net.del('data/zb/ops/' + id + '.json'); } catch (e) {}
     ['zb_name', 'zb_gender', 'zb_uid', 'zb_auto', 'zb_nick'].forEach((k) => localStorage.removeItem(k));
     return {
       ok: true, acct, save, lb,
