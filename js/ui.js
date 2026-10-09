@@ -1533,6 +1533,8 @@ r_tavern(p, tab) {
           ${g.img ? `<img src="${g.img}">` : `<div class="gi">${g.icon}</div>`}
           <div class="gn">${g.n}${g.rmb ? `<span class="tag y" style="font-size:11px">${g.rmb}</span>` : ''}</div>
           ${g.desc ? `<div class="lbl" style="font-size:11px;line-height:1.3;margin:2px 0">${g.desc}</div>` : ''}
+          ${(E.isRechargeGoods && E.isRechargeGoods(g, tab) && !p.firstRech)
+            ? `<div class="lbl" style="font-size:11px;color:#ffd76a">🎉 首充双倍 → 💎${Number(g.give.diamond) * 2}</div>` : ''}
           <button class="btn sm" data-buy="${g.id}" ${(can && !noBuy) ? '' : 'disabled'}
             style="font-size:11px;padding:3px 6px;margin-top:2px">
             ${btnTxt}</button>
@@ -1626,9 +1628,12 @@ r_tavern(p, tab) {
       if (g.give) for (const k in g.give) {
         if (k === 'gold') p.gold += g.give[k];
         else if (k === 'diamond') {
-          /* 表22 EV04 首充双倍：首次购买钻石类商品翻倍 */
+          /* 表22 EV04 首充双倍：首次充值钻石翻倍。
+           * 只对「直购 → 纯钻石档位」生效（见 E.isRechargeGoods 注释）。
+           * 此前任何含钻石的礼包都会消耗资格，玩家买个 10 钻的每日特惠
+           * 就把 1150 钻的权益换成了 10 钻。 */
           let amt = g.give[k];
-          if (amt > 0) {
+          if (amt > 0 && E.isRechargeGoods && E.isRechargeGoods(g, tab)) {
             const fr = E.applyFirstRecharge(p, amt);
             if (fr.doubled) this.toast('🎉 首充双倍！钻石 ' + g.give[k] + ' → ' + fr.amt, 'ok');
             amt = fr.amt;
@@ -1793,6 +1798,14 @@ r_tavern(p, tab) {
     const inlayOK = !!(g && _bag > 0 && p.gemOn !== g.id);
     const inlayTxt = !g ? '请选择宝石'
       : (p.gemOn === g.id ? '✔ 已镶嵌' : (_bag > 0 ? '镶 嵌' : '数量不足（' + _bag + ' 颗）'));
+    /* 合成按钮此前【永远可点】：既没有数量判断也没有满级判断。
+     * 而 E.gemFuse 的满级校验写在扣减之后 —— 满级时点一次就白吞 2 颗宝石
+     * （实测连点 5 次：15 颗 → 5 颗）。这里与引擎同一口径，不可用就禁用并写明原因。 */
+    const gMaxed = !!(g && E.gemLvOf && E.gemLvOf(p, g.id) >= E.GEM_MAX_LV - 1);
+    const fuseOK = !!(g && _bag >= 3 && !gMaxed);
+    const fuseTxt = !g ? '请选择宝石'
+      : gMaxed ? '✔ 宝石已满级 Lv.' + E.GEM_MAX_LV
+      : (_bag >= 3 ? '🔨 宝石合成（3 颗 → 升一级）' : '数量不足（需 3 颗，当前 ' + _bag + '）');
     return `<div class="stone-panel">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         ${this.zAvatarHTML('gem')}
@@ -1819,8 +1832,8 @@ r_tavern(p, tab) {
       </div>
       <button class="btn ${inlayOK ? '' : 'd'}" id="gemInlay" style="width:100%;margin-top:10px">${inlayTxt}</button>
       <button class="btn g" id="gemOff" style="width:100%;margin-top:6px">卸 下（返还背包）</button>
-      <button class="btn o" id="gemFuse" style="width:100%;margin-top:6px">🔨 宝石合成（3 颗 → 升一级）</button>
-      <div class="sub" style="margin-top:6px">当前宝石等级：<b style="color:var(--yel)">Lv.${p.gemOn ? E.gemTier(p, p.gemOn) : 1}</b>
+      <button class="btn o ${fuseOK ? '' : 'd'}" id="gemFuse" style="width:100%;margin-top:6px">${fuseTxt}</button>
+      <div class="sub" style="margin-top:6px">当前宝石等级：<b style="color:var(--yel)">Lv.${g ? E.gemTier(p, g.id) : (p.gemOn ? E.gemTier(p, p.gemOn) : 1)}</b>
         加成：${E.gemBonusTxt ? E.gemBonusTxt(p) : '—'}
         <span style="opacity:.7">（百分比加成，只随宝石合成等级提升，与角色等级无关）</span></div>
     </div>`;
