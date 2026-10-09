@@ -1712,6 +1712,23 @@ const EX = {
     const _rm = (Number(this.DROP_RATE_MUL) > 0) ? Number(this.DROP_RATE_MUL) : 1;
     return Math.min(1, Math.max(0, Number(d && d.rate) || 0)) * _rm;
   },
+  /* 【界面展示用】稀缺度之后的真实数量区间 + 真实概率
+   * ------------------------------------------------------------
+   * BUG：背包→宝箱卡片上把产出写死成「合金 3-5 个（70% 概率）」，
+   *   而实际数量要过 DROP_QTY_MUL 0.80 —— round(3×0.8)=2、round(5×0.8)=4，
+   *   真实区间是【2~4】，永远开不出 5 个，也低于承诺的下限 3。
+   *   实测 4000 次：数量只出现 2/3/4（917/927/899），无一次为 5。
+   *   运营一旦改 min/max 或调稀缺度，这句写死的文案会继续漂移。
+   * 这里与 rollDrop/dropAvg 共用同一口径算出展示值，界面直接用它，
+   * 以后改配置文案自动跟随，不会再出现「说 3-5 实发 2-4」。 */
+  dropDisp(d) {
+    if (!d) return { min: 0, max: 0, rate: 0, pct: 0 };
+    const _qm = (Number(this.DROP_QTY_MUL) > 0) ? Number(this.DROP_QTY_MUL) : 1;
+    const _min = Math.max(1, Math.round((Number(d.min) || 0) * _qm));
+    const _max = Math.max(_min, Math.round((Number(d.max) || 0) * _qm));
+    const _r = this.dropRate(d);
+    return { min: _min, max: _max, rate: _r, pct: Math.round(_r * 100) };
+  },
 
   dropPool(ch) {
     return this.drops.filter((d) => {
