@@ -316,8 +316,12 @@ r_tavern(p, tab) {
           <div class="mn"><b>${m.n}</b>
             <span>${m.desc}</span>
             <span>伤害 ${m.dmg} · 射速 ${m.rate}/s · 射程 ${m.rng}</span></div>
+          /* 已雇佣的佣兵此前【没有 disabled】：按钮显示「已雇佣」却依然可点，
+           * 点下去走 b_tavern 的「已在阵容中」分支直接 return —— 不扣钱、
+           * 不提示、界面不动，玩家只会以为按钮坏了。
+           * 现在与「金币不足」同一口径：已完成态一并置灰。 */
           <button data-hire="${m.id}" class="${own ? 'hired' : ''}"
-            ${own ? '' : (p.gold < m.cost ? 'disabled' : '')}>
+            ${own ? 'disabled' : (p.gold < m.cost ? 'disabled' : '')}>
             ${own ? '已雇佣' : '🪙' + m.cost}</button>
         </div>`;
       }).join('')}
@@ -331,7 +335,9 @@ r_tavern(p, tab) {
       b.onclick = () => {
         const id = b.dataset.hire;
         const m = EX.mercs.find((x) => x.id === id); if (!m) return;
-        if ((p.mercs || []).indexOf(id) >= 0) return;
+        /* 防御：按钮已置灰，但旧档/热更后仍可能点到 —— 给一句明确提示，
+         * 不再静默 return（与 r_tavern 的 disabled 一起保证「点了必有反馈」） */
+        if ((p.mercs || []).indexOf(id) >= 0) return this.toast(m.n + ' 已在阵容中', 'err');
         if (p.gold < m.cost) return this.toast('金币不足', 'err');
         p.gold -= m.cost;
         (p.mercs || (p.mercs = [])).push(id);
