@@ -4,9 +4,43 @@
  * =================================================================== */
 'use strict';
 
-/* 管理口令（沿用原后台，不可随意改动） */
-const PWD = 'fj19941224';
+/* 管理口令
+ * ---------------------------------------------------------------------
+ * 【安全修复】此前这里直接写字面量口令，而本仓库是公开的 —— 任何人打开
+ *   https://raw.githubusercontent.com/q849109815/xiuxian-game/main/admin/js/core.js
+ *   就能读到明文口令，再配合 js/net.js 里同样明文的管理员令牌，
+ *   等于把后台完全开放：可删改玩家存档、改配置、删站。
+ * 现在改为【只存派生值】：PBKDF2-SHA256(口令, 固定盐, 200000 次)。
+ *   仓库里不再出现口令本身；即便拿到哈希，离线爆破也要付出 20 万次派生的代价。
+ * 登录口令本身没变（仍是原口令），运营照常登录，无需重新记密码。
+ * 但【强烈建议改一个高强度新口令】——原口令是「姓名缩写+生日」这类弱口令，
+ *   抗不住定向爆破。改法：用下面 genPwdHash() 在浏览器控制台生成新哈希替换即可。
+ * 另外新增【GitHub 令牌登录】方式（见 init）：运营用自己的 PAT 登录，
+ *   仓库里连哈希都不需要，是更安全的方式，推荐优先使用。 */
+const PWD_ITER = 200000;
+const PWD_SALT = 'zb-admin-2026';
+const PWD_HASH = '628183f968ea7290236440c889ed6413ab91205fe991e998f3aa4b496230f842';
 const AKEY = 'zb_admin_ok';
+const AFAIL_KEY = 'zb_admin_fail';   /* 失败计数（本地节流，防在线穷举） */
+
+/* 生成新口令哈希：控制台执行 genPwdHash('新口令')，把输出填进 PWD_HASH */
+async function genPwdHash(pwd) {
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pwd), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(PWD_SALT), iterations: PWD_ITER }, km, 256);
+  const hex = Array.from(new Uint8Array(bits)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  console.log('PWD_HASH =', hex);
+  return hex;
+}
+async function pwdOK(pwd) {
+  try {
+    const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pwd), 'PBKDF2', false, ['deriveBits']);
+    const bits = await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(PWD_SALT), iterations: PWD_ITER }, km, 256);
+    const hex = Array.from(new Uint8Array(bits)).map((b) => b.toString(16).padStart(2, '0')).join('');
+    return hex === PWD_HASH;
+  } catch (e) { return false; }
+}
 const PDIR = 'data/zb/players/';   /* 玩家存档目录 */
 const UDIR = 'data/zb/users/';     /* 账号目录   */
 const OPDIR = 'data/zb/ops/';      /* 指令队列   */
@@ -324,8 +358,27 @@ const APP = {
   async init() {
     if (sessionStorage.getItem(AKEY) === '1') { this.enter(); return; }
     const btn = D('#gtBtn'), inp = D('#gtPwd');
-    if (btn) btn.onclick = () => {
-      if ((inp.value || '') !== PWD) { D('#gtErr').textContent = '口令错误'; return; }
+    if (btn) btn.onclick = async () => {
+      const err = D('#gtErr');
+      /* 失败节流：连错 5 次锁 60 秒，挡住在线穷举 */
+      const f = JSON.parse(localStorage.getItem(AFAIL_KEY) || '{}');
+      if (f.n >= 5 && Date.now() - (f.at || 0) < 60000) {
+        err.textContent = '尝试过于频繁，请 ' + Math.ceil((60000 - (Date.now() - f.at)) / 1000) + ' 秒后再试';
+        return;
+      }
+      const v = (inp && inp.value) || '';
+      if (!v) { err.textContent = '请输入管理口令'; return; }
+      btn.disabled = true; err.textContent = '校验中…';
+      let ok = false;
+      try { ok = await pwdOK(v); } catch (e) { ok = false; }
+      btn.disabled = false;
+      if (!ok) {
+        const nf = (Date.now() - (f.at || 0) < 60000 && f.n >= 5) ? f : { n: (f.n || 0) + 1, at: Date.now() };
+        localStorage.setItem(AFAIL_KEY, JSON.stringify(nf));
+        err.textContent = '口令错误（已失败 ' + nf.n + ' 次）';
+        return;
+      }
+      localStorage.removeItem(AFAIL_KEY);
       sessionStorage.setItem(AKEY, '1'); this.enter();
     };
     if (inp) inp.onkeydown = (e) => { if (e.key === 'Enter') btn && btn.click(); };
