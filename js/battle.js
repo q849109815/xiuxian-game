@@ -563,6 +563,11 @@ const BT = {
      * 于是上一局用掉后值停在 0，之后每一局都永远没有刷新机会（按钮恒灰）。 */
     if (window.UI) UI.rfLeft = 1;
     this.on = true; this.paused = false;
+    /* 表04 VO_001 进入战斗：此前整表 10 条里只有 003~008 接了线，
+     * VO_001/002/009/010 的台词与合成音效（audio.js 的 sfx 'start'/'wave'/
+     * 'upgrade'/'rare'）全都做好了却从没触发过 —— 玩家进关与每波开打
+     * 都听不到、也看不到任何提示。这里补上开局这一句。 */
+    try { if (window.VO) VO.say('VO_001'); } catch (e) {}
     this.startWave(1);
     this.startLoop();
     if (opt.cb) this.cb = opt.cb;
@@ -579,6 +584,8 @@ const BT = {
 
   startWave(w) {
     const r = this.run, d = r.def;
+    /* 表04 VO_002 波次开始：第 1 波由 VO_001（进入战斗）覆盖，避免开局连出两句 */
+    if (w > 1) { try { if (window.VO) VO.say('VO_002'); } catch (e) {} }
     r.wave = w;
     r.waveT = 0;              /* 重置波次计时（配合超时推进） */
     r.waveMaxT = (d.cond === 'boss' || d.cond === 'bossAll') && w === d.waves ? 999 : 20;
