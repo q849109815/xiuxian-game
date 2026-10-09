@@ -467,6 +467,8 @@ const BT = {
       shield: Number(a.shield) || 0, maxShield: Number(a.shield) || 0,
       turrets: [], mercs: [], coin: 0, cd: {},
       gunId: (p && p.gun) || 'W01',
+      /* 角色 id：角色天赋（C02 医疗兵「战地急救」）按此判定 */
+      charId: (p && p.char) || 'C01',
       atk: a.atk, rate: a.rate, range: a.range, pierce: a.pierce, spread: a.spread,
       pellets: a.pellets || 1, crit: a.crit, critDmg: a.critDmg, moveSpd: a.moveSpd,
       /* 后坐力倍率（武器表 recoil 低0.55/中1.0/高1.6）
@@ -1234,6 +1236,32 @@ const BT = {
       if (r.chillT <= 0) { r.chill = 0; r.chillMul = 1; r._chillToast = 0; }
     } else if (r.chillMul == null || r.chillMul === 0) { r.chillMul = 1; }
     else if (Number(r.chill) <= 0) { r.chillMul = 1; }
+
+    /* --- 角色天赋：C02 医疗兵「战地急救」 ---
+     * desc 白纸黑字写着「自带护甲与治疗天赋」，但治疗那一半从未实装
+     * （实测 15 秒 / 243 次采样回血 0 次，与 C01 对照组一致）。
+     * 这里按 EX.chars[].talent 配置驱动落地：每 cd 秒回一次，回血量为
+     * 防线【最大血量】的 heal 比例，不超过上限。
+     * 只在掉血时触发（满血不浪费），并在 HUD 上给一次治疗反馈。 */
+    if (r.charId && r.charId !== 'C01') {
+      const _ct = (EX.chars || []).find((c) => c.id === r.charId);
+      const _tal = _ct && _ct.talent;
+      if (_tal && Number(_tal.heal) > 0) {
+        const _cd = Math.max(1, Number(_tal.cd) || 8);
+        r.talentT = (Number(r.talentT) || 0) + dt;
+        if (r.talentT >= _cd) {
+          r.talentT = 0;
+          const _max = Number(r.wallMax) || Number(r.maxHp) || 0;
+          if (_max > 0 && r.wallHp < _max - 0.01) {
+            const _hv = Math.min(_max - r.wallHp, _max * Number(_tal.heal));
+            r.wallHp = Math.min(_max, (r.wallHp || 0) + _hv);
+            r.hp = r.wallHp;
+            if (window.SND) SND.play('heal');
+            try { this.fx && this.fx.text && this.fx.text('+' + Math.round(_hv), r.px, r.py - 30, '#7dffa8'); } catch (e) {}
+          }
+        }
+      }
+    }
 
     /* --- 地面腐蚀液池 --- */
     for (const pl of r.pools) {
