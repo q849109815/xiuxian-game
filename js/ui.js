@@ -1347,7 +1347,15 @@ r_tavern(p, tab) {
       </div>
       <div class="card"><div class="card-t">宝箱 <span class="sub">表31 DR11</span></div>
         <div class="kv"><span>持有宝箱</span><b>${(p.mat || {}).I04 || 0}</b></div>
-        <div class="sub">开启可得：合金 3-5 个（70% 概率）</div>
+        ${(() => {
+          /* 产出说明按【稀缺度之后的真实值】动态生成（EX.dropDisp）。
+           * 此前写死「合金 3-5 个（70% 概率）」，而 DROP_QTY_MUL 0.80 使
+           * 实际区间变成 2~4 —— 玩家永远开不出承诺的 5 个，下限也低于 3。 */
+          const _d = (EX.dropBySrc('宝箱开箱') || [])[0];
+          if (!_d) return '<div class="sub">开启可得材料</div>';
+          const _v = EX.dropDisp(_d);
+          return '<div class="sub">开启可得：' + E.itemName(_d.item) + ' ' + _v.min + '-' + _v.max + ' 个（' + _v.pct + '% 概率）</div>';
+        })()}
         <button class="btn blk" id="bagChest1">开启 1 个</button>
         <button class="btn o blk" id="bagChest10">开启 10 个</button>
       </div>
@@ -1575,6 +1583,19 @@ r_tavern(p, tab) {
        * 这里在扣款【之前】拦截，货币不会被白白扣掉。 */
       if (g.give && g.give.stamina && E.staminaFull && E.staminaFull(p)) {
         return this.toast('体力已满（' + EX.STAMINA_MAX + '），无需购买', 'err');
+      }
+      /* 体力「部分溢出」：此前只拦了「已满」，没拦「买完会超出上限」。
+       * 实测（D2 体力包 50 钻 → 60 体力）：体力 80 时购买，addStamina 钳制后
+       * 实际只加 20 点，却照扣 50 钻 —— 玩家付 60 体的钱只拿到 20，
+       * 且提示仍是「购买成功」，看不出自己亏了三分之二。
+       * 这里在扣款之前按「剩余容量」拦截，与满体力同一口径。 */
+      if (g.give && g.give.stamina) {
+        const _add = Math.max(0, Number(g.give.stamina) || 0);
+        const _max = Number(EX.STAMINA_MAX) || 100;
+        const _room = _max - Math.max(0, Number(p.stamina) || 0);
+        if (_add > _room) {
+          return this.toast('体力将溢出（当前 ' + (p.stamina || 0) + '/' + _max + '，本次只能获得 ' + Math.max(0, _room) + '），请先消耗体力', 'err');
+        }
       }
       /* 后台热更商品时漏填 price → `p[cur] -= undefined` 把玩家货币算成
        * 【NaN】，此后所有购买全部失效；负数则买东西倒赚。这里统一收紧。 */
@@ -2486,11 +2507,22 @@ r_tavern(p, tab) {
         /* 已拥有 / 芯片背包已满：与扣费前拦截同口径，按钮直接置灰并写明原因
          * （否则按钮照常可点，玩家点下去只弹一句「已拥有」，看着像按钮坏了） */
         const ownMsg = E.ownedGiveMsg ? E.ownedGiveMsg(p, it.give) : '';
-        const can = curVal >= it.cost && !full && !locked && !ownMsg;
+        /* 体力类：买完会超出上限时置灰并写明「只能获得 N」。
+         * 实测（ES11「体力×30」60 代币）：体力 80 时兑换只加 20 点、
+         * 却照扣 60 代币，提示仍是「兑换成功」——玩家白丢三分之一。
+         * 与商店体力包同一口径：按剩余容量判断，不只看「是否已满」。 */
+        let stRoom = -1;
+        if (it.give && it.give.stamina) {
+          const _max = Number(EX.STAMINA_MAX) || 100;
+          stRoom = Math.max(0, _max - Math.max(0, Number(p.stamina) || 0));
+          if (stRoom <= 0) stRoom = 0;
+        }
+        const stOver = stRoom >= 0 && (Math.max(0, Number(it.give.stamina) || 0) > stRoom);
+        const can = curVal >= it.cost && !full && !locked && !ownMsg && !stOver;
         return `<div class="zrow">
           <div class="zav">${it.t === '芯片' ? '💠' : it.t === '碎片' ? '🧩' : it.t === '皮肤' ? '👕' : it.t === '称号' ? '🏅' : '📦'}</div>
           <div class="zi"><b>${it.n}</b><span>${it.cost} ${curName} · 限购 ${it.limit}（已兑 ${bought}）${locked ? ' · <span style="color:#ff8fa4">需通关 ' + it.need + ' 关</span>' : ''}</span></div>
-          <button class="btn sm ${can ? '' : 'd'}" data-buy="${it.id}" ${can ? '' : 'disabled'}>${ownMsg ? (ownMsg.indexOf('背包') >= 0 ? '背包已满' : '已拥有') : '兑换'}</button>
+          <button class="btn sm ${can ? '' : 'd'}" data-buy="${it.id}" ${can ? '' : 'disabled'}>${ownMsg ? (ownMsg.indexOf('背包') >= 0 ? '背包已满' : '已拥有') : (stOver ? '体力将溢出' : '兑换')}</button>
         </div>`;
       }).join('')}
       <div class="sub" style="padding:6px 2px">限购按 ${isAch ? '每日/每周/每月' : '每日/活动期'} 刷新。</div>
