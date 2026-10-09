@@ -44,6 +44,10 @@ export default {
     }
 
     const isWrite = !['GET', 'HEAD'].includes(request.method);
+    // 写/删再加一道：只允许数据目录，禁止改代码文件与删站
+    if (isWrite && !allowedWrite(url.pathname)) {
+      return j({ message: 'write not allowed: ' + url.pathname }, 403);
+    }
 
     // 读缓存
     if (!isWrite) {
@@ -107,6 +111,22 @@ export default {
 function allowed(p) {
   if (p === '/rate_limit' || p === '/rate_limit/') return true;
   return p.startsWith('/repos/' + OWNER + '/' + REPO + '/');
+}
+
+/* 写/删白名单：只放行 data/zb/ 下的数据文件
+ * ---------------------------------------------------------------------
+ * 【安全修复】此前 allowed() 只校验路径前缀，对任意路径都允许 PUT/DELETE。
+ *   Worker 一旦部署，任何知道地址的人都能：
+ *     PUT /repos/.../contents/js/config.js   → 给自己发无限钻石
+ *     DELETE /repos/.../contents/index.html  → 整站下线
+ *   等于「令牌不下发前端了，但 Worker 自己又变成无鉴权的写入口」。
+ * 现在读仍走原白名单（读本来就是公开的），写/删只放行数据目录：
+ *   允许 /contents/data/zb/...   （玩家存档、账号、邮件、活动、榜单等）
+ *   拒绝 /contents/js|css|admin|assets|index.html 及所有非 contents 路径
+ * 这样即使地址泄露，最坏也只是数据被改，网站代码与仓库结构仍安全。 */
+function allowedWrite(p) {
+  if (!p.startsWith('/repos/' + OWNER + '/' + REPO + '/contents/')) return false;
+  return p.indexOf('/contents/data/zb/') >= 0;
 }
 function addCors(h) {
   h.set('access-control-allow-origin', '*');
