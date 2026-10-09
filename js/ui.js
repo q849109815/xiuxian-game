@@ -6,6 +6,21 @@
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 
+/* 「进入管理后台」入口是否显示
+ * ---------------------------------------------------------------------
+ * 【安全修复】此前设置页底部对所有玩家常驻一个「进入管理后台」按钮，
+ *   等于把 admin/ 后台地址主动摆在每一位玩家面前（此前后台口令又是明文写在
+ *   admin/js/core.js 里的，仓库公开 → 任何人可读，组合起来等于后台对外开放）。
+ * 入口改为默认隐藏，运营自己在地址后加 ?admin=1 打开游戏即可看到该按钮；
+ * 或在本机控制台执行 localStorage.setItem('zb_admin_entry','1') 后刷新。
+ * 这只是收窄暴露面（安全纵深的一层），真正的防护是后台口令与令牌。 */
+function adminEntryVisible() {
+  try {
+    if (location.search && /(\?|&)admin=1\b/.test(location.search)) return true;
+    return localStorage.getItem('zb_admin_entry') === '1';
+  } catch (e) { return false; }
+}
+
 const UI = {
   P: null, curPanel: null, curTab: {}, selChipSlot: 'c1', curChapter: 1, curDiff: 'normal',
 
@@ -2806,8 +2821,8 @@ r_tavern(p, tab) {
       <button class="btn blk" id="setSave">立即保存存档</button>
       <button class="btn d blk" id="setReset">重置存档（清空全部进度）</button>
       <div class="lbl">存档保存于云端仓库，换设备登录同一代号可继续。</div></div>
-      <div class="card"><div class="card-t">后台管理</div>
-      <button class="btn blk" id="setAdmin">进入管理后台</button></div>`;
+      ${adminEntryVisible() ? `<div class="card"><div class="card-t">后台管理</div>
+      <button class="btn blk" id="setAdmin">进入管理后台</button></div>` : ''}`;
   },
   b_set(p, tab) {
     /* ---------- 音频开关 / 音量 ---------- */
