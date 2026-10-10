@@ -1351,6 +1351,11 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 对照组（好友 +0.13、装备 +1.44）正常生效，证明就是这条没接。
      * 现在按 legionBonus 的返回值接入（每 1000 贡献 +1%，上限 10%）。 */
     const lb = this.legionBonus(p);
+    /* 最终攻击力（含角色等级固定值 + 天赋/建筑/芯片/皮肤% + 词条 + 宝石
+     * + 装备强化 + 好友 + 军团 + 升星）。
+     * 必须在 return 之前算出来，因为下面 dmgMin/dmgMax 要按它等比缩放
+     * —— 对象字面量里无法引用同级的 atk。 */
+    const atkTotal = ((atk + (p.lvBonusAtk || 0)) * (1 + atkUp) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct + this.equipBonus(p).atkPct + this.friendBonus(p) + lb.atkPct)) * (1 + EX.starBonus(p.charStar));
     return {
       /* 表25 #1：角色等级成长（每级 +攻击6 / +生命80） */
       /* 好友加成：面板写「每个 +0.5% 攻击」，但 attrs 从不读 p.friends
@@ -1359,7 +1364,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       /* atkUp / hpUp：天赋·建筑·芯片·皮肤的百分比，统一作用于【全部】
        * （含角色等级提供的固定加成 p.lvBonusAtk / p.lvBonusHp）。
        * 此前它们被并进只乘基础值的那一层，导致等级越高收益越接近 0，详见上方注释。 */
-      atk: ((atk + (p.lvBonusAtk || 0)) * (1 + atkUp) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct + this.equipBonus(p).atkPct + this.friendBonus(p) + lb.atkPct)) * (1 + EX.starBonus(p.charStar)),
+      atk: atkTotal,
       hp: ((Math.round(hp) + (p.lvBonusHp || 0)) * (1 + hpUp) * (1 + this.gemBonus(p).hpPct + this.equipBonus(p).hpPct + lb.hpPct)) * (1 + EX.starBonus(p.charStar)),
       gunBase, armor: Math.round(armor),
       /* 护盾（常驻值）
@@ -1393,12 +1398,26 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       reloadCut: af.reload, erMul: 1 + af.er, doubleChance: af.double,
       /* 表44 伤害浮动区间：必须随武器等级等比缩放
        * 严重BUG：此前直接返回表里写死的 g.dmgMin/g.dmgMax（突击步枪 22-28），
-       * 而 battle.shoot() 命中区间后 `dmg = dmgMin + rand*(dmgMax-dmgMin)`，
        * 会完全覆盖按武器等级算出的伤害 —— 结果武器从 Lv1 升到 Lv80，
        * 每发子弹始终是 22~28 点，升级对伤害毫无影响。
-       * 正确做法：把区间按 gunBase 等比放大（22/25=0.88 ~ 28/25=1.12） */
-      dmgMin: (g.dmgMin != null && g.dmg) ? gunBase * (g.dmgMin / g.dmg) : null,
-      dmgMax: (g.dmgMax != null && g.dmg) ? gunBase * (g.dmgMax / g.dmg) : null,
+       *
+       * 第二轮 BUG（更严重）：上一轮修成了按 gunBase 等比放大，
+       *   而 gunBase = 武器基础伤害 × 等级复利，【不含】
+       *     角色等级固定攻击 p.lvBonusAtk（表25 每级 +6）
+       *     天赋/建筑/芯片/皮肤的攻击%
+       *     武器词条 af.dmg
+       *     宝石 / 装备强化 / 好友 / 军团 / 升星
+       *   而 battle.shoot() 一旦命中这个区间就【完全丢弃 r.atk】：
+       *       dmg = r.dmgMin + rand*(r.dmgMax - r.dmgMin)
+       *   实测（gunLv60 / lv60，W01）：
+       *      面板攻击   无加成 2577.86 → 天赋满级(+60%) 4050.92   (+57.1%)
+       *      实际子弹   无加成 1861.96 → 天赋满级(+60%) 1983.46   (+6.5%，纯随机)
+       *   —— 天赋/芯片/皮肤/宝石/装备/好友/军团/升星/角色升级，
+       *      全都只涨面板数字，实战伤害纹丝不动。武器表凡配了
+       *      dmgMin/dmgMax 的枪（几乎全部）都中招。
+       *   现在改成按【最终攻击力 atkTotal】等比缩放，区间均值 = atkTotal。 */
+      dmgMin: (g.dmgMin != null && g.dmg) ? atkTotal * (g.dmgMin / g.dmg) : null,
+      dmgMax: (g.dmgMax != null && g.dmg) ? atkTotal * (g.dmgMax / g.dmg) : null,
       ls: this.talentVal(p, 'ls') + this.chipVal(p, 'ls') + af.lifesteal + this.gemBonus(p).ls,
       revive: Math.floor(p.talents.t_revive || 0),
       goldMul: 1 + this.talentVal(p, 'gold'),
