@@ -152,6 +152,17 @@ const SND = {
       case 'pickup':                      // 拾取：与 pick 同款
         this.tone(880, 0.09, { type: 'sine', to: 1200, vol: 0.14 });
         break;
+      /* 治疗音（角色天赋「战地急救」/ 支援武器医疗包回血时播放）
+       * BUG：battle.js 调用 SND.play('heal')，但音效表里没有这一条 ——
+       *   switch 无匹配 → 走 default → 静默无声，且不报错。
+       *   玩家看到防线飘出绿色「+N」回血数字，却听不到任何反馈音。
+       *   与 get/pickup 同类（调用了但不存在的音效名），这里补齐。
+       * 音色取柔和上行小三度（660 → 880），与拾取的短促感区分开，
+       *   音量压到 0.11：治疗每 8 秒触发一次，太响会盖过枪声。 */
+      case 'heal':
+        this.tone(660, 0.14, { type: 'sine', vol: 0.11 });
+        setTimeout(() => this.tone(880, 0.18, { type: 'sine', vol: 0.1 }), 110);
+        break;
       case 'win':                         // 胜利：大调琶音
         [523, 659, 784, 1046].forEach((f, i) =>
           setTimeout(() => this.tone(f, 0.4, { type: 'triangle', vol: 0.22 }), i * 130));
