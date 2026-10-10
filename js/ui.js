@@ -416,6 +416,21 @@ r_tavern(p, tab) {
   },
   r_legion(p, tab) {
     const lg = p.legion || null;
+    /* 名册兜底（存量存档）：members 只在【加入 / 创建军团】那一刻生成，
+     * 而「按配置人数生成名册」是后来才补的修复 —— 在那之前就已加入军团的
+     * 玩家，p.legion 里根本没有 members 字段，于是：
+     *   · 「成员」页签渲染成【0 人】的空军团（实测面板整块空白）
+     *   · 而军团主页写「成员 1/50」、军团列表卡片写「人数 42」，
+     *     三处数字互相矛盾，玩家只会以为自己加错了军团。
+     * 这里在读取时就地补全一次并写回存档，老玩家刷新一次即恢复正常。 */
+    if (lg && (!Array.isArray(lg.members) || !lg.members.length)) {
+      const cnt = 6;
+      try {
+        const cfg = (EX.legions || []).find((x) => x.id === lg.id);
+        lg.members = this.mkLegionMembers(p, (cfg && cfg.mem) || cnt, lg.job || '成员');
+        try { E.save(p); } catch (e) {}
+      } catch (e) { lg.members = []; }
+    }
     if (tab === '成员') {
       if (!lg) return '<div class="empty">尚未加入军团</div>';
       const mem = lg.members || [];
@@ -2941,9 +2956,21 @@ r_tavern(p, tab) {
       if (!ac.name) { if (tip) tip.textContent = '未获取到账号名'; return; }
       if (!o) { if (tip) tip.textContent = '请输入原密码'; return; }
       if (n1 !== n2) { if (tip) tip.textContent = '两次新密码不一致'; return; }
-      const r = await UA.changePwd(ac.name, o, n1);
+      /* 防连点（与「永久删除」同一口径）：
+       * 改密码是写云端账号文件，此前按钮点下去【既不置灰也不改字】，
+       * await 期间可以再点 —— 实测连点 3 次会并发发起 3 次 changePwd，
+       * 多次写同一份 user.json 存在互相覆盖的竞态，且玩家看不到任何"在处理"的反馈。
+       * 现在：处理期间置灰并提示，结束后复原。 */
+      sp.disabled = true; sp.textContent = '修改中…';
+      let r;
+      try { r = await UA.changePwd(ac.name, o, n1); }
+      catch (e) { r = { ok: false, msg: '修改异常：' + (e && e.message || e) }; }
+      sp.disabled = false; sp.textContent = '🔑 修改密码';
       if (tip) tip.textContent = r.ok ? (r.msg || '修改成功') : r.msg;
       this.toast(r.ok ? '密码已修改' : r.msg, r.ok ? 'ok' : 'err');
+      /* 改完清空三个输入框：密码属于敏感信息，不该一直留在 DOM 里
+       * （后台/截屏/他人拿到手机时都能直接看到）。 */
+      if (r.ok) { ['spOld', 'spNew', 'spNew2'].forEach((id) => { const el = $('#' + id); if (el) el.value = ''; }); }
     };
     /* 注销账号 */
     const sd = $('#spDelGo');
@@ -2952,9 +2979,22 @@ r_tavern(p, tab) {
       const w = ($('#spDel') || {}).value || '';
       if (!w) { this.toast('请输入密码确认', 'err'); return; }
       if (!confirm('确定注销账号「' + (ac.name || '') + '」？\n云端存档将一并删除，无法恢复！')) return;
-      const r = await UA.destroy(ac.name, w);
+      /* 防连点（与下方「永久删除」同一口径）：
+       * 注销是【不可恢复】操作（删云端存档 + 封禁账号 + 清榜单），
+       * 但此前这个按钮点下去【既不置灰也不改字】，await 期间还能继续点 ——
+       * 实测连点 3 次 → UA.destroy 被并发调用 3 次（对照组「永久删除」
+       * 有 disabled 保护，同样点 3 次只触发 1 次）。
+       * 并发销毁会同时读写同一份 index / leaderboard / player 文件，
+       * 存在互相覆盖的竞态；且 destroy 成功后各自 setTimeout(logout, 800)，
+       * 多次 reload 也会打架。
+       * 现在：处理期间置灰并提示，失败才恢复可点（成功反正要退出登录）。 */
+      sd.disabled = true; sd.textContent = '注销中…';
+      let r;
+      try { r = await UA.destroy(ac.name, w); }
+      catch (e) { r = { ok: false, msg: '注销异常：' + (e && e.message || e) }; }
       this.toast(r.msg || (r.ok ? '已注销' : '注销失败'), r.ok ? 'ok' : 'err');
-      if (r.ok) setTimeout(() => { if (window.UA) UA.logout(); }, 800);
+      if (r.ok) { setTimeout(() => { if (window.UA) UA.logout(); }, 800); return; }
+      sd.disabled = false; sd.textContent = '🗑 确认注销';
     };
     /* 永久删除账号：与注销不同，物理删除账号文件本身，不可恢复 */
     const spg = $('#spPurgeGo');
@@ -3008,7 +3048,15 @@ r_tavern(p, tab) {
     if (oct) oct.onclick = () => {
       if (window.OPS) OPS.clearTrack(); this.toast('埋点数据已清空', 'ok'); this.open('set', '运营');
     };
-    const sv = $('#setSave'); if (sv) sv.onclick = async () => { await MAIN.save(); this.toast('存档已上传', 'ok'); };
+    /* 防连点：上传存档是异步写云端，此前连点会并发发起多份写入
+     * （虽有 stale 守卫兜底，仍是浪费且存在写冲突），且按钮无任何反馈。
+     * 现在处理期间置灰，结束/失败都复原。 */
+    const sv = $('#setSave'); if (sv) sv.onclick = async () => {
+      sv.disabled = true; const _t = sv.textContent; sv.textContent = '上传中…';
+      try { await MAIN.save(); this.toast('存档已上传', 'ok'); }
+      catch (e) { this.toast('上传失败：' + (e && e.message || e), 'err'); }
+      sv.disabled = false; sv.textContent = _t || '☁️ 立即上传存档';
+    };
     const rs = $('#setReset'); if (rs) rs.onclick = async () => {
       if (!confirm('确定清空全部进度？\n云端存档与本地缓存将一并删除，账号保留但进度归零，此操作不可恢复！')) return;
       rs.disabled = true; rs.textContent = '重置中…';
