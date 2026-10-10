@@ -627,17 +627,32 @@ const EX = {
    * =================================================== */
   HOT_UPDATE: {
     enabled: true,
-    version: '20260927e',      /* 主版本号，改这个会强制全量刷新缓存 */
+    /* 主版本号：必须与 index.html 里 <script src="...?v="> 的 v= 【完全一致】。
+     *
+     * BUG（版本号分叉 → 虚假「发现新版本」弹窗）：
+     *   这里长期停在 '20260927e'，而 index.html 早已推进到 20261211a，
+     *   manifest 里 8 个资源的 ver 也全都停在 '20260927a'。
+     *   而 main.js applyHotfix() 的版本提示逻辑是：
+     *     const local = EX.HOT_UPDATE.version;   ← 取的是这里
+     *     if (cv === local) return;              ← 云端推送的 ver 与之比对
+     *   于是运营每次「推送到云端」（写 db.ver），local 永远是 9 月那个旧值，
+     *   两者必然不相等 → 所有玩家登录时都被弹一次「发现新版本，点击刷新」，
+     *   而玩家刷新后代码其实没变（真正控制缓存的是 index.html 的 ?v=），
+     *   只靠 z_hot_seen 记一次才不再弹。运营推几次，玩家就被误导几次。
+     *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
+     *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
+     * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
+    version: '20261212a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/style.css', ver: '20260927a', size: 0 },
-      { p: 'js/net.js', ver: '20260927a', size: 0 },
-      { p: 'js/config.js', ver: '20260927a', size: 0 },
-      { p: 'js/engine.js', ver: '20260927a', size: 0 },
-      { p: 'js/battle.js', ver: '20260927a', size: 0 },
-      { p: 'js/ui.js', ver: '20260927a', size: 0 },
-      { p: 'js/main.js', ver: '20260927a', size: 0 },
-      { p: 'js/audio.js', ver: '20260927a', size: 0 },
+      { p: 'css/style.css', ver: '20261211a', size: 0 },
+      { p: 'js/net.js', ver: '20261211a', size: 0 },
+      { p: 'js/config.js', ver: '20261211a', size: 0 },
+      { p: 'js/engine.js', ver: '20261211a', size: 0 },
+      { p: 'js/battle.js', ver: '20261211a', size: 0 },
+      { p: 'js/ui.js', ver: '20261211a', size: 0 },
+      { p: 'js/main.js', ver: '20261211a', size: 0 },
+      { p: 'js/audio.js', ver: '20261211a', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
