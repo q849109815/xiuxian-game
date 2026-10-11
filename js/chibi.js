@@ -12,6 +12,8 @@
   'use strict';
 
   var BASE = 'assets/chibi/';
+  /* 贴图缓存戳：换美术时改这里，强制玩家浏览器拉取新图（否则会一直读旧缓存） */
+  var IMG_V = '20261217a';
   var CACHE = {};   /* key -> {im,w,h,ok} */
   var TRIED = {};   /* key -> 1  已经发起过请求 */
 
@@ -41,7 +43,7 @@
       CACHE[key] = { im: im, w: im.naturalWidth || im.width, h: im.naturalHeight || im.height, ok: true };
     };
     im.onerror = function () { CACHE[key] = { im: null, ok: false }; };
-    im.src = BASE + key + '.png';
+    im.src = BASE + key + '.png?v=' + IMG_V;
     return null;
   }
 
