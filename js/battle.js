@@ -278,11 +278,24 @@ const BT = {
     const i = Math.max(0, (Number(ch) || 1) - 1) % 6;
     return ['city', 'factory', 'wasteland', 'tunnel', 'field', 'snow'][i];
   },
+  /* 场景图 url 解析：优先读 EX.sceneImg（后台运营配置，可热更），
+   * BT.SCENES 仅作兜底。
+   * BUG（热更无效）：EX.sceneImg 与 BT.SCENES 是【两份内容完全相同】的映射
+   *   （city/factory/wasteland/tunnel/field/snow 六个键、路径逐字一致），
+   *   但 img() 与 start() 只读 BT.SCENES 那份硬编码，EX.sceneImg 全项目零引用。
+   *   实测：把 EX.sceneImg.city 热更为任意新路径，
+   *        BT.img('city') 仍解析到 assets/scene/city.jpg —— 运营改了等于没改。
+   *   同类问题此前出在宝箱（双入口各写一份判定）与 BOSS 血量曲线
+   *   （声明了却不吃难度曲线），这里同样按「以可热更的配置为准」统一。 */
+  sceneUrl(key) {
+    const m = (typeof EX !== 'undefined' && EX.sceneImg) || null;
+    return (m && m[key]) || this.SCENES[key] || null;
+  },
   img(key) {
     const v = this._imgs[key];
     if (v) return v;
     if (v === null && Date.now() - (this._imgFail[key] || 0) < 4000) return null;
-    const url = this.SCENES[key]; if (!url) { this._imgs[key] = null; return null; }
+    const url = this.sceneUrl(key); if (!url) { this._imgs[key] = null; return null; }
     this._imgFail[key] = Date.now();
     const im = new Image();
     im.onload = () => { this._imgs[key] = im; };
@@ -446,7 +459,7 @@ const BT = {
      * 关卡表里 100 关逐个配的 scene 字段从未被消费 —— 实测 86/100 关场景与配置不符
      * （如 1-10 BOSS 关配了 snow，实际渲染 city；第 2 章 10 关全配 tunnel，实际全 factory）。
      * 现在按关卡配置取，缺配/非法值回退按章节推算。 */
-    this.scene = (def.scene && this.SCENES[def.scene]) ? def.scene : this.sceneFor(def.ch);
+    this.scene = (def.scene && this.sceneUrl(def.scene)) ? def.scene : this.sceneFor(def.ch);
     this.img(this.scene);
     /* 无尽模式：按玩家进度章节取关（见 levelDef 注释） */
     if (def.endless && p) def.ch = Math.max(1, (E.progressChapter ? E.progressChapter(p) : (E.chapterOf ? E.chapterOf(p.curLevel || '1-1') : 1)));
