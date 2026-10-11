@@ -6,6 +6,29 @@
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 
+/* 【贴图缓存戳】换美术时必须改这里，否则老玩家浏览器一直读旧缓存，看不到新图。
+ *
+ * BUG（只给战斗贴图加了戳，界面贴图没有）：
+ *   chibi.js 里的 IMG_V 只作用于 assets/chibi/*.png（战斗用）。
+ *   而皮肤 assets/skin/*.jpg、头像 assets/char/*.jpg、图标 assets/icon/*.jpg
+ *   在 ui.js / engine.js 里都是直接写进 <img src="..."> 的，不带任何版本号；
+ *   文件名没变 → 浏览器/ CDN 缓存不失效 → 玩家刷新后看到的仍是几个月前的旧图，
+ *   运营换了美术却像没换一样，还以为上传失败。
+ * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
+ *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
+ * 改美术时只需改这一个常量。 */
+const IMG_V = '20261218a';
+function stampImgs(root) {
+  try {
+    const box = root || document;
+    if (!box.querySelectorAll) return;
+    box.querySelectorAll('img[src^="assets/"]').forEach((im) => {
+      const s = im.getAttribute('src') || '';
+      if (s.indexOf('?') < 0) im.setAttribute('src', s + '?v=' + IMG_V);
+    });
+  } catch (e) { /* 兜底：加戳失败也不能影响渲染 */ }
+}
+
 /* 「进入管理后台」入口是否显示
  * ---------------------------------------------------------------------
  * 【安全修复】此前设置页底部对所有玩家常驻一个「进入管理后台」按钮，
@@ -53,9 +76,9 @@ const UI = {
     $('#hmPower').textContent = E.fmt(E.power(p));
     $('#cuGold').textContent = E.fmt(p.gold);
     const ci = EX.curIcon || {};
-    const cgEl = $('#cuGoldIco'); if (cgEl && ci.gold) cgEl.src = ci.gold;
-    const cdEl = $('#cuDiaIco'); if (cdEl && ci.diamond) cdEl.src = ci.diamond;
-    const csEl = $('#cuStaIco'); if (csEl && ci.stamina) csEl.src = ci.stamina;
+    const cgEl = $('#cuGoldIco'); if (cgEl && ci.gold) cgEl.src = ci.gold + '?v=' + IMG_V;
+    const cdEl = $('#cuDiaIco'); if (cdEl && ci.diamond) cdEl.src = ci.diamond + '?v=' + IMG_V;
+    const csEl = $('#cuStaIco'); if (csEl && ci.stamina) csEl.src = ci.stamina + '?v=' + IMG_V;
     $('#cuDia').textContent = E.fmt(p.diamond);
     const cur = E.curLevel(p);
     $('#hmLevel').textContent = E.char(p).n + ' · ' + E.levelName(cur);
@@ -236,6 +259,7 @@ const UI = {
     $('#pnTabs').style.display = def[1].length > 1 ? '' : 'none';
     $$('#pnTabs .pt').forEach((b) => { b.onclick = () => { this.curTab[key] = b.dataset.t; this.open(key); }; });
     $('#pnBody').innerHTML = this.render(key, this.curTab[key]);
+    stampImgs($('#pnBody'));
     const _sig = key + '|' + this.curTab[key];
     const _needTop = this._pnScrollSig !== _sig;
     $('#panel').classList.add('on');
@@ -280,6 +304,7 @@ const UI = {
     box.innerHTML = `<div class="pn-box"><div class="pn-hd"><b>${this.esc(title)}</b>
       <button id="shX">✕</button></div><div class="pn-main"><div class="pn-body">${html || ''}</div></div></div>`;
     box.classList.add('on');
+    stampImgs(box);
     const x = document.getElementById('shX');
     if (x) x.onclick = () => { box.classList.remove('on'); box.innerHTML = ''; };
     box.onclick = (e) => { if (e.target === box) { box.classList.remove('on'); box.innerHTML = ''; } };
@@ -3387,14 +3412,14 @@ r_tavern(p, tab) {
     if (!this.P) return;
     /* 左上英雄立绘 + 战力 */
     const hi = $('#btHeroImg');
-    if (hi && !hi.src) { const av = (E.char(this.P) || {}).img; if (av) hi.src = av; }
+    if (hi && !hi.src) { const av = (E.char(this.P) || {}).img; if (av) hi.src = av + '?v=' + IMG_V; }
     const bpw = $('#btPower'); if (bpw) bpw.textContent = E.fmt(E.power(this.P));
     const bd = $('#btDia'); if (bd) bd.textContent = E.fmt(this.P.diamond || 0);
     /* 武器图标（底部 + 右上） */
     const gi = $('#btGunImg');
-    if (gi && !gi.src) { const g = E.gun(this.P); if (g && g.img) gi.src = g.img; }
+    if (gi && !gi.src) { const g = E.gun(this.P); if (g && g.img) gi.src = g.img + '?v=' + IMG_V; }
     const gi2 = $('#btGunImg2');
-    if (gi2 && !gi2.src) { const g2 = E.gun(this.P); if (g2 && g2.img) gi2.src = g2.img; }
+    if (gi2 && !gi2.src) { const g2 = E.gun(this.P); if (g2 && g2.img) gi2.src = g2.img + '?v=' + IMG_V; }
     /* 右上弹药 30/30 */
     const mg2 = $('#btMag2'), mgm = $('#btMagMax');
     if (mg2) mg2.textContent = r.mag != null ? r.mag : 30;
