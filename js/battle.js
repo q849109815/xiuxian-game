@@ -2395,7 +2395,9 @@ const BT = {
     r.noHitStreak = (Number(r.noHitStreak) || 0) + 1;
     if (r.noHitStreak > (Number(r.noHitMax) || 0)) r.noHitMax = r.noHitStreak;
     /* 击杀反馈：此前僵尸是「瞬间消失」，没有任何消散表现 */
-    if (r.efx) r.efx.push({ t: 'die', x: z.x, y: z.y, life: 0.45, max: 0.45 });
+    if (r.efx) r.efx.push({ t: 'die', x: z.x, y: z.y, life: 0.62, max: 0.62, seed: Math.random() * 6 });
+    /* 击杀冲击环：贴地扩散，成片清怪时连成一片 */
+    if (r.efx && r.efx.length < 110) r.efx.push({ t: 'shock', x: z.x, y: z.y + 6, r: 20, life: 0.32, max: 0.32 });
     /* 【表03 FX_CoinDrop】金币掉落：击杀后弹起的金币，掉落物可视化 */
     if (r.efx && r.efx.length < 90) r.efx.push({ t: 'coin', x: z.x + (Math.random() - 0.5) * 10, y: z.y - 6, life: 0.6, max: 0.6 });
     /* 表37 埋点：kill_monster */
@@ -2736,7 +2738,42 @@ const BT = {
     this.capShield(r);
   },
 
-  addFloat(x, y, v, cls) { this.run.floats.push({ x, y, v: String(v), cls, life: 0.7 }); },
+  /* 飘字：
+   * ① 防重叠 —— 高射速武器（16 发/秒）在同一只僵尸身上会瞬间堆出十几段伤害，
+   *    此前全部落在同一个 (x,y)，十几串数字完全叠成一坨，玩家只看到一团糊字，
+   *    既读不出打了多少，也盖住了僵尸本体。现在按已有飘字做纵向错层，
+   *    最多错 4 层，保证每段伤害都读得到。
+   * ② 同帧同点合并 —— 散弹/多弹丸一次打出 5 段伤害时，合并成一段显示总伤，
+   *    而不是并排 5 串数字互相压住。 */
+  addFloat(x, y, v, cls) {
+    const fs = this.run.floats;
+    if (!fs) return;
+    const now = this.run.time || 0;
+    /* 同帧同点：合并为累计值（避免多弹丸并排堆叠） */
+    for (const f of fs) {
+      if (f.cls === cls && Math.abs(f.x - x) < 3 && Math.abs(f.y - y) < 3 && (now - (f.t0 || 0)) < 0.06) {
+        f.v = String((Number(f.v) || 0) + (Number(v) || 0));
+        f.life = 0.7;
+        f.pop = 1;                       /* 合并后做一次弹跳放大 */
+        return;
+      }
+    }
+    /* 纵向错层：找一条不与现有飘字打架的水平线 */
+    let oy = 0;
+    for (let k = 0; k < 4; k++) {
+      const ty = y + oy;
+      let busy = false;
+      for (const f of fs) {
+        if (Math.abs(f.x - x) < 24 && Math.abs(f.y - ty) < 13) { busy = true; break; }
+      }
+      if (!busy) break;
+      oy -= 14;
+    }
+    fs.push({ x, y: y + oy, v: String(v), cls, life: 0.7, t0: now, pop: 1 });
+    /* 上限保护：极端情况（几十只僵尸同时被打）下丢弃最旧的，
+     * 避免数组无限增长拖慢帧率 */
+    if (fs.length > 60) fs.splice(0, fs.length - 60);
+  },
 
   nearest(x, y, ex, maxR, opt) {
     /* 狙击炮台 desc「优先攻击精英」此前从未实现 —— 纯按距离选敌，
@@ -4809,15 +4846,45 @@ const BT = {
         c.beginPath(); c.arc(f.x, f.y, rr * 0.5, 0, 7); c.stroke();
         c.restore();
       } else if (f.t === 'die') {
-        /* 死亡消散：向上飘散的绿色粒子（僵尸倒下的反馈） */
+        /* 死亡爆碎：
+         * 此前只有 7 颗绿色小点向上飘，僵尸倒下几乎没有存在感，
+         * 打一大片时画面上「怪没了」但看不出是怎么没的。
+         * 现在三层叠加：
+         *   ① 暗红血雾（贴地扩散的椭圆，随寿命淡出）
+         *   ② 14 颗绿色尸毒粒子向外飞散（带重力下坠）
+         *   ③ 6 片白色碎块高速抛飞（碎肉/骨屑的打击感）
+         * 全部用 lighter 叠加，成片击杀时画面会有明显的爆裂感。 */
+        const k = 1 - al;
+        /* ① 血雾 */
+        c.save();
+        const mr = 10 + k * 26;
+        const bg = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, mr);
+        bg.addColorStop(0, 'rgba(150,40,44,' + (al * 0.42).toFixed(3) + ')');
+        bg.addColorStop(1, 'rgba(120,30,34,0)');
+        c.fillStyle = bg;
+        c.beginPath(); c.ellipse(f.x, f.y + 4, mr, mr * 0.55, 0, 0, 7); c.fill();
+        c.restore();
+        /* ②③ 粒子与碎块 */
         c.save(); c.globalCompositeOperation = 'lighter';
-        for (let i = 0; i < 7; i++) {
-          const a = (i / 7) * Math.PI * 2, k = 1 - al;
-          const px = f.x + Math.cos(a) * k * 22, py = f.y + Math.sin(a) * k * 15 - k * 26;
-          const pg = c.createRadialGradient(px, py, 0, px, py, 4 * al + 1);
-          pg.addColorStop(0, 'rgba(160,255,150,' + (al * 0.85).toFixed(3) + ')');
+        for (let i = 0; i < 14; i++) {
+          const a = (i / 14) * Math.PI * 2 + (f.seed || 0);
+          const sp2 = 20 + k * 30;
+          const px2 = f.x + Math.cos(a) * sp2;
+          const py2 = f.y + Math.sin(a) * sp2 * 0.62 - k * 22 + k * k * 26;
+          const pr = Math.max(0.8, 4.2 * al);
+          const pg = c.createRadialGradient(px2, py2, 0, px2, py2, pr * 2.2);
+          pg.addColorStop(0, 'rgba(190,255,170,' + (al * 0.9).toFixed(3) + ')');
+          pg.addColorStop(0.45, 'rgba(120,220,110,' + (al * 0.6).toFixed(3) + ')');
           pg.addColorStop(1, 'rgba(120,220,110,0)');
-          c.fillStyle = pg; c.beginPath(); c.arc(px, py, 4 * al + 1, 0, 7); c.fill();
+          c.fillStyle = pg; c.beginPath(); c.arc(px2, py2, pr * 2.2, 0, 7); c.fill();
+        }
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 + 0.7 + (f.seed || 0);
+          const sp3 = 14 + k * 46;
+          const px3 = f.x + Math.cos(a) * sp3;
+          const py3 = f.y + Math.sin(a) * sp3 * 0.5 - k * 16 + k * k * 46;
+          c.fillStyle = 'rgba(255,248,232,' + (al * 0.75).toFixed(3) + ')';
+          c.beginPath(); c.ellipse(px3, py3, 2.4 * al + 0.6, 1.5 * al + 0.4, a, 0, 7); c.fill();
         }
         c.restore();
       } else if (f.t === 'shock') {
@@ -5362,18 +5429,26 @@ const BT = {
       c.fillRect(0, 0, W, H);
     }
 
-    /* 飘字 */
+    /* 飘字：弹出弹跳 + 双层描边 + 元素配色，让每段伤害都读得清、看得爽 */
     c.textAlign = 'center'; c.textBaseline = 'middle';
     for (const f of r.floats) {
       const al = Math.max(0, f.life / 0.7);
       const fs = this.depthScale(f.y);
-      const px = (f.cls === 'crit' ? 17 : f.cls === 'hurt' ? 14 : 13) * fs;
-      c.font = (f.cls === 'crit' ? 'bold ' : '') + px.toFixed(1) + 'px sans-serif';
-      c.globalAlpha = al;
-      /* 描边：让飘字在 3D 场景里不糊 */
-      c.lineWidth = 3; c.strokeStyle = 'rgba(0,0,0,.65)';
+      /* 出现瞬间弹一下再回落（0.7s 寿命的前 0.18s），打击感来源之一 */
+      const age = 0.7 - f.life;
+      const pop = age < 0.18 ? 1 + (1 - age / 0.18) * 0.45 : 1;
+      const px = (f.cls === 'crit' ? 19 : f.cls === 'hurt' ? 15 : 14) * fs * pop;
+      c.font = 'bold ' + px.toFixed(1) + 'px system-ui,"PingFang SC","Microsoft YaHei",sans-serif';
+      c.globalAlpha = Math.min(1, al * 1.35);
+      /* 双层描边：外层黑（保证在任何场景上都读得清）+ 内层亮（勾边提亮） */
+      c.lineJoin = 'round';
+      c.lineWidth = Math.max(2.5, px * 0.28); c.strokeStyle = 'rgba(0,0,0,.85)';
       c.strokeText(f.v, f.x, f.y);
-      c.fillStyle = f.cls === 'crit' ? '#ff4d6d' : f.cls === 'hurt' ? '#ff8fa4' : '#ffe9a8';
+      if (f.cls === 'crit') {
+        c.lineWidth = Math.max(1, px * 0.09); c.strokeStyle = 'rgba(255,255,255,.55)';
+        c.strokeText(f.v, f.x, f.y);
+      }
+      c.fillStyle = f.cls === 'crit' ? '#ff5a72' : f.cls === 'hurt' ? '#ff8fa4' : '#ffe9a8';
       c.fillText(f.v, f.x, f.y);
       c.globalAlpha = 1;
     }
