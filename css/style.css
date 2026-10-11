@@ -319,7 +319,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
 /* 公式说明 / 接口路径这类长文本换行显示，别用省略号吞掉后半句
  * （如"基础伤害 × (1 − 目标剩余护甲%)"、"PUT data/ss/players/{uid}.json"） */
-.kv b.wrapv{max-width:62%;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35;word-break:break-word}
+.kv b.wrapv{display:inline-block;max-width:62%;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35;word-break:break-word}
 .empty{text-align:center;padding:26px 10px;color:var(--txt3);font-size:12px}
 .empty .ic{font-size:32px;display:block;margin-bottom:8px;opacity:.5}
 .btn{padding:8px 14px;border-radius:9px;font-size:12px;font-weight:700;
@@ -346,9 +346,20 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .item .sub{font-size:11px;color:var(--txt3);margin-top:2px;white-space:normal;line-height:1.35;
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
-.item .sub.wrap{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.4}
+/* 严重布局 BUG：.wrap 本意是「完整换行显示、不要用省略号吞掉内容」，
+ * 但它只覆盖了 white-space / overflow / text-overflow，没有覆盖上面
+ * .item .sub / .item .nm 设置的 display:-webkit-box。
+ * -webkit-box 是「收缩包裹」盒子：宽度会缩到内容宽度而不是撑满父容器，
+ * 再叠加 -webkit-line-clamp:2 + overflow:hidden —— 结果比不加 wrap 更糟：
+ * 文字被挤成一条 76px 宽的窄竖条（面板实际可用宽 173px），内容换行堆成
+ * 两三行后被硬生生截断，玩家看到的就是「字挤成一坨、互相压住」。
+ * 这在窄屏（360）上尤其明显，宽屏因为内容本身短而侥幸没暴露。
+ * 修法：显式改回块级盒子并撑满宽度，才能真正「换行完整显示」。 */
+.item .sub.wrap{display:block;width:100%;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.4;
+  -webkit-line-clamp:unset}
 /* 名称过长时换行显示，不要省略号吞掉"火焰喷射器"这类名字 */
-.item .nm.wrap{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
+.item .nm.wrap{display:block;width:100%;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35;
+  -webkit-line-clamp:unset}
 .item .act{flex:0 0 auto}
 .tag{display:inline-block;padding:1px 6px;border-radius:8px;font-size:11px;font-weight:700;margin-right:3px}
 .tag.y{background:rgba(255,215,106,.18);color:var(--gold)}
@@ -817,7 +828,8 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   font-size:13px;color:var(--txt);overflow:hidden;white-space:normal;
   word-break:break-word;line-height:1.35}
 /* 战令档位奖励名过长（如"Lv.20 枪械碎片×20"）时换行，不吞掉奖励内容 */
-.zrow .zi b.wrap{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}
+.zrow .zi b.wrap{display:block;width:100%;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35;
+  -webkit-line-clamp:unset}
 .zrow .zi span{display:block;font-size:11px;color:var(--txt3);line-height:1.45}
 .zrow .st{font-size:11px;padding:2px 7px;border-radius:8px;font-weight:700}
 .zrow .st.on{background:rgba(126,217,87,.18);color:var(--grn);border:1px solid rgba(126,217,87,.4)}
@@ -1266,10 +1278,11 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   --txt:#fff8ec; --txt2:#d3ddf0; --txt3:#9fb0d0;
   --line:rgba(255,255,255,.20);
 }
-/* 圆润字体：优先系统圆体，回退到默认（不改变字号，只换字形） */
+/* 卡片/按钮：与全局保持一致（黑体优先），避免这两类容器内的文字
+ * 又被拉回圆体导致同一屏出现两种清晰度。 */
 #app, .card, .btn{
-  font-family:"Yuanti SC","圆体-简","Hiragino Sans GB","PingFang SC",
-              "Microsoft YaHei","Noto Sans CJK SC",system-ui,sans-serif;
+  font-family:"PingFang SC","HarmonyOS Sans SC","Source Han Sans CN","Noto Sans CJK SC",
+              "Microsoft YaHei","Hiragino Sans GB",system-ui,-apple-system,sans-serif;
 }
 
 /* ① 卡片：大圆角 + 卡通厚描边 + 立体投影 + 顶部高光 */
@@ -1336,13 +1349,25 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   --q-bg1:#4a3f7a; --q-bg2:#332a5c; --q-bg3:#241d42;
   --q-txt:#fff8ee; --q-txt2:#d9cff2;
 }
-/* 圆体字：Q 版关键（系统无圆体时回退黑体，字形仍保持粗圆观感） */
+/* 字体：清晰度优先
+ * 原先首选项是「Yuanti SC 圆体」并全局 font-weight:700 —— 圆体笔画末端圆润、
+ * 没有锐利收尾，再叠加粗体后，站内大量 11~13px 的中文小字笔画直接粘连，
+ * 看起来就是「发糊、看不清」。这是玩家反馈「文字模糊」的主因。
+ * 现在改为：黑体优先（字形方正、边缘锐利），圆体退到回退链后段，
+ * 只在系统完全没有黑体时才启用；字重从 700 降到 500，小字不再糊成一团。
+ * Q 版观感由圆角、配色、描边承担，不依赖字形本身。 */
 html,body,button,input,select,textarea{
-  font-family:"Yuanti SC","Yuanti TC","圆体-简","HYQiHei","Hiragino Sans GB",
-    "PingFang SC","HarmonyOS Sans SC","Source Han Sans CN",
-    "Microsoft YaHei",-apple-system,BlinkMacSystemFont,sans-serif;
-  font-weight:700;
+  font-family:"PingFang SC","HarmonyOS Sans SC","Source Han Sans CN","Noto Sans CJK SC",
+    "Microsoft YaHei","Hiragino Sans GB",system-ui,-apple-system,BlinkMacSystemFont,
+    "Yuanti SC","圆体-简",sans-serif;
+  font-weight:500;
+  /* 深色背景上的浅色中文：关闭次像素渲染可消除彩边与发虚感，字形更锐利 */
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
 }
+/* 小字号：粗体会让笔画粘连，这里统一回落到常规字重并轻微放宽字距 */
+.sub,.tip,.t2,.t3,.dim,.note,.lv,.cd,.cost,.own,.desc,.hint{font-weight:400 !important}
 
 /* ---------- 通用：立体玩具按钮（黄）---------- */
 .btn,.btn.c,.lg-btn,.rs-b,.rs-b.c,.ps-b,.ps-b.c,.ha,.ha.go{
