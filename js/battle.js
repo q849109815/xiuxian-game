@@ -3172,6 +3172,115 @@ const BT = {
    *   ② 待机呼吸浮动 + 开火后坐位移：以前是纯静态色块，看不出炮台是否在工作
    *   ③ 底座元素光环 + 常驻氛围粒子（雪花/火苗/电弧/蓄能），静止也能分辨属性
    *   ④ 贴图未就绪 / 该种类无图时退回原矢量画法，绝不开天窗 */
+  /* ============================================================
+   * 掉落物绘制：材料 / 经验 / 金币
+   * 严重缺失：r.drops 有完整的生成、下落、磁吸、拾取逻辑（update 里一直在跑），
+   *   但全项目【没有任何一处绘制它】—— 玩家击杀僵尸后屏幕上看不到任何掉落，
+   *   只看到材料、经验莫名进账，拾取音效凭空响起。
+   *   这是"游戏里图片/动画缺失"最直接的一处。
+   * 现在补上三类掉落物的可视化（全部带贴地投影，与 3D 场景一致）：
+   *   材料 = 对应颜色的菱形晶体，自转 + 上下浮动 + 元素光晕
+   *   经验 = 青蓝脉动光球 + 两颗环绕光点
+   *   金币 = 旋转金币（宽度随相位变化模拟翻转）+ 金光晕 + 白高光
+   * ============================================================ */
+  drawDrops(c) {
+    const r = this.run;
+    if (!r || !r.drops || !r.drops.length) return;
+    const T = r.time || 0;
+    /* 材料 → 颜色（与背包/图鉴里的材料色一致，便于一眼认出掉了什么） */
+    const MCOL = {
+      M01: '176,196,222', M02: '255,196,92', M03: '198,140,255',
+      M04: '255,120,72', M05: '110,232,214',
+    };
+    for (const d of r.drops) {
+      if (!isFinite(d.x) || !isFinite(d.y)) continue;
+      const sc = this.depthScale(d.y);
+      const ph = T * 5 + (d.x || 0) * 0.07;
+      const bob = Math.sin(ph * 0.62) * 2.4 * sc;
+      const y = d.y + bob;
+      /* 贴地投影 */
+      c.fillStyle = 'rgba(0,0,0,.30)';
+      c.beginPath(); c.ellipse(d.x, d.y + 3 * sc, 6 * sc, 2.4 * sc, 0, 0, 7); c.fill();
+
+      const hasItem = !!(d.items && d.items.length);
+      const isGold = !hasItem && Number(d.gold) > 0;
+
+      if (hasItem) {
+        /* ---- 材料晶体 ---- */
+        const it = d.items[0];
+        const col = MCOL[it] || '255,214,120';
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        const g1 = c.createRadialGradient(d.x, y, 0, d.x, y, 11 * sc);
+        g1.addColorStop(0, 'rgba(' + col + ',.55)');
+        g1.addColorStop(1, 'rgba(' + col + ',0)');
+        c.fillStyle = g1;
+        c.beginPath(); c.arc(d.x, y, 11 * sc, 0, 7); c.fill();
+        c.restore();
+        /* 自转菱形晶体 */
+        c.save();
+        c.translate(d.x, y); c.rotate(ph * 0.85);
+        const cr = 5.4 * sc;
+        c.fillStyle = 'rgba(' + col + ',.95)';
+        c.beginPath(); c.moveTo(0, -cr); c.lineTo(cr * 0.72, 0); c.lineTo(0, cr); c.lineTo(-cr * 0.72, 0);
+        c.closePath(); c.fill();
+        /* 内部亮面（左上受光） */
+        c.fillStyle = 'rgba(255,255,255,.62)';
+        c.beginPath(); c.moveTo(0, -cr); c.lineTo(cr * 0.72, 0); c.lineTo(0, 0);
+        c.closePath(); c.fill();
+        c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 1;
+        c.beginPath(); c.moveTo(0, -cr); c.lineTo(cr * 0.72, 0); c.lineTo(0, cr); c.lineTo(-cr * 0.72, 0);
+        c.closePath(); c.stroke();
+        c.restore();
+      } else if (isGold) {
+        /* ---- 金币：宽度按 cos 变化 = 翻转感 ---- */
+        const r0 = 5.6 * sc;
+        const w = r0 * Math.max(0.26, Math.abs(Math.cos(ph * 0.9)));
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        const g1 = c.createRadialGradient(d.x, y, 0, d.x, y, r0 * 2.6);
+        g1.addColorStop(0, 'rgba(255,232,150,.75)');
+        g1.addColorStop(1, 'rgba(255,180,40,0)');
+        c.fillStyle = g1;
+        c.beginPath(); c.arc(d.x, y, r0 * 2.6, 0, 7); c.fill();
+        c.restore();
+        c.fillStyle = '#ffd76a';
+        c.beginPath(); c.ellipse(d.x, y, w, r0, 0, 0, 7); c.fill();
+        c.strokeStyle = 'rgba(150,92,16,.9)'; c.lineWidth = 1.1;
+        c.beginPath(); c.ellipse(d.x, y, w, r0, 0, 0, 7); c.stroke();
+        if (w > r0 * 0.45) {
+          /* 币面高光（只在正面朝上时可见） */
+          c.fillStyle = 'rgba(255,255,255,.55)';
+          c.beginPath(); c.ellipse(d.x - w * 0.3, y - r0 * 0.3, w * 0.3, r0 * 0.28, -0.5, 0, 7); c.fill();
+        }
+      } else {
+        /* ---- 经验光球 ---- */
+        const r0 = 4.4 * sc;
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        const g1 = c.createRadialGradient(d.x, y, 0, d.x, y, r0 * 2.8);
+        g1.addColorStop(0, 'rgba(235,255,255,.95)');
+        g1.addColorStop(0.32, 'rgba(110,225,255,.8)');
+        g1.addColorStop(1, 'rgba(60,160,240,0)');
+        c.fillStyle = g1;
+        c.beginPath(); c.arc(d.x, y, r0 * 2.8, 0, 7); c.fill();
+        /* 脉动外环 */
+        const pr = (ph * 0.5) % 1;
+        c.strokeStyle = 'rgba(150,235,255,' + ((1 - pr) * 0.5).toFixed(3) + ')';
+        c.lineWidth = 1.4;
+        c.beginPath(); c.ellipse(d.x, y, r0 * (1 + pr * 1.9), r0 * (1 + pr * 1.9) * 0.6, 0, 0, 7); c.stroke();
+        /* 两颗环绕光点 */
+        for (let i = 0; i < 2; i++) {
+          const a0 = ph * 1.5 + i * Math.PI;
+          c.fillStyle = 'rgba(220,250,255,.9)';
+          c.beginPath();
+          c.arc(d.x + Math.cos(a0) * r0 * 1.5, y + Math.sin(a0) * r0 * 0.95, 1.5 * sc, 0, 7);
+          c.fill();
+        }
+        c.restore();
+      }
+    }
+  },
   drawTurrets(c) {
     const r = this.run;
     const CB = (typeof window !== 'undefined') ? window.CHIBI : null;
@@ -5015,10 +5124,52 @@ const BT = {
     this.drawMercs(c);
 
     /* 腐蚀液池 */
+    /* 地面腐蚀液池：翻滚酸泡 + 边缘脉动 + 按寿命淡出。
+     * 修复前：只有一个静态半透明绿圆 —— 而它是【持续掉血的危险区域】，
+     *   既看不出边界、也看不出还剩多久，消失时还会整块"啪"地不见。
+     * 现在：外圈脉动危险环（贴地椭圆，符合透视）+ 内部翻滚酸泡
+     *   + 寿命末端整体淡出，玩家能一眼判断"这里不能站、还要站多久"。 */
     for (const p of r.pools) {
-      c.fillStyle = 'rgba(120,220,90,0.22)';
-      c.beginPath(); c.arc(p.x, p.y, p.r, 0, 7); c.fill();
+      if (!isFinite(p.x) || !isFinite(p.y)) continue;
+      const mx = Number(p.max) || Number(p.life) || 4;
+      const lk = Math.max(0, Math.min(1, (Number(p.life) || 0) / Math.max(0.001, mx)));
+      const sc = this.depthScale(p.y);
+      const T = r.time || 0;
+      const pr = Number(p.r) || 52;
+      const fade = 0.35 + lk * 0.65;          /* 快消失时整体变淡 */
+      /* 池体（贴地椭圆，带纵深） */
+      const g1 = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, pr);
+      g1.addColorStop(0, 'rgba(150,240,110,' + (0.34 * fade).toFixed(3) + ')');
+      g1.addColorStop(0.72, 'rgba(110,205,80,' + (0.26 * fade).toFixed(3) + ')');
+      g1.addColorStop(1, 'rgba(70,150,50,0)');
+      c.fillStyle = g1;
+      c.beginPath(); c.ellipse(p.x, p.y, pr, pr * 0.52, 0, 0, 7); c.fill();
+      /* 脉动危险环 */
+      const pul = 0.5 + Math.sin(T * 2.6 + p.x * 0.05) * 0.5;
+      c.strokeStyle = 'rgba(170,255,120,' + ((0.28 + pul * 0.26) * fade).toFixed(3) + ')';
+      c.lineWidth = 1.8;
+      c.beginPath(); c.ellipse(p.x, p.y, pr * (0.96 + pul * 0.05), pr * 0.52 * (0.96 + pul * 0.05), 0, 0, 7); c.stroke();
+      /* 翻滚酸泡：6 颗在池内上下起伏 + 明暗呼吸 */
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 6; i++) {
+        const sd = (p.x || 0) * 0.03 + i * 1.7;
+        const t2 = (T * 0.55 + i * 0.17) % 1;
+        const bx = p.x + Math.cos(sd * 1.9) * pr * 0.72;
+        const by = p.y + Math.sin(sd * 2.6) * pr * 0.34 - t2 * 9 * sc;
+        const br = (1.6 + Math.sin(T * 3 + i) * 0.6) * sc;
+        const a2 = (1 - t2) * 0.55 * fade;
+        const g2 = c.createRadialGradient(bx, by, 0, bx, by, br * 2.6);
+        g2.addColorStop(0, 'rgba(225,255,190,' + a2.toFixed(3) + ')');
+        g2.addColorStop(1, 'rgba(120,220,90,0)');
+        c.fillStyle = g2;
+        c.beginPath(); c.arc(bx, by, br * 2.6, 0, 7); c.fill();
+      }
+      c.restore();
     }
+
+    /* 掉落物（材料 / 经验 / 金币） */
+    this.drawDrops(c);
 
     /* 特效 */
     for (const f of r.efx) {
