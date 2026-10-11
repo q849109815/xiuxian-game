@@ -13,7 +13,7 @@
 
   var BASE = 'assets/chibi/';
   /* 贴图缓存戳：换美术时改这里，强制玩家浏览器拉取新图（否则会一直读旧缓存） */
-  var IMG_V = '20261218a';
+  var IMG_V = '20261219a';
   var CACHE = {};   /* key -> {im,w,h,ok} */
   var TRIED = {};   /* key -> 1  已经发起过请求 */
 
@@ -27,6 +27,14 @@
   /* 炮台 id → 贴图名（Q 版二头身炮塔，与美术产出一一对应） */
   var TURMAP = {
     T_HB: 't_hb', T_HY: 't_hy', T_DC: 't_dc', T_JJ: 't_jj'
+  };
+
+  /* 佣兵 id → 贴图名（Q 版二头身友军，与美术产出一一对应）
+   * 此前这四张图只在酒馆/佣兵面板当头像用，战斗里一律走 SPR 抠底头像或几何兜底，
+   * 画风与同一战场上的僵尸、主角、炮台不一致。现在接到战斗渲染上，
+   * 与僵尸走同一条 CHIBI 管线：抠底透明 PNG + 接触阴影 + 受击白闪。 */
+  var MERCMAP = {
+    M_SD: 'm_sd', M_JQ: 'm_jq', M_JZ: 'm_jz', M_SJ: 'm_sj'
   };
 
   /* 开关：整体启用 / 停用（停用后完全走原来的矢量画法） */
@@ -70,6 +78,12 @@
   function keyOfTurret(id) {
     if (!id) return null;
     return TURMAP[id] || null;
+  }
+
+  /* 按佣兵 id 取贴图名（召唤物返回 null，走各自的 3D 造型） */
+  function keyOfMerc(id) {
+    if (!id) return null;
+    return MERCMAP[id] || null;
   }
 
   /* 画一个 Q 版单位：
@@ -120,7 +134,9 @@
     keyOfZombie: keyOfZombie,
     keyOfGun: keyOfGun,
     keyOfTurret: keyOfTurret,
+    keyOfMerc: keyOfMerc,
     TURMAP: TURMAP,
+    MERCMAP: MERCMAP,
     draw: draw,
     has: function (k) { var c = CACHE[k]; return !!(c && c.ok); },
     ready: function (k) { var c = CACHE[k]; return !!(c && c.ok); },
