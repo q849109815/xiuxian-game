@@ -134,7 +134,14 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 .lg-net{margin-top:6px;text-align:center;font-size:11px;color:var(--txt3)}
 
 /* ============ 基地主界面 ============ */
-#home{background:linear-gradient(180deg,#1a2637 0%,#20304a 45%,#2c1c0c 100%)}
+/* 主界面背景：原为纯线性渐变，整体偏平、缺少光的方向性。
+ * 叠加两团柔和环境光（顶部偏冷的青蓝、底部偏暖的橙），
+ * 与战斗画面的氛围层（左上青 / 右下橙）同一套语言，
+ * 让主界面与战斗画面观感统一，且纯 CSS、不增加任何绘制开销。 */
+#home{background:
+  radial-gradient(ellipse 130% 62% at 50% 4%, rgba(126,186,255,.17) 0%, rgba(126,186,255,0) 62%),
+  radial-gradient(ellipse 96% 52% at 14% 96%, rgba(255,152,62,.14) 0%, rgba(255,152,62,0) 64%),
+  linear-gradient(180deg,#1a2637 0%,#20304a 45%,#2c1c0c 100%)}
 .hm-bg{position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(ellipse at 50% 18%,rgba(120,160,220,.18),transparent 55%),
              radial-gradient(circle at 15% 70%,rgba(116,92,60,.3),transparent 40%)}
