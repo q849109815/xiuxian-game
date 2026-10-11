@@ -712,7 +712,11 @@ const MAIN = {
        *   别人的成绩改小。 */
       const i = lb.findIndex((x) => (x.uid || x.u) === P.uid);
       if (i >= 0) lb[i] = this.mergeRow(lb[i], row); else lb.push(row);
-      lb.sort((a, b) => (b.eb || 0) - (a.eb || 0) || b.pw - a.pw);
+      /* 比较器缺兜底：原来是 `|| b.pw - a.pw`，pw 缺失时整条表达式返回 NaN。
+       * JS 的 sort 遇到 NaN 比较器结果是未定义行为（实测 V8 下不交换），
+       * 排序直接失效：实测 A(500)/C(900)/D(700) 排出来是 500、900、700。
+       * 与下面 topUnion() 里 `(b.pw || 0) - (a.pw || 0)` 保持同一口径。 */
+      lb.sort((a, b) => (b.eb || 0) - (a.eb || 0) || (b.pw || 0) - (a.pw || 0));
       /* 保留各榜 Top100 的并集（上限 200）。
        * 此前只按 eb 排序截断 50 条，于是「战力很高但无尽层数低」的玩家
        * 永远挤不进 leaderboard.json —— 游戏端切到战力榜时压根没有他，
