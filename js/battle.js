@@ -2940,6 +2940,112 @@ const BT = {
     return 0.55 + Math.pow(t, 0.85) * 0.45;
   },
 
+  /* ============================================================
+   * 氛围层 A：斜射体积光（god rays）
+   * 此前战斗画面只有「背景图 + 两团径向光晕」，是静止且平的，
+   * 缺少空气感与光的方向性。这里从画面上方补几道缓慢摆动的柔光束，
+   * 用 lighter 叠加，只提亮不遮挡，对任何背景图都成立。
+   * ============================================================ */
+  drawGodRays(c, W, H, t) {
+    if (!c || !isFinite(W) || !isFinite(H)) return;
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 4; i++) {
+      const base = W * (0.15 + i * 0.24);
+      const sway = Math.sin(t * 0.21 + i * 1.7) * W * 0.05;
+      const x = base + sway;
+      const wT = W * 0.045, wB = W * 0.17;
+      /* 明暗缓慢呼吸，避免光束看起来像贴上去的静态贴图 */
+      const al = 0.115 + Math.sin(t * 0.33 + i * 2.1) * 0.040;
+      if (al <= 0.005) continue;
+      const g = c.createLinearGradient(x, -10, x + W * 0.10, H);
+      g.addColorStop(0, 'rgba(255,216,156,' + al.toFixed(3) + ')');
+      g.addColorStop(0.5, 'rgba(255,190,120,' + (al * 0.40).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(255,168,88,0)');
+      c.fillStyle = g;
+      c.beginPath();
+      c.moveTo(x - wT, -10);
+      c.lineTo(x + wT, -10);
+      c.lineTo(x + wB + W * 0.10, H + 10);
+      c.lineTo(x - wB + W * 0.10, H + 10);
+      c.closePath(); c.fill();
+    }
+    c.restore();
+  },
+
+  /* 灰烬光点精灵：一次性生成离屏贴图，之后只 drawImage。
+   * 若每帧为每个粒子新建 createRadialGradient，46 个粒子 × 60fps
+   * 会产生 2760 次渐变构造，低端机会掉帧。 */
+  _ambSprite() {
+    if (this._ambSP) return this._ambSP;
+    if (typeof document === 'undefined') return null;
+    const s = 32;
+    const cv = document.createElement('canvas');
+    cv.width = s; cv.height = s;
+    const g2 = cv.getContext('2d');
+    const rg = g2.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    rg.addColorStop(0, 'rgba(255,240,206,1)');
+    rg.addColorStop(0.34, 'rgba(255,186,110,.62)');
+    rg.addColorStop(1, 'rgba(255,138,58,0)');
+    g2.fillStyle = rg; g2.fillRect(0, 0, s, s);
+    this._ambSP = cv;
+    return cv;
+  },
+
+  /* ============================================================
+   * 氛围层 B：飘浮灰烬 + 暗角
+   * ① 灰烬：末日战场该有的悬浮余烬，缓慢上浮 + 横向摆动 + 明暗呼吸，
+   *    让画面"有空气在流动"，是成本最低的氛围感来源。
+   * ② 暗角：四角压暗、中心提亮，把玩家视线收拢到战场中央，
+   *    同时弱化背景图边缘的粗糙拼接感。
+   * ============================================================ */
+  drawAmbient(c, W, H, t, dt) {
+    if (!c || !isFinite(W) || !isFinite(H) || W <= 0 || H <= 0) return;
+    const sp = this._ambSprite();
+    if (sp) {
+      if (!this._amb || !this._ambWH || this._ambWH.W !== W || this._ambWH.H !== H) {
+        this._amb = [];
+        for (let i = 0; i < 46; i++) {
+          this._amb.push({
+            x: Math.random() * W, y: Math.random() * H,
+            r: 1.1 + Math.random() * 2.6,
+            sp: 7 + Math.random() * 19,          /* 上浮速度 px/s */
+            dx: (Math.random() - 0.5) * 12,      /* 横向漂移 */
+            ph: Math.random() * 6.283,
+            a: 0.16 + Math.random() * 0.40,
+          });
+        }
+        this._ambWH = { W: W, H: H };
+      }
+      const d = (typeof dt === 'number' && isFinite(dt)) ? Math.max(0, Math.min(0.05, dt)) : 0.016;
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      for (const p of this._amb) {
+        p.y -= p.sp * d;
+        p.x += (p.dx + Math.sin(t * 0.6 + p.ph) * 8) * d;
+        if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
+        if (p.x < -10) p.x = W + 10; else if (p.x > W + 10) p.x = -10;
+        const tw = 0.5 + 0.5 * Math.sin(t * 1.5 + p.ph);   /* 明暗呼吸 */
+        const a = p.a * tw;
+        if (a <= 0.012) continue;
+        const s = p.r * 5.2;
+        c.globalAlpha = Math.min(1, a);
+        c.drawImage(sp, p.x - s / 2, p.y - s / 2, s, s);
+      }
+      c.globalAlpha = 1;
+      c.restore();
+    }
+    /* 暗角 */
+    c.save();
+    const vg = c.createRadialGradient(W * 0.5, H * 0.52, Math.min(W, H) * 0.26,
+      W * 0.5, H * 0.52, Math.max(W, H) * 0.78);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(0.62, 'rgba(0,0,0,.10)');
+    vg.addColorStop(1, 'rgba(0,0,0,.46)');
+    c.fillStyle = vg; c.fillRect(0, 0, W, H);
+    c.restore();
+  },
+
   /* ===== 真 3D 透视地面：消失点 + 大气雾化 + 明暗纵深条带 + 收敛网格 ===== */
   drawPerspGround(c) {
     const W = this.W, H = this.H, wall = this.wallY || (H - 96);
@@ -4689,6 +4795,12 @@ const BT = {
     /* 2.5D 透视地面网格（产生纵深） */
     this.drawPerspGround(c);
 
+    /* 氛围层 A：斜射体积光
+     * 必须画在地面【之后】：体积光是空气中的散射，若画在地面之下会被
+     * 地面网格完全覆盖（实测关掉后画面几乎无变化）。用 lighter 叠加，
+     * 只提亮不遮挡，因此也不会糊住后面的僵尸。 */
+    this.drawGodRays(c, W, H, r.time || 0);
+
     /* ---- 射程指示环 ----
      * 射程真正生效后，玩家必须能看见"我能打到多远"，否则短射程武器
      * （散弹 259px / 电击棒 253px）在玩家眼里就是"经常不开枪"的 BUG。
@@ -5440,6 +5552,22 @@ const BT = {
     /* 手持武器：跟随瞄准方向旋转 + 后坐力 + 枪口火光
      * Q 版贴图里已经画了枪，再叠加一次会出现两把枪，故此处跳过。 */
     if (!heroChi) this.drawHeldGun(c, r, aim);
+    /* 枪口环境照明：开火瞬间以玩家为中心向外照亮一小片地面与空气。
+     * 此前枪口火光只是枪口那一小簇，画面其余部分完全不受影响，
+     * 高射速武器连发时缺少「战场被火光映亮」的爽感。 */
+    if (r.muzzleT > 0) {
+      const ma = Math.min(1, r.muzzleT / 0.07);
+      c.save();
+      c.globalCompositeOperation = 'lighter';
+      const mr = 124, my = r.py - 14;
+      const mg = c.createRadialGradient(r.px, my, 0, r.px, my, mr);
+      mg.addColorStop(0, 'rgba(255,206,128,' + (0.30 * ma).toFixed(3) + ')');
+      mg.addColorStop(0.42, 'rgba(255,164,72,' + (0.13 * ma).toFixed(3) + ')');
+      mg.addColorStop(1, 'rgba(255,130,40,0)');
+      c.fillStyle = mg;
+      c.beginPath(); c.arc(r.px, my, mr, 0, 7); c.fill();
+      c.restore();
+    }
     if (r.shield > 0) {
       c.strokeStyle = 'rgba(92,216,255,0.75)'; c.lineWidth = 2.5;
       c.beginPath(); c.arc(r.px, r.py, 26, 0, 7); c.stroke();
@@ -5471,6 +5599,15 @@ const BT = {
       c.fillStyle = f.cls === 'crit' ? '#ff5a72' : f.cls === 'hurt' ? '#ff8fa4' : '#ffe9a8';
       c.fillText(f.v, f.x, f.y);
       c.globalAlpha = 1;
+    }
+
+    /* 氛围层 B：飘浮灰烬 + 暗角（画在最顶层，覆盖全画面，不参与遮挡关系） */
+    {
+      const _nt = (typeof performance !== 'undefined' && performance.now)
+        ? performance.now() : Date.now();
+      const _dt = this._ambT ? Math.max(0, Math.min(0.05, (_nt - this._ambT) / 1000)) : 0.016;
+      this._ambT = _nt;
+      this.drawAmbient(c, W, H, r.time || 0, _dt);
     }
 
     /* 屏幕震动收尾：与 draw() 开头的 save/translate 配对 */
