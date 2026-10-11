@@ -451,6 +451,13 @@ const BT = {
           }
         }
         ks.push('hero_base');
+        /* 已雇佣的佣兵一并预载：否则开局先画几何色块、图到了再突变，观感突兀 */
+        try {
+          for (const mid of (p && p.mercs ? p.mercs : [])) {
+            const mk = CHIBI.keyOfMerc(mid);
+            if (mk && ks.indexOf(mk) < 0) ks.push(mk);
+          }
+        } catch (e) { /* 佣兵预载失败不影响战斗 */ }
         CHIBI.preload(ks);
       }
     } catch (e) { /* 预载失败不影响战斗 */ }
@@ -3255,6 +3262,18 @@ const BT = {
       if (m.isSummon && m.def.id === 'SUM_DRONE') { this.drawDrone3d(c, m.x, y, sc, r); }
       else if (m.isSummon && m.def.id === 'SUM_CAR') { this.drawCar3d(c, m.x, y, sc); }
       else {
+        /* Q 版佣兵贴图优先：已抠底透明 PNG，与同场僵尸/主角/炮台同一画风。
+         * 贴图没到位 / 该佣兵没有贴图 → 自动退回立绘或几何兜底，不会开天窗。 */
+        let mChi = false;
+        const _mk = (!m.isSummon && typeof CHIBI !== 'undefined' && CHIBI)
+          ? (CHIBI.keyOfMerc(m.def && m.def.id) || null) : null;
+        if (_mk && (CHIBI.ready(_mk) || CHIBI.ensure(_mk))) {
+          mChi = CHIBI.draw(c, _mk, m.x, y + 4 * sc, 50 * sc, {
+            bob: Math.sin((r.time || 0) * 4 + (m.x || 0) * 0.05) * 1.1 * sc
+          });
+        }
+        if (mChi) { /* Q 版已绘制：跳过立绘与几何两套画法 */ }
+        else {
         const sp = SPR.get(m.def.img);
         if (sp) {
           const h = 46 * sc, w = h * (sp.w / sp.h);
@@ -3270,6 +3289,7 @@ const BT = {
         } else {
           /* 立绘未就绪时的 3D 兜底：士兵几何体（圆柱躯干+球头+手持枪） */
           this.drawMercShape(c, m.x, y, 15 * sc, m.def);
+        }
         }
       }
 
