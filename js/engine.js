@@ -1924,12 +1924,32 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       const sh = Math.round((r.wallMax || r.maxHp || 1000) * 0.3);
       r.shield = (r.shield || 0) + sh;
       r.maxShield = Math.max(r.maxShield || 0, r.shield);
-      return { ok: true, shield: sh };
+      /* 与 battle.js 里所有护盾来源同一口径：加完立刻按
+       * 「防线最大血量 × SHIELD_CAP_MUL(1.5)」封顶。
+       * 此前这里没有封顶，是唯一一处绕过上限的护盾来源：
+       *   连吃多个护盾发生器可以把 maxShield 抬到封顶之上，
+       *   下一帧 battle 的 capShield 又会把它夹回封顶值 ——
+       *   玩家看到护盾条先涨后掉，超出部分等于白吃，且无任何提示。
+       *   现在就地封顶，并如实回报实际获得量。 */
+      try { if (window.BT && BT.capShield) BT.capShield(r); } catch (e) {}
+      return { ok: true, shield: sh, now: r.shield };
     }
     if (id === 'I03') {
-      r.buffAtk = 0.30;
-      r.buffAtkT = 30;                 /* 30 秒 */
-      return { ok: true, atk: 0.3 };
+      /* BUG（同类消耗品口径不一致，多用的那几个白扔）：
+       *   这里原来是【覆盖式】赋值 `r.buffAtk = 0.30; r.buffAtkT = 30`。
+       *   而「战斗外使用 → 下一场自动生效」是【预置多份】的：
+       *     applyPendingItems() 按数量循环调用本函数，每次都覆盖成同一个值，
+       *     pendingItem 却在循环结束后被整体清空。
+       *   实测：预置 3 个 I03 → n=3（3 个全部扣掉、面板显示「已生效」），
+       *         实际 buffAtk 只有 0.30 / buffAtkT 只有 30 秒 —— 2 个纯白扔。
+       *   对照 I02 护盾发生器：`r.shield += sh` 是累加的，
+       *         同样的 3 个正确叠成 900（300×3）——同一批道具两种口径。
+       *   现在改成【时长叠加、幅值取上限】：连吃 3 个 = 90 秒的 +30%，
+       *   而不是把第 2、3 个直接吞掉。幅值不累加（否则 10 个 = +300%，
+       *   数值失控），与道具描述「攻击 +30%，持续 30 秒」一致。 */
+      r.buffAtk = Math.max(Number(r.buffAtk) || 0, 0.30);
+      r.buffAtkT = (Number(r.buffAtkT) || 0) + 30;   /* 30 秒，可叠加 */
+      return { ok: true, atk: r.buffAtk, sec: r.buffAtkT };
     }
     return { ok: false, msg: '不可在战斗中使用' };
   },
