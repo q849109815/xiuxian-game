@@ -3765,6 +3765,333 @@ const BT = {
     c.restore();
   },
 
+  /* 元素三段色（核心 / 主体 / 余晖）—— 与子弹、炮台开火共用同一套配色，
+   * 保证「同一个元素在任何地方都是同一个颜色」，玩家能一眼分辨。
+   * 元素表 EX.elements 里只有 火/冰/电/风/物，毒与暗是技能专属，在此补齐。 */
+  elRGB(el) {
+    if (el === '火') return ['255,248,214', '255,150,52', '220,60,16'];
+    if (el === '冰') return ['235,252,255', '120,220,255', '52,140,235'];
+    if (el === '电') return ['242,232,255', '186,132,255', '116,54,235'];
+    if (el === '毒') return ['232,255,208', '146,236,96', '66,176,38'];
+    if (el === '风') return ['232,255,240', '123,232,160', '40,170,110'];
+    if (el === '暗') return ['236,214,255', '150,86,220', '58,20,96'];
+    return ['255,248,222', '255,208,96', '236,132,32'];
+  },
+
+  /* 爆炸（boom）：按【元素】分成七种截然不同的爆开表现。
+   * 此前不管火/冰/电/毒/物，boom 一律画同一个橙色火球 ——
+   * 玩家释放冰冻手雷、电磁穿刺看到的也是一团火，元素感完全丢失。
+   * 现在每种元素有自己的爆开形态、碎片与颜色。 */
+  drawBoom(c, f, al) {
+    if (!isFinite(f.x) || !isFinite(f.y)) return;
+    const a = Math.max(0, Math.min(1, al));
+    const k = 1 - a;
+    const el = f.el || '火';
+    const [c0, c1, c2] = this.elRGB(el);
+    const rr = Math.max(1, (Number(f.r) || 60) * (1.2 - a * 0.5));
+    const seed = f.seed || ((f.x || 0) * 0.037 + (f.y || 0) * 0.021);
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+
+    /* 贴地冲击环（所有元素共有，给出"炸在地面上"的透视锚点） */
+    c.strokeStyle = 'rgba(' + c1 + ',' + (a * 0.55).toFixed(3) + ')';
+    c.lineWidth = 3;
+    c.beginPath(); c.ellipse(f.x, f.y, rr, rr * 0.38, 0, 0, 7); c.stroke();
+    c.strokeStyle = 'rgba(' + c0 + ',' + (a * 0.6).toFixed(3) + ')';
+    c.lineWidth = 2.4;
+    c.beginPath(); c.ellipse(f.x, f.y, rr * 1.35, rr * 0.5, 0, 0, 7); c.stroke();
+
+    if (el === '冰') {
+      /* 冰：蓝白晶核 + 六角冰棱向外刺出 + 8 片飞散冰屑 + 寒霜外环 */
+      const g = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, Math.max(1, rr * 0.9));
+      g.addColorStop(0, 'rgba(' + c0 + ',' + (a * 0.9).toFixed(3) + ')');
+      g.addColorStop(0.45, 'rgba(' + c1 + ',' + (a * 0.6).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(' + c2 + ',0)');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(f.x, f.y, Math.max(1, rr * 0.9), 0, 7); c.fill();
+      c.strokeStyle = 'rgba(235,252,255,' + (a * 0.95).toFixed(3) + ')';
+      c.lineWidth = 2;
+      for (let i = 0; i < 6; i++) {
+        const ang = seed + i * Math.PI / 3 + k * 0.6;
+        const L = rr * (1.05 - k * 0.3);
+        c.beginPath();
+        c.moveTo(f.x + Math.cos(ang) * rr * 0.2, f.y + Math.sin(ang) * rr * 0.16);
+        c.lineTo(f.x + Math.cos(ang) * L, f.y + Math.sin(ang) * L * 0.78);
+        c.stroke();
+      }
+      for (let i = 0; i < 8; i++) {
+        const ang = seed * 1.7 + i * 0.79;
+        const d = rr * (0.7 + k * 1.6);
+        const px = f.x + Math.cos(ang) * d, py = f.y + Math.sin(ang) * d * 0.7;
+        c.save(); c.translate(px, py); c.rotate(ang + k * 2);
+        c.fillStyle = 'rgba(235,252,255,' + (a * 0.85).toFixed(3) + ')';
+        c.beginPath(); c.moveTo(3.4, 0); c.lineTo(0, 1.9); c.lineTo(-3.4, 0); c.lineTo(0, -1.9);
+        c.closePath(); c.fill(); c.restore();
+      }
+    } else if (el === '电') {
+      /* 电：球形闪电核心（明暗闪烁）+ 5 条放射锯齿电弧 + 白色爆闪环 */
+      const fl = 0.7 + Math.sin(k * 40) * 0.3;
+      const g = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, Math.max(1, rr * 0.85 * fl));
+      g.addColorStop(0, 'rgba(255,255,255,' + (a * 0.95).toFixed(3) + ')');
+      g.addColorStop(0.4, 'rgba(' + c1 + ',' + (a * 0.75).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(' + c2 + ',0)');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(f.x, f.y, Math.max(1, rr * 0.85 * fl), 0, 7); c.fill();
+      for (let i = 0; i < 5; i++) {
+        const ang = seed * 2.1 + i * (Math.PI * 2 / 5);
+        c.strokeStyle = 'rgba(245,235,255,' + (a * 0.9).toFixed(3) + ')';
+        c.lineWidth = 1.8;
+        c.beginPath(); c.moveTo(f.x, f.y);
+        for (let s = 1; s <= 4; s++) {
+          const L = rr * (1.35 * s / 4) * (1 - k * 0.2);
+          const j = Math.sin(seed * 7 + i * 3 + s * 2.3 + k * 12) * rr * 0.16;
+          c.lineTo(f.x + Math.cos(ang) * L - Math.sin(ang) * j,
+                   f.y + Math.sin(ang) * L * 0.78 + Math.cos(ang) * j * 0.78);
+        }
+        c.stroke();
+      }
+      c.strokeStyle = 'rgba(255,255,255,' + (a * 0.7 * fl).toFixed(3) + ')';
+      c.lineWidth = 2.6;
+      c.beginPath(); c.arc(f.x, f.y, Math.max(1, rr * 1.1), 0, 7); c.stroke();
+    } else if (el === '毒') {
+      /* 毒：酸液蘑菇云（上涌下坠）+ 6 团翻滚毒雾 + 下坠液滴 */
+      const g = c.createRadialGradient(f.x, f.y - rr * 0.25, 0, f.x, f.y - rr * 0.25, Math.max(1, rr * 1.1));
+      g.addColorStop(0, 'rgba(' + c0 + ',' + (a * 0.8).toFixed(3) + ')');
+      g.addColorStop(0.5, 'rgba(' + c1 + ',' + (a * 0.5).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(' + c2 + ',0)');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(f.x, f.y - rr * 0.25, Math.max(1, rr * 1.1), 0, 7); c.fill();
+      for (let i = 0; i < 6; i++) {
+        const t2 = (k * 0.9 + i * 0.13) % 1;
+        const ang = seed + i * 1.05;
+        const d = rr * (0.35 + t2 * 1.15);
+        const px = f.x + Math.cos(ang) * d;
+        const py = f.y + Math.sin(ang) * d * 0.6 - t2 * rr * 0.75;
+        const pr = Math.max(1, rr * (0.3 + t2 * 0.28));
+        const g2 = c.createRadialGradient(px, py, 0, px, py, pr);
+        g2.addColorStop(0, 'rgba(' + c0 + ',' + ((1 - t2) * 0.45 * a).toFixed(3) + ')');
+        g2.addColorStop(1, 'rgba(' + c2 + ',0)');
+        c.fillStyle = g2;
+        c.beginPath(); c.arc(px, py, pr, 0, 7); c.fill();
+      }
+      for (let i = 0; i < 4; i++) {
+        const ang = seed * 3 + i * 1.6;
+        const d = rr * (0.5 + k * 1.2);
+        const px = f.x + Math.cos(ang) * d, py = f.y + Math.sin(ang) * d * 0.6 + k * k * 10;
+        c.fillStyle = 'rgba(' + c1 + ',' + (a * 0.75).toFixed(3) + ')';
+        c.beginPath(); c.ellipse(px, py, 2.2, 3.1, 0, 0, 7); c.fill();
+      }
+    } else if (el === '风') {
+      /* 风：三道弯月风刃向外旋切 + 青绿气旋环 + 气流点 */
+      for (let i = 0; i < 3; i++) {
+        const ang = seed * 1.3 + i * Math.PI * 2 / 3 + k * 2.2;
+        const d = rr * (0.75 + k * 0.95);
+        c.save(); c.translate(f.x + Math.cos(ang) * d, f.y + Math.sin(ang) * d * 0.7);
+        c.rotate(ang);
+        c.strokeStyle = 'rgba(' + c0 + ',' + (a * 0.85).toFixed(3) + ')';
+        c.lineWidth = 2.6;
+        c.beginPath(); c.arc(0, 0, Math.max(1, rr * 0.42), -0.9, 0.9); c.stroke();
+        c.restore();
+      }
+      c.strokeStyle = 'rgba(' + c1 + ',' + (a * 0.55).toFixed(3) + ')';
+      c.lineWidth = 2;
+      c.beginPath(); c.ellipse(f.x, f.y, Math.max(1, rr * 1.15), Math.max(1, rr * 0.62), 0, 0, 7); c.stroke();
+    } else if (el === '暗') {
+      /* 暗：内缩的湮灭球（越到后期越往中心塌）+ 紫色残影环 + 外溢暗雾 */
+      const inr = Math.max(1, rr * (0.95 - k * 0.55));
+      const g = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, inr);
+      g.addColorStop(0, 'rgba(20,4,36,' + (a * 0.92).toFixed(3) + ')');
+      g.addColorStop(0.62, 'rgba(' + c1 + ',' + (a * 0.7).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(' + c2 + ',0)');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(f.x, f.y, inr, 0, 7); c.fill();
+      for (let i = 0; i < 3; i++) {
+        const rk = 1.25 + i * 0.34 + k * 0.5;
+        c.strokeStyle = 'rgba(' + c0 + ',' + (a * (0.5 - i * 0.13)).toFixed(3) + ')';
+        c.lineWidth = 2.2 - i * 0.6;
+        c.beginPath(); c.arc(f.x, f.y, Math.max(1, rr * rk), 0, 7); c.stroke();
+      }
+      for (let i = 0; i < 5; i++) {
+        const ang = seed * 2.7 + i * 1.26;
+        const d = rr * (0.6 + k * 1.3);
+        const px = f.x + Math.cos(ang) * d, py = f.y + Math.sin(ang) * d * 0.68 - k * 6;
+        const pr = Math.max(1, rr * 0.3);
+        const g2 = c.createRadialGradient(px, py, 0, px, py, pr);
+        g2.addColorStop(0, 'rgba(' + c1 + ',' + (a * 0.4).toFixed(3) + ')');
+        g2.addColorStop(1, 'rgba(' + c2 + ',0)');
+        c.fillStyle = g2;
+        c.beginPath(); c.arc(px, py, pr, 0, 7); c.fill();
+      }
+    } else if (el === '物') {
+      /* 物：碎石爆散（无火） —— 土黄冲击云 + 8 块翻滚石块 + 尘土环 */
+      const g = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, Math.max(1, rr * 0.85));
+      g.addColorStop(0, 'rgba(255,246,214,' + (a * 0.7).toFixed(3) + ')');
+      g.addColorStop(0.45, 'rgba(206,168,110,' + (a * 0.45).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(120,92,56,0)');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(f.x, f.y, Math.max(1, rr * 0.85), 0, 7); c.fill();
+      for (let i = 0; i < 8; i++) {
+        const ang = seed * 1.9 + i * 0.785;
+        const d = rr * (0.55 + k * 1.5);
+        const px = f.x + Math.cos(ang) * d, py = f.y + Math.sin(ang) * d * 0.68 + k * k * 12;
+        c.save(); c.translate(px, py); c.rotate(ang + k * 5);
+        c.fillStyle = 'rgba(188,158,116,' + (a * 0.85).toFixed(3) + ')';
+        c.beginPath(); c.moveTo(3.6, 0); c.lineTo(0.6, 2.6); c.lineTo(-3.6, 0.6); c.lineTo(-1.2, -2.4);
+        c.closePath(); c.fill(); c.restore();
+      }
+    } else {
+      /* 火（默认）：熔核火球 + 双层焰环 + 6 颗带下坠的火星 + 上升烟柱 */
+      const g = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, Math.max(1, rr * 0.9));
+      g.addColorStop(0, 'rgba(' + c0 + ',' + (a * 0.9).toFixed(3) + ')');
+      g.addColorStop(0.42, 'rgba(' + c1 + ',' + (a * 0.6).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(' + c2 + ',0)');
+      c.fillStyle = g;
+      c.beginPath(); c.arc(f.x, f.y, Math.max(1, rr * 0.9), 0, 7); c.fill();
+      for (let i = 0; i < 2; i++) {
+        const rk = 1.1 + i * 0.5;
+        c.strokeStyle = 'rgba(' + (i ? c1 : c0) + ',' + (a * (i ? 0.5 : 0.8)).toFixed(3) + ')';
+        c.lineWidth = 2.6 - i * 0.9;
+        c.beginPath(); c.ellipse(f.x, f.y, Math.max(1, rr * rk), Math.max(1, rr * rk * 0.6), 0, 0, 7); c.stroke();
+      }
+      for (let i = 0; i < 6; i++) {
+        const ang = seed * 1.4 + i * 1.05;
+        const d = rr * (0.6 + k * 1.7);
+        const px = f.x + Math.cos(ang) * d, py = f.y + Math.sin(ang) * d * 0.68 + k * k * 8;
+        const pr = Math.max(0.5, 2.3 * (a - k * 0.3));
+        const g3 = c.createRadialGradient(px, py, 0, px, py, Math.max(0.5, pr * 2.2));
+        g3.addColorStop(0, 'rgba(255,250,220,' + (a * 0.95).toFixed(3) + ')');
+        g3.addColorStop(1, 'rgba(255,140,40,0)');
+        c.fillStyle = g3;
+        c.beginPath(); c.arc(px, py, Math.max(0.5, pr * 2.2), 0, 7); c.fill();
+      }
+    }
+    c.restore();
+  },
+
+  /* 冲击波（nova）：按【元素】分化。
+   * 此前 nova 固定一条青色圆环 —— BOSS 的暗影冲击、毒雾领域
+   * 和冰冻新星画出来完全一样，玩家无法预判接下来要吃什么伤害。 */
+  drawNova(c, f, al) {
+    if (!isFinite(f.x) || !isFinite(f.y)) return;
+    const a = Math.max(0, Math.min(1, al));
+    const k = 1 - a;
+    const el = f.el || '物';
+    const [c0, c1, c2] = this.elRGB(el);
+    const R = Math.max(1, (Number(f.r) || 46) * (1.25 - a * 0.4));
+    const seed = f.seed || ((f.x || 0) * 0.031 + (f.y || 0) * 0.017);
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+
+    /* 主冲击环（所有元素共有，标出伤害范围边界） */
+    c.strokeStyle = 'rgba(' + c1 + ',' + a.toFixed(3) + ')';
+    c.lineWidth = 2.5;
+    c.beginPath(); c.ellipse(f.x, f.y, R, R * 0.72, 0, 0, 7); c.stroke();
+    /* 外圈余波（更淡更大，强化扩散感） */
+    c.strokeStyle = 'rgba(' + c0 + ',' + (a * 0.42).toFixed(3) + ')';
+    c.lineWidth = 1.6;
+    c.beginPath(); c.ellipse(f.x, f.y, R * 1.22, R * 0.88, 0, 0, 7); c.stroke();
+
+    if (el === '火') {
+      /* 火：环上挂 12 团翻滚火舌 */
+      for (let i = 0; i < 12; i++) {
+        const ang = seed + i * Math.PI / 6 + k * 0.8;
+        const px = f.x + Math.cos(ang) * R, py = f.y + Math.sin(ang) * R * 0.72;
+        const pr = Math.max(1, R * 0.11 * (0.6 + Math.sin(i * 2.1 + k * 6) * 0.4));
+        const g = c.createRadialGradient(px, py, 0, px, py, pr * 2);
+        g.addColorStop(0, 'rgba(' + c0 + ',' + (a * 0.8).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(' + c2 + ',0)');
+        c.fillStyle = g;
+        c.beginPath(); c.arc(px, py, pr * 2, 0, 7); c.fill();
+      }
+    } else if (el === '冰') {
+      /* 冰：霜环 + 环上 10 片自转冰晶 */
+      for (let i = 0; i < 10; i++) {
+        const ang = seed * 1.6 + i * Math.PI / 5 - k * 1.1;
+        const px = f.x + Math.cos(ang) * R, py = f.y + Math.sin(ang) * R * 0.72;
+        c.save(); c.translate(px, py); c.rotate(ang + k * 3);
+        c.strokeStyle = 'rgba(235,252,255,' + (a * 0.85).toFixed(3) + ')';
+        c.lineWidth = 1.5;
+        c.beginPath();
+        c.moveTo(-R * 0.09, 0); c.lineTo(R * 0.09, 0);
+        c.moveTo(0, -R * 0.07); c.lineTo(0, R * 0.07);
+        c.stroke(); c.restore();
+      }
+    } else if (el === '电') {
+      /* 电：环上 4 处放电节点，每处射出锯齿电弧 */
+      for (let i = 0; i < 4; i++) {
+        const ang = seed * 2.3 + i * Math.PI / 2;
+        c.strokeStyle = 'rgba(245,235,255,' + (a * 0.85).toFixed(3) + ')';
+        c.lineWidth = 1.7;
+        c.beginPath();
+        c.moveTo(f.x + Math.cos(ang) * R * 0.55, f.y + Math.sin(ang) * R * 0.4);
+        for (let s = 1; s <= 3; s++) {
+          const j = Math.sin(seed * 9 + i * 4 + s * 2.1 + k * 15) * R * 0.1;
+          c.lineTo(f.x + Math.cos(ang) * R * (0.55 + 0.15 * s) - Math.sin(ang) * j,
+                   f.y + Math.sin(ang) * R * (0.4 + 0.11 * s) + Math.cos(ang) * j);
+        }
+        c.stroke();
+      }
+    } else if (el === '毒') {
+      /* 毒：环内填一层翻滚毒沼（半透明绿雾，看得出是持续伤害区） */
+      const g = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, Math.max(1, R));
+      g.addColorStop(0, 'rgba(' + c0 + ',' + (a * 0.22).toFixed(3) + ')');
+      g.addColorStop(0.7, 'rgba(' + c1 + ',' + (a * 0.18).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(' + c2 + ',0)');
+      c.fillStyle = g;
+      c.beginPath(); c.ellipse(f.x, f.y, Math.max(1, R), Math.max(1, R * 0.72), 0, 0, 7); c.fill();
+      for (let i = 0; i < 7; i++) {
+        const ang = seed + i * 0.9;
+        const d = R * (0.4 + ((k * 0.8 + i * 0.14) % 1) * 0.55);
+        const px = f.x + Math.cos(ang) * d, py = f.y + Math.sin(ang) * d * 0.7;
+        const pr = Math.max(1, R * 0.13);
+        const g2 = c.createRadialGradient(px, py, 0, px, py, pr);
+        g2.addColorStop(0, 'rgba(' + c0 + ',' + (a * 0.3).toFixed(3) + ')');
+        g2.addColorStop(1, 'rgba(' + c2 + ',0)');
+        c.fillStyle = g2;
+        c.beginPath(); c.arc(px, py, pr, 0, 7); c.fill();
+      }
+    } else if (el === '暗') {
+      /* 暗：双向环（外扩 + 内缩），中间夹紫色残影，做出"湮灭"观感 */
+      c.strokeStyle = 'rgba(' + c1 + ',' + (a * 0.75).toFixed(3) + ')';
+      c.lineWidth = 2.2;
+      c.beginPath(); c.ellipse(f.x, f.y, Math.max(1, R * (0.55 + k * 0.35)), Math.max(1, R * (0.4 + k * 0.26)), 0, 0, 7); c.stroke();
+      for (let i = 0; i < 6; i++) {
+        const ang = seed * 2.9 + i * 1.05;
+        const d = R * (0.85 + Math.sin(k * 7 + i) * 0.1);
+        const px = f.x + Math.cos(ang) * d, py = f.y + Math.sin(ang) * d * 0.72;
+        const pr = Math.max(1, R * 0.16);
+        const g = c.createRadialGradient(px, py, 0, px, py, pr);
+        g.addColorStop(0, 'rgba(' + c1 + ',' + (a * 0.5).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(' + c2 + ',0)');
+        c.fillStyle = g;
+        c.beginPath(); c.arc(px, py, pr, 0, 7); c.fill();
+      }
+    } else if (el === '风') {
+      /* 风：三道同向弯月气刃绕环旋转 */
+      for (let i = 0; i < 3; i++) {
+        const ang = seed * 1.1 + i * Math.PI * 2 / 3 + k * 2.6;
+        const px = f.x + Math.cos(ang) * R, py = f.y + Math.sin(ang) * R * 0.72;
+        c.save(); c.translate(px, py); c.rotate(ang);
+        c.strokeStyle = 'rgba(' + c0 + ',' + (a * 0.8).toFixed(3) + ')';
+        c.lineWidth = 2.4;
+        c.beginPath(); c.arc(0, 0, Math.max(1, R * 0.3), -1.0, 1.0); c.stroke();
+        c.restore();
+      }
+    } else {
+      /* 物（默认）：白色冲击环 + 4 道放射裂纹 */
+      for (let i = 0; i < 4; i++) {
+        const ang = seed + i * Math.PI / 2 + k * 0.5;
+        c.strokeStyle = 'rgba(' + c0 + ',' + (a * 0.6).toFixed(3) + ')';
+        c.lineWidth = 1.8;
+        c.beginPath();
+        c.moveTo(f.x + Math.cos(ang) * R * 0.5, f.y + Math.sin(ang) * R * 0.36);
+        c.lineTo(f.x + Math.cos(ang) * R * 1.05, f.y + Math.sin(ang) * R * 0.76);
+        c.stroke();
+      }
+    }
+    c.restore();
+  },
+
   /* 贯穿光束（电磁穿刺 / 高能射线 / 制导激光）
    * 3D 表现：外层辉光柱 → 中层元素色 → 亮白核心，电系带锯齿抖动。
    * 沿光束方向做纵向渐变（近端亮、远端衰减），强化空间纵深。 */
@@ -4022,13 +4349,122 @@ const BT = {
     c.restore();
     this.drawGunShape(c, g, 1.05);
     /* 枪口火光 */
-    if (r.muzzleT > 0) {
-      const bl = 21, a = Math.min(1, r.muzzleT / 0.07);
-      const fg = c.createRadialGradient(0, -bl, 0, 0, -bl, 12);
-      fg.addColorStop(0, 'rgba(255,248,214,' + (0.95 * a).toFixed(3) + ')');
-      fg.addColorStop(0.45, 'rgba(255,176,60,' + (0.62 * a).toFixed(3) + ')');
-      fg.addColorStop(1, 'rgba(255,120,20,0)');
-      c.fillStyle = fg;
+    if (r.muzzleT > 0) this.drawMuzzle(c, g, 21, Math.min(1, r.muzzleT / 0.07));
+    c.restore();
+  },
+
+  /* 枪口焰：按【武器类型】分成七种截然不同的开火表现。
+   * 此前所有武器共用同一个橙色圆光 —— 散弹枪、狙击枪、激光枪、
+   * 火焰喷射器开火长得一模一样，玩家换枪毫无"换了一把枪"的感觉。
+   * 坐标系：已 translate 到握把、rotate 到瞄准方向，枪口在 (0,-bl)。 */
+  drawMuzzle(c, g, bl, a) {
+    const ty = g.type || '自动';
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    if (ty === '能量') {
+      /* 激光枪 / 等离子枪：无火焰，纯能量闪光 + 十字星芒 + 环 */
+      const g1 = c.createRadialGradient(0, -bl, 0, 0, -bl, 15);
+      g1.addColorStop(0, 'rgba(255,255,255,' + (0.95 * a).toFixed(3) + ')');
+      g1.addColorStop(0.35, 'rgba(120,232,255,' + (0.7 * a).toFixed(3) + ')');
+      g1.addColorStop(1, 'rgba(60,120,255,0)');
+      c.fillStyle = g1;
+      c.beginPath(); c.arc(0, -bl, 15, 0, 7); c.fill();
+      c.strokeStyle = 'rgba(220,250,255,' + (0.9 * a).toFixed(3) + ')';
+      c.lineWidth = 1.8;
+      c.beginPath();
+      c.moveTo(0, -bl - 13); c.lineTo(0, -bl + 13);
+      c.moveTo(-11, -bl); c.lineTo(11, -bl);
+      c.stroke();
+      c.strokeStyle = 'rgba(150,220,255,' + (0.6 * a).toFixed(3) + ')';
+      c.lineWidth = 1.4;
+      c.beginPath(); c.arc(0, -bl, 8 + (1 - a) * 8, 0, 7); c.stroke();
+    } else if (ty === '喷射') {
+      /* 火焰喷射器 / 冰冻枪：持续喷流（更宽更长）+ 翻滚团块 */
+      const ice = (g.chill || g.slow) ? 1 : 0;
+      const c0 = ice ? '235,252,255' : '255,248,214';
+      const c1 = ice ? '120,220,255' : '255,150,52';
+      const c2 = ice ? '52,140,235' : '220,60,16';
+      const g2 = c.createRadialGradient(0, -bl - 14, 0, 0, -bl - 14, 22);
+      g2.addColorStop(0, 'rgba(' + c0 + ',' + (0.85 * a).toFixed(3) + ')');
+      g2.addColorStop(0.4, 'rgba(' + c1 + ',' + (0.55 * a).toFixed(3) + ')');
+      g2.addColorStop(1, 'rgba(' + c2 + ',0)');
+      c.fillStyle = g2;
+      c.beginPath(); c.ellipse(0, -bl - 14, 13, 22, 0, 0, 7); c.fill();
+      for (let i = 0; i < 5; i++) {
+        const py = -bl - 6 - i * 7;
+        const pr = 4.5 + Math.sin(i * 2.3 + a * 8) * 2.2;
+        const g3 = c.createRadialGradient(0, py, 0, 0, py, pr * 2);
+        g3.addColorStop(0, 'rgba(' + c0 + ',' + (0.6 * a).toFixed(3) + ')');
+        g3.addColorStop(1, 'rgba(' + c1 + ',0)');
+        c.fillStyle = g3;
+        c.beginPath(); c.arc(0, py, pr * 2, 0, 7); c.fill();
+      }
+    } else if (ty === '狙击') {
+      /* 狙击枪 / 电磁炮：细长焰锥（高初速感）+ 白色爆闪十字 */
+      const g4 = c.createRadialGradient(0, -bl, 0, 0, -bl, 10);
+      g4.addColorStop(0, 'rgba(255,255,255,' + (0.95 * a).toFixed(3) + ')');
+      g4.addColorStop(0.4, 'rgba(255,214,140,' + (0.6 * a).toFixed(3) + ')');
+      g4.addColorStop(1, 'rgba(255,120,20,0)');
+      c.fillStyle = g4;
+      c.beginPath(); c.arc(0, -bl, 10, 0, 7); c.fill();
+      c.fillStyle = 'rgba(255,246,214,' + (0.9 * a).toFixed(3) + ')';
+      c.beginPath();
+      c.moveTo(-2.2, -bl + 2); c.lineTo(0, -bl - 22); c.lineTo(2.2, -bl + 2);
+      c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(255,255,255,' + (0.8 * a).toFixed(3) + ')';
+      c.lineWidth = 1.6;
+      c.beginPath();
+      c.moveTo(-9, -bl); c.lineTo(9, -bl);
+      c.moveTo(0, -bl - 9); c.lineTo(0, -bl + 9);
+      c.stroke();
+    } else if (ty === '散弹') {
+      /* 散弹枪：宽扇形喷焰（一次性大片火光，体现"喷"） */
+      const g5 = c.createRadialGradient(0, -bl, 0, 0, -bl, 18);
+      g5.addColorStop(0, 'rgba(255,252,230,' + (0.95 * a).toFixed(3) + ')');
+      g5.addColorStop(0.45, 'rgba(255,168,54,' + (0.7 * a).toFixed(3) + ')');
+      g5.addColorStop(1, 'rgba(220,70,16,0)');
+      c.fillStyle = g5;
+      c.beginPath(); c.arc(0, -bl, 18, 0, 7); c.fill();
+      c.fillStyle = 'rgba(255,236,180,' + (0.85 * a).toFixed(3) + ')';
+      for (let i = -2; i <= 2; i++) {
+        const ang = i * 0.32;
+        c.save(); c.translate(0, -bl); c.rotate(ang);
+        c.beginPath();
+        c.moveTo(-2.6, 2); c.lineTo(0, -14); c.lineTo(2.6, 2);
+        c.closePath(); c.fill();
+        c.restore();
+      }
+    } else if (ty === '爆炸') {
+      /* 榴弹枪 / 火箭筒：厚重爆焰 + 烟环（低沉的"轰"） */
+      const g6 = c.createRadialGradient(0, -bl, 0, 0, -bl, 16);
+      g6.addColorStop(0, 'rgba(255,240,190,' + (0.9 * a).toFixed(3) + ')');
+      g6.addColorStop(0.42, 'rgba(255,140,40,' + (0.65 * a).toFixed(3) + ')');
+      g6.addColorStop(1, 'rgba(160,40,10,0)');
+      c.fillStyle = g6;
+      c.beginPath(); c.arc(0, -bl, 16, 0, 7); c.fill();
+      c.strokeStyle = 'rgba(255,196,110,' + (0.7 * a).toFixed(3) + ')';
+      c.lineWidth = 3;
+      c.beginPath(); c.arc(0, -bl, 11 + (1 - a) * 12, 0, 7); c.stroke();
+      c.strokeStyle = 'rgba(120,110,100,' + (0.35 * a).toFixed(3) + ')';
+      c.lineWidth = 2.4;
+      c.beginPath(); c.arc(0, -bl, 17 + (1 - a) * 16, 0, 7); c.stroke();
+    } else if (ty === '近战') {
+      /* 链锯枪：无焰，改为橙白火花四溅（锯齿切割的金属感） */
+      c.fillStyle = 'rgba(255,250,220,' + (0.9 * a).toFixed(3) + ')';
+      for (let i = 0; i < 7; i++) {
+        const ang = -Math.PI / 2 + (i - 3) * 0.36 + Math.sin(i * 3.1 + a * 12) * 0.2;
+        const d = 8 + ((i * 7 + a * 30) % 14);
+        const px = Math.cos(ang) * d, py = -bl + Math.sin(ang) * d;
+        const pr = 1.5 + Math.sin(i * 2.7) * 0.6;
+        c.beginPath(); c.arc(px, py, Math.max(0.4, pr), 0, 7); c.fill();
+      }
+    } else {
+      /* 自动 / 重机枪：短促锥形焰（节奏快、不抢戏） */
+      const g7 = c.createRadialGradient(0, -bl, 0, 0, -bl, 12);
+      g7.addColorStop(0, 'rgba(255,248,214,' + (0.95 * a).toFixed(3) + ')');
+      g7.addColorStop(0.45, 'rgba(255,176,60,' + (0.62 * a).toFixed(3) + ')');
+      g7.addColorStop(1, 'rgba(255,120,20,0)');
+      c.fillStyle = g7;
       c.beginPath(); c.arc(0, -bl, 12, 0, 7); c.fill();
       c.fillStyle = 'rgba(255,242,196,' + (0.9 * a).toFixed(3) + ')';
       c.beginPath();
@@ -5175,25 +5611,22 @@ const BT = {
     for (const f of r.efx) {
       const al = f.life / f.max;
       if (f.t === 'boom') {
-        const rr = f.r * (1.2 - al * 0.5);
-        /* 地面透视冲击环（椭圆＝贴地的 3D 圆环） */
-        c.strokeStyle = 'rgba(255,150,60,' + (al * 0.55).toFixed(3) + ')'; c.lineWidth = 3;
-        c.beginPath(); c.ellipse(f.x, f.y, rr, rr * 0.38, 0, 0, 7); c.stroke();
-        /* 立体火球（径向渐变球体） */
-        const bg = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, Math.max(1, rr * 0.8));
-        bg.addColorStop(0, 'rgba(255,240,200,' + (al * 0.85).toFixed(3) + ')');
-        bg.addColorStop(0.45, 'rgba(255,150,60,' + (al * 0.55).toFixed(3) + ')');
-        bg.addColorStop(1, 'rgba(255,90,30,0)');
-        c.fillStyle = bg;
-        c.beginPath(); c.arc(f.x, f.y, Math.max(1, rr * 0.8), 0, 7); c.fill();
-        c.strokeStyle = 'rgba(255,150,60,' + al + ')'; c.lineWidth = 3;
-        c.beginPath(); c.arc(f.x, f.y, rr, 0, 7); c.stroke();
-        /* 地面冲击波：火球之外补一层贴地扩散环 */
-        c.strokeStyle = 'rgba(255,238,190,' + (al * 0.6).toFixed(3) + ')'; c.lineWidth = 2.4;
-        c.beginPath(); c.ellipse(f.x, f.y, rr * 1.35, rr * 0.5, 0, 0, 7); c.stroke();
+        /* 爆炸按元素分化（此前一律橙色火球，冰/电/毒炸开也是一团火） */
+        this.drawBoom(c, f, al);
       } else if (f.t === 'nova') {
-        c.strokeStyle = 'rgba(92,216,255,' + al + ')'; c.lineWidth = 2.5;
-        c.beginPath(); c.arc(f.x, f.y, f.r * (1.25 - al * 0.4), 0, 7); c.stroke();
+        /* 冲击波按元素分化（此前一律青色圆环） */
+        this.drawNova(c, f, al);
+      } else if (f.t === 'shell') {
+        /* 抛壳：开火时从枪侧弹出的弹壳，带翻转与落地 */
+        const sk = 1 - al;
+        const sx = f.x + Math.cos(f.a || 0) * (6 + sk * 26);
+        const sy = f.y + Math.sin(f.a || 0) * (4 + sk * 14) + sk * sk * 30;
+        c.save(); c.translate(sx, sy); c.rotate((f.a || 0) + sk * 9);
+        c.fillStyle = 'rgba(226,182,88,' + (al * 0.9).toFixed(3) + ')';
+        c.fillRect(-2.6, -1.4, 5.2, 2.8);
+        c.fillStyle = 'rgba(255,236,180,' + (al * 0.7).toFixed(3) + ')';
+        c.fillRect(-2.6, -1.4, 5.2, 1);
+        c.restore();
       } else if (f.t === 'tfire') {
         /* 炮台开火：炮口元素星芒 + 扩散环。
          * 此前炮台开火只飞出一枚子弹，画面上没有任何开火反馈，
@@ -5801,6 +6234,14 @@ const BT = {
     /* 按 y 排序：远的先画，近的后画（2.5D 遮挡关系） */
     const zs = r.zombies.filter((z) => !z.dead).sort((a, b) => a.y - b.y);
     for (const z of zs) {
+      /* 受击动作反馈：被打中的瞬间横向一颤 + 向后一顿（0.12s 内衰减）。
+       * 此前受击只有一层闪白贴图，僵尸"纹丝不动"地站着掉血，
+       * 玩家感觉不到自己打中了，打击感几乎为零。 */
+      const _hs = (z.hitT > 0) ? Math.min(1, z.hitT * 8) : 0;
+      if (_hs > 0) {
+        c.save();
+        c.translate(Math.sin((z.hitT || 0) * 95) * 3.4 * _hs, -2.8 * _hs);
+      }
       const sc = this.depthScale(z.y);
       const sz = (z.isBoss ? 58 : ((z.d && z.d.elite) ? 38 : 32)) * sc;
       this._cardH = 0;
@@ -5872,6 +6313,7 @@ const BT = {
         c.fillStyle = z.isBoss ? '#ff4d6d' : '#5fd07a';
         c.fillRect(z.x - bw / 2, by, bw * Math.max(0, z.hp / z.maxHp), 3.5);
       }
+      if (_hs > 0) c.restore();
     }
 
     /* ===== 真 3D 防线城墙：顶面（俯视可见）+ 正面 + 底部暗面 + 立体墙垛 ===== */
