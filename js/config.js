@@ -642,7 +642,7 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20261231b',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20261231c',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/style.css', ver:'20261231b', size: 0 },
@@ -2013,6 +2013,9 @@ const EX = {
     factory: 'assets/scene/factory.jpg', tunnel: 'assets/scene/tunnel.jpg',
     field: 'assets/scene/field.jpg', snow: 'assets/scene/snow.jpg',
   },
+  /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
+     换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
+  sceneV: '20261231c',
 
   /* 品质与元素 */
   qualities: ['白', '绿', '蓝', '紫', '橙', '红'],
