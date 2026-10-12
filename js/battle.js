@@ -289,7 +289,12 @@ const BT = {
    *   （声明了却不吃难度曲线），这里同样按「以可热更的配置为准」统一。 */
   sceneUrl(key) {
     const m = (typeof EX !== 'undefined' && EX.sceneImg) || null;
-    return (m && m[key]) || this.SCENES[key] || null;
+    const url = (m && m[key]) || this.SCENES[key] || null;
+    if (!url) return null;
+    /* 缓存戳：场景文件名是固定的 city.jpg 等，不带版本号时玩家浏览器会一直读旧缓存，
+       换美术等于白换。运营自定义路径若已带查询串则不覆盖。 */
+    const V = (typeof EX !== 'undefined' && EX.sceneV) || '';
+    return (!V || url.indexOf('?') >= 0) ? url : url + '?v=' + V;
   },
   img(key) {
     const v = this._imgs[key];
