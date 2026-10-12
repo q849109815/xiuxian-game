@@ -642,17 +642,17 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270104a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270105a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/style.css', ver:'20270104a', size: 0 },
-      { p: 'js/net.js', ver:'20270104a', size: 0 },
-      { p: 'js/config.js', ver:'20270104a', size: 0 },
-      { p: 'js/engine.js', ver:'20270104a', size: 0 },
-      { p: 'js/battle.js', ver:'20270104a', size: 0 },
-      { p: 'js/ui.js', ver:'20270104a', size: 0 },
-      { p: 'js/main.js', ver:'20270104a', size: 0 },
-      { p: 'js/audio.js', ver:'20270104a', size: 0 },
+      { p: 'css/style.css', ver:'20270105a', size: 0 },
+      { p: 'js/net.js', ver:'20270105a', size: 0 },
+      { p: 'js/config.js', ver:'20270105a', size: 0 },
+      { p: 'js/engine.js', ver:'20270105a', size: 0 },
+      { p: 'js/battle.js', ver:'20270105a', size: 0 },
+      { p: 'js/ui.js', ver:'20270105a', size: 0 },
+      { p: 'js/main.js', ver:'20270105a', size: 0 },
+      { p: 'js/audio.js', ver:'20270105a', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -1424,11 +1424,11 @@ const EX = {
        *   （正常要通关 1-4 才拿得到，付费可在 1-1 就用上，dmg120+爆炸）。
        *   用新 id 而非复用 W1 —— 早期买过 W1 的玩家 limit 已记 1 次，
        *   复用会让他们买不了新枪；新 id 对所有人都是可买的。 */
-      { id: 'W2', n: '霰弹枪', icon: '💥', img: 'assets/icon/w2_shotgun.jpg', price: 7250, cur: 'gold', gun: 'W02',
+      { id: 'W2', n: '霰弹枪', icon: '💥', img: 'assets/icon/w_shotgun.jpg', price: 7250, cur: 'gold', gun: 'W02',
         give: { M02: 15 }, limit: { t: 'once', v: 1 }, desc: '解锁霰弹枪(原需通关1-2)+合金15 · 限购1次' },
       { id: 'W6', n: '榴弹枪', icon: '🎇', img: 'assets/icon/w_grenade.jpg', price: 9400, cur: 'gold', gun: 'W03',
         give: { M01: 20, M02: 10 }, limit: { t: 'once', v: 1 }, desc: '解锁榴弹枪(原需通关1-4)+金属20+合金10 · 限购1次' },
-      { id: 'W3', n: '狙击枪', icon: '🎯', img: 'assets/icon/w3_sniper.jpg', price: 11600, cur: 'gold', gun: 'W04',
+      { id: 'W3', n: '狙击枪', icon: '🎯', img: 'assets/icon/w_sniper.jpg', price: 11600, cur: 'gold', gun: 'W04',
         give: { M03: 10 }, limit: { t: 'once', v: 1 }, desc: '解锁狙击枪(原需通关2-2)+稀有金属10 · 限购1次' },
       /* 支援武器（医疗包 / 护盾发生器）：
        * 这两把 dmg=0，此前既不能装备、商店也没上架 —— 玩家永远拿不到，
@@ -2015,7 +2015,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270104a',
+  sceneV: '20270105a',
 
   /* 品质与元素 */
   qualities: ['白', '绿', '蓝', '紫', '橙', '红'],
