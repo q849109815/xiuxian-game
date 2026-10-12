@@ -642,17 +642,17 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270103a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270104a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/style.css', ver:'20270103a', size: 0 },
-      { p: 'js/net.js', ver:'20270103a', size: 0 },
-      { p: 'js/config.js', ver:'20270103a', size: 0 },
-      { p: 'js/engine.js', ver:'20270103a', size: 0 },
-      { p: 'js/battle.js', ver:'20270103a', size: 0 },
-      { p: 'js/ui.js', ver:'20270103a', size: 0 },
-      { p: 'js/main.js', ver:'20270103a', size: 0 },
-      { p: 'js/audio.js', ver:'20270103a', size: 0 },
+      { p: 'css/style.css', ver:'20270104a', size: 0 },
+      { p: 'js/net.js', ver:'20270104a', size: 0 },
+      { p: 'js/config.js', ver:'20270104a', size: 0 },
+      { p: 'js/engine.js', ver:'20270104a', size: 0 },
+      { p: 'js/battle.js', ver:'20270104a', size: 0 },
+      { p: 'js/ui.js', ver:'20270104a', size: 0 },
+      { p: 'js/main.js', ver:'20270104a', size: 0 },
+      { p: 'js/audio.js', ver:'20270104a', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -1099,14 +1099,14 @@ const EX = {
   ],
   /* BOSS */
   bosses: [
-    { id: 'juxing', n: '巨型丧尸', icon: '🦖', chibi: 'z_boss', img: 'assets/char/boss_juxing.jpg', hp: 6500, spd: 22, dmg: 40, atkR: 46, def: 0.25,
+    { id: 'juxing', n: '巨型丧尸', icon: '🦖', chibi: 'z_boss_juxing', img: 'assets/char/boss_juxing.jpg', hp: 6500, spd: 22, dmg: 40, atkR: 46, def: 0.25,
       phases: 2, xp: 220, gold: 260,
       skills: [
         { n: '巨爪拍击', sk: '大范围近战，击退防线', trig: 'contact' },
         { n: '召唤小怪', sk: '召唤普通僵尸群助战', trig: 0.7 },
         { n: '召唤小怪', sk: '再次召唤僵尸群', trig: 0.4 },
       ] },
-    { id: 'mama', n: '感染母体', icon: '🕷️', chibi: 'z_boss', img: 'assets/char/boss_mama.jpg', hp: 14000, spd: 26, dmg: 34, atkR: 150, def: 0.2,
+    { id: 'mama', n: '感染母体', icon: '🕷️', chibi: 'z_boss_mama', img: 'assets/char/boss_mama.jpg', hp: 14000, spd: 26, dmg: 34, atkR: 150, def: 0.2,
       phases: 3, xp: 320, gold: 380,
       skills: [
         { n: '孢子喷吐', sk: '喷出感染孢子，落地分裂小怪', trig: 0.8 },
@@ -1115,42 +1115,42 @@ const EX = {
       ] },
     /* ===== 真实 BOSS（资料表 realBosses，此前 6 个名字未使用，
      *       100 关里只有 2 个 BOSS 反复轮播） ===== */
-    { id: 'kaiken', n: '开垦者', icon: '⛏️', chibi: 'z_boss', img: 'assets/char/boss_kaiken.jpg', hp: 44000, spd: 20, dmg: 52, atkR: 60, def: 0.28,
+    { id: 'kaiken', n: '开垦者', icon: '⛏️', chibi: 'z_boss_kaiken', img: 'assets/char/boss_kaiken.jpg', hp: 44000, spd: 20, dmg: 52, atkR: 60, def: 0.28,
       phases: 2, xp: 420, gold: 480,
       skills: [
         { n: '铲斗横扫', sk: '大范围横扫，击退并眩晕', trig: 'contact' },
         { n: '地面震击', sk: '砸地产生冲击波', trig: 0.7 },
         { n: '狂暴', sk: '攻速提升，免疫减速', trig: 0.35 },
       ] },
-    { id: 'chaoxue', n: '巢穴之母', icon: '🕸️', chibi: 'z_king', img: 'assets/char/boss_chaoxue.jpg', hp: 76000, spd: 18, dmg: 58, atkR: 130, def: 0.30,
+    { id: 'chaoxue', n: '巢穴之母', icon: '🕸️', chibi: 'z_boss_chaoxue', img: 'assets/char/boss_chaoxue.jpg', hp: 76000, spd: 18, dmg: 58, atkR: 130, def: 0.30,
       phases: 3, xp: 620, gold: 700,
       skills: [
         { n: '产卵', sk: '持续孵化小僵尸', trig: 0.85 },
         { n: '酸液喷吐', sk: '远程腐蚀伤害', trig: 0.6 },
         { n: '狂暴', sk: '移速提升，召唤虫群', trig: 0.4 },
       ] },
-    { id: 'shenyuan', n: '深渊领主', icon: '🔱', chibi: 'z_king', img: 'assets/char/boss_shenyuan.jpg', hp: 195000, spd: 24, dmg: 75, atkR: 170, def: 0.32,
+    { id: 'shenyuan', n: '深渊领主', icon: '🔱', chibi: 'z_boss_shenyuan', img: 'assets/char/boss_shenyuan.jpg', hp: 195000, spd: 24, dmg: 75, atkR: 170, def: 0.32,
       phases: 3, xp: 880, gold: 980,
       skills: [
         { n: '暗影镰斩', sk: '远程能量斩击', trig: 'contact' },
         { n: '深渊召唤', sk: '召唤精英僵尸', trig: 0.7 },
         { n: '狂暴免疫', sk: '免疫控制，伤害大幅提升', trig: 0.3 },
       ] },
-    { id: 'baoshi', n: '暴食者', icon: '🍖', chibi: 'z_butcher', img: 'assets/char/boss_baoshi.jpg', hp: 240000, spd: 14, dmg: 88, atkR: 55, def: 0.38,
+    { id: 'baoshi', n: '暴食者', icon: '🍖', chibi: 'z_boss_baoshi', img: 'assets/char/boss_baoshi.jpg', hp: 240000, spd: 14, dmg: 88, atkR: 55, def: 0.38,
       phases: 2, xp: 1200, gold: 1350,
       skills: [
         { n: '吞噬', sk: '近身吞噬，大量伤害', trig: 'contact' },
         { n: '呕吐酸液', sk: '范围持续伤害', trig: 0.65 },
         { n: '狂暴', sk: '移速提升，血量回复', trig: 0.35 },
       ] },
-    { id: 'xiudao', n: '修道士', icon: '🕯️', img: 'assets/char/boss_xiudao.jpg', hp: 1700000, spd: 28, dmg: 105, atkR: 200, def: 0.34,
+    { id: 'xiudao', n: '修道士', icon: '🕯️', chibi: 'z_boss_xiudao', img: 'assets/char/boss_xiudao.jpg', hp: 1700000, spd: 28, dmg: 105, atkR: 200, def: 0.34,
       phases: 3, xp: 1650, gold: 1850,
       skills: [
         { n: '诅咒之杖', sk: '远程诅咒，降低玩家攻速', trig: 'contact' },
         { n: '亡者复苏', sk: '复活场上死亡僵尸', trig: 0.7 },
         { n: '暗红仪式', sk: '全屏伤害', trig: 0.4 },
       ] },
-    { id: 'shiwang', n: '尸王', icon: '👑', img: 'assets/char/boss_shiwang.jpg', hp: 3500000, spd: 26, dmg: 130, atkR: 210, def: 0.40,
+    { id: 'shiwang', n: '尸王', icon: '👑', chibi: 'z_boss_shiwang', img: 'assets/char/boss_shiwang.jpg', hp: 3500000, spd: 26, dmg: 130, atkR: 210, def: 0.40,
       phases: 3, xp: 2400, gold: 2800,
       skills: [
         { n: '巨剑斩击', sk: '超大范围斩击', trig: 'contact' },
@@ -2015,7 +2015,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270103a',
+  sceneV: '20270104a',
 
   /* 品质与元素 */
   qualities: ['白', '绿', '蓝', '紫', '橙', '红'],
