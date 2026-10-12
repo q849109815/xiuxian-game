@@ -1229,9 +1229,9 @@ const BT = {
             zn.target = tg;
           }
           this.hurt(tg, zn.dps * dt, false, zn.el);
-          r.efx.push({ t: 'beam', x: r.px, y: r.py,
-            a: Math.atan2(tg.y - r.py, tg.x - r.px),
-            len: Math.hypot(tg.x - r.px, tg.y - r.py), life: 0.08, max: 0.08, el: zn.el });
+          /* 画面表现改由 drawZoneLaser 负责（真正的持续光束）。
+           * 此前这里每帧 push 一个 life=0.08 的 beam：3 秒要产生约 180 个
+           * 特效对象挤占 efx（上限 90），画面却只是一条一闪一闪的短光。 */
           continue;
         }
         /* 区域型：旋风 / 燃烧 / 冰暴 */
@@ -1916,6 +1916,8 @@ const BT = {
       /* 温压弹：以玩家为中心大范围爆炸 */
       const rad = m.blastR * (1 + (lv - 1) * 0.08);
       const dmg = dmgBase * m.blastMul * (1 + (lv - 1) * 0.15);
+      /* 温压弹专属：蘑菇云（此前与所有火系技能共用 nova，没有辨识度） */
+      r.efx.push({ t: 'thermo', x: r.px, y: r.py, r: rad, life: 0.75, max: 0.75, seed: Math.random() * 6 });
       r.efx.push({ t: 'nova', x: r.px, y: r.py, r: rad, life: 0.5, max: 0.5, el: '火' });
       for (const z of r.zombies) {
         if (z.dead) continue;
@@ -1928,6 +1930,8 @@ const BT = {
       /* 干冰弹：范围内僵尸冻结 */
       const rad = m.freezeR * (1 + (lv - 1) * 0.07);
       const dur = m.freeze * (1 + (lv - 1) * 0.12);
+      /* 干冰弹专属：冰晶爆散 + 地面霜环扩散（冻结范围可视化） */
+      r.efx.push({ t: 'cryo', x: r.px, y: r.py, r: rad, life: 0.7, max: 0.7, seed: Math.random() * 6 });
       r.efx.push({ t: 'nova', x: r.px, y: r.py, r: rad, life: 0.5, max: 0.5, el: '冰' });
       for (const z of r.zombies) {
         if (z.dead) continue;
@@ -1942,7 +1946,8 @@ const BT = {
       const ang = tg ? Math.atan2(tg.y - r.py, tg.x - r.px) : -Math.PI / 2;
       const n = Math.round(m.pierceN * (1 + (lv - 1) * 0.1));
       const dmg = dmgBase * m.chainMul * (1 + (lv - 1) * 0.12);
-      r.efx.push({ t: 'beam', x: r.px, y: r.py, a: ang, len: 620, life: 0.35, max: 0.35, el: '电' });
+      /* 电磁穿刺专属：旋转电磁钻（此前与高能射线共用 beam 电，两个技能画面完全一样） */
+      r.efx.push({ t: 'pierce', x: r.px, y: r.py, a: ang, len: 620, life: 0.5, max: 0.5, el: '电' });
       for (const z of r.zombies) {
         if (z.dead || hit >= n) continue;
         const da = Math.abs(Math.atan2(z.y - r.py, z.x - r.px) - ang);
@@ -1991,7 +1996,8 @@ const BT = {
       const dmg = dmgBase * m.rayMul * (1 + (lv - 1) * 0.14);
       const tg = this.nearest(r.px, r.py, null, 9999);
       const ang = tg ? Math.atan2(tg.y - r.py, tg.x - r.px) : -Math.PI / 2;
-      r.efx.push({ t: 'beam', x: r.px, y: r.py, a: ang, len: 700, life: 0.45, max: 0.45, el: '电' });
+      /* 高能射线专属：粗能量柱 + 沿束推进的能量环（与电磁穿刺的细钻形成对比） */
+      r.efx.push({ t: 'ray', x: r.px, y: r.py, a: ang, len: 700, life: 0.55, max: 0.55, el: '电' });
       for (const z of r.zombies) {
         if (z.dead || hit >= n) continue;
         const da = Math.abs(Math.atan2(z.y - r.py, z.x - r.px) - ang);
@@ -3146,24 +3152,385 @@ const BT = {
   },
 
   /* 主动技能区域：燃烧/旋风/冰暴/轰炸范围 */
+  /* ============================================================
+   * 技能持续区域绘制
+   * 严重缺失：此前【所有 zone 都画成同一个渐变圆 + 一圈描边】，
+   *   旋风加农 / 燃油弹 / 冰暴发生器 / 轰炸机这四种持续技能，
+   *   在画面上长得一模一样，只有颜色不同（橙 / 橙 / 蓝 / 橙），
+   *   玩家根本分不清脚下是哪一种、范围边界在哪、还剩多久。
+   *   另外制导激光的 zone 被 `continue` 跳过、轰炸机 delay 期间也
+   *   被 `continue` 跳过 —— 这两处是纯粹的画面缺失。
+   * 现在按 zn.t 各自绘制（见下方各 drawZone* 函数），
+   *   并补上激光持续光束与轰炸落点预警。
+   * ============================================================ */
   drawZones(c) {
     const r = this.run; if (!r.zones) return;
     for (const zn of r.zones) {
-      if (zn.t === 'laser') continue;
-      if (zn.delay != null && zn.delay > 0) continue;
+      /* 制导激光：zone 上没有 x/y（只有 target 引用），走专属绘制 */
+      if (zn.t === 'laser') { this.drawZoneLaser(c, zn); continue; }
+      if (!isFinite(zn.x) || !isFinite(zn.y)) continue;
+      /* 轰炸机：延时期间画落点预警。
+       * 此前 delay>0 直接 continue —— 玩家看不到任何提示，
+       * 不知道炸弹会落在哪、什么时候落，只能等它突然炸开。 */
+      if (zn.delay != null && zn.delay > 0) {
+        if (zn.t === 'bomb') this.drawZoneBombWarn(c, zn);
+        continue;
+      }
       const a = Math.max(0, Math.min(1, zn.life / (zn.max || 1)));
+      if (zn.t === 'vortex') { this.drawZoneVortex(c, zn, a); continue; }
+      if (zn.t === 'burn') { this.drawZoneBurn(c, zn, a); continue; }
+      if (zn.t === 'storm') { this.drawZoneStorm(c, zn, a); continue; }
+      if (zn.t === 'bomb') continue;   /* 已爆发，爆炸表现由 nova 负责 */
+      /* 其它区域：保留原渐变圆画法 */
       const col = zn.el === '火' ? '255,122,60' : zn.el === '冰' ? '92,216,255'
                 : zn.el === '电' ? '192,140,255' : '123,232,160';
-      const g = c.createRadialGradient(zn.x, zn.y, 0, zn.x, zn.y, Math.max(1, zn.r));
+      const rad0 = Math.max(1, zn.r);
+      const g = c.createRadialGradient(zn.x, zn.y, 0, zn.x, zn.y, rad0);
       if (g) {
         g.addColorStop(0, 'rgba(' + col + ',' + (0.34 * a).toFixed(3) + ')');
         g.addColorStop(1, 'rgba(' + col + ',0)');
         c.fillStyle = g;
       } else c.fillStyle = 'rgba(' + col + ',' + (0.2 * a).toFixed(3) + ')';
-      c.beginPath(); c.arc(zn.x, zn.y, zn.r, 0, 7); c.fill();
+      c.beginPath(); c.arc(zn.x, zn.y, rad0, 0, 7); c.fill();
       c.strokeStyle = 'rgba(' + col + ',' + (0.6 * a).toFixed(3) + ')';
-      c.lineWidth = 2; c.beginPath(); c.arc(zn.x, zn.y, zn.r, 0, 7); c.stroke();
+      c.lineWidth = 2; c.beginPath(); c.arc(zn.x, zn.y, rad0, 0, 7); c.stroke();
     }
+  },
+
+  /* 旋风加农：地面旋涡 + 向上收窄的龙卷 + 吸入碎屑 + 高速风刃 */
+  drawZoneVortex(c, zn, a) {
+    const T = (this.run && this.run.time) || 0;
+    const R = Math.max(20, zn.r || 100);
+    const cx = zn.x, cy = zn.y;
+    c.save();
+    /* ① 地面旋涡：3 条螺旋臂绕中心旋转（贴地椭圆透视） */
+    c.save();
+    c.globalCompositeOperation = 'lighter';
+    for (let s = 0; s < 3; s++) {
+      const off = T * 3.2 + (s / 3) * Math.PI * 2;
+      c.beginPath();
+      for (let i = 0; i <= 26; i++) {
+        const t = i / 26;
+        const ang = off + t * Math.PI * 2.4;
+        const rr = R * (1 - t * 0.92);
+        const px = cx + Math.cos(ang) * rr;
+        const py = cy + Math.sin(ang) * rr * 0.38;
+        if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+      }
+      c.strokeStyle = 'rgba(150,240,210,' + (0.30 * a).toFixed(3) + ')';
+      c.lineWidth = Math.max(0.6, 3 - s * 0.6);
+      c.stroke();
+    }
+    c.restore();
+    /* ② 龙卷柱体：由下往上逐层收窄并左右摆动 */
+    const H = 96;
+    for (let i = 0; i < 7; i++) {
+      const t = i / 6;
+      const yy = cy - t * H;
+      const rr = R * (0.62 - t * 0.30) * (1 + Math.sin(T * 5 + t * 3) * 0.08);
+      c.fillStyle = 'rgba(190,250,225,' + (0.075 * a * (1 - t * 0.55)).toFixed(3) + ')';
+      c.beginPath();
+      c.ellipse(cx + Math.sin(T * 4 + t * 2.2) * 9 * t, yy, Math.max(1, rr), Math.max(0.5, rr * 0.34), 0, 0, 7);
+      c.fill();
+    }
+    /* ③ 吸入碎屑：绕中心螺旋向内并抬升（吸附感的来源） */
+    c.save(); c.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 12; i++) {
+      const ph = (T * 1.5 + i / 12) % 1;
+      const ang = i * 2.4 + T * 6;
+      const rr = R * (1 - ph) * 0.95;
+      const px = cx + Math.cos(ang) * rr;
+      const py = cy + Math.sin(ang) * rr * 0.4 - ph * 46;
+      const pr = Math.max(0.8, 2.4 * (1 - Math.abs(ph - 0.5) * 2));
+      c.fillStyle = 'rgba(215,255,235,' + (0.62 * a * (1 - ph * 0.4)).toFixed(3) + ')';
+      c.beginPath(); c.arc(px, py, pr, 0, 7); c.fill();
+    }
+    c.restore();
+    /* ④ 高速旋转的双风刃（切割感） */
+    c.save(); c.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 2; i++) {
+      const ang = T * 7 + i * Math.PI;
+      const rr = R * 0.86;
+      c.save();
+      c.translate(cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr * 0.42);
+      c.rotate(ang + Math.PI / 2);
+      c.strokeStyle = 'rgba(180,255,225,' + (0.5 * a).toFixed(3) + ')';
+      c.lineWidth = 2.4;
+      c.beginPath(); c.arc(0, 0, 13, -0.9, 0.9); c.stroke();
+      c.restore();
+    }
+    c.restore();
+    /* ⑤ 范围边界环 */
+    c.strokeStyle = 'rgba(140,235,200,' + (0.4 * a).toFixed(3) + ')';
+    c.lineWidth = 2;
+    c.beginPath(); c.ellipse(cx, cy, R, R * 0.38, 0, 0, 7); c.stroke();
+    c.restore();
+  },
+
+  /* 燃油弹：焦痕 + 不规则火池 + 跳动火舌 + 上升火星 + 黑烟 */
+  drawZoneBurn(c, zn, a) {
+    const T = (this.run && this.run.time) || 0;
+    const R = Math.max(20, zn.r || 120);
+    const cx = zn.x, cy = zn.y;
+    c.save();
+    /* ① 地面焦痕 */
+    const gg = c.createRadialGradient(cx, cy, 0, cx, cy, R);
+    gg.addColorStop(0, 'rgba(38,20,14,' + (0.5 * a).toFixed(3) + ')');
+    gg.addColorStop(1, 'rgba(30,16,12,0)');
+    c.fillStyle = gg;
+    c.beginPath(); c.ellipse(cx, cy, R, R * 0.4, 0, 0, 7); c.fill();
+    c.globalCompositeOperation = 'lighter';
+    /* ② 不规则火池：6 团偏移的火焰叠加，火面在动（不是死板的一个圆） */
+    for (let i = 0; i < 6; i++) {
+      const ang = (i / 6) * Math.PI * 2;
+      const wob = Math.sin(T * 3.4 + i * 1.7) * 0.20;
+      const ox = Math.cos(ang) * R * (0.34 + wob * 0.3);
+      const oy = Math.sin(ang) * R * (0.14 + wob * 0.12);
+      const rr = Math.max(2, R * (0.34 + Math.sin(T * 4.2 + i) * 0.07));
+      const g = c.createRadialGradient(cx + ox, cy + oy, 0, cx + ox, cy + oy, rr);
+      g.addColorStop(0, 'rgba(255,190,70,' + (0.34 * a).toFixed(3) + ')');
+      g.addColorStop(0.5, 'rgba(255,110,40,' + (0.20 * a).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(180,50,20,0)');
+      c.fillStyle = g;
+      c.beginPath(); c.ellipse(cx + ox, cy + oy, rr, rr * 0.5, 0, 0, 7); c.fill();
+    }
+    /* ③ 跳动火舌（10 根，高度随正弦呼吸） */
+    for (let i = 0; i < 10; i++) {
+      const ang = (i / 10) * Math.PI * 2 + T * 0.4;
+      const rr = R * (0.24 + (((i * 37) % 10) / 10) * 0.62);
+      const px = cx + Math.cos(ang) * rr;
+      const py = cy + Math.sin(ang) * rr * 0.42;
+      const h = (16 + Math.abs(Math.sin(T * 6 + i * 2.1)) * 26) * (0.7 + a * 0.5);
+      const g = c.createLinearGradient(px, py, px, py - h);
+      g.addColorStop(0, 'rgba(255,236,170,' + (0.85 * a).toFixed(3) + ')');
+      g.addColorStop(0.35, 'rgba(255,150,50,' + (0.6 * a).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(255,70,20,0)');
+      c.fillStyle = g;
+      const w = 3.4 + Math.sin(T * 7 + i) * 1.2;
+      c.beginPath();
+      c.moveTo(px - w, py);
+      c.quadraticCurveTo(px - w * 0.3, py - h * 0.6, px, py - h);
+      c.quadraticCurveTo(px + w * 0.3, py - h * 0.6, px + w, py);
+      c.closePath(); c.fill();
+    }
+    /* ④ 上升火星 */
+    for (let i = 0; i < 9; i++) {
+      const sd = i * 1.37;
+      const ph = (T * 0.55 + (sd % 1)) % 1;
+      const px = cx + Math.cos(sd * 2.4) * R * 0.6 + Math.sin(T * 2 + i) * 6;
+      const py = cy + Math.sin(sd * 2.4) * R * 0.24 - ph * 74;
+      c.fillStyle = 'rgba(255,' + (170 + Math.floor((1 - ph) * 60)) + ',80,' + ((1 - ph) * 0.72 * a).toFixed(3) + ')';
+      c.beginPath(); c.arc(px, py, Math.max(0.7, 2.1 * (1 - ph)), 0, 7); c.fill();
+    }
+    c.restore();
+    /* ⑤ 黑烟（火池的"烧"不只靠火，烟才像真的在烧） */
+    for (let i = 0; i < 4; i++) {
+      const ph = ((T * 0.32) + i / 4) % 1;
+      const px = cx + Math.sin(T * 1.2 + i * 2) * 12;
+      const py = cy - 30 - ph * 96;
+      c.fillStyle = 'rgba(70,58,54,' + ((1 - ph) * 0.16 * a).toFixed(3) + ')';
+      c.beginPath(); c.arc(px, py, 8 + ph * 18, 0, 7); c.fill();
+    }
+    /* ⑥ 危险边界（虚线，提示别站进去） */
+    c.save();
+    c.strokeStyle = 'rgba(255,120,50,' + (0.34 * a).toFixed(3) + ')';
+    c.lineWidth = 2; c.setLineDash([7, 6]);
+    c.beginPath(); c.ellipse(cx, cy, R, R * 0.4, 0, 0, 7); c.stroke();
+    c.setLineDash([]);
+    c.restore();
+  },
+
+  /* 冰暴发生器：霜层 + 反向双层冰环 + 下落冰晶 + 中心寒气 */
+  drawZoneStorm(c, zn, a) {
+    const T = (this.run && this.run.time) || 0;
+    const R = Math.max(20, zn.r || 140);
+    const cx = zn.x, cy = zn.y;
+    c.save();
+    /* ① 地面霜层 */
+    const g = c.createRadialGradient(cx, cy, 0, cx, cy, R);
+    g.addColorStop(0, 'rgba(200,245,255,' + (0.30 * a).toFixed(3) + ')');
+    g.addColorStop(0.6, 'rgba(120,205,255,' + (0.16 * a).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(70,160,230,0)');
+    c.fillStyle = g;
+    c.beginPath(); c.ellipse(cx, cy, R, R * 0.4, 0, 0, 7); c.fill();
+    /* ② 反向旋转的双层冰环（8 片冰棱 × 2 层） */
+    c.save(); c.globalCompositeOperation = 'lighter';
+    for (let s = 0; s < 2; s++) {
+      const dir = s === 0 ? 1 : -1;
+      const rr = R * (0.92 - s * 0.34);
+      for (let i = 0; i < 8; i++) {
+        const ang = dir * T * (2.4 - s * 0.9) + (i / 8) * Math.PI * 2;
+        const px = cx + Math.cos(ang) * rr;
+        const py = cy + Math.sin(ang) * rr * 0.4;
+        c.save(); c.translate(px, py); c.rotate(ang);
+        c.fillStyle = 'rgba(225,250,255,' + (0.55 * a).toFixed(3) + ')';
+        c.beginPath();
+        c.moveTo(0, -5); c.lineTo(3.2, 0); c.lineTo(0, 5); c.lineTo(-3.2, 0);
+        c.closePath(); c.fill();
+        c.restore();
+      }
+    }
+    c.restore();
+    /* ③ 空中下落的冰晶（24 片，下落 + 横向摆动 + 自转） */
+    for (let i = 0; i < 24; i++) {
+      const sd = i * 1.11;
+      const sp = 0.5 + (((i * 7) % 5) * 0.12);
+      const ph = ((T * sp) + (sd % 1)) % 1;
+      const ang = sd * 2.4;
+      const rr = R * (0.15 + (((i * 13) % 10) / 10) * 0.8);
+      const px = cx + Math.cos(ang) * rr + Math.sin(T * 2.4 + i) * 9;
+      const py = cy - 130 + ph * 150 + Math.sin(ang) * rr * 0.3;
+      const sz = 1.6 + (((i * 3) % 4) * 0.5);
+      c.save();
+      c.translate(px, py); c.rotate(T * 1.6 + i);
+      c.strokeStyle = 'rgba(235,252,255,' + ((1 - Math.abs(ph - 0.5) * 1.2) * 0.7 * a).toFixed(3) + ')';
+      c.lineWidth = 1.2;
+      c.beginPath();
+      for (let k = 0; k < 3; k++) {
+        const a0 = (k / 3) * Math.PI;
+        c.moveTo(-Math.cos(a0) * sz * 2, -Math.sin(a0) * sz * 2);
+        c.lineTo(Math.cos(a0) * sz * 2, Math.sin(a0) * sz * 2);
+      }
+      c.stroke();
+      c.restore();
+    }
+    /* ④ 中心寒气核心 */
+    c.save(); c.globalCompositeOperation = 'lighter';
+    const cg = c.createRadialGradient(cx, cy - 24, 0, cx, cy - 24, 34);
+    cg.addColorStop(0, 'rgba(240,255,255,' + (0.42 * a).toFixed(3) + ')');
+    cg.addColorStop(1, 'rgba(90,190,255,0)');
+    c.fillStyle = cg;
+    c.beginPath(); c.arc(cx, cy - 24, 34, 0, 7); c.fill();
+    c.restore();
+    /* ⑤ 范围边界环 */
+    c.strokeStyle = 'rgba(150,225,255,' + (0.45 * a).toFixed(3) + ')';
+    c.lineWidth = 2;
+    c.beginPath(); c.ellipse(cx, cy, R, R * 0.4, 0, 0, 7); c.stroke();
+    c.restore();
+  },
+
+  /* 轰炸机：落点预警（收缩环 + 闪烁十字准星 + 高空落下的炸弹） */
+  drawZoneBombWarn(c, zn) {
+    const T = (this.run && this.run.time) || 0;
+    const R = Math.max(20, zn.r || 95);
+    const cx = zn.x, cy = zn.y;
+    /* 越接近落点越亮越大（delay 从初值递减到 0） */
+    const k = 1 - Math.max(0, Math.min(1, (zn.delay || 0) / 0.7));
+    const blink = 0.45 + Math.abs(Math.sin(T * 12)) * 0.55;
+    c.save();
+    /* ① 外圈锁定环 */
+    c.strokeStyle = 'rgba(255,90,80,' + (0.5 * blink).toFixed(3) + ')';
+    c.lineWidth = 2.2;
+    const r1 = R * (1.15 - k * 0.25);
+    c.beginPath(); c.ellipse(cx, cy, r1, r1 * 0.4, 0, 0, 7); c.stroke();
+    /* ② 收缩内环（倒计时感） */
+    c.strokeStyle = 'rgba(255,190,120,' + (0.7 * blink).toFixed(3) + ')';
+    c.lineWidth = 1.8;
+    const r2 = Math.max(2, R * (0.9 - k * 0.72));
+    c.beginPath(); c.ellipse(cx, cy, r2, r2 * 0.4, 0, 0, 7); c.stroke();
+    /* ③ 闪烁十字准星 */
+    c.strokeStyle = 'rgba(255,120,90,' + (0.8 * blink).toFixed(3) + ')';
+    c.lineWidth = 2;
+    const g0 = 10 + k * 8;
+    c.beginPath();
+    c.moveTo(cx - g0 - 12, cy); c.lineTo(cx - g0, cy);
+    c.moveTo(cx + g0, cy); c.lineTo(cx + g0 + 12, cy);
+    c.moveTo(cx, cy - g0 * 0.5 - 8); c.lineTo(cx, cy - g0 * 0.5);
+    c.moveTo(cx, cy + g0 * 0.5); c.lineTo(cx, cy + g0 * 0.5 + 8);
+    c.stroke();
+    /* ④ 高空投下的炸弹（带尾焰，从画面上方落向落点） */
+    const fall = 1 - Math.max(0, Math.min(1, (zn.delay || 0) / 0.6));
+    const by = cy - 260 + fall * 260;
+    c.fillStyle = 'rgba(40,44,52,.95)';
+    c.beginPath(); c.ellipse(cx, by, 7, 11, 0, 0, 7); c.fill();
+    c.fillStyle = 'rgba(120,128,142,.95)';
+    c.beginPath(); c.ellipse(cx, by - 8, 4, 5, 0, 0, 7); c.fill();
+    c.save(); c.globalCompositeOperation = 'lighter';
+    const fg = c.createRadialGradient(cx, by - 13, 0, cx, by - 13, 12);
+    fg.addColorStop(0, 'rgba(255,200,120,.9)');
+    fg.addColorStop(1, 'rgba(255,120,40,0)');
+    c.fillStyle = fg;
+    c.beginPath(); c.arc(cx, by - 13, 12, 0, 7); c.fill();
+    c.restore();
+    c.restore();
+  },
+
+  /* 制导激光：从枪口到目标的持续激光束
+   * 缺失：zone.t==='laser' 在 drawZones 里被 `continue` 跳过，
+   *   全项目没有别处绘制它。此前靠 update 每帧 push 一个 life=0.08
+   *   的 beam 拼出闪烁光束（3 秒要 push 180 个特效对象），
+   *   画面上是一条一闪一闪的短光，没有"持续灼烧"的观感。
+   * 现在画真正的持续光束：枪口蓄能 + 外辉光 + 闪烁核心 +
+   *   沿束流动的能量环 + 目标身上的持续爆燃与溅射电弧。 */
+  drawZoneLaser(c, zn) {
+    const r = this.run; if (!r) return;
+    const tg = zn.target;
+    if (!tg || tg.dead) return;
+    if (!isFinite(tg.x) || !isFinite(tg.y)) return;
+    const T = r.time || 0;
+    const x0 = r.px, y0 = (r.py || 0) - 26;
+    const x1 = tg.x, y1 = tg.y - 10;
+    const len = Math.hypot(x1 - x0, y1 - y0);
+    if (!isFinite(len) || len < 1) return;
+    const ang = Math.atan2(y1 - y0, x1 - x0);
+    const a = Math.max(0, Math.min(1, zn.life / (zn.max || 1)));
+    c.save();
+    c.translate(x0, y0); c.rotate(ang);
+    /* 枪口蓄能核心 */
+    c.save(); c.globalCompositeOperation = 'lighter';
+    const mg = c.createRadialGradient(0, 0, 0, 0, 0, 16);
+    mg.addColorStop(0, 'rgba(255,255,255,.95)');
+    mg.addColorStop(0.4, 'rgba(140,200,255,.7)');
+    mg.addColorStop(1, 'rgba(90,140,255,0)');
+    c.fillStyle = mg;
+    c.beginPath(); c.arc(0, 0, 16, 0, 7); c.fill();
+    c.restore();
+    /* ① 外层辉光 */
+    c.save(); c.globalCompositeOperation = 'lighter';
+    const og = c.createLinearGradient(0, 0, len, 0);
+    og.addColorStop(0, 'rgba(120,190,255,' + (0.55 * a).toFixed(3) + ')');
+    og.addColorStop(1, 'rgba(180,140,255,' + (0.42 * a).toFixed(3) + ')');
+    c.fillStyle = og;
+    c.fillRect(0, -6.5, len, 13);
+    c.restore();
+    /* ② 亮白核心（高频闪烁 = 激光的电流感） */
+    const fl = 0.82 + Math.sin(T * 42) * 0.18;
+    c.fillStyle = 'rgba(255,255,255,' + (0.95 * fl * a).toFixed(3) + ')';
+    c.fillRect(0, -1.9, len, 3.8);
+    /* ③ 沿束流动的能量环（体现"持续"而不是"一瞬"） */
+    c.save(); c.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 3; i++) {
+      const ph = ((T * 1.1) + i / 3) % 1;
+      const px = ph * len;
+      const rg = c.createRadialGradient(px, 0, 0, px, 0, 11);
+      rg.addColorStop(0, 'rgba(200,235,255,' + (0.75 * a).toFixed(3) + ')');
+      rg.addColorStop(1, 'rgba(120,160,255,0)');
+      c.fillStyle = rg;
+      c.beginPath(); c.arc(px, 0, 11, 0, 7); c.fill();
+    }
+    c.restore();
+    c.restore();
+    /* ④ 命中点持续爆燃 + 溅射电弧 */
+    c.save(); c.globalCompositeOperation = 'lighter';
+    const hr = 26 + Math.sin(T * 22) * 5;
+    const hg = c.createRadialGradient(x1, y1, 0, x1, y1, Math.max(1, hr));
+    hg.addColorStop(0, 'rgba(255,255,255,' + (0.9 * a).toFixed(3) + ')');
+    hg.addColorStop(0.35, 'rgba(150,200,255,' + (0.65 * a).toFixed(3) + ')');
+    hg.addColorStop(1, 'rgba(90,140,255,0)');
+    c.fillStyle = hg;
+    c.beginPath(); c.arc(x1, y1, Math.max(1, hr), 0, 7); c.fill();
+    for (let i = 0; i < 4; i++) {
+      const a0 = T * 9 + (i / 4) * Math.PI * 2;
+      c.strokeStyle = 'rgba(200,230,255,' + (0.6 * a).toFixed(3) + ')';
+      c.lineWidth = 1.6;
+      c.beginPath();
+      c.moveTo(x1, y1);
+      c.lineTo(x1 + Math.cos(a0) * 13 + Math.sin(T * 30 + i) * 4,
+               y1 + Math.sin(a0) * 9 + Math.cos(T * 26 + i) * 3);
+      c.lineTo(x1 + Math.cos(a0) * 22, y1 + Math.sin(a0) * 15);
+      c.stroke();
+    }
+    c.restore();
   },
 
   /* 炮台：Q 版贴塔 + 元素氛围 + 开火后坐
@@ -5635,6 +6002,200 @@ const BT = {
       } else if (f.t === 'bolt') {
         c.strokeStyle = 'rgba(192,140,255,' + al + ')'; c.lineWidth = 2;
         c.beginPath(); c.moveTo(f.x1, f.y1); c.lineTo(f.x2, f.y2); c.stroke();
+      } else if (f.t === 'thermo') {
+        /* 温压弹：高温高压 —— 蘑菇云 + 双层冲击环 + 飞散火星。
+         * 此前温压弹与所有火系技能共用 nova，玩家看不出这是"温压弹"。 */
+        const k = 1 - al;
+        const R = Math.max(20, f.r || 96);
+        /* ① 双层冲击环（一快一慢，体现"高压"） */
+        for (let s = 0; s < 2; s++) {
+          const kk = Math.max(0, Math.min(1, k * (1.5 - s * 0.45)));
+          const rr = Math.max(1, R * (0.25 + kk * (1.0 - s * 0.28)));
+          c.strokeStyle = 'rgba(' + (s ? '255,196,120' : '255,120,50') + ',' + ((1 - kk) * (0.75 - s * 0.25)).toFixed(3) + ')';
+          c.lineWidth = Math.max(0.5, (s ? 2.2 : 4) * (1 - kk * 0.6));
+          c.beginPath(); c.ellipse(f.x, f.y, rr, rr * 0.38, 0, 0, 7); c.stroke();
+        }
+        c.save(); c.globalCompositeOperation = 'lighter';
+        /* ② 蘑菇云：烟柱 + 伞盖 */
+        const stemH = 34 + k * 44;
+        const sg = c.createLinearGradient(f.x, f.y, f.x, f.y - stemH);
+        sg.addColorStop(0, 'rgba(255,240,190,' + (al * 0.8).toFixed(3) + ')');
+        sg.addColorStop(0.5, 'rgba(255,130,50,' + (al * 0.5).toFixed(3) + ')');
+        sg.addColorStop(1, 'rgba(180,60,20,0)');
+        c.fillStyle = sg;
+        c.beginPath();
+        c.ellipse(f.x, f.y - stemH * 0.45, Math.max(1, R * 0.22 * (1 + k * 0.5)), stemH * 0.5, 0, 0, 7);
+        c.fill();
+        const capR = Math.max(2, R * (0.34 + k * 0.62));
+        const capY = f.y - stemH * (0.82 + k * 0.12);
+        const cg = c.createRadialGradient(f.x, capY, 0, f.x, capY, capR);
+        cg.addColorStop(0, 'rgba(255,235,190,' + (al * 0.72).toFixed(3) + ')');
+        cg.addColorStop(0.45, 'rgba(255,120,40,' + (al * 0.42).toFixed(3) + ')');
+        cg.addColorStop(1, 'rgba(150,50,20,0)');
+        c.fillStyle = cg;
+        c.beginPath(); c.ellipse(f.x, capY, capR, capR * 0.62, 0, 0, 7); c.fill();
+        /* ③ 飞散火星 */
+        for (let i = 0; i < 12; i++) {
+          const a0 = (i / 12) * Math.PI * 2 + (f.seed || 0);
+          const sp = k * R * (0.9 + (((i * 7) % 5) * 0.08));
+          const px = f.x + Math.cos(a0) * sp;
+          const py = f.y + Math.sin(a0) * sp * 0.44 - k * 26 + k * k * 34;
+          c.fillStyle = 'rgba(255,' + (150 + ((i * 11) % 90)) + ',60,' + (al * 0.85).toFixed(3) + ')';
+          c.beginPath(); c.arc(px, py, Math.max(0.8, 3 * al), 0, 7); c.fill();
+        }
+        c.restore();
+      } else if (f.t === 'cryo') {
+        /* 干冰弹：地面霜环扩散 + 冰棱爆散 + 中心爆闪。
+         * 冻结是"范围控制"，画面必须让玩家看清冻结到哪里。 */
+        const k = 1 - al;
+        const R = Math.max(20, f.r || 120);
+        /* ① 霜环扩散 */
+        const rr = Math.max(1, R * (0.2 + k * 0.85));
+        const fg = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, rr);
+        fg.addColorStop(0, 'rgba(210,245,255,' + ((1 - k) * 0.26).toFixed(3) + ')');
+        fg.addColorStop(1, 'rgba(120,200,255,0)');
+        c.fillStyle = fg;
+        c.beginPath(); c.ellipse(f.x, f.y, rr, rr * 0.38, 0, 0, 7); c.fill();
+        c.strokeStyle = 'rgba(150,230,255,' + ((1 - k) * 0.7).toFixed(3) + ')';
+        c.lineWidth = Math.max(0.5, 3 * (1 - k * 0.5));
+        c.beginPath(); c.ellipse(f.x, f.y, rr, rr * 0.38, 0, 0, 7); c.stroke();
+        /* ② 冰棱爆散（10 片，边飞边自转） */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 10; i++) {
+          const a0 = (i / 10) * Math.PI * 2 + (f.seed || 0);
+          const sp = k * R * (0.55 + (((i * 5) % 6) * 0.09));
+          const px = f.x + Math.cos(a0) * sp;
+          const py = f.y + Math.sin(a0) * sp * 0.5 - k * 18 + k * k * 22;
+          c.save(); c.translate(px, py); c.rotate(a0 + k * 5);
+          const s2 = (1 - k * 0.4) * (2.6 + (((i * 3) % 4) * 0.9));
+          c.fillStyle = 'rgba(230,250,255,' + (al * 0.9).toFixed(3) + ')';
+          c.beginPath();
+          c.moveTo(0, -s2 * 2.2); c.lineTo(s2 * 0.78, 0); c.lineTo(0, s2 * 2.2); c.lineTo(-s2 * 0.78, 0);
+          c.closePath(); c.fill();
+          c.restore();
+        }
+        /* ③ 中心爆闪 */
+        const cr = Math.max(2, 34 * (1 - k * 0.5) + 6);
+        const cg = c.createRadialGradient(f.x, f.y, 0, f.x, f.y, cr);
+        cg.addColorStop(0, 'rgba(255,255,255,' + (al * 0.9).toFixed(3) + ')');
+        cg.addColorStop(0.4, 'rgba(150,225,255,' + (al * 0.5).toFixed(3) + ')');
+        cg.addColorStop(1, 'rgba(80,170,240,0)');
+        c.fillStyle = cg;
+        c.beginPath(); c.arc(f.x, f.y, cr, 0, 7); c.fill();
+        c.restore();
+      } else if (f.t === 'pierce') {
+        /* 电磁穿刺：一条会旋转的电磁钻 —— 螺旋螺纹 + 抖动核心 + 前端钻头。
+         * 此前与高能射线共用 beam 电，两个技能画面完全一样。 */
+        const T = (this.run && this.run.time) || 0;
+        const ang = f.a || 0, len = Math.max(1, f.len || 620);
+        c.save();
+        c.translate(f.x, f.y); c.rotate(ang);
+        /* ① 外辉光 */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const og = c.createLinearGradient(0, -14, 0, 14);
+        og.addColorStop(0, 'rgba(150,110,255,0)');
+        og.addColorStop(0.5, 'rgba(190,150,255,' + (al * 0.55).toFixed(3) + ')');
+        og.addColorStop(1, 'rgba(150,110,255,0)');
+        c.fillStyle = og;
+        c.fillRect(0, -14, len, 28);
+        c.restore();
+        /* ② 螺旋螺纹沿束推进（"钻"的感觉）：12 道密螺纹，色偏青紫 */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 12; i++) {
+          const t = (i / 12 + T * 2.4) % 1;
+          const px = t * len;
+          const w = Math.max(1, 8 - t * 4.4);
+          c.strokeStyle = 'rgba(' + (i % 2 ? '150,235,255' : '210,180,255') + ',' + ((1 - t * 0.5) * al * 0.85).toFixed(3) + ')';
+          c.lineWidth = 2.2;
+          c.beginPath(); c.ellipse(px, 0, w * 0.36, w, 0, 0, 7); c.stroke();
+        }
+        /* 绕束自旋的青色电弧（与高能射线的"宽柱"拉开区分） */
+        for (let i = 0; i < 3; i++) {
+          const t = ((T * 1.7) + i / 3) % 1;
+          const px = t * len;
+          c.strokeStyle = 'rgba(120,240,255,' + (al * 0.55).toFixed(3) + ')';
+          c.lineWidth = 1.3;
+          c.beginPath();
+          c.moveTo(px - 6, Math.sin(T * 26 + i) * 4);
+          c.lineTo(px, Math.sin(T * 26 + i + 1) * 7);
+          c.lineTo(px + 6, Math.sin(T * 26 + i + 2) * 4);
+          c.stroke();
+        }
+        c.restore();
+        /* ③ 抖动核心（细而亮，锯齿电流） */
+        c.strokeStyle = 'rgba(235,255,255,' + (al * 0.95).toFixed(3) + ')';
+        c.lineWidth = 1.8;
+        c.beginPath();
+        c.moveTo(0, 0);
+        const seg = 14;
+        for (let i = 1; i <= seg; i++) {
+          const t = i / seg;
+          const jitter = (i % 2 ? 1 : -1) * (1 - t * 0.4) * (2.6 + Math.sin(T * 30 + i) * 1.6);
+          c.lineTo(t * len, jitter);
+        }
+        c.stroke();
+        /* ④ 前端钻头 */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        c.fillStyle = 'rgba(235,220,255,' + (al * 0.9).toFixed(3) + ')';
+        c.beginPath();
+        c.moveTo(len, 0); c.lineTo(len - 20, -9); c.lineTo(len - 14, 0); c.lineTo(len - 20, 9);
+        c.closePath(); c.fill();
+        c.restore();
+        c.restore();
+      } else if (f.t === 'ray') {
+        /* 高能射线：粗能量柱 + 沿束推进的能量环 + 出口爆闪。
+         * 与电磁穿刺（细钻）形成对比：一个是"贯穿炮"，一个是"穿刺钻"。 */
+        const T = (this.run && this.run.time) || 0;
+        const ang = f.a || 0, len = Math.max(1, f.len || 700);
+        c.save();
+        c.translate(f.x, f.y); c.rotate(ang);
+        /* ① 三层粗能量柱（越外层越淡）：比电磁穿刺明显更宽，颜色偏白紫 */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        for (let s = 0; s < 3; s++) {
+          const w = 27 - s * 7;
+          const og = c.createLinearGradient(0, -w, 0, w);
+          og.addColorStop(0, 'rgba(150,110,255,0)');
+          og.addColorStop(0.5, 'rgba(' + (s === 2 ? '255,255,255' : '205,175,255') + ',' + (al * (0.34 + s * 0.24)).toFixed(3) + ')');
+          og.addColorStop(1, 'rgba(150,110,255,0)');
+          c.fillStyle = og;
+          c.fillRect(0, -w, len, w * 2);
+        }
+        c.restore();
+        /* ② 沿束推进的能量环（横向脉冲，宽椭圆） */
+        c.save(); c.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 3; i++) {
+          const t = ((T * 1.4) + i / 3) % 1;
+          const px = t * len;
+          const rg = c.createRadialGradient(px, 0, 0, px, 0, 26);
+          rg.addColorStop(0, 'rgba(255,245,255,' + (al * 0.9).toFixed(3) + ')');
+          rg.addColorStop(0.5, 'rgba(200,160,255,' + (al * 0.5).toFixed(3) + ')');
+          rg.addColorStop(1, 'rgba(140,90,255,0)');
+          c.fillStyle = rg;
+          c.beginPath(); c.ellipse(px, 0, 11, 26, 0, 0, 7); c.fill();
+        }
+        /* 柱体横向光纹（"炮"的充能感） */
+        for (let i = 0; i < 6; i++) {
+          const t = ((T * 0.9) + i / 6) % 1;
+          const px = t * len;
+          c.fillStyle = 'rgba(255,255,255,' + (al * 0.30).toFixed(3) + ')';
+          c.fillRect(px, -20, 3, 40);
+        }
+        c.restore();
+        /* ③ 核心亮线（比电磁穿刺更粗） */
+        c.fillStyle = 'rgba(255,255,255,' + (al * 0.9).toFixed(3) + ')';
+        c.fillRect(0, -4.4, len, 8.8);
+        c.restore();
+        /* ④ 出口爆闪 */
+        const ex = f.x + Math.cos(ang) * len, ey = f.y + Math.sin(ang) * len;
+        c.save(); c.globalCompositeOperation = 'lighter';
+        const er = Math.max(2, 30 * al + 6);
+        const eg = c.createRadialGradient(ex, ey, 0, ex, ey, er);
+        eg.addColorStop(0, 'rgba(255,255,255,' + (al * 0.85).toFixed(3) + ')');
+        eg.addColorStop(0.4, 'rgba(180,140,255,' + (al * 0.55).toFixed(3) + ')');
+        eg.addColorStop(1, 'rgba(120,80,255,0)');
+        c.fillStyle = eg;
+        c.beginPath(); c.arc(ex, ey, er, 0, 7); c.fill();
+        c.restore();
       } else if (f.t === 'beam') {
         /* 贯穿光束：电磁穿刺 / 高能射线 / 制导激光。
          * 严重 BUG：这三种技能 push 的是 t:'beam'，而这里此前只有
