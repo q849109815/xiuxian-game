@@ -1818,3 +1818,13 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
   #login{justify-content:flex-start !important;padding-top:12px !important}
   .lg-box{margin:0 auto;flex-shrink:0}
 }
+
+/* ===== 主菜单导航图标：emoji 换真图 ===== */
+.hn i, .hn2 i { display:flex; align-items:center; justify-content:center; }
+.hn i img { width:25px; height:25px; object-fit:contain; display:block;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.55)); }
+.hn.main i img { width:32px; height:32px; }
+.hn.on i img { filter:drop-shadow(0 0 8px var(--gold)) drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+.hn2 i img { width:21px; height:21px; object-fit:contain; display:block;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+.hn2.on i img { filter:drop-shadow(0 0 7px #ffa53c) drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
