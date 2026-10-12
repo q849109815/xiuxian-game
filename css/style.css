@@ -138,9 +138,18 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
  * 叠加两团柔和环境光（顶部偏冷的青蓝、底部偏暖的橙），
  * 与战斗画面的氛围层（左上青 / 右下橙）同一套语言，
  * 让主界面与战斗画面观感统一，且纯 CSS、不增加任何绘制开销。 */
+/* 【主界面实景背景】
+ * 原先只有纯 CSS 渐变，整体偏平、看不出"末日幸存者营地"的题材。
+ * 现在在渐变之下垫一张营地实景图（assets/scene/main_bg.jpg），
+ * 上面压一层 55% 暗色遮罩 —— 压暗是刻意的：面板文字要压在背景上，
+ * 图太亮会看不清字。两团环境光（顶冷青 / 底暖橙）保持叠加在最上层，
+ * 与战斗画面氛围层同一套语言。
+ * 图加载失败时自动回落到最后那层纯渐变，不会出现白屏。 */
 #home{background:
   radial-gradient(ellipse 130% 62% at 50% 4%, rgba(126,186,255,.17) 0%, rgba(126,186,255,0) 62%),
   radial-gradient(ellipse 96% 52% at 14% 96%, rgba(255,152,62,.14) 0%, rgba(255,152,62,0) 64%),
+  linear-gradient(180deg,rgba(8,12,20,.62) 0%,rgba(8,12,20,.50) 45%,rgba(12,8,4,.68) 100%),
+  url(../assets/scene/main_bg.jpg?v=20270105a) center/cover no-repeat,
   linear-gradient(180deg,#1a2637 0%,#20304a 45%,#2c1c0c 100%)}
 .hm-bg{position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(ellipse at 50% 18%,rgba(120,160,220,.18),transparent 55%),
