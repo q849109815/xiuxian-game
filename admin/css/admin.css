@@ -176,3 +176,10 @@ pre.json{margin:0;padding:10px;background:var(--bg);border:1px solid var(--line)
   background:var(--bg3);font-size:11px;color:var(--fg2)}
 .cb{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--fg2);cursor:pointer}
 .cb input{width:15px;height:15px}
+
+/* ---- 后台图标（emoji 换图）---- */
+.ai{width:14px;height:14px;object-fit:contain;vertical-align:-2px;border-radius:2px}
+.nv i img.ai{width:16px;height:16px;vertical-align:-3px}
+.gt-logo img{width:44px;height:44px;object-fit:cover;border-radius:10px;display:block;margin:0 auto}
+.hd-logo{width:18px;height:18px;object-fit:cover;border-radius:5px;vertical-align:-3px;margin-right:5px}
+.hd-menu img,.hd-btn img{width:16px;height:16px;object-fit:contain;opacity:.85}
