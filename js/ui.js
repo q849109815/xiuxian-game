@@ -17,7 +17,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270106a';
+const IMG_V = '20270107a';
 function stampImgs(root) {
   try {
     const box = root || document;
@@ -116,7 +116,7 @@ const UI = {
 
     $('#hmBase').innerHTML = EX.buildings.map((b) => {
       const l = p.build[b.id] || 1;
-      return `<button class="bs" data-build="${b.id}"><i>${b.icon}</i><b>${b.n} Lv.${l}</b><span>${b.desc}</span></button>`;
+      return `<button class="bs" data-build="${b.id}"><i>${b.img ? `<img src="${b.img}" alt="">` : b.icon}</i><b>${b.n} Lv.${l}</b><span>${b.desc}</span></button>`;
     }).join('');
     $$('#hmBase .bs').forEach((el) => { el.onclick = () => this.open('base', el.dataset.build); });
     this.navDots();
@@ -493,7 +493,7 @@ r_tavern(p, tab) {
     return `<div class="card"><div class="card-t">加入军团</div>
       <div class="sub" style="padding:4px 2px">军团可提供属性加成、军团副本与军团商店。</div>
       ${EX.legions.map((l) => `<div class="mc-card">
-        <div class="mi">${l.icon}</div>
+        <div class="mi">${l.img ? `<img src="${l.img}" alt="">` : l.icon}</div>
         <div class="mn"><b>${l.n}</b><span>${l.desc}</span>
           <span>人数 ${l.mem} · 需要战力 ${E.fmt(l.need)}</span></div>
         <button data-join="${l.id}" ${E.power(p) < l.need ? 'disabled' : ''}>加入</button>
@@ -542,7 +542,7 @@ r_tavern(p, tab) {
           const okSt = (p.stamina || 0) >= a.cost;
           const okPw = E.power(p) >= a.need;
           return `<div class="mc-card">
-            <div class="mi">${a.icon}</div>
+            <div class="mi">${a.img ? `<img src="${a.img}" alt="">` : a.icon}</div>
             <div class="mn"><b>${a.n}</b><span>贡献 +${a.contrib} · 金币 +${E.fmt(a.gold)}</span>
               <span>体力 ${a.cost} · 推荐战力 ${E.fmt(a.need)}${okPw ? '' : '（战力不足）'}</span></div>
             <button data-lact="${a.id}" ${(okSt && okPw) ? '' : 'disabled'}>${okSt ? '挑战' : '体力不足'}</button>
@@ -579,7 +579,7 @@ r_tavern(p, tab) {
           const used = p.lgShopBuy[g.id] || 0;
           const can = (p.legionExp || 0) >= g.cost && (!g.lim || used < g.lim);
           return `<div class="mc-card">
-            <div class="mi">${g.icon}</div>
+            <div class="mi">${g.img ? `<img src="${g.img}" alt="">` : g.icon}</div>
             <div class="mn"><b>${g.n}</b><span>${g.item === 'gold' ? ('金币 ' + E.fmt(g.n2)) : (E.itemName(g.item) + ' ×' + g.n2)}</span>
               <span>贡献 ${g.cost}${g.lim ? ' · 每日限 ' + g.lim + '（已兑 ' + used + '）' : ''}</span></div>
             <button data-lbuy="${g.id}" ${can ? '' : 'disabled'}>${can ? '兑换' : (g.lim && used >= g.lim ? '已达上限' : '贡献不足')}</button>
@@ -663,7 +663,7 @@ r_tavern(p, tab) {
       ${EX.expeds.map((e) => {
         const ok = (p.stamina || 0) >= e.cost;
         return `<div class="mc-card">
-          <div class="mi">${e.icon}</div>
+          <div class="mi">${e.img ? `<img src="${e.img}" alt="">` : e.icon}</div>
           <div class="mn"><b>${e.n}</b><span>${e.desc}</span>
             <span>消耗体力 ${e.cost} · 推荐战力 ${E.fmt(e.need)}</span></div>
           <button data-exped="${e.id}" ${!ok ? 'disabled' : ''}>${ok ? '挑战' : '体力不足'}</button>
@@ -1192,7 +1192,7 @@ r_tavern(p, tab) {
       const cost = E.talentCost(p, t.id);
       const lock = !E.talentUnlocked(p, t.id);
       const full = cur >= t.max;
-      return `<div class="item"><div class="ic">${t.icon}</div>
+      return `<div class="item"><div class="ic">${t.img ? `<img src="${t.img}" alt="">` : t.icon}</div>
         <div class="info"><div class="nm">${t.n} <span class="tag y">Lv.${cur}/${t.max}</span></div>
         <div class="sub">${t.desc}</div>
         <div class="bar"><i style="width:${cur / t.max * 100}%"></i></div>
@@ -2419,12 +2419,12 @@ r_tavern(p, tab) {
         const cur = d.id === dm.id;
         const dd = E.diffMul(d.id);
         return `<button class="lvc ${cur ? 'cur' : ''}" data-df="${d.id}" style="${cur ? 'background:' + (d.color || '#5fd97a') + '22;border-color:' + (d.color || '#5fd97a') : ''}">
-          <i style="font-size:17px;font-style:normal;display:block">${d.icon}</i>
+          <i style="font-size:17px;font-style:normal;display:block">${d.img ? `<img src="${d.img}" style="width:17px;height:17px;object-fit:cover;border-radius:4px">` : d.icon}</i>
           <b style="font-size:11px">${d.n}</b>
           <span style="font-size:11px;opacity:.85">奖励×${dd.rw} · 体力+${Math.max(0, dd.stam - 1)}</span></button>`;
       }).join('')}</div>
       <div class="sub" style="margin-top:6px">${E.diffDef(dm.id).desc || ''}</div></div>`;
-    return diffBar + `<div class="card"><div class="card-t">${cd.icon} ${cd.n}</div>
+    return diffBar + `<div class="card"><div class="card-t">${cd.img ? `<img src="${cd.img}" style="width:20px;height:20px;object-fit:cover;border-radius:5px;vertical-align:-4px">` : cd.icon} ${cd.n}</div>
       ${list.map((l) => {
         const lock = !E.levelUnlocked(p, l.id);
         const st = E.diffStars(p, l.id, diff);
@@ -2448,7 +2448,7 @@ r_tavern(p, tab) {
       }).join('')}</div>
       <div class="card"><div class="card-t">章节</div>
       <div class="lvgrid">${E.chapters().map((c) => `<button class="lvc ${c.id === ch ? 'cur' : ''}" data-ch="${c.id}">
-        <i style="font-size:17px;font-style:normal;display:block">${c.icon}</i><b style="font-size:11px">${c.n.split(' · ')[0]}</b></button>`).join('')}</div></div>
+        <i style="font-size:17px;font-style:normal;display:block">${c.img ? `<img src="${c.img}" style="width:17px;height:17px;object-fit:cover;border-radius:4px">` : c.icon}</i><b style="font-size:11px">${c.n.split(' · ')[0]}</b></button>`).join('')}</div></div>
       <div class="card"><div class="card-t">无尽模式</div>
       ${`<div class="kv"><span>最佳层数</span><b>${p.endlessBest || 0}</b></div>
          <div class="sub">默认解锁 · 掉落/收益随进度章节提升</div>
@@ -2547,7 +2547,7 @@ r_tavern(p, tab) {
     /* 离线面板此前只显示金币数字，金属/经验写成「金属 + 经验」没有数量，
      * 而领取时三者都发 —— 玩家看不到自己能拿多少。这里按实际计算值显示。 */
     const ofc = E.offlineCalc(p);
-    return `<div class="card"><div class="card-t">${b.icon} ${b.n} <span class="sub">Lv.${cur}/${b.max}</span></div>
+    return `<div class="card"><div class="card-t">${b.img ? `<img src="${b.img}" style="width:22px;height:22px;vertical-align:-5px;border-radius:5px">` : b.icon} ${b.n} <span class="sub">Lv.${cur}/${b.max}</span></div>
       <div class="kv"><span>效果</span><b style="color:var(--green)">${val}</b></div>
       <div class="kv"><span>说明</span><b style="font-size:11px">${b.desc}</b></div>
       <button class="btn c blk" id="buUp" ${p.gold < cost ? 'disabled' : ''}>升级 · ${E.fmt(cost)} 金币</button></div>
