@@ -17,7 +17,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270109a';
+const IMG_V = '20270110a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -46,7 +46,121 @@ const EMOJI_ICON = {
   '⚙': 'nav_set.png', '📢': 'nav_notice.png', '🏥': 'bd_hospital.jpg',
   '🏗️': 'nav_base.png', '🔧': 'nav_base.png',
   '🛸': 'sk_wurenji.jpg', '🚙': 'sk_zhuangjiache.jpg',
+  /* —— 全量补齐：把界面/配置里剩余的 emoji 全部接图（本轮新增 10 张：
+   *    ic_add 加号 / ic_slot 空槽 / ic_music 音乐 / ic_sound 音效 / ic_lang 语言 /
+   *    ic_stats 统计 / ic_avatar 头像上传 / ic_up 升级箭头 / ic_hammer 强化锤 / ic_cloud 云存档）
+   * 未收录的 emoji 会原样显示，所以这里按「全量扫描结果」逐条映射，做到界面零 emoji。 */
+  '🌪️': 'sk_xuanfengjianong.jpg',
+  '🌾': 'bd_warehouse.jpg',
+  '💪': 'talent_t_atk.jpg',
+  '📜': 'ms_clipboard.jpg',
+  '🏙️': 'nav_battle.png',
+  '🕯️': 'ms_sparkle.jpg',
+  '♾': 'ms_infinity.jpg',
+  '🖼️': 'ic_avatar.jpg',
+  '🕵️‍♀️': 'av_a04.png',
+  '🌉': 'nav_battle.png',
+  '💫': 'ms_sparkle.jpg',
+  '🏜️': 'nav_exped.png',
+  '🏔️': 'nav_exped.png',
+  '✈️': 'z_feixing.jpg',
+  '⛏️': 'ic_hammer.jpg',
+  '⇄': 'hud_switch.png',
+  '↔': 'hud_switch.png',
+  '🔨': 'ic_hammer.jpg',
+  '☁️': 'ic_cloud.jpg',
+  '✗': 'hud_close.png',
+  '✘': 'hud_close.png',
+  '👩‍⚕️': 'av_a02.png',
+  '🛢️': 'i_powder.jpg',
+  '🎇': 'w_grenade.jpg',
+  '🚀': 'w_grenade.jpg',
+  '☠️': 'hud_kill.png',
+  '🎙️': 'ic_sound.jpg',
+  '🦾': 'eq_gloves.jpg',
+  '🪚': 'eq_weapon.jpg',
+  '⚔': 'eq_weapon.jpg',
+  '🏭': 'bd_armory.jpg',
+  '🧰': 'bd_armory.jpg',
+  '🦅': 'z_feixing.jpg',
+  '🕷️': 'z_fenlie.jpg',
+  '🗓️': 'ms_login.jpg',
+  '📘': 'nav_codex.png',
+  '🎵': 'ic_music.jpg',
+  '🔊': 'ic_sound.jpg',
+  '📊': 'ic_stats.jpg',
+  '🧑‍🚀': 'av_a01.png',
+  '👨‍🚀': 'av_a01.png',
+  '🧑‍🏭': 'av_a03.png',
+  '🧑‍🚒': 'av_a08.png',
+  '🧑‍🍳': 'av_a09.png',
+  '⚙️': 'nav_set.png',
+  '🖥️': 'nav_set.png',
+  '🕸️': 'ms_boss.jpg',
+  '🕳️': 'ms_boss.jpg',
+  '🥼': 'cdx_skin.jpg',
+  '👗': 'cdx_skin.jpg',
+  '🥻': 'cdx_skin.jpg',
+  '🧨': 'i_powder.jpg',
+  '💉': 'i_medkit.jpg',
+  '👑': 'ic_medal.jpg',
+  '🔰': 'ic_medal.jpg',
+  '🔱': 'ic_medal.jpg',
+  '🩸': 'i_potion.jpg',
+  '🍖': 'i_potion.jpg',
+  '🦺': 'eq_armor.jpg',
+  '🌫️': 'el_wind.jpg',
+  '☢️': 'el_elec.jpg',
+  '🪱': 'z_putong.jpg',
+  '🐛': 'z_putong.jpg',
+  '🤡': 'z_putong.jpg',
+  '🕐': 'ms_login.jpg',
+  '📮': 'nav_mail.png',
+  '🔲': 'ic_slot.jpg',
+  '🌐': 'ic_lang.jpg',
+  '🔩': 'i_metal.jpg',
+  '⬜': 'ic_slot.jpg',
+  '🦖': 'ms_boss.jpg',
+  '❔': 'ic_warn.jpg',
+  '❓': 'ic_warn.jpg',
+  '⚠': 'ic_warn.jpg',
+  '🚫': 'ic_warn.jpg',
+  '🔺': 'ic_warn.jpg',
+  '💰': 'd1_gold.jpg',
+  '🎪': 'nav_act.png',
+  '📺': 'nav_act.png',
+  '❤️': 'hud_hp.png',
+  '🔌': 'el_elec.jpg',
+  '🌨️': 'el_ice.jpg',
+  '➕': 'ic_add.jpg',
+  '🔳': 'i_chip.jpg',
+  '🧑': 'av_a05.png',
+  '🥷': 'av_a06.png',
+  '👤': 'av_a07.png',
+  '💣': 'w_mine.jpg',
+  '🔬': 'bd_lab.jpg',
+  '🧪': 'bd_lab.jpg',
+  '📡': 'bd_lab.jpg',
+  '🚇': 'nav_go.png',
+  '➤': 'nav_go.png',
+  '🏃': 'nav_go.png',
+  '🏺': 'i_rare.jpg',
+  '⬆': 'ic_up.jpg',
+  '✔': 'check.jpg',
+  '✓': 'check.jpg',
+  '🔴': 'gem_r.jpg',
+  '🔵': 'gem_b.jpg',
+  '🟣': 'gem_p.jpg',
+  '🟢': 'gem_g.jpg',
+  '🔦': 'w_smg.jpg',
+  '☣️': 'z_du.jpg',
+  '✅': 'check.jpg',
+  '★': 'star.jpg',
+  '🏹': 'm_sj.jpg',
+  '🔒': 'lock.jpg',
+  '🤮': 'z_du.jpg',
 };
+
 /* 长串优先，避免 ⚔ + ️ 被拆开匹配 */
 const EMOJI_RE = new RegExp(
   Object.keys(EMOJI_ICON).sort((a, b) => b.length - a.length).join('|'), 'g');
@@ -165,7 +279,13 @@ const UI = {
       const _av = p.avatar || '';
       const _u = this.avSrc(_av);
       if (_u) avEl.innerHTML = `<img src="${_u}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-      else avEl.textContent = _av || E.char(p).icon;   /* 旧存档仍是 emoji，回退不空白 */
+      else {
+        /* 旧存档里 p.avatar 仍是 emoji（尚无对应图片），此时回退到【角色立绘】而不是 emoji：
+         * 主界面左上角头像此前会显示 👨‍🚀 这类死 emoji，与新美术不是一个画风。 */
+        const _ci = (E.char(p) || {}).img;
+        if (_ci) avEl.innerHTML = `<img src="${_ci}?v=${IMG_V}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+        else avEl.textContent = _av || '';
+      }
     }
     /* 头像框
      * BUG：equipFrame() 只写 p.frame，而全项目【没有任何一处读取它做渲染】——
@@ -3281,6 +3401,7 @@ r_tavern(p, tab) {
     const el = $('#btTalk'), tx = $('#btTalkTx');
     if (!el || !tx || !text) return;
     tx.textContent = text;
+    emojify(tx);   /* 台词前缀 🎙️ 此前是死 emoji，这里统一换成图片 */
     el.classList.add('on');
     clearTimeout(this._talkT);
     this._talkT = setTimeout(() => el.classList.remove('on'), ms || 4200);
@@ -3642,7 +3763,7 @@ r_tavern(p, tab) {
     this.rfLeft = (this.rfLeft == null ? 1 : this.rfLeft);
     const rfB = $('#chRefresh');
     if (rfB) {
-      rfB.innerHTML = '🔄 刷新';
+      rfB.innerHTML = '<img class="ei" src="assets/icon/hud_switch.png?v=' + IMG_V + '" alt=""> 刷新';
       rfB.disabled = this.rfLeft <= 0;
       rfB.style.opacity = this.rfLeft > 0 ? '1' : '.45';
     }
