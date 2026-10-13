@@ -1794,16 +1794,15 @@ function bindAll() {
     if (window.SND) SND.play('click');
   };
 
-  $$('.hm-nav .hn').forEach((b) => {
+  /* 主菜单：原「5 格一级 + 17 个横滑二级」已整合为 .hm-menu 分组网格（20270122a）。
+   * 统一按 .hmb[data-p] 绑定，22 个入口一个不少；
+   * 旧的 .hn / .hn2 选择器已随 HTML 一并移除，此处不再需要两段各自绑定。 */
+  $$('.hm-menu .hmb').forEach((b) => {
     b.onclick = () => {
-      const k = b.dataset.p;
-      if (k === 'battle') { UI.open('level', '章节'); return; }
-      $$('.hm-nav .hn').forEach((x) => x.classList.remove('on'));
-      b.classList.add('on');
-      UI.open(k);
+      if (window.SND) SND.play('click');
+      UI.open(b.dataset.p);
     };
   });
-  $$('.hm-nav2 .hn2').forEach((b) => { b.onclick = () => { UI.open(b.dataset.p); }; });
 
   const px = document.getElementById('pnX'); if (px) px.onclick = () => UI.close();
   const pm = document.getElementById('pnMask'); if (pm) pm.onclick = () => UI.close();
