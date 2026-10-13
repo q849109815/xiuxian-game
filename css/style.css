@@ -575,6 +575,12 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 .lvc.lock{opacity:.38}
 .lvc.cur{border-color:var(--gold);background:rgba(255,215,106,.12)}
 .lvc.boss b{color:var(--red)}
+/* 关卡格子的场景缩略图：此前没有专门规则，继承默认后只有 17×17，
+ * 640×1137 的场景实景图缩到这个尺寸根本看不出是哪张场景（白画了）。
+ * 放大到 30px 居中显示，格子加高容纳，文字保持原样。 */
+.lvc > i{display:block;margin:0 auto 3px;line-height:0}
+.lvc > i img{width:30px;height:30px;border-radius:7px;object-fit:cover;
+  display:block;margin:0 auto;box-shadow:0 1px 3px rgba(0,0,0,.5)}
 
 /* ===== 防线塔防战斗 UI（真实《向僵尸开炮》布局） ===== */
 .bt-wall{position:absolute;left:10px;right:10px;bottom:150px;display:flex;align-items:center;gap:7px;
@@ -1793,7 +1799,7 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
  * ======================================================= */
 .gcell{aspect-ratio:auto !important;min-height:104px;padding:6px 4px 8px !important}
 .gcell img{flex:0 1 auto;min-height:0;width:auto;height:auto;
-  max-width:60%;max-height:46px;object-fit:contain}
+  max-width:76%;max-height:64px;object-fit:contain}
 /* 名称与描述改为完整显示：此前 line-clamp:2 把「金币2000+金属50+枪械碎片10+急救包3」
    这类描述砍掉一半（内容 58px / 可视 29px），玩家看不到商品到底给什么。
    格子已是 aspect-ratio:auto + min-height 自适应，去掉截断不会把布局顶坏。 */
