@@ -1862,3 +1862,9 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 .gd-finger .ei{width:30px;height:30px;margin:0}
 .bw-heart .ei{width:13px;height:13px;margin:0;vertical-align:-2px}
 #pnX .ei{width:15px;height:15px;margin:0;vertical-align:-2px}
+/* 本轮把最后 3 个静态 emoji（⏸ 暂停 / ⏱ 三选一倒计时 / ◀ 面板返回）换成图片。
+ * 这三处不走 emojify（战斗顶栏与静态 HTML 结构），必须在各自容器里定尺寸，
+ * 否则会沿用 .ei 的 1.05em，在按钮里偏小、在圆形返回键里会溢出。 */
+#btPause .ei{width:19px;height:19px;margin:0;vertical-align:middle}
+.ch-timer .ei{width:13px;height:13px;margin:0;vertical-align:-1px}
+.pn-back .ei{width:15px;height:15px;margin:0;vertical-align:middle}
