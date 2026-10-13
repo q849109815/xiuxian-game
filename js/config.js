@@ -533,9 +533,9 @@ const EX = {
    * unlock  需先通关的上一难度
    * =================================================== */
   DIFFS: [
-    { id: 'normal', n: '普通', icon: '🌱', color: '#5fd97a', hpMul: 1.0, dmgMul: 1.0, cntMul: 1.0, spdMul: 1.0, rwMul: 1.0, stam: 1, unlock: null, desc: '标准难度，熟悉关卡用' },
-    { id: 'hard',   n: '困难', icon: '🔥', color: '#ff9a4d', hpMul: 2.2, dmgMul: 1.5, cntMul: 1.3, spdMul: 1.1, rwMul: 2.6, stam: 2, unlock: 'normal', desc: '血量翻倍、怪更多，奖励 ×2.6' },
-    { id: 'hell',   n: '恶魔', icon: '💀', color: '#b57bff', hpMul: 4.6, dmgMul: 2.0, cntMul: 1.6, spdMul: 1.2, rwMul: 6.5, stam: 3, unlock: 'hard', desc: '极限挑战，奖励 ×6.5' },
+    { id: 'normal', n: '普通', icon: '🌱', img: 'assets/icon/diff_normal.jpg', color: '#5fd97a', hpMul: 1.0, dmgMul: 1.0, cntMul: 1.0, spdMul: 1.0, rwMul: 1.0, stam: 1, unlock: null, desc: '标准难度，熟悉关卡用' },
+    { id: 'hard',   n: '困难', icon: '🔥', img: 'assets/icon/diff_hard.jpg', color: '#ff9a4d', hpMul: 2.2, dmgMul: 1.5, cntMul: 1.3, spdMul: 1.1, rwMul: 2.6, stam: 2, unlock: 'normal', desc: '血量翻倍、怪更多，奖励 ×2.6' },
+    { id: 'hell',   n: '恶魔', icon: '💀', img: 'assets/icon/diff_hell.jpg', color: '#b57bff', hpMul: 4.6, dmgMul: 2.0, cntMul: 1.6, spdMul: 1.2, rwMul: 6.5, stam: 3, unlock: 'hard', desc: '极限挑战，奖励 ×6.5' },
   ],
 
   /* =====================================================
@@ -642,17 +642,17 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270108a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270109a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/style.css', ver:'20270108a', size: 0 },
-      { p: 'js/net.js', ver:'20270108a', size: 0 },
-      { p: 'js/config.js', ver:'20270108a', size: 0 },
-      { p: 'js/engine.js', ver:'20270108a', size: 0 },
-      { p: 'js/battle.js', ver:'20270108a', size: 0 },
-      { p: 'js/ui.js', ver:'20270108a', size: 0 },
-      { p: 'js/main.js', ver:'20270108a', size: 0 },
-      { p: 'js/audio.js', ver:'20270108a', size: 0 },
+      { p: 'css/style.css', ver:'20270109a', size: 0 },
+      { p: 'js/net.js', ver:'20270109a', size: 0 },
+      { p: 'js/config.js', ver:'20270109a', size: 0 },
+      { p: 'js/engine.js', ver:'20270109a', size: 0 },
+      { p: 'js/battle.js', ver:'20270109a', size: 0 },
+      { p: 'js/ui.js', ver:'20270109a', size: 0 },
+      { p: 'js/main.js', ver:'20270109a', size: 0 },
+      { p: 'js/audio.js', ver:'20270109a', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -961,9 +961,9 @@ const EX = {
    * =================================================== */
   codexRw: { zombie: { gold: 100, ach: 5 }, gun: { gold: 200, ach: 10 }, skin: { gold: 300, ach: 15 } },
   codexKinds: [
-    { k: 'zombie', n: '怪物图鉴', icon: '🧟' },
-    { k: 'gun', n: '武器图鉴', icon: '🔫' },
-    { k: 'skin', n: '皮肤图鉴', icon: '👕' },
+    { k: 'zombie', n: '怪物图鉴', icon: '🧟', img: 'assets/icon/cdx_zombie.jpg' },
+    { k: 'gun', n: '武器图鉴', icon: '🔫', img: 'assets/icon/cdx_gun.jpg' },
+    { k: 'skin', n: '皮肤图鉴', icon: '👕', img: 'assets/icon/cdx_skin.jpg' },
   ],
   codexOf(kind) {
     /* 带上 skill/sk：图鉴此前只显示图标+名字，怪物表配的 12 条技能名与
@@ -987,19 +987,19 @@ const EX = {
    * =================================================== */
   shop: [
     { id: 'SH01', n: '新手礼包', type: '礼包', price: 6, cur: 'RMB', limit: 1,
-      rw: { gold: 2000, M01: 50, P01: 10 }, icon: '🎁' },
+      rw: { gold: 2000, M01: 50, P01: 10 }, icon: '🎁', img: 'assets/icon/sh01_gift.jpg' },
     { id: 'SH02', n: '钻石小包', type: '直购', price: 6, cur: 'RMB', limit: 0,
-      rw: { diamond: 60 }, icon: '💎' },
+      rw: { diamond: 60 }, icon: '💎', img: 'assets/icon/i_diamond.jpg' },
     { id: 'SH03', n: '钻石中包', type: '直购', price: 30, cur: 'RMB', limit: 0,
-      rw: { diamond: 330 }, icon: '💎' },
+      rw: { diamond: 330 }, icon: '💎', img: 'assets/icon/i_diamond.jpg' },
     { id: 'SH04', n: '钻石大包', type: '直购', price: 98, cur: 'RMB', limit: 0,
-      rw: { diamond: 1150 }, icon: '💎' },
+      rw: { diamond: 1150 }, icon: '💎', img: 'assets/icon/i_diamond.jpg' },
     { id: 'SH05', n: '月卡', type: '月卡', price: 30, cur: 'RMB', limit: 1,
-      rw: { diamond: 0 }, monthly: true, icon: '📅' },
+      rw: { diamond: 0 }, monthly: true, icon: '📅', img: 'assets/icon/sh05_mcard.jpg' },
     { id: 'SH06', n: '战令(普通)', type: '战令', price: 0, cur: 'RMB', limit: 0,
-      rw: {}, pass: true, icon: '🎖️' },
+      rw: {}, pass: true, icon: '🎖️', img: 'assets/icon/sh06_pass.jpg' },
     { id: 'SH07', n: '战令(进阶)', type: '战令', price: 68, cur: 'RMB', limit: 0,
-      rw: { diamond: 300 }, pass: true, icon: '🎖️' },
+      rw: { diamond: 300 }, pass: true, icon: '🎖️', img: 'assets/icon/sh07_passpro.jpg' },
     { id: 'SH08', n: '废土战甲皮肤', type: '直购', price: 68, cur: 'RMB', limit: 0,
       rw: { skin: 'sk_c01b' }, icon: '🥼', img: 'assets/skin/sk_c01b.jpg?v=20270105a' },
     { id: 'SH09', n: '传说芯片包', type: '礼包', price: 98, cur: 'RMB', limit: 3,
@@ -1542,14 +1542,14 @@ const EX = {
   },
   /* 【装备槽】截图：装备/宝石界面 */
   equipSlots: [
-    { k: 'head', n: '头盔', icon: '🪖' },
-    { k: 'cloth', n: '衣甲', icon: '🥋' },
-    { k: 'weapon', n: '神兵', icon: '⚔️' },
-    { k: 'ring', n: '首饰', icon: '💍' },
-    { k: 'boot', n: '靴子', icon: '👢' },
-    { k: 'fabao', n: '法器', icon: '🔮' },
-    { k: 'neck', n: '项链', icon: '📿' },
-    { k: 'brace', n: '护腕', icon: '🧤' },
+    { k: 'head', n: '头盔', icon: '🪖' , img: 'assets/icon/eq_helmet.jpg' },
+    { k: 'cloth', n: '衣甲', icon: '🥋' , img: 'assets/icon/eq_armor.jpg' },
+    { k: 'weapon', n: '神兵', icon: '⚔️' , img: 'assets/icon/eq_weapon.jpg' },
+    { k: 'ring', n: '首饰', icon: '💍' , img: 'assets/icon/eq_ring.jpg' },
+    { k: 'boot', n: '靴子', icon: '👢' , img: 'assets/icon/eq_boots.jpg' },
+    { k: 'fabao', n: '法器', icon: '🔮' , img: 'assets/icon/eq_orb.jpg' },
+    { k: 'neck', n: '项链', icon: '📿' , img: 'assets/icon/eq_necklace.jpg' },
+    { k: 'brace', n: '护腕', icon: '🧤' , img: 'assets/icon/eq_gloves.jpg' },
   ],
 
   /* 军团商店：消耗军团贡献
@@ -2015,7 +2015,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270108a',
+  sceneV: '20270109a',
 
   /* 品质与元素 */
   qualities: ['白', '绿', '蓝', '紫', '橙', '红'],
