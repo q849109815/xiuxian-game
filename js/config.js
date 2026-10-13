@@ -505,16 +505,16 @@ const EX = {
   ],
 
   chapters: [
-    { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️' },
-    { id: 2, n: '第二章 · 地下设施', icon: '🚇' },
-    { id: 3, n: '第三章 · 城市核心', icon: '🌉' },
-    { id: 4, n: '第四章 · 废弃工厂', icon: '🏭' },
-    { id: 5, n: '第五章 · 荒野麦田', icon: '🌾' },
-    { id: 6, n: '第六章 · 辐射废墟', icon: '☢️' },
-    { id: 7, n: '第七章 · 雪山哨站', icon: '🏔️' },
-    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️' },
-    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️' },
-    { id: 10, n: '第十章 · 最终防线', icon: '⚔️' },
+    { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️', img: 'assets/scene/city.jpg?v=20270105a' },
+    { id: 2, n: '第二章 · 地下设施', icon: '🚇', img: 'assets/scene/tunnel.jpg?v=20270105a' },
+    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/city.jpg?v=20270105a' },
+    { id: 4, n: '第四章 · 废弃工厂', icon: '🏭', img: 'assets/scene/factory.jpg?v=20270105a' },
+    { id: 5, n: '第五章 · 荒野麦田', icon: '🌾', img: 'assets/scene/field.jpg?v=20270105a' },
+    { id: 6, n: '第六章 · 辐射废墟', icon: '☢️', img: 'assets/scene/wasteland.jpg?v=20270105a' },
+    { id: 7, n: '第七章 · 雪山哨站', icon: '🏔️', img: 'assets/scene/snow.jpg?v=20270105a' },
+    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/tunnel.jpg?v=20270105a' },
+    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/factory.jpg?v=20270105a' },
+    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/city.jpg?v=20270105a' },
   ],
 
   /* 无尽模式：默认解锁（此前需通关 10-10，新手前期完全没有刷材料的出口） */
@@ -642,17 +642,17 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270106a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270107a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/style.css', ver:'20270106a', size: 0 },
-      { p: 'js/net.js', ver:'20270106a', size: 0 },
-      { p: 'js/config.js', ver:'20270106a', size: 0 },
-      { p: 'js/engine.js', ver:'20270106a', size: 0 },
-      { p: 'js/battle.js', ver:'20270106a', size: 0 },
-      { p: 'js/ui.js', ver:'20270106a', size: 0 },
-      { p: 'js/main.js', ver:'20270106a', size: 0 },
-      { p: 'js/audio.js', ver:'20270106a', size: 0 },
+      { p: 'css/style.css', ver:'20270107a', size: 0 },
+      { p: 'js/net.js', ver:'20270107a', size: 0 },
+      { p: 'js/config.js', ver:'20270107a', size: 0 },
+      { p: 'js/engine.js', ver:'20270107a', size: 0 },
+      { p: 'js/battle.js', ver:'20270107a', size: 0 },
+      { p: 'js/ui.js', ver:'20270107a', size: 0 },
+      { p: 'js/main.js', ver:'20270107a', size: 0 },
+      { p: 'js/audio.js', ver:'20270107a', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -1001,11 +1001,11 @@ const EX = {
     { id: 'SH07', n: '战令(进阶)', type: '战令', price: 68, cur: 'RMB', limit: 0,
       rw: { diamond: 300 }, pass: true, icon: '🎖️' },
     { id: 'SH08', n: '废土战甲皮肤', type: '直购', price: 68, cur: 'RMB', limit: 0,
-      rw: { skin: 'sk_c01b' }, icon: '🥼' },
+      rw: { skin: 'sk_c01b' }, icon: '🥼', img: 'assets/skin/sk_c01b.jpg?v=20270105a' },
     { id: 'SH09', n: '传说芯片包', type: '礼包', price: 98, cur: 'RMB', limit: 3,
-      rw: { chipRed: 2, diamond: 200 }, icon: '📦' },
+      rw: { chipRed: 2, diamond: 200 }, icon: '📦', img: 'assets/icon/i_chip.jpg?v=20270105a' },
     { id: 'SH10', n: '资源礼包', type: '礼包', price: 30, cur: 'RMB', limit: 0,
-      rw: { M01: 100, M02: 50, M04: 50 }, icon: '📦' },
+      rw: { M01: 100, M02: 50, M04: 50 }, icon: '📦', img: 'assets/icon/gp02.jpg?v=20270105a' },
   ],
 
   /* =====================================================
@@ -1025,23 +1025,23 @@ const EX = {
      * 玩家在周四打开面板看到「每周五~周日」，照样能领奖；
      * 而周五来领时可能上一期已领过，反而领不到。
      * 说明与实装不符，改为按真实周期描述（周期本身不变，收益不受影响）。 */
-    { id: 'EV01', n: '丧尸围城', type: '限时挑战', time: '常驻 · 每周可领 1 次', icon: '🏰',
+    { id: 'EV01', n: '丧尸围城', type: '限时挑战', time: '常驻 · 每周可领 1 次', icon: '🏰', img: 'assets/icon/z_putong.jpg?v=20270105a',
       desc: '生存限时挑战，波次积分', rwDesc: '活动代币 + 芯片', rule: '按积分领奖',
       per: 'week', cond: { endlessMin: 1 },
       rw: { evToken: 60, chipN: 1 } },
-    { id: 'EV02', n: 'BOSS突袭', type: '限时', time: '每日开放 · 每月可领 1 次', icon: '👹',
+    { id: 'EV02', n: 'BOSS突袭', type: '限时', time: '每日开放 · 每月可领 1 次', icon: '👹', img: 'assets/char/boss_juxing.jpg?v=20270105a',
       desc: '限定 BOSS 战，挑战次数限制', rwDesc: '稀有金属 + 钻石', rule: '每日 3 次',
       per: 'month', cond: { raidToday: 1 },
       rw: { evToken: 80, M03: 3, diamond: 20 } },
-    { id: 'EV03', n: '签到活动', type: '常驻', time: '每自然月', icon: '📅',
+    { id: 'EV03', n: '签到活动', type: '常驻', time: '每自然月', icon: '📅', img: 'assets/icon/gp03.jpg?v=20270105a',
       desc: '累计登录领奖', rwDesc: '钻石 + 材料', rule: '连续签到奖励递增',
       per: 'month', cond: { signToday: 1 },
       rw: { diamond: 30, M01: 20 } },
-    { id: 'EV04', n: '首充双倍', type: '付费活动', time: '开服永久', icon: '💰',
+    { id: 'EV04', n: '首充双倍', type: '付费活动', time: '开服永久', icon: '💰', img: 'assets/icon/sh02_diamond.jpg?v=20270105a',
       desc: '首次充值钻石翻倍', rwDesc: '钻石', rule: '仅 1 次', rw: {} },
-    { id: 'EV05', n: '限时皮肤', type: '皮肤活动', time: '节日期间', icon: '👗',
+    { id: 'EV05', n: '限时皮肤', type: '皮肤活动', time: '节日期间', icon: '👗', img: 'assets/skin/sk_c01b.jpg?v=20270105a',
       desc: '限定皮肤上架', rwDesc: '皮肤', rule: '限时购买', rw: {} },
-    { id: 'EV06', n: '无尽冲榜', type: '排行榜', time: '常驻 · 每月可领 1 次', icon: '🏆',
+    { id: 'EV06', n: '无尽冲榜', type: '排行榜', time: '常驻 · 每月可领 1 次', icon: '🏆', img: 'assets/icon/star.jpg?v=20270105a',
       desc: '无尽模式存活时长排名', rwDesc: '传说芯片 + 限定称号', rule: '按排名发奖',
       per: 'month', cond: { endlessMin: 10 },
       rw: { evToken: 120, chipL: 1, title: 'endless_king' } },
@@ -1401,11 +1401,11 @@ const EX = {
         limit: { t: 'daily', v: 3 }, desc: '体力×60 · 每日3次' },
       { id: 'D3', n: '宝箱', icon: '🎁', img: 'assets/icon/d3_box.jpg', price: 100, cur: 'diamond',
         give: { M01: 50, gold: 2000 }, limit: { t: 'daily', v: 2 }, desc: '金属50+金币2000 · 每日2次' },
-      { id: 'D4', n: '武器箱', icon: '🔫', price: 200, cur: 'diamond', give: { M02: 30 },
+      { id: 'D4', n: '武器箱', icon: '🔫', img: 'assets/icon/d3_box.jpg?v=20270105a', price: 200, cur: 'diamond', give: { M02: 30 },
         limit: { t: 'daily', v: 2 }, desc: '合金×30 · 每日2次' },
-      { id: 'D5', n: '宝石礼包', icon: '💎', price: 300, cur: 'diamond', give: { M03: 20 },
+      { id: 'D5', n: '宝石礼包', icon: '💎', img: 'assets/icon/gem_r.jpg?v=20270105a', price: 300, cur: 'diamond', give: { M03: 20 },
         limit: { t: 'daily', v: 1 }, desc: '稀有金属×20 · 每日1次' },
-      { id: 'D6', n: '招募令', icon: '📜', price: 150, cur: 'diamond', give: { M04: 10 },
+      { id: 'D6', n: '招募令', icon: '📜', img: 'assets/icon/gp01.jpg?v=20270105a', price: 150, cur: 'diamond', give: { M04: 10 },
         limit: { t: 'daily', v: 2 }, desc: '火药×10 · 每日2次' },
     ],
     '武器': [
@@ -1442,13 +1442,13 @@ const EX = {
     '宝石': [
       /* 同上：宝石此前无限购，钻石可无限换宝石 → 镶嵌/合成系统失去约束。
        * 每日 3 次，够正常合成又不至于一次刷满。 */
-      { id: 'GB1', n: '红宝石', icon: '🔴', price: 200, cur: 'diamond', give: { gem: 'G_R' },
+      { id: 'GB1', n: '红宝石', icon: '🔴', img: 'assets/icon/gem_r.jpg?v=20270105a', price: 200, cur: 'diamond', give: { gem: 'G_R' },
         limit: { t: 'daily', v: 3 }, desc: '红宝石×1 · 每日3次' },
-      { id: 'GB2', n: '蓝宝石', icon: '🔵', price: 200, cur: 'diamond', give: { gem: 'G_B' },
+      { id: 'GB2', n: '蓝宝石', icon: '🔵', img: 'assets/icon/gem_b.jpg?v=20270105a', price: 200, cur: 'diamond', give: { gem: 'G_B' },
         limit: { t: 'daily', v: 3 }, desc: '蓝宝石×1 · 每日3次' },
-      { id: 'GB3', n: '绿宝石', icon: '🟢', price: 200, cur: 'diamond', give: { gem: 'G_G' },
+      { id: 'GB3', n: '绿宝石', icon: '🟢', img: 'assets/icon/gem_g.jpg?v=20270105a', price: 200, cur: 'diamond', give: { gem: 'G_G' },
         limit: { t: 'daily', v: 3 }, desc: '绿宝石×1 · 每日3次' },
-      { id: 'GB4', n: '紫宝石', icon: '🟣', price: 300, cur: 'diamond', give: { gem: 'G_P' },
+      { id: 'GB4', n: '紫宝石', icon: '🟣', img: 'assets/icon/gem_p.jpg?v=20270105a', price: 300, cur: 'diamond', give: { gem: 'G_P' },
         limit: { t: 'daily', v: 3 }, desc: '紫宝石×1 · 每日3次' },
     ],
     /* ===== 表35 礼包内容明细表 GP01~GP06 =====
@@ -1534,8 +1534,8 @@ const EX = {
        *   玩家花 500 金币根本不知道能买到 30 个还是 3 个，无从判断是否划算。
        *   其余所有页签（每日/宝石/礼包/直购）都写明了数量，这里补齐同一口径。
        *   （成就商店/活动商店靠品名自带数量，如「金属x20」，不受影响。） */
-      { id: 'M1', n: '金属', icon: '🔩', price: 500, cur: 'gold', give: { M01: 30 }, desc: '金属×30' },
-      { id: 'M2', n: '合金', icon: '⚙️', price: 1200, cur: 'gold', give: { M02: 20 }, desc: '合金×20' },
+      { id: 'M1', n: '金属', icon: '🔩', img: 'assets/icon/i_metal.jpg?v=20270105a', price: 500, cur: 'gold', give: { M01: 30 }, desc: '金属×30' },
+      { id: 'M2', n: '合金', icon: '⚙️', img: 'assets/icon/i_alloy.jpg?v=20270105a', price: 1200, cur: 'gold', give: { M02: 20 }, desc: '合金×20' },
       { id: 'M3', n: '稀有金属', icon: '💠', price: 3000, cur: 'gold', give: { M03: 10 }, desc: '稀有金属×10' },
       { id: 'M4', n: '火药', icon: '🧨', price: 800, cur: 'gold', give: { M04: 15 }, desc: '火药×15' },
     ],
@@ -1563,29 +1563,29 @@ const EX = {
      * → 金币可以反复「捐献 → 兑金币袋」凭空增殖，实测 10 万 → 20 万。
      * 现在把金币袋汇率压到明确低于捐献汇率（2500/60 = 41.7 金/贡献，循环 0.83），
      * 贡献仍可折回金币（捐多了不浪费），但每循环一次净亏约 17%，套利链断开。 */
-    { id: 'LS01', n: '金币袋', icon: '💰', cost: 60, item: 'gold', n2: 2500, lim: 0 },
-    { id: 'LS02', n: '合金', icon: '🔩', cost: 40, item: 'M02', n2: 10, lim: 0 },
-    { id: 'LS03', n: '稀有金属', icon: '💠', cost: 120, item: 'M03', n2: 5, lim: 3 },
-    { id: 'LS04', n: '枪械碎片', icon: '🧩', cost: 150, item: 'P01', n2: 5, lim: 2 },
-    { id: 'LS05', n: '普通芯片', icon: '🔲', cost: 200, item: 'C01', n2: 1, lim: 2 },
-    { id: 'LS06', n: '红宝石', icon: '🔴', cost: 400, item: 'gem_G_R', n2: 1, lim: 1 },
+    { id: 'LS01', n: '金币袋', icon: '💰', img: 'assets/icon/d1_gold.jpg?v=20270105a', cost: 60, item: 'gold', n2: 2500, lim: 0 },
+    { id: 'LS02', n: '合金', icon: '🔩', img: 'assets/icon/i_alloy.jpg?v=20270105a', cost: 40, item: 'M02', n2: 10, lim: 0 },
+    { id: 'LS03', n: '稀有金属', icon: '💠', img: 'assets/icon/i_rare.jpg?v=20270105a', cost: 120, item: 'M03', n2: 5, lim: 3 },
+    { id: 'LS04', n: '枪械碎片', icon: '🧩', img: 'assets/icon/i_gunfrag.jpg?v=20270105a', cost: 150, item: 'P01', n2: 5, lim: 2 },
+    { id: 'LS05', n: '普通芯片', icon: '🔲', img: 'assets/icon/i_chip.jpg?v=20270105a', cost: 200, item: 'C01', n2: 1, lim: 2 },
+    { id: 'LS06', n: '红宝石', icon: '🔴', img: 'assets/icon/gem_r.jpg?v=20270105a', cost: 400, item: 'gem_G_R', n2: 1, lim: 1 },
   ],
   /* 军团副本：消耗体力，产出贡献与奖励
    * 此前「军团活动」按钮写死「开发中」，点了没反应。 */
   legionActs: [
-    { id: 'LA01', n: '尸潮防线', icon: '🧟', cost: 15, need: 5000,
+    { id: 'LA01', n: '尸潮防线', icon: '🧟', img: 'assets/icon/z_putong.jpg?v=20270105a', cost: 15, need: 5000,
       contrib: 80, gold: 2000, mats: [{ k: 'M01', n: 8 }] },
-    { id: 'LA02', n: '物资争夺', icon: '📦', cost: 20, need: 15000,
+    { id: 'LA02', n: '物资争夺', icon: '📦', img: 'assets/icon/d3_box.jpg?v=20270105a', cost: 20, need: 15000,
       contrib: 150, gold: 4000, mats: [{ k: 'M02', n: 6 }] },
-    { id: 'LA03', n: '母巢攻坚', icon: '🕸️', cost: 25, need: 40000,
+    { id: 'LA03', n: '母巢攻坚', icon: '🕸️', img: 'assets/icon/z_jinying.jpg?v=20270105a', cost: 25, need: 40000,
       contrib: 260, gold: 8000, mats: [{ k: 'M03', n: 4 }, { k: 'M05', n: 3 }] },
   ],
   /* 【军团】社交：加入/自建/捐献 */
   legions: [
-    { id: 'L01', n: '钢铁防线', icon: '🛡️', mem: 42, need: 0, desc: '老牌军团，气氛活跃' },
-    { id: 'L02', n: '末日先锋', icon: '⚔️', mem: 38, need: 5000, desc: '主攻高难副本' },
-    { id: 'L03', n: '废土游侠', icon: '🏹', mem: 25, need: 20000, desc: '休闲养老，福利好' },
-    { id: 'L04', n: '雷霆战队', icon: '⚡', mem: 46, need: 50000, desc: '战力顶尖，赛季强队' },
+    { id: 'L01', n: '钢铁防线', icon: '🛡️', img: 'assets/icon/i_shield.jpg?v=20270105a', mem: 42, need: 0, desc: '老牌军团，气氛活跃' },
+    { id: 'L02', n: '末日先锋', icon: '⚔️', img: 'assets/icon/z_zhongjia.jpg?v=20270105a', mem: 38, need: 5000, desc: '主攻高难副本' },
+    { id: 'L03', n: '废土游侠', icon: '🏹', img: 'assets/icon/m_sd.jpg?v=20270105a', mem: 25, need: 20000, desc: '休闲养老，福利好' },
+    { id: 'L04', n: '雷霆战队', icon: '⚡', img: 'assets/icon/t_dc.jpg?v=20270105a', mem: 46, need: 50000, desc: '战力顶尖，赛季强队' },
   ],
 
   /* 【远征堡垒】消耗体力挑战 */
@@ -1595,14 +1595,14 @@ const EX = {
      * ② 面板总描述写"产出稀有材料与宝石"，但代码从不发宝石 —— 实测 20 次 0 宝石，
      *    玩家花 10~20 体力打远征永远拿不到宝石，宝石只剩商城一条路。
      * 现在按各副本描述精确配置 mats，并给 E02/E03 配宝石产出。 */
-    { id: 'E01', n: '尸潮围剿', icon: '🧟', cost: 10, need: 3000, gold: 800, mat: 5,
+    { id: 'E01', n: '尸潮围剿', icon: '🧟', img: 'assets/icon/z_putong.jpg?v=20270105a', cost: 10, need: 3000, gold: 800, mat: 5,
       desc: '成波次尸潮，产出金属与合金',
       mats: [{ k: 'M01', n: 5 }, { k: 'M02', n: 2 }] },
-    { id: 'E02', n: '精英猎杀', icon: '☠️', cost: 15, need: 8000, gold: 1500, mat: 8,
+    { id: 'E02', n: '精英猎杀', icon: '☠️', img: 'assets/icon/z_jinying.jpg?v=20270105a', cost: 15, need: 8000, gold: 1500, mat: 8,
       desc: '精英僵尸，产出稀有金属与宝石',
       mats: [{ k: 'M03', n: 3 }],
       gem: { rate: 0.35, n: 1 } },
-    { id: 'E03', n: '母巢突袭', icon: '🕸️', cost: 20, need: 20000, gold: 3000, mat: 12,
+    { id: 'E03', n: '母巢突袭', icon: '🕸️', img: 'assets/icon/z_fenlie.jpg?v=20270105a', cost: 20, need: 20000, gold: 3000, mat: 12,
       desc: '深入母巢，产出火药、电子元件与宝石',
       mats: [{ k: 'M04', n: 5 }, { k: 'M05', n: 3 }],
       gem: { rate: 0.55, n: 1 } },
@@ -1840,21 +1840,21 @@ const EX = {
    * 【永久天赋表】资料 10 表：8 项
    * =================================================== */
   talents: [
-    { id: 't_hp', n: '基地生命强化', icon: '❤️', max: 20, cost0: 500, costGrow: 1.35, unlock: 0,
+    { id: 't_hp', n: '基地生命强化', icon: '❤️', img: 'assets/icon/talent_t_hp.jpg?v=20270105a', max: 20, cost0: 500, costGrow: 1.35, unlock: 0,
       desc: '基地外永久生命 +5%', per: 0.05, stat: 'hp' },
-    { id: 't_atk', n: '伤害强化天赋', icon: '⚔️', max: 20, cost0: 600, costGrow: 1.38, unlock: 0,
+    { id: 't_atk', n: '伤害强化天赋', icon: '⚔️', img: 'assets/icon/talent_t_atk.jpg?v=20270105a', max: 20, cost0: 600, costGrow: 1.38, unlock: 0,
       desc: '全局伤害 +3%', per: 0.03, stat: 'atk' },
-    { id: 't_gold', n: '金币加成', icon: '🪙', max: 20, cost0: 400, costGrow: 1.32, unlock: '1-1',
+    { id: 't_gold', n: '金币加成', icon: '🪙', img: 'assets/icon/talent_t_gold.jpg?v=20270105a', max: 20, cost0: 400, costGrow: 1.32, unlock: '1-1',
       desc: '金币获取 +5%', per: 0.05, stat: 'gold' },
-    { id: 't_xp', n: '经验加成', icon: '📘', max: 20, cost0: 450, costGrow: 1.33, unlock: '1-1',
+    { id: 't_xp', n: '经验加成', icon: '📘', img: 'assets/icon/talent_t_xp.jpg?v=20270105a', max: 20, cost0: 450, costGrow: 1.33, unlock: '1-1',
       desc: '经验获取 +5%', per: 0.05, stat: 'xp' },
-    { id: 't_crit', n: '暴击天赋', icon: '🎯', max: 20, cost0: 700, costGrow: 1.40, unlock: '1-3',
+    { id: 't_crit', n: '暴击天赋', icon: '🎯', img: 'assets/icon/talent_t_crit.jpg?v=20270105a', max: 20, cost0: 700, costGrow: 1.40, unlock: '1-3',
       desc: '全局暴击率 +2%', per: 0.02, stat: 'crit' },
-    { id: 't_ls', n: '吸血天赋', icon: '🩸', max: 15, cost0: 800, costGrow: 1.42, unlock: '1-3',
+    { id: 't_ls', n: '吸血天赋', icon: '🩸', img: 'assets/icon/talent_t_ls.jpg?v=20270105a', max: 15, cost0: 800, costGrow: 1.42, unlock: '1-3',
       desc: '全局吸血 +1%', per: 0.01, stat: 'ls' },
-    { id: 't_armor', n: '护甲天赋', icon: '🛡️', max: 20, cost0: 650, costGrow: 1.39, unlock: '2-2',
+    { id: 't_armor', n: '护甲天赋', icon: '🛡️', img: 'assets/icon/talent_t_armor.jpg?v=20270105a', max: 20, cost0: 650, costGrow: 1.39, unlock: '2-2',
       desc: '全局护甲 +3%', per: 0.03, stat: 'armor' },
-    { id: 't_revive', n: '复活天赋', icon: '💚', max: 3, cost0: 5000, costGrow: 2.2, unlock: '2-3',
+    { id: 't_revive', n: '复活天赋', icon: '💚', img: 'assets/icon/talent_t_revive.jpg?v=20270105a', max: 3, cost0: 5000, costGrow: 2.2, unlock: '2-3',
       desc: '每局限一次免费复活（每级 +1 次）', per: 1, stat: 'revive' },
   ],
 
@@ -1862,13 +1862,13 @@ const EX = {
    * 【基地建筑】GD-010：医疗站/军械库/研究所/仓库
    * =================================================== */
   buildings: [
-    { id: 'hospital', n: '医疗站', icon: '🏥', desc: '提升角色生命上限', stat: 'hp', per: 0.06,
+    { id: 'hospital', n: '医疗站', icon: '🏥', img: 'assets/icon/bd_hospital.jpg?v=20270105a', desc: '提升角色生命上限', stat: 'hp', per: 0.06,
       cost0: 800, grow: 1.45, max: 30 },
-    { id: 'armory', n: '军械库', icon: '🔧', desc: '提升武器伤害', stat: 'atk', per: 0.05,
+    { id: 'armory', n: '军械库', icon: '🔧', img: 'assets/icon/bd_armory.jpg?v=20270105a', desc: '提升武器伤害', stat: 'atk', per: 0.05,
       cost0: 900, grow: 1.46, max: 30 },
-    { id: 'lab', n: '研究所', icon: '🔬', desc: '提升经验获取', stat: 'xp', per: 0.04,
+    { id: 'lab', n: '研究所', icon: '🔬', img: 'assets/icon/bd_lab.jpg?v=20270105a', desc: '提升经验获取', stat: 'xp', per: 0.04,
       cost0: 700, grow: 1.44, max: 30 },
-    { id: 'warehouse', n: '仓库', icon: '📦', desc: '离线产出金币（每小时）', stat: 'gold', per: 1,
+    { id: 'warehouse', n: '仓库', icon: '📦', img: 'assets/icon/bd_warehouse.jpg?v=20270105a', desc: '离线产出金币（每小时）', stat: 'gold', per: 1,
       cost0: 600, grow: 1.42, max: 30, offline: 120 },
   ],
 
@@ -2015,7 +2015,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270106a',
+  sceneV: '20270107a',
 
   /* 品质与元素 */
   qualities: ['白', '绿', '蓝', '紫', '橙', '红'],
