@@ -1847,3 +1847,18 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 .item .ic img{width:100%;height:100%;object-fit:contain;border-radius:8px}
 .bs i img{width:26px;height:26px;object-fit:contain;vertical-align:middle;display:inline-block}
 .mc-card .mi img{width:100%;height:100%;object-fit:cover;border-radius:9px;display:block}
+
+/* =====================================================
+ * emoji 替换图（全局）
+ * -----------------------------------------------------
+ * emojify() 把文本节点里命中映射表的 emoji 换成 <img class="ei">，
+ * 这里统一规定行内尺寸：跟随字号、垂直对齐到基线、圆角小方块。
+ * 单独用在按钮/标题里时由各自的 CSS 覆盖（见 .bts img / .gd img 等）。 */
+.ei{width:1.05em;height:1.05em;object-fit:contain;border-radius:3px;
+     vertical-align:-.18em;margin-right:.08em;display:inline-block}
+.bts .ei{width:22px;height:22px;margin:0;vertical-align:middle}
+.gd .ei,.gd img{width:20px;height:20px;border-radius:50%;object-fit:cover;margin:0;vertical-align:-4px}
+.ld-logo img{width:100%;height:100%;object-fit:contain;border-radius:16px}
+.gd-finger .ei{width:30px;height:30px;margin:0}
+.bw-heart .ei{width:13px;height:13px;margin:0;vertical-align:-2px}
+#pnX .ei{width:15px;height:15px;margin:0;vertical-align:-2px}
