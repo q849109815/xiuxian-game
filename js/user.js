@@ -218,7 +218,10 @@ const UA = {
         text: '该账号已注销，无法登录\n如需重新游玩请重新注册' };
     }
     const until = Number(o.banUntil) || 0;
-    const now = Date.now();
+    /* 【改系统时间 BUG 修复】此前用设备时钟判定封禁到期：
+     * 玩家把手机时间【往前调】过 banUntil，登录时就会被判定为「已到期」而解禁，
+     * 7 天封禁形同虚设。改为权威时间（服务器校准）。 */
+    const now = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
     /* 有时限且已到期 → 视为解封 */
     if (until && until <= now) {
       return { on: false, until, reason, expired: true, left: '', text: '' };
