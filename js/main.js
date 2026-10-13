@@ -4,6 +4,14 @@
  *        08 跳转流程（16 步）
  * ========================================================= */
 
+/* 权威当前时间：优先取服务器校准时间（net.js 的 SRV / engine.js 的 E.now），
+ * 未联网校准时回退设备时钟。凡是"是否到期 / 是否跨天刷新"的判定都必须走这里，
+ * 否则玩家改手机系统时间就能刷体力、刷离线收益、续期限时道具、解封账号。 */
+function AUTH_NOW() {
+  try { if (window.E && typeof E.now === 'function') { const t = E.now(); if (typeof t === 'number' && isFinite(t) && t > 1e12) return t; } } catch (e) {}
+  return Date.now();
+}
+
 let P = null, UID = null, saveT = null, hudT = null, MAINT = null;
 let battleMode = 'normal', battleLevel = '1-1', battleDiff = 'normal';
 
@@ -123,7 +131,7 @@ const MAIN = {
      * 但离线或账号文件缺失时，玩家存档里的 p.ban 也要能拦住。
      * 提示统一走 banInfo：玩家看得到封多久、何时解封、为什么。 */
     const bInfo = (window.UA && UA.banInfo) ? UA.banInfo(p)
-      : { on: !!(p && p.ban) && (!p.banUntil || p.banUntil > Date.now()), text: '' };
+      : { on: !!(p && p.ban) && (!p.banUntil || p.banUntil > AUTH_NOW()), text: '' };
     if (bInfo.on) {
       const msg = bInfo.text || ('🚫 该账号已被封禁\n理由：' + ((p && p.banReason) || '违规处理'));
       const html = msg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
@@ -498,7 +506,10 @@ const MAIN = {
    * 扣回时发一封邮件说明，避免玩家以为物品凭空消失。 */
   tickTempItems(p) {
     if (!p || !Array.isArray(p.tempItems) || !p.tempItems.length) return 0;
-    const now = Date.now();
+    /* 【改系统时间 BUG 修复】此前用设备时钟判定到期：
+     * 玩家把时间往回调，限时道具就永不到期、也永不被回收，
+     * 限时皮肤/武器可以无限期持有。改为权威时间。 */
+    const now = AUTH_NOW();
     const keep = [];
     const got = {};
     p.tempItems.forEach((t) => {
@@ -553,7 +564,7 @@ const MAIN = {
     if (!p || !Array.isArray(p.tempItems)) return 0;
     let e = 0;
     p.tempItems.forEach((t) => {
-      if (t && t.id === id && (Number(t.exp) || 0) > Date.now()) e = Math.max(e, Number(t.exp) || 0);
+      if (t && t.id === id && (Number(t.exp) || 0) > AUTH_NOW()) e = Math.max(e, Number(t.exp) || 0);
     });
     return e;
   },
@@ -889,7 +900,9 @@ const MAIN = {
            * 但云端 status 字段自创建起就一直是 '待开启'，从没被回写。
            * 此前 live = (status === '运行中') 恒为 false，
            * 导致后台时间到了显示运行中、游戏端却判定为不可参与。 */
-          const nowT = Date.now();
+          /* 【改系统时间 BUG 修复】玩家把时钟调到活动区间内，
+           * 就能提前参加未开始的活动、或让已结束的活动复活。改用权威时间。 */
+          const nowT = AUTH_NOW();
           /* endAt 为 0（后台新建时没填结束日期）此前会被判成「已结束」——
            * `nowT > 0` 恒真。运营漏填结束日期的活动因此永远处于已结束状态。
            * 0 应视为「无结束时间 / 长期有效」。 */
@@ -1262,7 +1275,7 @@ const MAIN = {
     if (!c) return { ok: false, msg: '兑换码不存在' };
     if (c.status === '作废') return { ok: false, msg: '该兑换码已作废' };
     if ((c.used || 0) >= (c.maxUse || 1)) return { ok: false, msg: '该兑换码已被使用' };
-    if (c.exp && c.exp < Date.now()) return { ok: false, msg: '该兑换码已过期' };
+    if (c.exp && c.exp < AUTH_NOW()) return { ok: false, msg: '该兑换码已过期' };
     if (c.bindUid && c.bindUid !== P.uid) return { ok: false, msg: '该兑换码已绑定其他账号' };
     /* 每人可兑次数：后台表单「每人次数」写的是 c.use，此前游戏端只判断
      * 「usedBy 里有没有我」—— 一律按 1 次封顶，运营填 3 次也只给 1 次。
