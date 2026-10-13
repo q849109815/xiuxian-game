@@ -148,12 +148,16 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 #home{background:
   radial-gradient(ellipse 130% 62% at 50% 4%, rgba(126,186,255,.17) 0%, rgba(126,186,255,0) 62%),
   radial-gradient(ellipse 96% 52% at 14% 96%, rgba(255,152,62,.14) 0%, rgba(255,152,62,0) 64%),
-  linear-gradient(180deg,rgba(8,12,20,.62) 0%,rgba(8,12,20,.50) 45%,rgba(12,8,4,.68) 100%),
-  url(../assets/scene/main_bg.jpg?v=20270117a) center/cover no-repeat,
+  linear-gradient(180deg,rgba(8,12,20,.50) 0%,rgba(8,12,20,.40) 45%,rgba(12,8,4,.56) 100%),
+  url(../assets/scene/main_bg.jpg?v=20270121a) center/cover no-repeat,
   linear-gradient(180deg,#1a2637 0%,#20304a 45%,#2c1c0c 100%)}
 .hm-bg{position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(ellipse at 50% 18%,rgba(120,160,220,.18),transparent 55%),
-             radial-gradient(circle at 15% 70%,rgba(116,92,60,.3),transparent 40%)}
+             radial-gradient(circle at 15% 70%,rgba(116,92,60,.3),transparent 40%);
+  /* 篝火呼吸：整层环境光缓慢明暗起伏，让静态背景图有"火光跳动"的呼吸感。
+   * 纯 CSS opacity 动画，不触发布局与重绘，开销可忽略。 */
+  animation:bgBreath 7s ease-in-out infinite}
+@keyframes bgBreath{0%,100%{opacity:.78}50%{opacity:1}}
 .hm-bg::after{content:'';position:absolute;inset:0;opacity:.5;
   background:repeating-linear-gradient(0deg,transparent 0 38px,rgba(255,255,255,.02) 38px 39px)}
 
@@ -172,7 +176,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 .hm-pw b{font-size:13px;color:var(--gold);font-weight:800}
 .hm-cur{display:flex;flex-direction:column;gap:3px;align-items:flex-end}
 .cu{display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:11px;
-  background:rgba(10,16,28,.75);border:1px solid var(--line)}
+  background:rgba(10,16,28,.70);border:1px solid var(--line)}
 .cu i{font-size:11px;font-style:normal}
 .cu b{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
 
@@ -192,7 +196,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 .hm-side{display:flex;flex-direction:column;gap:8px;flex:0 0 74px}
 .hm-sbtn{flex:1;padding:8px;border-radius:12px;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:2px;
-  background:rgba(20,30,46,.9);border:1px solid var(--line)}
+  background:rgba(20,30,46,.84);border:1px solid var(--line)}
 .hm-sbtn i{font-size:18px;font-style:normal}
 .hm-sbtn span{font-size:11px;color:var(--txt2)}
 .hm-sbtn:active{transform:scale(.94)}
@@ -201,17 +205,17 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 .hm-base{position:relative;flex:1;display:grid;grid-template-columns:repeat(3,1fr);
   gap:9px;padding:0 12px;align-content:start;overflow-y:auto}
 .bs{padding:12px 6px;border-radius:12px;text-align:center;position:relative;
-  background:linear-gradient(160deg,rgba(34,47,66,.92),rgba(18,26,38,.95));
+  background:linear-gradient(160deg,rgba(34,47,66,.82),rgba(18,26,38,.88));
   border:1px solid var(--line);box-shadow:0 3px 10px rgba(0,0,0,.35)}
 .bs i{display:block;font-size:26px;font-style:normal;margin-bottom:4px}
-.bs b{display:block;font-size:12px;font-weight:700}
-.bs span{display:block;font-size:11px;color:var(--txt3);margin-top:2px;line-height:1.3}
+.bs b{display:block;font-size:12px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.85)}
+.bs span{display:block;font-size:11px;color:var(--txt3);margin-top:2px;line-height:1.3;text-shadow:0 1px 3px rgba(0,0,0,.85)}
 .bs:active{transform:scale(.95)}
 .bs .dot{position:absolute;top:6px;right:8px;width:7px;height:7px;border-radius:50%;
   background:var(--red);box-shadow:0 0 6px var(--red)}
 
 .hm-nav{position:relative;display:flex;padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));
-  background:linear-gradient(0deg,rgba(10,16,28,.98),rgba(10,16,28,.7));
+  background:linear-gradient(0deg,rgba(10,16,28,.94),rgba(10,16,28,.62));
   border-top:1px solid var(--line)}
 .hn{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 0}
 .hn i{font-size:19px;font-style:normal;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
@@ -549,11 +553,11 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 .hm-nav .hn span{font-size:11px}
 
 .hm-acts{display:flex;gap:8px;padding:0 12px 8px}
-.ha{flex:1;padding:10px 6px;border-radius:11px;background:rgba(27,38,55,.85);
+.ha{flex:1;padding:10px 6px;border-radius:11px;background:rgba(27,38,55,.78);
   border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:2px}
 .ha i{font-size:20px;font-style:normal}
-.ha b{font-size:13px}
-.ha span{font-size:11px;color:var(--txt3)}
+.ha b{font-size:13px;text-shadow:0 1px 3px rgba(0,0,0,.85)}
+.ha span{font-size:11px;color:var(--txt3);text-shadow:0 1px 3px rgba(0,0,0,.85)}
 .ha.go{background:linear-gradient(160deg,rgba(255,215,106,.22),rgba(240,160,32,.12));border-color:rgba(255,215,106,.45)}
 .ha.go b{color:var(--gold)}
 
@@ -626,7 +630,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 0 1px rgba(255,165,60,.18)}
 
 /* ===== 真实主界面双排导航 ===== */
-.hm-nav2{display:flex;gap:4px;padding:5px 6px;overflow-x:auto;background:rgba(8,13,22,.9);
+.hm-nav2{display:flex;gap:4px;padding:5px 6px;overflow-x:auto;background:rgba(8,13,22,.82);
   border-top:1px solid rgba(255,255,255,.07);flex:0 0 auto;
   /* 手机端：隐藏横向滚动条、开启 iOS 惯性滑动 */
   scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;overscroll-behavior-x:contain;
@@ -685,7 +689,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 
 /* --- 左上：等级战力 --- */
 .bt-hero{position:absolute;left:8px;top:52px;z-index:6;display:flex;align-items:center;gap:6px;
-  padding:4px 8px 4px 4px;border-radius:20px;background:rgba(8,13,22,.82);
+  padding:4px 8px 4px 4px;border-radius:20px;background:rgba(8,13,22,.9);
   border:1px solid rgba(255,255,255,.1)}
 .bth-av{width:30px;height:30px;border-radius:50%;overflow:hidden;flex:0 0 auto;
   background:rgba(255,165,60,.14);display:flex;align-items:center;justify-content:center}
@@ -701,7 +705,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 .bt-cur{position:absolute;right:8px;top:86px;z-index:6;display:flex;flex-direction:column;
   gap:3px;align-items:flex-end}
 .bt-cur span{display:flex;align-items:center;gap:3px;font-size:11px;color:#cfd8e8;
-  padding:2px 6px;border-radius:8px;background:rgba(8,13,22,.82);border:1px solid rgba(255,255,255,.08)}
+  padding:2px 6px;border-radius:8px;background:rgba(8,13,22,.9);border:1px solid rgba(255,255,255,.08)}
 .bt-cur span img{width:13px;height:13px;border-radius:3px}
 .bt-cur span b{color:#ffd76a;font-size:11px}
 
