@@ -17,7 +17,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270116a';
+const IMG_V = '20270117a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -610,10 +610,25 @@ r_tavern(p, tab) {
   r_core(p, tab) {
     const byEl = {};
     EX.skills.forEach((s) => { (byEl[s.el] || (byEl[s.el] = [])).push(s); });
-    const elName = { '火': '🔥 火系', '冰': '❄️ 冰系', '电': '⚡ 电系', '风': '🌪️ 风系', '物': '🔩 物理' };
+    /* 【BUG修复】元素标题此前直接用 emoji（🔥❄️⚡🌪️🔩），而这些 emoji 在
+     * EMOJI_ICON 映射表里早已被【其它语义抢占】：
+     *   🔥→diff_hard.jpg（困难难度）  ⚡→i_stamina.jpg（体力瓶）
+     *   🔩→i_metal.jpg（金属材料）    🌪️→sk_xuanfengjianong.jpg（旋风加农技能）
+     * 于是面板渲染后 emojify() 把「火系」标题换成了困难难度图标、「电系」换成了
+     * 体力瓶、「物理」换成了金属块、「风系」换成了旋风加农 —— 五个元素里四个图标
+     * 是错的。同时 el:'毒' 的技能不在这张表里，标题会退化成裸字「毒」。
+     * 现在改为直接引用 el_*.jpg 元素图标，彻底绕开 emoji 映射冲突。 */
+    const elIcon = {
+      '火': 'el_fire.jpg', '冰': 'el_ice.jpg', '电': 'el_elec.jpg',
+      '风': 'el_wind.jpg', '物': 'el_phys.jpg', '毒': 'el_poison.jpg',
+    };
+    const elName = { '火': '火系', '冰': '冰系', '电': '电系', '风': '风系', '物': '物理', '毒': '毒系' };
     return Object.keys(byEl).map((el) => {
       const c = (EX.elements.find((x) => x.k === el) || {}).c || '#ffd76a';
-      return `<div class="card"><div class="card-t" style="color:${c}">${elName[el] || el}</div>
+      const ic = elIcon[el]
+        ? `<img class="ei" src="assets/icon/${elIcon[el]}" style="width:17px;height:17px;border-radius:4px;object-fit:contain;vertical-align:-3px;margin-right:4px">`
+        : '';
+      return `<div class="card"><div class="card-t" style="color:${c}">${ic}${elName[el] || el}</div>
       ${byEl[el].map((s) => `<div class="item">
         <div class="ic" style="border:1.5px solid ${c}66">${s.img
           ? `<img src="${s.img}" style="width:30px;height:30px;border-radius:6px;object-fit:cover">`
@@ -700,7 +715,7 @@ r_tavern(p, tab) {
         <button class="btn sm o" style="flex:1" id="lgShop">军团商店</button>
         <button class="btn sm" style="flex:1" id="lgDonate">捐献</button>
       </div>
-      <div class="card" style="margin-top:8px"><div class="card-t">军团贡献
+      <div class="card" style="margin-top:8px"><div class="card-t"><img class="ei" src="assets/icon/contrib.jpg" style="width:17px;height:17px;border-radius:4px;object-fit:contain;vertical-align:-3px;margin-right:4px">军团贡献
         <span class="sub">捐献获得，可在军团商店消费</span></div>
         <div class="kv"><span>当前贡献</span><b>${E.fmt(p.legionExp || 0)}</b></div>
         <div class="kv"><span>累计贡献</span><b>${E.fmt(E.legionContribOf(p))}</b></div>
