@@ -17,7 +17,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270118a';
+const IMG_V = '20270119a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -1616,7 +1616,7 @@ r_tavern(p, tab) {
         <div class="grid4">${gs.length ? gs.map((g) => {
           const n = (p.gems || {})[g.id] || 0;
           return `<div class="gcell ${n ? '' : 'sel'}" data-gem="${g.id}">
-            ${g.img ? `<img src="${g.img}" style="width:60%;height:60%;object-fit:contain">`
+            ${g.img ? `<img src="${g.img}" style="width:82%;height:auto;aspect-ratio:1/1;object-fit:contain;flex:none;margin-top:2px">`
                     : `<div class="${GEMC[g.c] || 'gem'}">${g.icon || '💎'}</div>`}
             <div class="gn">${g.n}</div>
             ${n ? `<span class="gq">×${n}</span>` : ''}${n == 0 ? '' : '<i class="gdot"></i>'}</div>`;
@@ -2947,7 +2947,7 @@ r_tavern(p, tab) {
         const has = got.indexOf(x.id) >= 0;
         return `<div class="gcell ${has ? '' : 'sel'}"${has
             ? ` data-cdxs="${kind}|${x.id}"` : ` data-cdxh="${kind}|${x.id}"`}>
-          ${x.img ? `<img src="${x.img}" style="width:60%;height:60%;object-fit:contain">`
+          ${x.img ? `<img src="${x.img}" style="width:82%;height:auto;aspect-ratio:1/1;object-fit:contain;flex:none;margin-top:2px">`
                   : `<div class="gi">${x.icon || '❓'}</div>`}
           <div class="gn">${has ? x.n : '???'}</div>
           ${has && x.skill ? `<div style="font-size:11px;color:#8fb4ff;line-height:1.2;margin-top:1px">${x.skill}</div>` : ''}
