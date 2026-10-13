@@ -17,7 +17,77 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270108a';
+const IMG_V = '20270109a';
+
+/* 全局 emoji → 图片替换
+ * ---------------------------------------------------------------------
+ * 界面里散落着上百处 emoji（🪙💎☠🤖🔥…），与整套新美术不是一个画风。
+ * 与其逐个面板改模板字符串（几十处、且新加面板容易漏），这里改在渲染之后：
+ * 遍历 DOM 文本节点，凡命中映射表的 emoji 就地换成 <img class="ei">。
+ * 未收录的 emoji 原样保留（不会变空白、不会报错），所以是渐进式的。
+ * stampImgs 每次面板渲染后都会跑，故覆盖全部面板与页签。 */
+const EMOJI_ICON = {
+  '💎': 'i_diamond.jpg', '🪙': 'i_gold.jpg', '⚡': 'i_stamina.jpg',
+  '☠': 'hud_kill.png', '❤': 'hud_hp.png', '🤖': 'hud_auto.png',
+  '🔄': 'hud_switch.png', '🔁': 'hud_switch.png', '✕': 'hud_close.png', '👆': 'hud_finger.png',
+  '💥': 'logo_boom.jpg',
+  '🌱': 'diff_normal.jpg', '🔥': 'diff_hard.jpg', '💀': 'diff_hell.jpg',
+  '🧟': 'cdx_zombie.jpg', '🔫': 'cdx_gun.jpg', '👕': 'cdx_skin.jpg', '🎽': 'cdx_skin.jpg',
+  '🎁': 'sh01_gift.jpg',
+  '🪖': 'eq_helmet.jpg', '🥋': 'eq_armor.jpg', '⚔️': 'eq_weapon.jpg', '💍': 'eq_ring.jpg',
+  '👢': 'eq_boots.jpg', '🔮': 'eq_orb.jpg', '📿': 'eq_necklace.jpg', '🧤': 'eq_gloves.jpg',
+  '🎯': 'ms_target.jpg', '🏁': 'ms_flag.jpg', '🚩': 'ms_flag.jpg', '📅': 'ms_login.jpg',
+  '👹': 'ms_boss.jpg', '✨': 'ms_sparkle.jpg', '♾️': 'ms_infinity.jpg', '📋': 'ms_clipboard.jpg',
+  '⚠️': 'ic_warn.jpg', '🎉': 'ic_party.jpg', '💠': 'ic_chip.jpg', '🏅': 'ic_medal.jpg',
+  '🔑': 'ic_key.jpg', '🗑': 'ic_trash.jpg',
+  '🏆': 'nav_rank.png', '❄️': 'el_ice.jpg', '⭐': 'star.jpg',
+  '🧩': 'i_frag.jpg', '📦': 'd3_box.jpg', '🩹': 'i_medkit.jpg', '🛡️': 'i_shield.jpg',
+  '💚': 'i_potion.jpg', '🎖️': 'sh06_pass.jpg', '🍺': 'nav_tavern.png', '🏰': 'nav_legion.png',
+  '⚙': 'nav_set.png', '📢': 'nav_notice.png', '🏥': 'bd_hospital.jpg',
+  '🏗️': 'nav_base.png', '🔧': 'nav_base.png',
+  '🛸': 'sk_wurenji.jpg', '🚙': 'sk_zhuangjiache.jpg',
+};
+/* 长串优先，避免 ⚔ + ️ 被拆开匹配 */
+const EMOJI_RE = new RegExp(
+  Object.keys(EMOJI_ICON).sort((a, b) => b.length - a.length).join('|'), 'g');
+
+function emojify(root) {
+  try {
+    const box = root || document;
+    if (!box.querySelectorAll) return;
+    const txt = box.textContent || '';
+    EMOJI_RE.lastIndex = 0;
+    if (!EMOJI_RE.test(txt)) return;
+    const w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null);
+    const list = []; let n;
+    while ((n = w.nextNode())) {
+      const s = n.nodeValue;
+      if (!s) continue;
+      const p = n.parentNode;
+      if (!p || /^(STYLE|SCRIPT|TEXTAREA|INPUT|OPTION|IMG)$/.test(p.nodeName)) continue;
+      EMOJI_RE.lastIndex = 0;
+      if (EMOJI_RE.test(s)) list.push(n);
+    }
+    for (const nd of list) {
+      const s = nd.nodeValue;
+      const frag = document.createDocumentFragment();
+      let last = 0, m;
+      EMOJI_RE.lastIndex = 0;
+      while ((m = EMOJI_RE.exec(s))) {
+        if (m.index > last) frag.appendChild(document.createTextNode(s.slice(last, m.index)));
+        const im = document.createElement('img');
+        im.className = 'ei';
+        im.setAttribute('src', 'assets/icon/' + EMOJI_ICON[m[0]] + '?v=' + IMG_V);
+        im.setAttribute('alt', m[0]);
+        frag.appendChild(im);
+        last = m.index + m[0].length;
+      }
+      if (last < s.length) frag.appendChild(document.createTextNode(s.slice(last)));
+      if (nd.parentNode) nd.parentNode.replaceChild(frag, nd);
+    }
+  } catch (e) { /* 兜底：替换失败保留原 emoji，不影响渲染 */ }
+}
+
 function stampImgs(root) {
   try {
     const box = root || document;
@@ -26,6 +96,7 @@ function stampImgs(root) {
       const s = im.getAttribute('src') || '';
       if (s.indexOf('?') < 0) im.setAttribute('src', s + '?v=' + IMG_V);
     });
+    emojify(box);
   } catch (e) { /* 兜底：加戳失败也不能影响渲染 */ }
 }
 
@@ -55,6 +126,7 @@ const UI = {
     const box = $('#toasts'); if (!box) return;
     const d = document.createElement('div');
     d.className = 'toast ' + (cls || ''); d.innerHTML = msg;
+    emojify(d);
     box.appendChild(d); setTimeout(() => { if (d.remove) d.remove(); }, cls === 'boss' ? 2600 : 2000);
     while (box.children.length > 4 && box.firstElementChild) box.firstElementChild.remove();
   },
