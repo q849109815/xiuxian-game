@@ -557,7 +557,7 @@ const EX = {
     { id: 'I01', n: '急救包', type: '消耗', q: '白', icon: '🧰', img: 'assets/icon/i_medkit.jpg', stack: 99, src: '关卡/商店', use: '恢复生命50%' },
     { id: 'I02', n: '护盾发生器', type: '消耗', q: '蓝', icon: '🛡️', img: 'assets/icon/i_shield.jpg', stack: 99, src: '商店/任务', use: '获得护盾' },
     { id: 'I03', n: '攻击增幅药剂', type: '消耗', q: '蓝', icon: '💉', img: 'assets/icon/i_potion.jpg', stack: 99, src: '商店/掉落', use: '攻击+30%持续30秒' },
-    { id: 'I04', n: '宝箱', type: '消耗', q: '紫', icon: '🎁', img: 'assets/icon/i_chip.jpg', stack: 99, src: '活动/商城', use: '开启获得材料（表31 DR11）' },
+    { id: 'I04', n: '宝箱', type: '消耗', q: '紫', icon: '🎁', img: 'assets/icon/d3_box.jpg', stack: 99, src: '活动/商城', use: '开启获得随机材料' },
   ],
   /* 成就点（任务奖励货币） */
   ACH_POINT: '成就点',
