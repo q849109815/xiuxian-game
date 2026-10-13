@@ -17,7 +17,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270117a';
+const IMG_V = '20270118a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -2652,7 +2652,7 @@ r_tavern(p, tab) {
         const cur = d.id === dm.id;
         const dd = E.diffMul(d.id);
         return `<button class="lvc ${cur ? 'cur' : ''}" data-df="${d.id}" style="${cur ? 'background:' + (d.color || '#5fd97a') + '22;border-color:' + (d.color || '#5fd97a') : ''}">
-          <i style="font-size:17px;font-style:normal;display:block">${d.img ? `<img src="${d.img}" style="width:17px;height:17px;object-fit:cover;border-radius:4px">` : d.icon}</i>
+          <i style="font-size:30px;font-style:normal;display:block">${d.img ? `<img src="${d.img}" style="width:30px;height:30px;object-fit:cover;border-radius:6px">` : d.icon}</i>
           <b style="font-size:11px">${d.n}</b>
           <span style="font-size:11px;opacity:.85">奖励×${dd.rw} · 体力+${Math.max(0, dd.stam - 1)}</span></button>`;
       }).join('')}</div>
@@ -2681,7 +2681,7 @@ r_tavern(p, tab) {
       }).join('')}</div>
       <div class="card"><div class="card-t">章节</div>
       <div class="lvgrid">${E.chapters().map((c) => `<button class="lvc ${c.id === ch ? 'cur' : ''}" data-ch="${c.id}">
-        <i style="font-size:17px;font-style:normal;display:block">${c.img ? `<img src="${c.img}" style="width:17px;height:17px;object-fit:cover;border-radius:4px">` : c.icon}</i><b style="font-size:11px">${c.n.split(' · ')[0]}</b></button>`).join('')}</div></div>
+        <i style="font-size:34px;font-style:normal;display:block;margin-bottom:2px">${c.img ? `<img src="${c.img}" style="width:34px;height:34px;object-fit:cover;border-radius:7px">` : c.icon}</i><b style="font-size:11px">${c.n.split(' · ')[0]}</b></button>`).join('')}</div></div>
       <div class="card"><div class="card-t">无尽模式</div>
       ${`<div class="kv"><span>最佳层数</span><b>${p.endlessBest || 0}</b></div>
          <div class="sub">默认解锁 · 掉落/收益随进度章节提升</div>
