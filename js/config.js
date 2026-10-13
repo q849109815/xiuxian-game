@@ -642,7 +642,7 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270110a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270114a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/style.css', ver:'20270110a', size: 0 },
@@ -1397,7 +1397,7 @@ const EX = {
        *   只要钻石够就能连点到底（实测连点 5 次，5 次全部扣款成功）。
        *   「每日」页签语义上就是每日刷新，却只有 D1 一件真正限购。
        *   现在按商品价值配每日限购次数，并同步 desc 文案。 */
-      { id: 'D2', n: '体力包', icon: '⚡', price: 50, cur: 'diamond', give: { stamina: 60 },
+      { id: 'D2', n: '体力包', icon: '⚡', img: 'assets/icon/i_stamina.jpg', price: 50, cur: 'diamond', give: { stamina: 60 },
         limit: { t: 'daily', v: 3 }, desc: '体力×60 · 每日3次' },
       { id: 'D3', n: '宝箱', icon: '🎁', img: 'assets/icon/d3_box.jpg', price: 100, cur: 'diamond',
         give: { M01: 50, gold: 2000 }, limit: { t: 'daily', v: 2 }, desc: '金属50+金币2000 · 每日2次' },
@@ -1490,7 +1490,7 @@ const EX = {
        *   玩家在哪个页签买，拿到的东西不一样 —— 在直购页买就白亏 3 个急救包，
        *   且两者 limit 各自独立计次（id 不同），等于同一个「限购1次」的新手礼包
        *   能被买两次。现在与 GP01 完全对齐。 */
-      { id: 'SH01', n: '新手礼包', icon: '🎁', price: 60, cur: 'diamond', rmb: '6元',
+      { id: 'SH01', n: '新手礼包', icon: '🎁', img: 'assets/icon/sh01_gift.jpg', price: 60, cur: 'diamond', rmb: '6元',
         give: { gold: 2000, M01: 50, P01: 10, I01: 3 }, limit: { t: 'once', v: 1 },
         desc: '金币2000+金属50+枪械碎片10+急救包3 · 限购1' },
       { id: 'SH02', n: '钻石小包', icon: '💎', img: 'assets/icon/sh02_diamond.jpg', price: 60, cur: 'diamond', rmb: '6元',
@@ -1501,9 +1501,9 @@ const EX = {
        *   可无限循环：980→1150→1320→1490… 实测点 10 次钻石从 980 涨到 2680，
        *   等于所有付费内容（月卡/战令/皮肤/传说芯片）全部白嫖。
        * 修法：保留"多充多送"的档位设计，补上月度限购（每月 1 次），套利量降到可忽略。 */
-      { id: 'SH03', n: '钻石中包', icon: '💎', price: 300, cur: 'diamond', rmb: '30元',
+      { id: 'SH03', n: '钻石中包', icon: '💎', img: 'assets/icon/sh02_diamond.jpg', price: 300, cur: 'diamond', rmb: '30元',
         give: { diamond: 330 }, limit: { t: 'monthly', v: 1 }, desc: '钻石 300 + 赠送 30 · 每月1次' },
-      { id: 'SH04', n: '钻石大包', icon: '💎', price: 980, cur: 'diamond', rmb: '98元',
+      { id: 'SH04', n: '钻石大包', icon: '💎', img: 'assets/icon/sh02_diamond.jpg', price: 980, cur: 'diamond', rmb: '98元',
         give: { diamond: 1150 }, limit: { t: 'monthly', v: 1 }, desc: '钻石 1000 + 赠送 150 · 每月1次' },
       { id: 'SH05', n: '月卡', icon: '📅', img: 'assets/icon/sh05_mcard.jpg', price: 300, cur: 'diamond', rmb: '30元',
         give: {}, monthly: true, limit: { t: 'monthly', v: 1 },
@@ -1519,13 +1519,13 @@ const EX = {
       { id: 'SH07', n: '战令(进阶)', icon: '🎖️', img: 'assets/icon/sh07_passpro.jpg', price: 680, cur: 'diamond', rmb: '68元',
         give: { diamond: 300, frame: 'pass_frame' }, pass: 'adv', limit: { t: 'monthly', v: 1 },
         desc: '解锁高级奖励（每档额外钻石）+ 钻石300 + 限定头像框' },
-      { id: 'SH08', n: '废土战甲皮肤', icon: '🥼', price: 680, cur: 'diamond', rmb: '68元',
+      { id: 'SH08', n: '废土战甲皮肤', icon: '🥼', img: 'assets/skin/sk_armor.jpg', price: 680, cur: 'diamond', rmb: '68元',
         give: { skin: 'sk_c01b' }, limit: { t: 'once', v: 1 },
         desc: '角色皮肤 · 废土战甲' },
-      { id: 'SH09', n: '传说芯片包', icon: '📦', price: 980, cur: 'diamond', rmb: '98元',
+      { id: 'SH09', n: '传说芯片包', icon: '📦', img: 'assets/icon/i_chip_elec.jpg', price: 980, cur: 'diamond', rmb: '98元',
         give: { chipL: 2, diamond: 200 }, limit: { t: 'once', v: 3 },
         desc: '传说芯片×2 + 钻石200 · 限购3' },
-      { id: 'SH10', n: '资源礼包', icon: '📦', price: 300, cur: 'diamond', rmb: '30元',
+      { id: 'SH10', n: '资源礼包', icon: '📦', img: 'assets/icon/d3_box.jpg', price: 300, cur: 'diamond', rmb: '30元',
         give: { M01: 100, M02: 50, M04: 50 }, desc: '金属100+合金50+火药50' },
     ],
     '材料': [
