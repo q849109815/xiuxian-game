@@ -51,7 +51,7 @@ async function pwdOK(pwd) {
  * 做法与前端 ui.js 的 emojify 相同：渲染后遍历文本节点就地换成 <img class="ai">。
  * 未收录的 emoji 原样保留（不会变空白、不会报错），所以是渐进式的。
  * =================================================================== */
-const AIMG_V = '20270113a';
+const AIMG_V = '20270114a';
 const AICON = {
   '💰': 'i_gold.jpg', '💎': 'i_diamond.jpg', '⚡': 'i_stamina.jpg',
   '🏆': 'nav_rank.png', '🎁': 'sh01_gift.jpg', '📦': 'd3_box.jpg',
@@ -65,6 +65,16 @@ const AICON = {
   '💥': 'logo_boom.jpg', '🔒': 'lock.jpg', '✅': 'check.jpg', '✔': 'check.jpg',
   '❌': 'hud_close.png', '✕': 'hud_close.png', '⚠️': 'ic_warn.jpg', '⚠': 'ic_warn.jpg',
   '🗑': 'ic_trash.jpg', '📅': 'ms_login.jpg', '🎯': 'ms_target.jpg',
+  /* 后台操作按钮：此前这些全是死 emoji（导出/补发/报表/详情/删除/重置…） */
+  '⬇': 'ic_down.jpg', '⬆': 'ic_up.jpg',
+  '📤': 'ic_send.jpg', '📈': 'ic_report.jpg', '🔍': 'ic_search.jpg',
+  '🎲': 'ic_dice.jpg', '🔧': 'ic_fix.jpg', '🔨': 'ic_hammer.jpg',
+  '💀': 'ic_destroy.jpg', '🔥': 'ic_purge.jpg', '♻': 'ic_reset.jpg',
+  '🧹': 'ic_broom.jpg', '📜': 'ic_log.jpg', '⚔': 'ic_power.jpg',
+  '📋': 'ms_clipboard.jpg', '🔑': 'ic_key.jpg',
+  '🪙': 'i_gold.jpg', '🏅': 'ic_medal.jpg', '🥼': 'cdx_skin.jpg',
+  '🧑': 'ic_avatar.jpg', '🚫': 'ic_warn.jpg',
+  '✓': 'check.jpg', '✗': 'hud_close.png',
 };
 function admEmojify(root) {
   if (!root) return;
