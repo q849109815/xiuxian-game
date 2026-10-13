@@ -17,7 +17,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270119a';
+const IMG_V = '20270122a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -379,7 +379,9 @@ const UI = {
   navDots() {
     const p = this.P; if (!p) return;
     const set = (key, n) => {
-      const btn = document.querySelector(`.hm-nav .hn[data-p="${key}"],.hm-nav2 .hn2[data-p="${key}"]`);
+      /* 20270122a：导航已整合为 .hm-menu 分组网格，旧 .hn/.hn2 选择器失效。
+       * 两种都查，保证老缓存页面也不会丢红点。 */
+      const btn = document.querySelector(`.hm-menu .hmb[data-p="${key}"],.hm-nav .hn[data-p="${key}"],.hm-nav2 .hn2[data-p="${key}"]`);
       if (!btn) return;
       let d = btn.querySelector('.nv-dot');
       if (n > 0) {
