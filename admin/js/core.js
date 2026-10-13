@@ -41,6 +41,67 @@ async function pwdOK(pwd) {
     return hex === PWD_HASH;
   } catch (e) { return false; }
 }
+
+/* =====================================================================
+ * 后台图标：把界面里的 emoji 换成游戏内已有的手绘图片
+ * ---------------------------------------------------------------------
+ * 后台此前【零图片】：登录门是一个 💥 字符，导航 14 个入口全是 emoji，
+ * 头部菜单/刷新也是 ☰ ⟳ 字符。与前端"emoji 全部换图"的画风不一致。
+ * 这里复用前端 assets/icon 下已画好的图（后台目录在 admin/，需 ../ 前缀），
+ * 做法与前端 ui.js 的 emojify 相同：渲染后遍历文本节点就地换成 <img class="ai">。
+ * 未收录的 emoji 原样保留（不会变空白、不会报错），所以是渐进式的。
+ * =================================================================== */
+const AIMG_V = '20270113a';
+const AICON = {
+  '💰': 'i_gold.jpg', '💎': 'i_diamond.jpg', '⚡': 'i_stamina.jpg',
+  '🏆': 'nav_rank.png', '🎁': 'sh01_gift.jpg', '📦': 'd3_box.jpg',
+  '🥺': 'cdx_skin.jpg', '🖼️': 'ic_avatar.jpg', '👑': 'ic_medal.jpg',
+  '🎟️': 'ic_party.jpg',
+  /* 导航 14 个入口 */
+  '🛒': 'nav_shop.png', '🖥️': 'nav_set.png', '🔄': 'hud_switch.png',
+  '📺': 'nav_act.png', '📮': 'nav_mail.png', '📢': 'nav_notice.png',
+  '📊': 'ic_stats.jpg', '💾': 'ic_cloud.jpg', '👥': 'nav_friends.png',
+  '👤': 'ic_avatar.jpg', '⚙️': 'nav_set.png', '☰': 'nav_set.png', '⟳': 'hud_switch.png',
+  '💥': 'logo_boom.jpg', '🔒': 'lock.jpg', '✅': 'check.jpg', '✔': 'check.jpg',
+  '❌': 'hud_close.png', '✕': 'hud_close.png', '⚠️': 'ic_warn.jpg', '⚠': 'ic_warn.jpg',
+  '🗑': 'ic_trash.jpg', '📅': 'ms_login.jpg', '🎯': 'ms_target.jpg',
+};
+function admEmojify(root) {
+  if (!root) return;
+  /* \uFE0F 是变体选择符：🖥️ / ⚙️ 这类 emoji 由「基本字符 + FE0F」组成，
+   * 必须整体匹配，否则只命中 🖥 而留下一个孤立的 ️ 字符。 */
+  const re = /(\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD00-\uDFFF]|[\u2190-\u2BFF\uFE0F])\uFE0F?/g;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  const todo = [];
+  while (w.nextNode()) {
+    const n = w.currentNode;
+    const pe = n.parentElement && n.parentElement.tagName;
+    /* <option> 里浏览器不渲染 img，换进去反而丢图标 —— 跳过 */
+    if (pe === 'OPTION' || pe === 'TEXTAREA' || pe === 'SCRIPT' || pe === 'STYLE') continue;
+    if (!n.nodeValue || !re.test(n.nodeValue)) { re.lastIndex = 0; continue; }
+    re.lastIndex = 0;
+    todo.push(n);
+  }
+  for (const n of todo) {
+    const frag = document.createDocumentFragment();
+    let last = 0, m;
+    re.lastIndex = 0;
+    while ((m = re.exec(n.nodeValue))) {
+      const f = AICON[m[0]] || AICON[m[0].replace(/\uFE0F/g, '')];
+      if (!f) continue;
+      if (m.index > last) frag.appendChild(document.createTextNode(n.nodeValue.slice(last, m.index)));
+      const im = document.createElement('img');
+      im.className = 'ai'; im.alt = '';
+      im.src = '../assets/icon/' + f + '?v=' + AIMG_V;
+      frag.appendChild(im);
+      last = m.index + m[0].length;
+    }
+    if (!last) continue;
+    if (last < n.nodeValue.length) frag.appendChild(document.createTextNode(n.nodeValue.slice(last)));
+    n.parentNode.replaceChild(frag, n);
+  }
+}
+
 const PDIR = 'data/zb/players/';   /* 玩家存档目录 */
 const UDIR = 'data/zb/users/';     /* 账号目录   */
 const OPDIR = 'data/zb/ops/';      /* 指令队列   */
@@ -341,6 +402,7 @@ const APP = {
     const m = D('#modal'), b = D('#mbox');
     if (!m || !b) return;
     b.innerHTML = html; m.classList.add('on');
+    admEmojify(b);
     /* 弹窗内统一委托 */
     b.onclick = (e) => {
       const t = e.target.closest('[data-m]');
@@ -436,6 +498,7 @@ const APP = {
       });
     });
     nav.innerHTML = h;
+    admEmojify(nav);
     DA('#nav .nv').forEach((b) => { b.onclick = () => this.go(b.dataset.pg); });
     const rs = D('#roleSel');
     if (rs) rs.onchange = () => {
@@ -466,6 +529,7 @@ const APP = {
       b.innerHTML = `<div class="ph"><h2>${U.esc(p.n)}</h2></div>
         <div class="card"><div class="lbl">🔒 当前角色（${(PERM.ROLES[PERM.curRole()] || PERM.ROLES.admin).n}）无此页面权限</div></div>`;
       return;
+
     }
     /* 把当前页的动作表挂到 APP 上：
      * bind / acts 内部回调的 this 都是 APP，而 acts 定义在页面对象里，
@@ -478,8 +542,10 @@ const APP = {
            ⟳ 正在拉取玩家存档 ${pg.done}/${pg.total} …</div></div>` : '';
     try {
       b.innerHTML = '<div class="ph"><h2>' + U.esc(p.n) + '</h2></div>' + bar + p.render.call(this);
+    admEmojify(b);
     } catch (e) {
       b.innerHTML = `<div class="card"><div class="lbl">页面渲染出错：${U.esc(e.message)}</div></div>`;
+    admEmojify(b);
       console.error(e); return;
     }
     /* 统一事件委托：data-a="动作名" */
