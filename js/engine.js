@@ -508,7 +508,12 @@ const E = {
     return p;
   },
   tickStamina(p) {
-    const now = Date.now();
+    /* 【改系统时间刷体力 BUG 修复】
+     * 恢复量 add = (now - staminaAt) / 间隔，而 now 此前取的是【设备时钟】。
+     * 玩家把系统时间往后调 1 天 → add 直接 +288 点（间隔 300 秒），体力瞬间回满；
+     * 调回当天再调前，可无限重复，体力上限形同虚设（实测调前 1 天立刻满体力）。
+     * 改为取服务器校准时间（见 now()），设备时钟不再影响恢复速度。 */
+    const now = this.now();
     /* 【时间回拨 BUG 修复】
      * 若 p.staminaAt 被写成【未来时间】（玩家改过系统时间、或设备时钟同步跳变），
      * 则 now - staminaAt 恒为负数 → add 恒 <= 0 → 体力【永远不恢复】，
@@ -554,7 +559,7 @@ const E = {
     this.tickStamina(p);
     const c = this.staminaCost(id, diff);
     if ((p.stamina || 0) < c) return { ok: false, msg: EX.tip('popup.noStaminaCur', { v: c, n: Math.floor(p.stamina) }) };
-    p.stamina -= c; p.staminaAt = Date.now();
+    p.stamina -= c; p.staminaAt = this.now();
     return { ok: true, cost: c };
   },
   addStamina(p, v) {
@@ -1142,7 +1147,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      *   ② 点领取必走 gain<=0 分支被拒绝，且 patrolT 不重置
      *   ③ 结果巡逻永久卡住，要等真实时间追上那个未来时刻才恢复
      * 与体力 staminaAt 是同一类问题（后者已修）。这里统一钳回当前时刻。 */
-    if (p.patrolT && p.patrolT > Date.now()) p.patrolT = Date.now();
+    if (p.patrolT && p.patrolT > this.now()) p.patrolT = this.now();
     /* 【当前章节】p.ch 全项目【只读不写】：
      *      UI 里两处 `第 ${p.ch || 1} 章`（巡逻面板、主线任务面板）
      *      永远显示「第 1 章」，即使玩家已经打到第 10 章。
@@ -1174,9 +1179,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* 基准必须用独立的 offBase，不能用 offlineAt：
      * offlineAt 每次自动存档（30 秒定时）/切后台/关页面都会被刷成当前时间，
      * 用它算离线时长 → 玩家打开游戏几十秒后收益就被清零，永远领不到。
-     * 旧档无 offBase 时回退 offlineAt；并钳到当前时刻（防改系统时间导致负数）。 */
-    const base = Math.min(Number(p.offBase) || Number(p.offlineAt) || Date.now(), Date.now());
-    const hrsRaw = (Date.now() - base) / 3600000;
+     * 旧档无 offBase 时回退 offlineAt；并钳到当前时刻（防改系统时间导致负数）。
+     * 【改系统时间刷离线收益 BUG 修复】
+     * 此前两处 Date.now() 都取自设备时钟：玩家把时间往后调 8 小时再打开游戏，
+     * hrs 直接算满 8 小时上限（第5章+ 约 700 金币/小时·级 → 一次白拿 5600×等级），
+     * 领完调回当天再调前，可无限重复。改为取服务器校准时间后设备时钟不再参与。 */
+    const _now = this.now();
+    const base = Math.min(Number(p.offBase) || Number(p.offlineAt) || _now, _now);
+    const hrsRaw = (_now - base) / 3600000;
     const hrs = Math.min(8, Math.max(0, hrsRaw));           /* 表34：上限 8 小时 */
     if (hrs < 0.05) return { hrs: 0, gold: 0, metal: 0, xp: 0, tier: t };
     const mul = lv;                                          /* 仓库等级放大金币 */
@@ -1207,14 +1217,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   offlineClaim(p) {
     const c = this.offlineCalc(p);
     if (c.gold <= 0 && c.metal <= 0 && c.xp <= 0) {
-      p.offBase = Date.now();
+      p.offBase = this.now();
       return { ok: false, msg: '离线时间太短，暂无可领收益' };
     }
     p.gold = (p.gold || 0) + c.gold;
     p.mat.M01 = (p.mat.M01 || 0) + c.metal;
     /* 推进【结算基准】，不动 offlineAt（后者是回档守卫用的最后活跃时间，
      * 由 syncSnap/save 负责刷新，两者必须解耦） */
-    p.offBase = Date.now();
+    p.offBase = this.now();
     /* BUG：方法名写错（addExp vs 实际的 addXp），且被 try/catch 静默吞掉
      * → 提示写着「经验 +544」，实际 p.xp 纹丝不动，离线经验从来没发过。
      * 现在用正确方法名，并去掉会掩盖问题的空 catch。 */
@@ -1702,11 +1712,22 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 出现「每日任务已刷新、但每日礼包限购还没刷新」的错位窗口
    * → 在错开的几个小时内，每日限购礼包可以再买一次。
    * 统一为 UTC+8 业务日（与签到/礼包/BOSS突袭同一基准）。 */
-  dailyKey() { const d = new Date(Date.now() + 8 * 36e5); return d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate(); },
+  /* 权威当前时间（毫秒）
+   * 直接用 Date.now() 时，玩家把手机系统时间往后调一天就能刷新 dailyKey，
+   * 实测可清空 dailyClaimed、重置 patrolFast、刷新礼包 daily 限购（见 net.js SRV 注释）。
+   * 改为优先取 GitHub 响应头校准过的服务器时间；未联网校准时回退 Date.now()。 */
+  now() {
+    try { if (typeof window !== 'undefined' && typeof window.SERVER_NOW === 'function') {
+      const t = window.SERVER_NOW();
+      if (typeof t === 'number' && isFinite(t) && t > 1e12) return t;
+    } } catch (e) {}
+    return Date.now();
+  },
+  dailyKey() { const d = new Date(this.now() + 8 * 36e5); return d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate(); },
   /* 快速巡逻每日次数上限 */
   PATROL_FAST_MAX: 3,
   weekKey() {
-    const d = new Date(Date.now() + 8 * 36e5);     /* UTC+8 业务日 */
+    const d = new Date(this.now() + 8 * 36e5);     /* 权威时间 + UTC+8 业务日 */
     const day = (d.getUTCDay() + 6) % 7;           /* 周一为 0 */
     const mon = new Date(d.getTime() - day * 864e5);
     return mon.getUTCFullYear() + '-' + (mon.getUTCMonth() + 1) + '-' + mon.getUTCDate();
@@ -1727,7 +1748,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      *      → 刚建号就能白领 8 小时巡逻收益。 */
     if (p.patrolDay !== dk) { p.patrolDay = dk; p.patrolFast = this.PATROL_FAST_MAX; }
     if (p.patrolFast == null) p.patrolFast = this.PATROL_FAST_MAX;
-    if (!p.patrolT) p.patrolT = Date.now();
+    if (!p.patrolT) p.patrolT = this.now();
   },
   /* 各类进度值 */
   taskVal(p, t) {
@@ -1754,15 +1775,15 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * ========================================================= */
   giftKey(g) {
     const t = (g.limit && g.limit.t) || 'once';
-    if (t === 'daily') { const d = new Date(Date.now() + 8 * 3600000); return d.toISOString().slice(0, 10); }
+    if (t === 'daily') { const d = new Date(this.now() + 8 * 3600000); return d.toISOString().slice(0, 10); }
     if (t === 'weekly') {
-      const d = new Date(Date.now() + 8 * 3600000);
-      const y = new Date(Date.now() + 8 * 3600000);
+      const d = new Date(this.now() + 8 * 3600000);
+      const y = new Date(this.now() + 8 * 3600000);
       const day = (d.getUTCDay() + 6) % 7;            /* 周一为一周起点 */
       y.setUTCDate(d.getUTCDate() - day);
       return y.toISOString().slice(0, 10);
     }
-    if (t === 'monthly') { const d = new Date(Date.now() + 8 * 3600000); return d.toISOString().slice(0, 7); }
+    if (t === 'monthly') { const d = new Date(this.now() + 8 * 3600000); return d.toISOString().slice(0, 7); }
     return 'all';                                      /* once / level / bossFirst */
   },
 
@@ -1836,13 +1857,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 表22 活动 EV02 BOSS突袭：每日 3 次挑战
    * ========================================================= */
   bossRaidLeft(p) {
-    const d = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+    const d = new Date(this.now() + 8 * 3600000).toISOString().slice(0, 10);
     if ((p.bossRaidDate || '') !== d) return 3;
     return Math.max(0, 3 - (p.bossRaidUsed || 0));
   },
   bossRaidStart(p) {
     if (this.bossRaidLeft(p) <= 0) return { ok: false, msg: '今日挑战次数已用完（每日 3 次）' };
-    const d = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+    const d = new Date(this.now() + 8 * 3600000).toISOString().slice(0, 10);
     if ((p.bossRaidDate || '') !== d) { p.bossRaidDate = d; p.bossRaidUsed = 0; }
     p.bossRaidUsed = (p.bossRaidUsed || 0) + 1;
     return { ok: true, msg: 'BOSS突袭开始！剩余 ' + this.bossRaidLeft(p) + ' 次' };
@@ -2000,13 +2021,16 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   monthCardLeft(p) {
     const mc = p.monthCard;
     if (!mc || !mc.until) return 0;
-    if (Date.now() > mc.until) return 0;
-    return Math.ceil((mc.until - Date.now()) / 86400000);
+    /* 用权威时间判定到期：此前用设备时钟，玩家把时间往回调
+     * 就能让已过期的月卡「复活」，反复领取每日钻石。 */
+    const _n = this.now();
+    if (_n > mc.until) return 0;
+    return Math.ceil((mc.until - _n) / 86400000);
   },
   /* 每日领取，返回 {ok,msg} */
   monthCardClaim(p) {
     if (this.monthCardLeft(p) <= 0) return { ok: false, msg: '月卡未开通或已过期' };
-    const d = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+    const d = new Date(this.now() + 8 * 3600000).toISOString().slice(0, 10);
     if (p.monthCard.last === d) return { ok: false, msg: '今日已领取' };
     p.monthCard.last = d;
     p.diamond = (p.diamond || 0) + 50;
@@ -2209,7 +2233,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   },
   /* 每日签到（UTC+8 跨天，防改系统时间） */
   sign(p) {
-    const now = Date.now();
+    const now = this.now();
     if (p.signLast && now < p.signLast - 3600000) {
       return { ok: false, msg: '时间异常，无法签到' };
     }
@@ -2525,7 +2549,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   actOf(id) { return (EX.acts || EX.activities || []).find((x) => x.id === id); },
   /* UTC+8 日历日（YYYYMMDD 整数），与 sign() 同一基准 */
   _utc8dayNum() {
-    const d = new Date(Date.now() + 8 * 3600000);
+    const d = new Date(this.now() + 8 * 3600000);
     return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
   },
   /* 本期是否已领（带周期重置）。旧档 actRwGot[id] 是数字 1 → 迁移为 {n:1} */
@@ -2559,7 +2583,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (c.endlessMin && (p.endlessBest || 0) < c.endlessMin) {
       return { ok: false, msg: '需无尽模式达到 ' + c.endlessMin + ' 波' };
     }
-    if (c.raidToday && !(p.bossRaidUsed > 0 && (p.bossRaidDate || '') === new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10))) {
+    if (c.raidToday && !(p.bossRaidUsed > 0 && (p.bossRaidDate || '') === new Date(this.now() + 8 * 3600000).toISOString().slice(0, 10))) {
       return { ok: false, msg: '需今日先挑战一次 BOSS 突袭' };
     }
     if (c.signToday && p.signDay !== this._utc8dayNum()) return { ok: false, msg: '需先完成今日签到' };
@@ -2604,7 +2628,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 限购不刷新，玩家白白少一天额度。运营意义上的「每日限购」应按自然日跨天算。
    * 周 / 月同理，改为按自然周、自然月（周一为周起点）。 */
   _perReset(rec, per, evName) {
-    const now = Date.now();
+    const now = this.now();
     /* 【时区严重 BUG 修复】
      * 原代码：先 new Date(now + 8h) 构造「UTC+8 业务日」，
      *         却用 getFullYear()/getMonth()/getDate()【本地时区方法】读取。
@@ -2998,7 +3022,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   },
   /* 小时 key（UTC+8，与 dailyKey/weekKey 同一业务日基准） */
   hourKey() {
-    const d = new Date(Date.now() + 8 * 36e5);
+    const d = new Date(this.now() + 8 * 36e5);
     return d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate() + '-' + d.getUTCHours();
   },
   /* 【排行榜奖励周期 key】
@@ -3018,7 +3042,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     else if (cyc.indexOf('每周') >= 0) pk = 'w' + this.weekKey();
     else if (/^(\d+)\s*天$/.test(cyc)) {
       const n = Number(RegExp.$1) || 1;
-      pk = 'n' + Math.floor((Date.now() + 8 * 36e5) / 864e5 / n);
+      pk = 'n' + Math.floor((this.now() + 8 * 36e5) / 864e5 / n);
     } else pk = 'all';   /* 活动结束 / 每期：不区分周期 */
     return 'rk_' + board + '_' + rw.id + '_' + pk;
   },
