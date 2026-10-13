@@ -1529,10 +1529,16 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   /* 累计贡献（纯读，用于面板显示；老存档缺失时按当前余额回退一次） */
   legionContribOf(p) {
     if (!p) return 0;
+    /* 兜底值同样过 isFinite：后台 GM 把 legionExp 填成极大值/非数字时，
+     * 旧写法会把 Infinity 直接写进 legionContrib 并返回 —— 面板「累计贡献」
+     * 显示 Infinity，且由此算出的军团加成（每 1000 贡献 +1%）也会污染战力。
+     * 这里统一钳到合法区间。 */
     if (p.legionContrib == null || !isFinite(Number(p.legionContrib))) {
-      p.legionContrib = Math.max(0, Number(p.legionExp || 0));
+      const fb = Number(p.legionExp || 0);
+      p.legionContrib = isFinite(fb) ? Math.max(0, Math.floor(fb)) : 0;
     }
-    return Math.max(0, Number(p.legionContrib || 0));
+    const c = Number(p.legionContrib || 0);
+    return isFinite(c) ? Math.max(0, c) : 0;
   },
   legionBonus(p) {
     if (!p.legion) return { atkPct: 0, hpPct: 0 };
