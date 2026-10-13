@@ -149,7 +149,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   radial-gradient(ellipse 130% 62% at 50% 4%, rgba(126,186,255,.17) 0%, rgba(126,186,255,0) 62%),
   radial-gradient(ellipse 96% 52% at 14% 96%, rgba(255,152,62,.14) 0%, rgba(255,152,62,0) 64%),
   linear-gradient(180deg,rgba(8,12,20,.50) 0%,rgba(8,12,20,.40) 45%,rgba(12,8,4,.56) 100%),
-  url(../assets/scene/main_bg.jpg?v=20270121a) center/cover no-repeat,
+  url(../assets/scene/main_bg.jpg?v=20270122a) center/cover no-repeat,
   linear-gradient(180deg,#1a2637 0%,#20304a 45%,#2c1c0c 100%)}
 .hm-bg{position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(ellipse at 50% 18%,rgba(120,160,220,.18),transparent 55%),
@@ -1883,3 +1883,38 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 #btPause .ei{width:19px;height:19px;margin:0;vertical-align:middle}
 .ch-timer .ei{width:16px;height:16px;margin:0;vertical-align:-1px}
 .pn-back .ei{width:17px;height:17px;margin:0;vertical-align:middle}
+
+/* =====================================================
+ * 主菜单整合（20270122a）
+ * -----------------------------------------------------
+ * 原结构：5 格一级导航 + 17 个横向滚动二级按钮 = 22 个散按钮，
+ *   一排滑不到头、功能分散（"战斗"格与上方"出击"打开的是同一面板，纯重复）。
+ * 现结构：5 个功能分组的网格，21 个入口一个不少，按用途归类，
+ *   高频的养成/资源排在前面，低频的排行/设置收在最后。
+ * 菜单区可纵向滚动，小屏也不会把基地卡片挤出可视区。
+ * ===================================================== */
+.hm-menu{position:relative;flex:1 1 auto;min-height:0;max-height:44vh;overflow-y:auto;
+  padding:4px 8px calc(8px + env(safe-area-inset-bottom,0px));
+  scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.hm-menu::-webkit-scrollbar{display:none}
+.hmg{margin-bottom:5px;padding:4px 3px 5px;border-radius:10px;
+  background:rgba(10,16,28,.52);border:1px solid rgba(255,255,255,.07)}
+.hmg-t{display:flex;align-items:center;gap:5px;padding:0 4px 3px;
+  font-size:10.5px;font-weight:800;color:#8fa3c0;letter-spacing:1.5px;
+  text-shadow:0 1px 2px rgba(0,0,0,.8)}
+.hmg-t::before{content:'';width:3px;height:10px;border-radius:2px;
+  background:linear-gradient(180deg,#ffd76a,#ffa53c);flex:0 0 auto}
+.hmg-b{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+.hmb{position:relative;padding:4px 1px 3px;border:none;background:none;color:#93a4bf;
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;border-radius:8px}
+.hmb i{display:flex;align-items:center;justify-content:center;font-style:normal}
+.hmb i img{width:26px;height:26px;object-fit:contain;display:block;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))}
+.hmb span{font-size:10px;line-height:1.15;color:#a9b8d0;
+  text-shadow:0 1px 2px rgba(0,0,0,.85)}
+.hmb:active{transform:scale(.9);background:rgba(255,165,60,.15)}
+.hmb:active span{color:#ffd08a}
+/* 红点：沿用 navDots() 的 .nv-dot，位置适配新的小网格按钮 */
+.hmb .nv-dot{position:absolute;top:0;right:6px;min-width:14px;height:14px;padding:0 3px;
+  border-radius:7px;background:var(--red);color:#fff;font-size:9px;font-weight:800;font-style:normal;
+  line-height:14px;text-align:center;box-shadow:0 0 6px rgba(255,60,60,.8)}
