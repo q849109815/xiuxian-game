@@ -17,7 +17,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270114a';
+const IMG_V = '20270115a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -159,6 +159,20 @@ const EMOJI_ICON = {
   '🏹': 'm_sj.jpg',
   '🔒': 'lock.jpg',
   '🤮': 'z_du.jpg',
+  /* 最后 4 个漏网 emoji：它们出现在「静态 HTML」或「不走 emojify 的动态片段」里，
+   * 靠映射表兜不住，所以 index.html 里那三处也同步改成了 <img>（双保险）：
+   *   ⏸ 战斗顶栏暂停按钮（index.html，战斗界面不跑 emojify）
+   *   ⏱ 三选一倒计时（index.html）
+   *   ◀ 面板返回箭头（index.html）
+   *   ⏳ 限时道具角标（ui.js tempTag，面板渲染后走 emojify，故映射即可） */
+  '⏸': 'hud_pause.png',
+  '⏸️': 'hud_pause.png',
+  '⏱': 'ic_timer.png',
+  '⏱️': 'ic_timer.png',
+  '◀': 'ic_back.png',
+  '◀️': 'ic_back.png',
+  '⏳': 'ic_hourglass.png',
+  '⏳️': 'ic_hourglass.png',
 };
 
 /* 长串优先，避免 ⚔ + ️ 被拆开匹配 */
