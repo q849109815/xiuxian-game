@@ -1757,6 +1757,13 @@ textarea,select{ font-size:16px !important; }
 .avp-c.on{border-color:var(--q-y2);
   box-shadow:0 0 0 3px rgba(255,201,60,.4),0 3px 0 var(--q-ink2)}
 .avp-c:active{transform:translateY(3px);box-shadow:0 0 0 var(--q-ink2)}
+/* 头像：emoji → 手绘真图（20270108a）
+ * .avp-c 原本靠 font-size:26px 显示 emoji，换成 img 后需要显式给尺寸；
+ * 主界面左上角 .hm-av i 现在是 img 容器，让图铺满圆形。 */
+.avp-img{width:82%;height:82%;object-fit:contain;display:block;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.45))}
+.hm-av i img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
+.hm-av i:has(img){overflow:hidden}
 
 /* ---------- 音量滑块：原生 range 只有 20px 高、滑块极小，手指点不中 ---------- */
 input[type="range"]{height:44px !important;-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
