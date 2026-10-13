@@ -17,7 +17,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270107a';
+const IMG_V = '20270108a';
 function stampImgs(root) {
   try {
     const box = root || document;
@@ -89,7 +89,12 @@ const UI = {
     if (st) st.textContent = Math.floor(p.stamina || 0) + '/' + EX.STAMINA_MAX;
     const avEl = $('#hmAvIco');
     /* 头像：优先用玩家自己选的，没选过才回退到当前角色图标 */
-    if (avEl) avEl.textContent = p.avatar || E.char(p).icon;
+    if (avEl) {
+      const _av = p.avatar || '';
+      const _u = this.avSrc(_av);
+      if (_u) avEl.innerHTML = `<img src="${_u}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      else avEl.textContent = _av || E.char(p).icon;   /* 旧存档仍是 emoji，回退不空白 */
+    }
     /* 头像框
      * BUG：equipFrame() 只写 p.frame，而全项目【没有任何一处读取它做渲染】——
      *   玩家在设置页点「装备」拿到「已装备头像框：活动限定框」的成功提示，
@@ -126,8 +131,15 @@ const UI = {
    * 主界面左上角头像此前是死 emoji：直接取 E.char(p).icon（当前角色图标），
    * 且 #hmAv 完全没有点击绑定 —— 玩家点不动，也换不了。
    * 这里给一组头像供选择，选完写进 p.avatar 并同步云端。 */
-  AVATARS: ['👨‍🚀', '👩‍🚀', '🧑‍🎤', '👩‍🍳', '🕵️', '👮', '🧙', '🥷',
-            '🦸', '🧟', '🤖', '💀', '🐱', '🐶', '🦊', '🐼'],
+  /* 头像此前是 16 个死 emoji（👨‍🚀👩‍🚀🧟🤖🐱🐼…），与主界面/战斗的新美术完全不是一个画风。
+   * 改为 16 张末日主题手绘头像（assets/icon/av_a01~a16.png）。
+   * 旧存档里 p.avatar 仍是 emoji 字符串，渲染时按前缀判断：
+   * 以 'av_' 开头走图片，否则回退 emoji，老玩家不会变空白。 */
+  AVATARS: ['av_a01','av_a02','av_a03','av_a04','av_a05','av_a06','av_a07','av_a08',
+            'av_a09','av_a10','av_a11','av_a12','av_a13','av_a14','av_a15','av_a16'],
+  avSrc(id){ return id && String(id).indexOf('av_') === 0 ? `assets/icon/${id}.png?v=${IMG_V}` : ''; },
+  avHTML(id, cls){ const u = this.avSrc(id);
+    return u ? `<img class="${cls || ''}" src="${u}" alt="">` : (id || ''); },
   pickAvatar() {
     const p = this.P; if (!p) return;
     const old = document.getElementById('avPick'); if (old) old.remove();
@@ -137,7 +149,7 @@ const UI = {
       <div class="avp-box">
         <div class="pn-hd"><span class="pn-back" id="avpX">✕</span><b>选择头像</b><span class="avp-sp"></span></div>
         <div class="avp-grid">
-          ${this.AVATARS.map((a) => `<button class="avp-c${p.avatar === a ? ' on' : ''}" data-av="${a}">${a}</button>`).join('')}
+          ${this.AVATARS.map((a) => `<button class="avp-c${p.avatar === a ? ' on' : ''}" data-av="${a}">${this.avHTML(a, 'avp-img')}</button>`).join('')}
         </div>
         <div class="lbl" style="text-align:center;margin-top:8px">点选即换，自动保存</div>
       </div>`;
