@@ -870,8 +870,11 @@ r_tavern(p, tab) {
        * last=1970 年 → hrs 被 8 小时上限钳住 → 新号一进面板就能白领
        * 8 小时收益（实测 128 金币，第 5 章档位 1120）。
        * 无 patrolT 时用【账号创建时间】兜底，老存档不受影响。 */
-      const last = p.patrolT || p.created || Date.now();
-      const now = Date.now();
+      const last = p.patrolT || p.created || (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
+      /* 【改系统时间 BUG 修复】巡逻「累计可领」此前用设备时钟算时长，
+       * 玩家把时钟往前调 8 小时再打开面板，就能一次领满 8 小时金币，
+       * 调回当天再调前可无限重复。与离线收益、体力是同一类问题。 */
+      const now = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
       /* 双重保险：时间回拨时 (now-last) 为负，会让「累计可领」显示负数金币 */
       const hrs = Math.min(8, Math.max(0, (now - last) / 3600000));
       /* 零头累积（与下面 b_exped 的领取同口径）
@@ -935,7 +938,7 @@ r_tavern(p, tab) {
     }; });
     const cb = $('#ptClaim');
     if (cb) cb.onclick = () => {
-      const now = Date.now();
+      const now = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
       /* 双重保险：时间回拨时 hrs 为负，gain 变负数被拒且 patrolT 不重置 → 永久卡住 */
       const hrs = Math.min(8, Math.max(0, (now - (p.patrolT || p.created || now)) / 3600000));
       /* 与上方 r_exped 显示同口径：零头存回 patrolAcc 累积到下次，不再丢弃 */
@@ -1796,7 +1799,7 @@ r_tavern(p, tab) {
         <div class="card" style="grid-column:1/-1"><div class="card-t">月卡 <span class="sub">SH05 每日领</span></div>
           ${E.monthCardLeft(p) > 0 ? `
             <div class="kv"><span>剩余天数</span><b>${E.monthCardLeft(p)} 天</b></div>
-            <div class="kv"><span>今日状态</span><b>${(p.monthCard && p.monthCard.last === new Date(Date.now()+8*3600000).toISOString().slice(0,10)) ? '已领取' : '待领取'}</b></div>
+            <div class="kv"><span>今日状态</span><b>${(p.monthCard && p.monthCard.last === new Date((typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now())+8*3600000).toISOString().slice(0,10)) ? '已领取' : '待领取'}</b></div>
             <button class="btn blk" id="shMcClaim" style="margin-top:6px">📅 领取今日（钻石50+体力60）</button>`
             : `<div class="lbl">未开通 · 在上方购买「月卡」后 30 天内每日可领</div>`}
         </div>
@@ -2035,7 +2038,7 @@ r_tavern(p, tab) {
          *   同时 last 被清成 ''，当天已领过的记录丢失，
          *   实测同一天可连领两次 50 钻。
          * 现在：未过期则【叠加】到原到期日之后，并保留当日领取记录。 */
-        const _now = Date.now();
+        const _now = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
         const _old = p.monthCard;
         const _base = (_old && Number(_old.until) > _now) ? Number(_old.until) : _now;
         const _last = (_old && _old.last) ? _old.last : '';
@@ -2273,7 +2276,7 @@ r_tavern(p, tab) {
   tempTag(p, id) {
     const e = (window.MAIN && MAIN.tempExpOf) ? MAIN.tempExpOf(p, id) : 0;
     if (!e) return '';
-    const ms = e - Date.now();
+    const ms = e - (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
     if (ms <= 0) return '';
     const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5);
     const t = d > 0 ? '剩' + d + '天' : (h > 0 ? '剩' + h + '时' : '即将到期');
@@ -2369,7 +2372,9 @@ r_tavern(p, tab) {
    * BUG：后台支持设「生效时间」和「有效期」，但面板此前完全不看这两个字段，
    * 过期邮件照样显示「领取」按钮、照样能领走附件里的 9999 金币。 */
   mailActive(m) {
-    const now = Date.now();
+    /* 【改系统时间 BUG 修复】此前用设备时钟：玩家把时钟往回调，
+     * 已过期的补偿邮件会重新变成可领（含大额金币/钻石的运营补偿）。 */
+    const now = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
     if (m.startAt && m.startAt > now) return false;
     if (m.expireAt && m.expireAt < now) return false;
     return true;
@@ -2383,7 +2388,7 @@ r_tavern(p, tab) {
     return `<div class="card"><div class="card-t">邮件 <span class="sub">${un} 封未读</span></div>
       ${ms.length ? ms.map((m) => {
         const act = this.mailActive(m);
-        const exp = m.expireAt && m.expireAt < Date.now();
+        const exp = m.expireAt && m.expireAt < (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
         const wait = m.startAt && m.startAt > Date.now();
         return `<div class="zrow">
         ${this.zAvatarHTML(m.t)}
@@ -2552,8 +2557,10 @@ r_tavern(p, tab) {
      * 此前游戏端原样列出全部活动，运营紧急下架了，玩家照样看得见、照样能参与。 */
     const acts = (EX.acts || EX.activities || []).filter((a) => {
       if (a.status === '强制下架') return false;
-      if (a.endAt && Date.now() > a.endAt) return false;
-      if (a.startAt && Date.now() < a.startAt - 864e5 * 30) return false;  /* 一个月后才开始的先不显示 */
+      /* 同样改用权威时间：否则玩家调时钟就能让已下架/已结束的活动重新出现 */
+      const _actNow = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
+      if (a.endAt && _actNow > a.endAt) return false;
+      if (a.startAt && _actNow < a.startAt - 864e5 * 30) return false;  /* 一个月后才开始的先不显示 */
       return true;
     });
     /* 计数此前直接取 acts.length，把「待开启」的后台活动也算成进行中
