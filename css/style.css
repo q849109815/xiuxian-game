@@ -1828,3 +1828,15 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 .hn2 i img { width:21px; height:21px; object-fit:contain; display:block;
   filter:drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
 .hn2.on i img { filter:drop-shadow(0 0 7px #ffa53c) drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+/* 出击 / 无尽模式 主行动按钮：emoji 换真图（20270107a） */
+.ha i { display:flex; align-items:center; justify-content:center; }
+.ha i img { width:27px; height:27px; object-fit:contain; display:block;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.55)); }
+.ha.go i img { width:30px; height:30px; filter:drop-shadow(0 0 8px rgba(255,180,60,.75)) drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+
+/* 天赋/建筑/军团条目：emoji → 真实图标（20270105a）
+ * 原来天赋、基地建筑、军团商店是全项目唯一【只有 emoji、没有配图】的条目，
+ * 统一改为 38px 圆形缩略图；无 img 字段的旧配置仍回退 emoji，不会空白。 */
+.item .ic img{width:100%;height:100%;object-fit:contain;border-radius:8px}
+.bs i img{width:26px;height:26px;object-fit:contain;vertical-align:middle;display:inline-block}
+.mc-card .mi img{width:100%;height:100%;object-fit:cover;border-radius:9px;display:block}
