@@ -845,9 +845,13 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 .stone-panel>*{position:relative}
 
 /* 列表行（好友/邮件截图） */
-.zrow{display:flex;align-items:center;gap:9px;padding:9px;border-radius:12px;margin-bottom:7px;
+/* 列表行：侧边页签面板（好友/军团，正文仅 264px）里，一行要塞「头像+名字+按钮+状态」，
+ * 旧值 flex:1(flex-basis:0)+min-width:0 让名字区被挤到 18px —— 7 字好友名只能露出 1 个。
+ * 改为 basis 90px + 允许换行：空间够时照旧一行排布，不够时按钮/状态落到第二行，
+ * 名字区至少拿到 90px（实测好友 141px、军团成员 130px）。 */
+.zrow{display:flex;align-items:center;gap:9px;padding:9px;border-radius:12px;margin-bottom:7px;flex-wrap:wrap;
   background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)}
-.zrow .zi{flex:1;min-width:0}
+.zrow .zi{flex:1 1 90px;min-width:0}
 /* 列表行标题：单行省略号吞掉「每周击杀1000僵尸」(79/110)、「限定称号-百人斩」
  * (77/96)、运营页 8 条版本说明等 —— 改为最多 2 行完整显示。 */
 .zrow .zi b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
