@@ -805,7 +805,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   border:2px solid rgba(255,255,255,.16);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.22)}
-.gcell img{width:60%;height:60%;object-fit:contain}
+.gcell img{width:82%;height:auto;aspect-ratio:1/1;object-fit:contain;flex:none;margin-top:2px}
 .gcell .gi{font-size:24px}
 .gcell .gn{font-size:11px;color:var(--txt2);text-align:center;line-height:1.1;
   padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
@@ -1282,7 +1282,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 /* 护盾条容器：此前护盾只是血条旁一根细条，与血量条并排时玩家分不清哪根是血、
  * 哪根是盾。现在条左侧补一枚盾牌图标，与血量数字旁的心形图标形成呼应。 */
 .bw-shwrap{display:flex;align-items:center;gap:3px;flex:0 0 auto}
-.bw-shwrap .ei{width:13px;height:13px;margin:0;vertical-align:-2px;
+.bw-shwrap .ei{width:17px;height:17px;margin:0;vertical-align:-2px;
   filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
 
 /* ============================================================
@@ -1865,17 +1865,17 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
  * emojify() 把文本节点里命中映射表的 emoji 换成 <img class="ei">，
  * 这里统一规定行内尺寸：跟随字号、垂直对齐到基线、圆角小方块。
  * 单独用在按钮/标题里时由各自的 CSS 覆盖（见 .bts img / .gd img 等）。 */
-.ei{width:1.05em;height:1.05em;object-fit:contain;border-radius:3px;
-     vertical-align:-.18em;margin-right:.08em;display:inline-block}
+.ei{width:1.3em;height:1.3em;min-width:16px;min-height:16px;object-fit:contain;border-radius:3px;
+     vertical-align:-.22em;margin-right:.1em;display:inline-block}
 .bts .ei{width:22px;height:22px;margin:0;vertical-align:middle}
 .gd .ei,.gd img{width:20px;height:20px;border-radius:50%;object-fit:cover;margin:0;vertical-align:-4px}
 .ld-logo img{width:100%;height:100%;object-fit:contain;border-radius:16px}
 .gd-finger .ei{width:30px;height:30px;margin:0}
-.bw-heart .ei{width:13px;height:13px;margin:0;vertical-align:-2px}
-#pnX .ei{width:15px;height:15px;margin:0;vertical-align:-2px}
+.bw-heart .ei{width:17px;height:17px;margin:0;vertical-align:-2px}
+#pnX .ei{width:18px;height:18px;margin:0;vertical-align:-2px}
 /* 本轮把最后 3 个静态 emoji（⏸ 暂停 / ⏱ 三选一倒计时 / ◀ 面板返回）换成图片。
  * 这三处不走 emojify（战斗顶栏与静态 HTML 结构），必须在各自容器里定尺寸，
  * 否则会沿用 .ei 的 1.05em，在按钮里偏小、在圆形返回键里会溢出。 */
 #btPause .ei{width:19px;height:19px;margin:0;vertical-align:middle}
-.ch-timer .ei{width:13px;height:13px;margin:0;vertical-align:-1px}
-.pn-back .ei{width:15px;height:15px;margin:0;vertical-align:middle}
+.ch-timer .ei{width:16px;height:16px;margin:0;vertical-align:-1px}
+.pn-back .ei{width:17px;height:17px;margin:0;vertical-align:middle}
