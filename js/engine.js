@@ -3745,7 +3745,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* 每 5 级进阶一次 */
     if (cur.lv % 5 === 0) cur.adv = (cur.adv || 0) + 1;
     eq[slot] = cur;
-    return { ok: true, msg: '强化成功！' + slot + ' Lv.' + cur.lv + (cur.lv % 5 === 0 ? ' · 进阶 +1' : '') };
+    /* BUG（提示文案露出内部键）：这里直接拼 slot，而 slot 是装备槽的英文键
+     * （equipSlots 里的 k：head / cloth / weapon / ring / boot / fabao / neck / brace）。
+     * 实测点击头盔强化，玩家看到的提示是「强化成功！head Lv.1」——
+     * 一串英文键摆在中文界面里，与全站文案风格不一致。
+     * 面板按钮上显示的是中文名（sl.n），提示也应取同一个名字。 */
+    const _sd = ((typeof EX !== 'undefined' && EX.equipSlots) || []).find((x) => x && x.k === slot);
+    const _sn = (_sd && _sd.n) || slot;
+    return { ok: true, msg: '强化成功！' + _sn + ' Lv.' + cur.lv + (cur.lv % 5 === 0 ? ' · 进阶 +1' : '') };
   },
 
   taskProg(p, t) {
