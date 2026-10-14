@@ -1,3 +1,8 @@
+/* localStorage 安全读写：隐私模式/禁用站点数据/配额耗尽时 localStorage 会【抛异常】
+ * 而不是返回 null，裸调会让本模块初始化中断（实测禁用存储后整页白屏）。
+ * 这里统一走包装，读取失败回落默认值，写入失败静默忽略。 */
+function lsGet(k, dflt) { try { const v = localStorage.getItem(k); return v === null || v === undefined ? dflt : v; } catch (e) { return dflt; } }
+function lsSet(k, v) { try { lsSet(k, v); return true; } catch (e) { return false; } }
 /* =========================================================
  * main.js —— 启动 / 登录 / 战斗流程 / 存档
  * 依据资料 06 操作方案（自动瞄准 + PC 键盘备选）
@@ -58,13 +63,13 @@ const MAIN = {
 
   /* 进入游戏（供微信登录 / 自动登录复用） */
   async enterWith(uid, name, gender) {
-    UID = uid || (window.UA ? UA.acctId(UA.remembered().name || '') : '') || localStorage.getItem('zb_uid');
-    localStorage.setItem('zb_uid', UID);
+    UID = uid || (window.UA ? UA.acctId(UA.remembered().name || '') : '') || lsGet('zb_uid', '');
+    lsSet('zb_uid', UID);
     return this.login(name, gender);
   },
 
   async login(name, gender) {
-    UID = localStorage.getItem('zb_uid') || UID;
+    UID = lsGet('zb_uid', '') || UID;
     /* 需求：必须输入账号登录 —— 未经账号密码校验不得凭空开户进入游戏。
      * 旧行为：UID 为空时随机生成 'u'+随机串 并直接进主界面，
      *   等于任何一次 MAIN.login 调用都能绕过登录页生成一个游客存档。
@@ -471,9 +476,9 @@ const MAIN = {
     if (!p || !p.uid || !window.UA || !UA.idxAdd) return;
     try {
       const K = 'zb_idxat_' + p.uid;
-      const last = Number(localStorage.getItem(K) || 0);
+      const last = Number(lsGet(K, '') || 0);
       if (Date.now() - last < 6 * 3600e3) return;
-      localStorage.setItem(K, String(Date.now()));
+      lsSet(K, String(Date.now()));
       const name = (window.UA && UA.remembered ? UA.remembered().name : '') || p.name || '';
       UA.idxAdd(p.uid, name, p.name || name);
       /* 索引里补上等级与战力，后台列表不必逐个拉存档也能显示 */
@@ -584,12 +589,12 @@ const MAIN = {
     if (!P || window.__zbResetting) return;
     try {
       P.offlineAt = Date.now(); P.lastSeen = Date.now();
-      localStorage.setItem(this.snapKey(P.uid), JSON.stringify(P));
+      lsSet(this.snapKey(P.uid), JSON.stringify(P));
     } catch (e) {}
   },
   loadSnap(uid) {
     try {
-      const s = localStorage.getItem(this.snapKey(uid));
+      const s = lsGet(this.snapKey(uid), '');
       if (!s) return null;
       const o = JSON.parse(s);
       return (o && o.uid) ? o : null;
@@ -824,9 +829,9 @@ const MAIN = {
       if (cv === local) return;
       const KEY = 'z_hot_seen';
       let seen = '';
-      try { seen = localStorage.getItem(KEY) || ''; } catch (e) {}
+      try { seen = lsGet(KEY, ''); } catch (e) {}
       if (seen === cv) return;
-      try { localStorage.setItem(KEY, cv); } catch (e) {}
+      try { lsSet(KEY, cv); } catch (e) {}
       if (window.UI && UI.showUpdate) UI.showUpdate(cv);
     } catch (e) { console.error('applyHotfix', e); }
   },
@@ -838,10 +843,10 @@ const MAIN = {
       try { const r = await window.TMO(Net.read(path), 6000, null); db = r && r.data; } catch (e) {}
       if (!db) {
         /* 离线：用上次缓存 */
-        try { db = JSON.parse(localStorage.getItem('zb_cfg_' + key) || 'null'); } catch (e) {}
+        try { db = JSON.parse(lsGet('zb_cfg_' + key, 'null')); } catch (e) {}
         if (!db) continue;
       } else {
-        try { localStorage.setItem('zb_cfg_' + key, JSON.stringify(db)); } catch (e) {}
+        try { lsSet('zb_cfg_' + key, JSON.stringify(db)); } catch (e) {}
       }
       this.applyCloudCfg(key, db);
     }
@@ -1934,7 +1939,7 @@ function bindAll() {
     const keep = document.getElementById('lgKeep');
     if (keep && !keep.checked) localStorage.removeItem('zb_auto');
     sayTip(lgTip, '登录成功，正在进入…', true);
-    localStorage.setItem('zb_uid', r.id);
+    lsSet('zb_uid', r.id);
     await MAIN.login(r.nick || u.trim(), r.gender || 'm');
   };
 
@@ -1959,7 +1964,7 @@ function bindAll() {
     rgBtn.disabled = false; rgBtn.textContent = '注 册 并 进 入';
     if (!r.ok) { sayTip(rgTip, r.msg); return; }
     sayTip(rgTip, '注册成功，正在进入…', true);
-    localStorage.setItem('zb_uid', r.id);
+    lsSet('zb_uid', r.id);
     await MAIN.login(r.nick, r.gender);
   };
 
