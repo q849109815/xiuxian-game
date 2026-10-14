@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270208a';
+const IMG_V = '20270209a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -890,11 +890,14 @@ r_tavern(p, tab) {
        *     而每小时产出就是 16 —— 频繁领取白白少拿 25%。
        *   现在把零头存进 patrolAcc 累积到下次，显示与实际领取一致。 */
       const _ptAcc = Number(p.patrolAcc) || 0;
-      const gain = Math.floor(_ptAcc + hrs * ((p.patrolRate || 16)));
+      /* 与领取同口径：必须走 E.patrolRateReal（含挂机折扣），
+       * 用 p.patrolRate 会让「累计可领」按 100% 显示、实发 60% */
+      const _rate = E.patrolRateReal(p);
+      const gain = Math.floor(_ptAcc + hrs * _rate);
       return `<div class="card"><div class="card-t">🚩 巡逻收益
         <span class="sub">章节越高，收益越大</span></div>
         <div class="kv"><span>当前章节</span><b>第 ${p.ch || 1} 章</b></div>
-        <div class="kv"><span>每小时产出</span><b>${p.patrolRate || 16} 金币</b></div>
+        <div class="kv"><span>每小时产出</span><b>${Math.round(_rate * 10) / 10} 金币</b></div>
         <div class="kv"><span>累计可领</span><b>${E.fmt(gain)}</b></div>
         <div class="sub" style="padding:6px 2px">最长累计 8 小时，离线也会累积。</div>
         <button class="btn" id="ptClaim" style="width:100%;margin-top:6px">领取巡逻收益</button>
@@ -947,7 +950,7 @@ r_tavern(p, tab) {
       /* 双重保险：时间回拨时 hrs 为负，gain 变负数被拒且 patrolT 不重置 → 永久卡住 */
       const hrs = Math.min(8, Math.max(0, (now - (p.patrolT || p.created || now)) / 3600000));
       /* 与上方 r_exped 显示同口径：零头存回 patrolAcc 累积到下次，不再丢弃 */
-      const total = (Number(p.patrolAcc) || 0) + hrs * (p.patrolRate || 16);
+      const total = (Number(p.patrolAcc) || 0) + hrs * E.patrolRateReal(p);
       const gain = Math.floor(total);
       if (gain <= 0) return this.toast('暂无可领收益', 'err');
       p.gold += gain; p.patrolAcc = total - gain; p.patrolT = now;
@@ -956,7 +959,7 @@ r_tavern(p, tab) {
     const fb = $('#ptFast');
     if (fb) fb.onclick = () => {
       if ((p.patrolFast || 0) <= 0) return this.toast('快速巡逻次数已用完', 'err');
-      p.patrolFast--; p.gold += (p.patrolRate || 16) * 2;
+      p.patrolFast--; p.gold += Math.floor(E.patrolRateReal(p) * 2);
       E.save(p); this.toast('快速巡逻完成', 'ok'); this.open('exped', '巡逻'); this.home();
     };
   },
