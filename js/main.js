@@ -23,7 +23,7 @@ const MAIN = {
     let up = { updated: false };
     try { up = OPS.checkUpdate(); } catch (e) { up = { updated: false }; }
     if (up.updated) {
-      console.log('[热更新]', up.from, '→', up.ver);
+      log('[热更新]', up.from, '→', up.ver);
       setTimeout(() => {
         if (window.UI && UI.toast) UI.toast('已更新到 ' + up.ver, 'ok');
       }, 1500);
@@ -107,7 +107,7 @@ const MAIN = {
       if (staleBase) {
         /* 云端已被别处推进，本地这份是旧版派生 → 丢弃，保住云端新进度 */
         try { this.dropSnap(UID); } catch (e) {}
-        try { console.log('[存档] 本地快照基于旧版，已丢弃，采用云端新进度'); } catch (e) {}
+        try { log('[存档] 本地快照基于旧版，已丢弃，采用云端新进度'); } catch (e) {}
       } else if (!p || (Number(snap.offlineAt) || 0) > cAt) {
         p = snap;
         try { UI.toast('已恢复上次未保存的进度', 'ok'); } catch (e) {}
@@ -1034,7 +1034,7 @@ const MAIN = {
          * 现在未到生效时间就整份跳过（沿用内置默认值），下次登录到点后自然生效。 */
         const hf = src._hotfix || {};
         if (hf.at && Date.now() < Number(hf.at)) {
-          console.log('[cfg] 热更未到生效时间，跳过：' + new Date(Number(hf.at)).toLocaleString());
+          log('[cfg] 热更未到生效时间，跳过：' + new Date(Number(hf.at)).toLocaleString());
           return;
         }
         Object.keys(src || {}).forEach((k) => {
@@ -1112,7 +1112,7 @@ const MAIN = {
             });
             EX.shopGoods = g;
           }
-          console.log('[cfg] 商城云端覆盖 ' + ov.length + ' 件商品');
+          log('[cfg] 商城云端覆盖 ' + ov.length + ' 件商品');
         }
       } else if (key === 'ad' && Array.isArray(db.list)) {
         /* 后台「广告位配置」→ 覆盖 EX.ads 的每日上限与奖励
@@ -1135,7 +1135,7 @@ const MAIN = {
             if (o.item) c.rwItem = { item: o.item, n: Number(o.n) || 1 };
             return c;
           });
-          console.log('[cfg] 广告位云端覆盖 ' + ov.length + ' 个');
+          log('[cfg] 广告位云端覆盖 ' + ov.length + ' 个');
         }
       } else if (key === 'social') {
         /* 后台「社交」→ 军团与好友的云端配置
@@ -1153,7 +1153,7 @@ const MAIN = {
             (ov[a.id] != null) ? Object.assign({}, a, { need: Number(ov[a.id]) || 0 }) : a);
         }
         if (db.friendMax != null) EX.FRIEND_MAX = Number(db.friendMax) || EX.FRIEND_MAX;
-        console.log('[cfg] 社交云端配置已应用');
+        log('[cfg] 社交云端配置已应用');
       }
     } catch (e) { console.error('applyCloudCfg ' + key, e); }
   },
