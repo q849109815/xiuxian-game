@@ -11,15 +11,24 @@
 const DBG = (() => { try { return localStorage.getItem('zb_debug') === '1'; } catch (e) { return false; } })();
 function log() { if (!DBG) return; try { console.log.apply(console, arguments); } catch (e) {} }
 
+/* ---- 访问令牌 ----
+ * 单独放在模块作用域，不放进 GH 对象。
+ * 原因：本文件末尾有 `window.GH = GH`，会把整个对象挂到全局，
+ * 令牌随之在运行时暴露（控制台敲 window.GH 就能看到）。
+ * 外部（ui.js 设置页）只用到 GH.extra —— 玩家填的自定义加速地址，
+ * 并不需要令牌。因此对外暴露的 GH 里不再带 token，令牌由本文件内部持有。
+ * 注意：这只是收窄【运行时】暴露面。令牌仍以明文存在于本文件源码中，
+ * 任何人打开网页源代码都能拿到，彻底解决须部署 worker/ 代理（见 worker/wrangler.toml）。 */
+const GH_TOKEN = 'github_pat_11ASQODRI0RODZ7pBgKRl'
+  + 'o_t4vgK8n0XabhsaL7Ctx59CksV3OGVo'
+  + 'b5QOEcwAk2fX2EMICCZ5WnMI5D25i';
+
 const GH = {
   owner: 'q849109815',
   repo: 'xiuxian-game',
   branch: 'main',
   /** 玩家存档专用分支（与 main 分离，避免存档提交触发 Pages 重建耗光 500 次/月额度） */
   dataBranch: 'players',
-  token: 'github_pat_11ASQODRI0RODZ7pBgKRl'
-       + 'o_t4vgK8n0XabhsaL7Ctx59CksV3OGVo'
-       + 'b5QOEcwAk2fX2EMICCZ5WnMI5D25i',
   extra: [],
 };
 
@@ -133,7 +142,7 @@ async function probe() {
   if (probing) return probing;
   probing = (async () => {
     // 直接用「真实读写」判定：GET contents 是最权威的连通性检查
-    const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
+    const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
     const test = async (ep, ms) => {
       const t0 = performance.now();
       const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/data/config/core.json`,
@@ -184,7 +193,7 @@ async function probe() {
 
 /** 逐端点诊断（后台用）：返回每个端点的连通状态 */
 async function diagnose() {
-  const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
+  const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
   const list = [...(BEST ? [BEST] : []), 'https://api.github.com', ...GH.extra,
     ...EPS.filter((e) => e !== BEST && e !== 'https://api.github.com')];
   const seen = new Set();
@@ -213,7 +222,7 @@ async function ghReq(path, { method = 'GET', body = null, timeout = 14000, quick
     ? [...GH.extra, 'https://api.github.com'].filter((e, i, a) => e && a.indexOf(e) === i)
     : allEps();
   if (!eps.length) { DEAD = {}; eps = allEps(); }
-  const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
+  const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
   const opt = { method, headers: { ...H, 'Content-Type': 'application/json' } };
   if (body) opt.body = JSON.stringify(body);
   // 并发窗口：离线快速模式只试 4 个，正常模式试 6 个
@@ -293,15 +302,29 @@ const Net = {
   /** 读 JSON：优先云端，失败用缓存，再失败读本地静态 */
   /** quick=true：先立即返回本地缓存/静态，网络请求后台进行（保证秒开） */
   async read(path, quick) {
+    /* ---- 玩家存档形状校验 ----
+     * JSON.parse 只保证「语法合法」，不保证「是我们想要的形状」：
+     *   文件内容是 `123` / `"hello"` / `[1,2,3]` / `null` 时解析都会成功，
+     *   但下游把它当玩家存档用就会出问题 —— 实测 E.power() 对这几种
+     *   一律抛 TypeError（取 p.equip / p.chips 等字段时炸在 undefined 上）。
+     * 玩家存档必须是「普通对象」，这里统一挡掉，按“读不到”处理，
+     * 交给后续兜底（缓存 → 静态 → null），而不是把脏数据递给引擎。
+     * 只校验 players 下的存档，其余 data/zb/*.json 不受影响。 */
+    const isPlayerSave = /^data\/zb\/players\/[^/]+\.json$/.test(path);
+    const mk = (v, sha, from) => {
+      const ok = !isPlayerSave || (v && typeof v === 'object' && !Array.isArray(v));
+      if (!ok) { log('[net] 玩家存档形状异常，已丢弃:', path, typeof v); return null; }
+      return { data: v, sha, from };
+    };
     if (quick) {
       const c = localStorage.getItem(LS.cache + path);
       if (c) {
-        try { return { data: JSON.parse(c), sha: null, from: 'cache' }; } catch (e) {}
+        try { return mk(JSON.parse(c), null, 'cache'); } catch (e) {}
       }
       try {
         const r = await fetch(path + '?t=' + Date.now(), { cache: 'no-store' });
         try { noteServerTime(r.headers); } catch (e) {}
-        if (r.ok) return { data: await r.json(), sha: null, from: 'static' };
+        if (r.ok) return mk(await r.json(), null, 'static');
       } catch (e) {}
     }
     /* ===============================================================
@@ -341,16 +364,16 @@ const Net = {
       if (txt) {
         try {
           localStorage.setItem(LS.cache + path, txt);
-          return { data: JSON.parse(txt), sha: d.sha, from: 'net' };
+          return mk(JSON.parse(txt), d.sha, 'net');
         } catch (e) {}
       }
     }
     const c = localStorage.getItem(LS.cache + path);
-    if (c) { try { return { data: JSON.parse(c), sha: null, from: 'cache' }; } catch (e) {} }
+    if (c) { try { return mk(JSON.parse(c), null, 'cache'); } catch (e) {} }
     // 静态兜底（同域相对路径）
     try {
       const r = await fetch(path + '?t=' + Date.now(), { cache: 'no-store' });
-      if (r.ok) return { data: await r.json(), sha: null, from: 'static' };
+      if (r.ok) return mk(await r.json(), null, 'static');
     } catch (e) {}
     return null;
   },
@@ -436,7 +459,7 @@ const Net = {
   },
 
   async _writeSave(path, obj, msg, content) {
-    const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
+    const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
     const eps = [...GH.extra, 'https://api.github.com'].filter((e, i, a) => e && a.indexOf(e) === i);
     const br = GH.dataBranch || GH.branch;
 
@@ -620,7 +643,7 @@ const Net = {
     const d = await ghReq(path, { method: 'GET' });
     if (!d || !d.sha) return false;
     const eps = allEps();
-    const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
+    const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
     for (const ep of eps.slice(0, 6)) {
       try {
         const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
@@ -672,7 +695,7 @@ const Net = {
     const now = Date.now();
     const c = this._treeCache[branch];
     if (c && now - c.at < 60000) return c.paths;
-    const H = { Authorization: 'Bearer ' + GH.token, Accept: 'application/vnd.github+json' };
+    const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
     const eps = [...GH.extra, 'https://api.github.com'];   // trees API 只有官方支持，反代多不支持
     for (const ep of eps) {
       try {
@@ -731,6 +754,8 @@ const Net = {
 };
 
 window.Net = Net;
+/* 对外只暴露仓库坐标与玩家自定义加速地址（ui.js 设置页读写 GH.extra）。
+ * 令牌已移到模块作用域的 GH_TOKEN，不随此对象挂到全局。 */
 window.GH = GH;
 /* 权威时间源（供 engine 的 dailyKey/weekKey/giftKey 使用）
  * 未联网校准时回退 Date.now()，与修复前行为一致，不会卡住玩家。 */
