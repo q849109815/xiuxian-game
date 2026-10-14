@@ -201,7 +201,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 .hm-sbtn span{font-size:11px;color:var(--txt2)}
 .hm-sbtn:active{transform:scale(.94)}
 
-.hm-sec{position:relative;padding:10px 14px 6px;font-size:11px;color:var(--txt2);letter-spacing:3px}
+.hm-sec{position:relative;padding:10px 14px 6px;font-size:12px;color:var(--txt2);letter-spacing:3px}
 .hm-base{position:relative;flex:1;display:grid;grid-template-columns:repeat(3,1fr);
   gap:9px;padding:0 12px;align-content:start;overflow-y:auto}
 .bs{padding:12px 6px;border-radius:12px;text-align:center;position:relative;
@@ -219,7 +219,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   border-top:1px solid var(--line)}
 .hn{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 0}
 .hn i{font-size:19px;font-style:normal;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
-.hn span{font-size:11px;color:var(--txt2)}
+.hn span{font-size:12px;color:var(--txt2)}
 .hn.on i{filter:drop-shadow(0 0 7px var(--gold))}
 .hn.on span{color:var(--gold);font-weight:700}
 .hn:active{transform:scale(.9)}
@@ -704,10 +704,12 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
  * 现按 48 → 86 → 162 依次向下排开，信息全部保留、不再互相遮挡。 */
 .bt-cur{position:absolute;right:8px;top:86px;z-index:6;display:flex;flex-direction:column;
   gap:3px;align-items:flex-end}
-.bt-cur span{display:flex;align-items:center;gap:3px;font-size:11px;color:#cfd8e8;
-  padding:2px 6px;border-radius:8px;background:rgba(8,13,22,.9);border:1px solid rgba(255,255,255,.08)}
-.bt-cur span img{width:13px;height:13px;border-radius:3px}
-.bt-cur span b{color:#ffd76a;font-size:11px}
+/* 与下方 .bt-coin（16px 图标 / 12px 字号）统一：此前这里是 13px 图标 + 11px 字号，
+ * 同一屏右侧上下两栏大小不一致，且 13px 图标细节糊成一团。 */
+.bt-cur span{display:flex;align-items:center;gap:4px;font-size:12px;color:#cfd8e8;
+  padding:2px 7px;border-radius:8px;background:rgba(8,13,22,.9);border:1px solid rgba(255,255,255,.08)}
+.bt-cur span img{width:16px;height:16px;border-radius:3px}
+.bt-cur span b{color:#ffd76a;font-size:12px}
 
 /* --- 右侧功能栏 --- */
 .bt-side{position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:6;
@@ -1130,8 +1132,9 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 #wxtName{font-size:16px}
 
 /* ---- 战斗右上：金币/钻石 ---- */
-.bt-coin{position:absolute;right:8px;top:162px;z-index:6;display:flex;flex-direction:column;
-  gap:3px;align-items:flex-end;font-size:11px;color:var(--txt2);
+/* top 由 162 → 172：上栏 .bt-cur 图标放大到 16px 后整栏变高，留出安全间距 */
+.bt-coin{position:absolute;right:8px;top:172px;z-index:6;display:flex;flex-direction:column;
+  gap:3px;align-items:flex-end;font-size:12px;color:var(--txt2);
   text-shadow:0 1px 3px rgba(0,0,0,.9)}
 .bt-coin b{color:var(--gold);font-size:12px}
 
@@ -1904,9 +1907,9 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 .hmg{margin-bottom:5px;padding:4px 3px 5px;border-radius:10px;
   background:rgba(10,16,28,.52);border:1px solid rgba(255,255,255,.07)}
 .hmg-t{display:flex;align-items:center;gap:5px;padding:0 4px 3px;
-  font-size:10.5px;font-weight:800;color:#8fa3c0;letter-spacing:1.5px;
+  font-size:11.5px;font-weight:800;color:#8fa3c0;letter-spacing:1.5px;
   text-shadow:0 1px 2px rgba(0,0,0,.8)}
-.hmg-t::before{content:'';width:3px;height:10px;border-radius:2px;
+.hmg-t::before{content:'';width:3px;height:11px;border-radius:2px;
   background:linear-gradient(180deg,#ffd76a,#ffa53c);flex:0 0 auto}
 .hmg-b{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
 .hmb{position:relative;padding:4px 1px 3px;border:none;background:none;color:#93a4bf;
@@ -1914,7 +1917,9 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 .hmb i{display:flex;align-items:center;justify-content:center;font-style:normal}
 .hmb i img{width:26px;height:26px;object-fit:contain;display:block;
   filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))}
-.hmb span{font-size:10px;line-height:1.15;color:#a9b8d0;
+/* 10px 过小：与界面其它 12~14px 文案不统一，且小屏上细碎难认。
+ * 每格实际宽度约 58~66px，2 字标签放大到 12px 仍绰绰有余（实测无换行/溢出）。 */
+.hmb span{font-size:12px;line-height:1.15;color:#a9b8d0;
   text-shadow:0 1px 2px rgba(0,0,0,.85)}
 .hmb:active{transform:scale(.9);background:rgba(255,165,60,.15)}
 .hmb:active span{color:#ffd08a}
