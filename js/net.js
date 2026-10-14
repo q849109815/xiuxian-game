@@ -148,22 +148,39 @@ function serverNow() {
 function serverTimeState() { return { n: SRV.n, t: SRV.t, drift: SRV.t ? Math.round(SRV.t - Date.now()) : null }; }
 
 
-let BEST = localStorage.getItem(LS.best) || '';
+/* localStorage 安全读写包装。
+ * 【为什么必须包一层】localStorage 在某些环境下【直接抛异常】而不是返回 null：
+ *   · 浏览器隐私/无痕模式（部分版本禁用存储）
+ *   · 玩家手动关闭站点数据 / Cookie
+ *   · 存储配额耗尽（QuotaExceededError）
+ * 而下面 BEST / ONLINE / AUTHFAIL 三个是【模块顶层】读取，没有 try/catch ——
+ * 一旦抛出，整个 net.js 加载中断 → Net 未定义 → 后续 engine/ui/main 全线崩，
+ * 玩家看到白屏且无任何提示（实测：禁用 localStorage 后报 "Net is not defined"）。
+ * 现在统一走 lsGet/lsSet，读取失败回落默认值，写入失败静默忽略，
+ * 保证网络层在任何存储环境下都能初始化完成。 */
+function lsGet(k, dflt) {
+  try { const v = localStorage.getItem(k); return v === null || v === undefined ? dflt : v; } catch (e) { return dflt; }
+}
+function lsSet(k, v) {
+  try { localStorage.setItem(k, v); return true; } catch (e) { return false; }
+}
+
+let BEST = lsGet(LS.best, '');
 // 恢复自定义加速地址（后台/设置里保存的）
 try {
-  const ex = JSON.parse(localStorage.getItem('ss_extra') || '[]');
+  const ex = JSON.parse(lsGet('ss_extra', '[]'));
   if (Array.isArray(ex) && ex.length) GH.extra = ex;
 } catch (e) {}
 let DEAD = {};                       // { ep: expireAt }，3 分钟后自动复活
-try { DEAD = JSON.parse(localStorage.getItem(LS.dead) || '{}'); } catch (e) { DEAD = {}; }
+try { DEAD = JSON.parse(lsGet(LS.dead, '{}')); } catch (e) { DEAD = {}; }
 let QUEUE = [];
-try { QUEUE = JSON.parse(localStorage.getItem(LS.queue) || '[]'); } catch (e) { QUEUE = []; }
+try { QUEUE = JSON.parse(lsGet(LS.queue, '[]')); } catch (e) { QUEUE = []; }
 /* 写入串行锁：{ path: Promise }，同一客户端同路径的写入排队执行 */
 const WRITING = {};
-let ONLINE = localStorage.getItem(LS.net) !== 'offline';
+let ONLINE = lsGet(LS.net, 'online') !== 'offline';
 /* 凭据失效标记：网络通但令牌被拒（401/403）。
  * 此时读写必然失败，若不明确提示，玩家只会读到本机旧缓存并以为"自己回档"。 */
-let AUTHFAIL = localStorage.getItem(LS.authfail) === '1';
+let AUTHFAIL = lsGet(LS.authfail, '0') === '1';
 let probing = null;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -171,7 +188,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function markDead(ep) {
   if (ep === 'https://api.github.com' || GH.extra.includes(ep)) return;   // 官方与自定义永不拉黑
   DEAD[ep] = Date.now() + 180000;
-  try { localStorage.setItem(LS.dead, JSON.stringify(DEAD)); } catch (e) {}
+  try { lsSet(LS.dead, JSON.stringify(DEAD)); } catch (e) {}
   if (BEST === ep) { BEST = ''; localStorage.removeItem(LS.best); }
 }
 function isDead(ep) {
@@ -229,19 +246,19 @@ async function probe() {
         AUTHFAIL = false;
         try { localStorage.removeItem(LS.authfail); } catch (e) {}
         BEST = good[0].ep; ONLINE = true;
-        try { localStorage.setItem(LS.best, BEST); localStorage.setItem(LS.net, 'online'); } catch (e) {}
+        try { lsSet(LS.best, BEST); lsSet(LS.net, 'online'); } catch (e) {}
         return BEST;
       }
       if (ok.length) {
         AUTHFAIL = true;
-        try { localStorage.setItem(LS.authfail, '1'); } catch (e) {}
+        try { lsSet(LS.authfail, '1'); } catch (e) {}
         BEST = ok[0].ep; ONLINE = true;
-        try { localStorage.setItem(LS.best, BEST); localStorage.setItem(LS.net, 'online'); } catch (e) {}
+        try { lsSet(LS.best, BEST); lsSet(LS.net, 'online'); } catch (e) {}
         return BEST;
       }
     }
     ONLINE = false;
-    try { localStorage.setItem(LS.net, 'offline'); } catch (e) {}
+    try { lsSet(LS.net, 'offline'); } catch (e) {}
     return null;
   })().finally(() => { setTimeout(() => (probing = null), 30000); });
   return probing;
@@ -315,8 +332,8 @@ async function ghReq(path, { method = 'GET', body = null, timeout = 14000, quick
     const res = await Promise.all(slice.map(tryOne));
     const hit = res.find((x) => x.ok);
     if (hit) {
-      if (hit.ep !== BEST) { BEST = hit.ep; localStorage.setItem(LS.best, hit.ep); }
-      ONLINE = true; localStorage.setItem(LS.net, 'online');
+      if (hit.ep !== BEST) { BEST = hit.ep; lsSet(LS.best, hit.ep); }
+      ONLINE = true; lsSet(LS.net, 'online');
       return hit.json;
     }
     // 该批全部失败，若已判定离线则快速放弃
@@ -384,7 +401,7 @@ const Net = {
       return { data: v, sha, from };
     };
     if (quick) {
-      const c = localStorage.getItem(LS.cache + path);
+      const c = lsGet(LS.cache + path, '');
       if (c) {
         try { return mk(JSON.parse(c), null, 'cache'); } catch (e) {}
       }
@@ -430,12 +447,12 @@ const Net = {
       const txt = unb64(d.content);
       if (txt) {
         try {
-          localStorage.setItem(LS.cache + path, txt);
+          lsSet(LS.cache + path, txt);
           return mk(JSON.parse(txt), d.sha, 'net');
         } catch (e) {}
       }
     }
-    const c = localStorage.getItem(LS.cache + path);
+    const c = lsGet(LS.cache + path, '');
     if (c) { try { return mk(JSON.parse(c), null, 'cache'); } catch (e) {} }
     // 静态兜底（同域相对路径）
     try {
@@ -465,14 +482,14 @@ const Net = {
     if (typeof window !== 'undefined' && window.__zbResetting) return false;
     QUEUE = QUEUE.filter((x) => x.path !== path);
     QUEUE.push({ path, obj, msg, at: Date.now() });
-    try { localStorage.setItem(LS.queue, JSON.stringify(QUEUE)); } catch (e) {}
+    try { lsSet(LS.queue, JSON.stringify(QUEUE)); } catch (e) {}
     return false;
   },
 
   /* 仅写缓存，配额溢出时清掉最旧缓存重试一次，绝不抛穿调用方 */
   _cache(path, obj) {
     try {
-      localStorage.setItem(LS.cache + path, JSON.stringify(obj));
+      lsSet(LS.cache + path, JSON.stringify(obj));
     } catch (e) {
       try {
         const keys = [];
@@ -482,7 +499,7 @@ const Net = {
         }
         keys.sort();
         for (const k of keys.slice(0, Math.ceil(keys.length / 3))) localStorage.removeItem(k);
-        localStorage.setItem(LS.cache + path, JSON.stringify(obj));
+        lsSet(LS.cache + path, JSON.stringify(obj));
       } catch (e2) {}
     }
   },
@@ -593,8 +610,8 @@ const Net = {
           }, 14000);
           st = r.status;
           if (r.ok || r.status === 201) {
-            BEST = ep; try { localStorage.setItem(LS.best, ep); } catch (e) {}
-            ONLINE = true; try { localStorage.setItem(LS.net, 'online'); } catch (e) {}
+            BEST = ep; try { lsSet(LS.best, ep); } catch (e) {}
+            ONLINE = true; try { lsSet(LS.net, 'online'); } catch (e) {}
             try { obj._rev = nextRev; } catch (e) {}
             this._cache(path, obj);
             return true;
@@ -656,7 +673,7 @@ const Net = {
     if (typeof window !== 'undefined' && window.__zbResetting) return false;
     QUEUE = QUEUE.filter((x) => x.path !== path);
     QUEUE.push({ path, obj, msg, at: Date.now() });
-    try { localStorage.setItem(LS.queue, JSON.stringify(QUEUE)); } catch (e) {}
+    try { lsSet(LS.queue, JSON.stringify(QUEUE)); } catch (e) {}
     return false;
   },
 
@@ -678,7 +695,7 @@ const Net = {
       if (ok) n++; else QUEUE.push(it);
       await sleep(1500);                 // 慢速，避免触发限流
     }
-    try { localStorage.setItem(LS.queue, JSON.stringify(QUEUE)); } catch (e) {}
+    try { lsSet(LS.queue, JSON.stringify(QUEUE)); } catch (e) {}
     if (drop) { try { log('[存档] 丢弃过期补传 ' + drop + ' 条（云端已有更新的数据）'); } catch (e) {} }
     return n;
   },
@@ -815,7 +832,7 @@ const Net = {
   reset() {
     DEAD = {}; BEST = ''; ONLINE = true;
     localStorage.removeItem(LS.dead); localStorage.removeItem(LS.best);
-    localStorage.setItem(LS.net, 'online');
+    lsSet(LS.net, 'online');
     return probe();
   },
 };
