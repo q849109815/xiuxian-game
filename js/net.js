@@ -55,6 +55,62 @@ const EPS = [
 
 const LS = { best: 'ss_best', dead: 'ss_dead', cache: 'ss_cache_', queue: 'ss_queue', net: 'ss_net', authfail: 'ss_authfail' };
 
+/* =========================================================
+ * 玩家存档字段默认值表（用于残缺存档自愈）
+ * 与 E.newPlayer 的初始结构保持一致；这里独立写一份而不是运行时调
+ * E.newPlayer，是为了让 net.js 不依赖加载顺序（net.js 先于 engine.js 加载，
+ * 而 healSave 在运行时被调用，虽那时 E 已就绪，但保持模块自洽更稳）。
+ * 只用于「补齐缺失字段」，任何时候都不覆盖玩家已有数据。
+ * ========================================================= */
+const SAVE_DEFAULTS = {
+  uid: '', name: '', gender: 'm',
+  char: 'C01', chars: ['C01'], skin: 'sk_c01a', skins: ['sk_c01a'],
+  lv: 1, xp: 0, tp: 3, gold: 2000, diamond: 100, ach: 0,
+  mat: { M01: 0, M02: 0, M03: 0, M04: 0, M05: 0, P01: 0, P02: 0 },
+  use: { I01: 0, I02: 0, I03: 0 },
+  gun: 'W01', gunLv: 1, gunAdv: 0, gunStats: {}, gunOwn: ['W01'], gun2: null,
+  chips: {}, bag: [], talents: {},
+  build: { hospital: 1, armory: 1, lab: 1, warehouse: 1 },
+  mercs: [], cleared: {}, curLevel: '1-1',
+  endlessBest: 0, endlessTime: 0, stamina: 100,
+  tasks: { mainClaimed: [], dailyClaimed: [], dailyDate: '', dailyProg: {}, weeklyClaimed: [], weeklyKey: '', weeklyProg: {}, achieveClaimed: [] },
+  stats: { kills: 0, runs: 0, bossKill: 0, noHitBest: 0, endlessBest: 0 },
+  adUsed: {}, adDate: '', guide: {},
+  mail: [],
+};
+
+/**
+ * 残缺玩家存档自愈：把缺失的顶层字段和嵌套键按默认值补上。
+ * 原则：只补 undefined / null，绝不覆盖已有值；
+ * 也绝不删除玩家多出来的字段（老版本可能有已废弃字段，保留无害）。
+ */
+function healSave(v) {
+  if (!v || typeof v !== 'object') return v;
+  for (const k in SAVE_DEFAULTS) {
+    const cur = v[k];
+    const def = SAVE_DEFAULTS[k];
+    if (cur === undefined || cur === null) {
+      v[k] = (def && typeof def === 'object') ? JSON.parse(JSON.stringify(def)) : def;
+      continue;
+    }
+    /* 顶层存在但类型不对（例如 tasks 被写成字符串）→ 置为默认值 */
+    if (def && typeof def === 'object' && (typeof cur !== 'object' || Array.isArray(cur) !== Array.isArray(def))) {
+      v[k] = JSON.parse(JSON.stringify(def));
+      continue;
+    }
+    /* 嵌套对象：逐键补齐缺失的子键 */
+    if (def && typeof def === 'object' && !Array.isArray(def) && typeof cur === 'object') {
+      for (const kk in def) {
+        if (cur[kk] === undefined || cur[kk] === null) {
+          const d2 = def[kk];
+          cur[kk] = (d2 && typeof d2 === 'object') ? JSON.parse(JSON.stringify(d2)) : d2;
+        }
+      }
+    }
+  }
+  return v;
+}
+
 /* =========================================================================
  * 服务器时间基准（防「改手机系统时间」无限刷每日重置）
  *
@@ -314,6 +370,17 @@ const Net = {
     const mk = (v, sha, from) => {
       const ok = !isPlayerSave || (v && typeof v === 'object' && !Array.isArray(v));
       if (!ok) { log('[net] 玩家存档形状异常，已丢弃:', path, typeof v); return null; }
+      /* ---- 残缺存档自愈（只补缺失，绝不覆盖已有值） ----
+       * 上面的形状校验只挡「不是对象」，但对象内部缺字段同样会让引擎崩：
+       * 实测删掉 talents / build / cleared / tasks 任一字段，E.attrs() /
+       * E.power() 立刻抛 TypeError（读 undefined.t_atk、undefined.armory、
+       * undefined['1-3']、undefined.dailyProg），玩家直接白屏进不去。
+       * 正常存档由 E.newPlayer 初始化，字段齐全；但后台手工编辑存档、
+       * 老版本存档、传输损坏都可能缺字段。这里按默认值补齐，
+       * 让残缺存档自愈而不是把玩家挡在门外。 */
+      if (isPlayerSave && v) {
+        try { healSave(v); } catch (e) { log('[net] 存档自愈失败:', e && e.message); }
+      }
       return { data: v, sha, from };
     };
     if (quick) {
