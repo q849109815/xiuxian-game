@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270206a';
+const IMG_V = '20270207a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -1237,7 +1237,7 @@ r_tavern(p, tab) {
       <button class="btn o blk" id="gunReroll" ${Object.keys(p.gunStats || {}).filter((k) => p.gunStats[k]).length <= 0 ? 'disabled' : ''}>🔄 洗练词条（💎${EX.REROLL_GUN_COST}）</button>
       <div class="lbl">洗练将重随机全部已解锁词条，按品质加权：蓝60% / 紫30% / 红10%。</div></div>
 
-      <div class="card"><div class="card-t">武器词条 <span class="sub">表30 · ${g.slots || 2} 槽位</span></div>
+      <div class="card"><div class="card-t">武器词条 <span class="sub">${g.slots || 2} 槽位</span></div>
       ${E.gunAffixes(p).map((af, i) => {
         const a = EX.affixOf(af.id); if (!a) return '';
         const qc = EX.qColor[a.q] || '#ccc';
@@ -1680,7 +1680,7 @@ r_tavern(p, tab) {
         }).join('')}
         <button class="btn o blk" id="bagDecAll">一键分解（碎片 + 芯片）</button>
       </div>
-      <div class="card"><div class="card-t">宝箱 <span class="sub">表31 DR11</span></div>
+      <div class="card"><div class="card-t">宝箱</div>
         <div class="kv"><span>持有宝箱</span><b>${(p.mat || {}).I04 || 0}</b></div>
         ${(() => {
           /* 产出说明按【稀缺度之后的真实值】动态生成（EX.dropDisp）。
@@ -2416,7 +2416,7 @@ r_tavern(p, tab) {
         return `<div class="kv"><span>${b}</span><b style="color:${rk ? 'var(--yel)' : 'var(--txt3)'}">${rk ? '第 ' + rk + ' 名' : '未上榜'}</b></div>`;
       }).join('')}
     </div>
-    <div class="card"><div class="card-t">排名奖励 <span class="sub">表33</span></div>
+    <div class="card"><div class="card-t">排名奖励</div>
       ${boards.map((b) => `<div class="sub" style="color:var(--yel);font-weight:700;margin-top:6px">${b}</div>
         ${(EX.rankRewards || []).filter((x) => x.board === b).map((rw) => {
           const rk = myRank[b] || 0;
@@ -2806,7 +2806,7 @@ r_tavern(p, tab) {
       <div class="kv"><span>仓库离线收益</span><b style="color:var(--gold)">${E.fmt(E.offlineIncome(p))} 金币</b></div>
       <div class="kv"><span>同时产出</span><b>${ofc.metal} 金属 · ${ofc.xp} 经验</b></div>
       <button class="btn blk" id="buClaim">领取离线收益</button>
-      <div class="lbl">离线最多累计 8 小时（表34）。</div></div>`;
+      <div class="lbl">离线最多累计 8 小时。</div></div>`;
   },
   b_base(p, tab) {
     /* 升级必须按建筑 id 调用：
@@ -3022,7 +3022,7 @@ r_tavern(p, tab) {
       /* 单语言版本：仅简体中文，不再提供语种切换入口。
        * 文案预览保留 —— 运营可在后台改文案，这里能看到改后的中文。 */
       const only = (EX.LANGS || [{ k: 'zh', n: '简体中文' }])[0];
-      return `<div class="card"><div class="card-t">语言 <span class="sub">表39 本地化</span></div>
+      return `<div class="card"><div class="card-t">语言</div>
         <div class="zrow">
           <div class="zav">🌐</div>
           <div class="zi"><b>${only.n}</b><span>${only.k}</span></div>
@@ -3030,9 +3030,9 @@ r_tavern(p, tab) {
         </div>
         <div class="sub">本游戏仅支持简体中文，无需切换。</div>
       </div>
-      <div class="card"><div class="card-t">文本预览 <span class="sub">TXT_001~008</span></div>
+      <div class="card"><div class="card-t">文本预览 <span class="sub">共 ${Object.keys(EX.I18N || {}).length} 条</span></div>
         ${Object.keys(EX.I18N || {}).map((id) => `<div class="kv">
-          <span style="font-size:11px">${id}</span><b style="font-size:11px">${window.OPS ? OPS.t(id) : (EX.I18N[id] || {}).zh}</b></div>`).join('')}
+          <b style="font-size:11px">${window.OPS ? OPS.t(id) : (EX.I18N[id] || {}).zh}</b></div>`).join('')}
       </div>`;
     }
     /* ---------- 运营（表37 埋点 / 表38 版本 / 表40 接口 / 表36 命名 / 热更新） ---------- */
@@ -3040,19 +3040,19 @@ r_tavern(p, tab) {
       const st = window.OPS ? OPS.trackStat() : {};
       const mi = window.OPS ? OPS.manifestInfo() : { ver: '-', n: 0 };
       const cv = window.OPS ? OPS.curVersion() : null;
-      return `<div class="card"><div class="card-t">热更新 <span class="sub">表02 #15 / 表23 #9</span></div>
+      return `<div class="card"><div class="card-t">热更新</div>
         <div class="kv"><span>资源版本号</span><b style="color:var(--yel)">${mi.ver}</b></div>
         <div class="kv"><span>清单条目</span><b>${mi.n} 个</b></div>
         <div class="sub">启动时比对版本，不一致自动刷新缓存并提示。</div></div>
 
-      <div class="card"><div class="card-t">版本 <span class="sub">表38 排期</span></div>
+      <div class="card"><div class="card-t">版本</div>
         <div class="kv"><span>当前版本</span><b style="color:var(--green)">${cv ? cv.v + ' ' + cv.n : '-'}</b></div>
         ${(EX.VERSIONS || []).map((v) => `<div class="zrow"><div class="zav">${v.done ? '✔' : '○'}</div>
           <div class="zi"><b>${v.v} ${v.n}</b><span>${v.wk} · ${v.c}</span></div>
           <span class="st ${v.done ? 'on' : 'off'}">${v.done ? '已完成' : '开发中'}</span></div>`).join('')}
       </div>
 
-      <div class="card"><div class="card-t">数据埋点 <span class="sub">表37 · 共 ${window.OPS ? OPS.trackBuf().length : 0} 条</span></div>
+      <div class="card"><div class="card-t">数据埋点 <span class="sub">共 ${window.OPS ? OPS.trackBuf().length : 0} 条</span></div>
         ${Object.keys(st).length ? Object.keys(st).map((k) => `<div class="zrow">
           <div class="zav">📊</div>
           <div class="zi"><b>${st[k].n}</b><span>${k} · ${st[k].pr} · ${st[k].cnt} 次</span></div></div>`).join('')
@@ -3060,13 +3060,13 @@ r_tavern(p, tab) {
         <button class="btn d blk" id="opsClearTrack">清空埋点</button>
       </div>
 
-      <div class="card"><div class="card-t">后端接口 <span class="sub">表40 → GitHub 实现</span></div>
+      <div class="card"><div class="card-t">后端接口</div>
         ${(EX.APIS || []).map((a) => `<div class="kv">
           <span style="font-size:11px">${a.id} ${a.n}</span>
           <b class="wrapv" style="font-size:11px;color:var(--txt3)">${a.impl}</b></div>`).join('')}
       </div>
 
-      <div class="card"><div class="card-t">资源命名规范 <span class="sub">表36 · 12 类</span></div>
+      <div class="card"><div class="card-t">资源命名规范</div>
         ${(EX.NAMING || []).map((n) => `<div class="kv">
           <span style="font-size:11px"><b style="color:var(--yel)">${n.pre}</b> ${n.t}</span>
           <b style="font-size:11px;color:var(--txt3)">${n.eg}</b></div>`).join('')}
@@ -3167,7 +3167,7 @@ r_tavern(p, tab) {
       <div class="card"><div class="card-t">引导进度 <span class="sub">${Object.keys(p.guide || {}).length}/${EX.guides.length}</span></div>
       ${EX.guides.filter((g) => g.must).map((g) => `<div class="kv"><span style="font-size:11px">${g.n}</span>
         <b style="font-size:11px;color:${(p.guide || {})[g.id] ? 'var(--green)' : '#6b7899'}">${(p.guide || {})[g.id] ? '✔ 已完成' : '待引导'}</b></div>`).join('')}</div>
-      <div class="card"><div class="card-t">广告福利 <span class="sub">表24 广告位</span></div>
+      <div class="card"><div class="card-t">广告福利</div>
       <div class="kv"><span style="font-size:11px">免费体力 AD03</span>
         <b><button class="btn sm" id="setAdStam2">看广告 +10 体力（剩 ${E.adLeft(p, 'AD03')}）</button></b></div>
       <div class="kv"><span style="font-size:11px">免费抽奖 AD04</span>
