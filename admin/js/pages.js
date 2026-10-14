@@ -338,7 +338,7 @@ const PAGES = {
           const cl = (id, min, max, def) => {
             const v = this.num(id);
             if (!isFinite(v)) return def;
-            return Math.min(Math.max(Math.floor(v), min), max);
+            return clamp(Math.floor(v), min, max);
           };
           /* 只收集【运营实际改动过的字段】，不整份覆盖存档 ——
            * 后台快照可能是几十分钟前的：表单里其余字段仍是旧值，
