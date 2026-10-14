@@ -3,6 +3,14 @@
  * 能力：多端点自动测速切换 / 死端点自动复活 / 离线队列补传 / 读缓存兜底
  * ========================================================= */
 
+/* ---- 调试日志开关 ----
+ * 生产环境默认关闭：热更新版本、存档冲突、补传丢弃等属于内部信息，
+ * 不该刷在玩家控制台里，也让真出问题时的关键告警不被淹没。
+ * 需要排查时，在浏览器控制台执行 `localStorage.zb_debug='1'` 后刷新即可重新打开。
+ * 本文件在前后端都是首个加载，因此 log() 全局可用。 */
+const DBG = (() => { try { return localStorage.getItem('zb_debug') === '1'; } catch (e) { return false; } })();
+function log() { if (!DBG) return; try { console.log.apply(console, arguments); } catch (e) {} }
+
 const GH = {
   owner: 'q849109815',
   repo: 'xiuxian-game',
@@ -465,13 +473,13 @@ const Net = {
     const myRev = Number(obj && obj._rev) || 0;
     const cloudRev = Number(cloud && cloud._rev) || 0;
     if (myRev && cloudRev && myRev < cloudRev) {
-      try { console.log('[存档] 拒绝写入：本地 v' + myRev + ' 落后云端 v' + cloudRev + '，保护云端新档'); } catch (e) {}
+      try { log('[存档] 拒绝写入：本地 v' + myRev + ' 落后云端 v' + cloudRev + '，保护云端新档'); } catch (e) {}
       return 'stale';
     }
     /* 时间守卫（老档无 _rev 时兜底）：容差 60s → 5s。
      * 原 60s 容差 = 60 秒的回档窗口，任何跨设备推进都落在这个窗口里。 */
     if (mine && theirs && theirs > mine + 5000) {
-      try { console.log('[存档] 拒绝写入：本地数据比云端旧 ' + Math.round((theirs - mine) / 1000) + ' 秒，保护云端新档'); } catch (e) {}
+      try { log('[存档] 拒绝写入：本地数据比云端旧 ' + Math.round((theirs - mine) / 1000) + ' 秒，保护云端新档'); } catch (e) {}
       return 'stale';
     }
 
@@ -540,12 +548,12 @@ const Net = {
       /* 重跑守卫：云端已被别人推进（版本号或时间）→ 放弃本次写入 */
       const cRev2 = Number(ncloud && ncloud._rev) || 0;
       if (myRev && cRev2 && myRev < cRev2) {
-        try { console.log('[存档] 并发冲突：本地 v' + myRev + ' 落后云端 v' + cRev2 + '，放弃写入以保护新档'); } catch (e) {}
+        try { log('[存档] 并发冲突：本地 v' + myRev + ' 落后云端 v' + cRev2 + '，放弃写入以保护新档'); } catch (e) {}
         return 'stale';
       }
       const theirs2 = Number(ncloud && ncloud.offlineAt) || 0;
       if (mine && theirs2 && theirs2 > mine + 5000) {
-        try { console.log('[存档] 并发冲突：本地数据比云端旧，放弃写入以保护新档'); } catch (e) {}
+        try { log('[存档] 并发冲突：本地数据比云端旧，放弃写入以保护新档'); } catch (e) {}
         return 'stale';
       }
 
@@ -581,7 +589,7 @@ const Net = {
       await sleep(1500);                 // 慢速，避免触发限流
     }
     try { localStorage.setItem(LS.queue, JSON.stringify(QUEUE)); } catch (e) {}
-    if (drop) { try { console.log('[存档] 丢弃过期补传 ' + drop + ' 条（云端已有更新的数据）'); } catch (e) {} }
+    if (drop) { try { log('[存档] 丢弃过期补传 ' + drop + ' 条（云端已有更新的数据）'); } catch (e) {} }
     return n;
   },
 
