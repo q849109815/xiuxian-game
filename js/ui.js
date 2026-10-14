@@ -1,3 +1,8 @@
+/* localStorage 安全读写：隐私模式/禁用站点数据/配额耗尽时 localStorage 会【抛异常】
+ * 而不是返回 null，裸调会让本模块初始化中断（实测禁用存储后整页白屏）。
+ * 这里统一走包装，读取失败回落默认值，写入失败静默忽略。 */
+function lsGet(k, dflt) { try { const v = localStorage.getItem(k); return v === null || v === undefined ? dflt : v; } catch (e) { return dflt; } }
+function lsSet(k, v) { try { lsSet(k, v); return true; } catch (e) { return false; } }
 /* =========================================================
  * ui.js —— 界面层
  * 依据资料 07 模块关系表（16 界面）/ 08 跳转流程
@@ -17,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270205a';
+const IMG_V = '20270206a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -234,12 +239,12 @@ function stampImgs(root) {
  *   等于把 admin/ 后台地址主动摆在每一位玩家面前（此前后台口令又是明文写在
  *   admin/js/core.js 里的，仓库公开 → 任何人可读，组合起来等于后台对外开放）。
  * 入口改为默认隐藏，运营自己在地址后加 ?admin=1 打开游戏即可看到该按钮；
- * 或在本机控制台执行 localStorage.setItem('zb_admin_entry','1') 后刷新。
+ * 或在本机控制台执行 lsSet('zb_admin_entry','1') 后刷新。
  * 这只是收窄暴露面（安全纵深的一层），真正的防护是后台口令与令牌。 */
 function adminEntryVisible() {
   try {
     if (location.search && /(\?|&)admin=1\b/.test(location.search)) return true;
-    return localStorage.getItem('zb_admin_entry') === '1';
+    return lsGet('zb_admin_entry', '') === '1';
   } catch (e) { return false; }
 }
 
@@ -3334,7 +3339,7 @@ r_tavern(p, tab) {
       /* 置位「重置中」：阻止 beforeunload/pagehide 的同步快照、
        * 30 秒定时存档、以及离线队列把刚删掉的进度重新写回去 */
       window.__zbResetting = true;
-      const uid = (window.P && P.uid) || localStorage.getItem('zb_uid') || '';
+      const uid = (window.P && P.uid) || lsGet('zb_uid', '');
       /* ① 真删云端存档。
        * 此前只 removeItem('zb_uid') + reload，云端 players/<uid>.json 原封不动，
        * 玩家重载后重新登录同一账号，进度原样回来 —— 「清空全部进度」从未生效过。 */
@@ -3413,7 +3418,7 @@ r_tavern(p, tab) {
     };
     const se = $('#setSaveEps'); if (se) se.onclick = () => {
       const v = ($('#setEps').value || '').split('\n').map((x) => x.trim()).filter(Boolean);
-      GH.extra = v; try { localStorage.setItem('zb_extra', JSON.stringify(v)); } catch (e) {}
+      GH.extra = v; try { lsSet('zb_extra', JSON.stringify(v)); } catch (e) {}
       alert('已保存 ' + v.length + ' 个加速地址'); Net.reset();
     };
   },
