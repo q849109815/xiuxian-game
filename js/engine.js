@@ -2282,6 +2282,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   canSweep(p, lvId) {
     /* BUG修复：通关记录写在 p.cleared[id]，此前读的是从未赋值的 p.stars，
      * 导致已通关关卡也判定"需先通关该关卡"，扫荡功能完全不可用 */
+    /* 关卡存在性校验：此前只查 p.cleared[lvId]，任何不存在的 id（''、null、
+     * '99-99'）只要被写进通关记录就能扫荡，而 sweepLvNum 会算出一个荒谬的
+     * 关卡序号（99-99 → 1079），再按该序号的公式发钱 —— 实测单次要发
+     * 8600 金币，而正常的 1-1 只有 2500。这里先确认关卡真的在 levels 表里。 */
+    if (!(EX.levels || []).some((x) => x.id === lvId)) {
+      return { ok: false, msg: '关卡不存在' };
+    }
     const st = (p.cleared || {})[lvId] || 0;
     if (!st) return { ok: false, msg: '需先通关该关卡' };
     const one = this.sweepStamina(lvId, this.sweepDiff(p, lvId));
@@ -2350,7 +2357,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   sweepDropEst(p, ld, times, commit) {
     const out = { mat: {}, chip: {} };
     if (!ld) return out;
-    const t = Math.max(1, Math.min(EX.SWEEP_MAX, times || 1));
+    /* 次数必须取整：此前 1.5 次会被原样接受，扣 1.5 点体力、发 1.5 倍奖励，
+     * 玩家体力余额会出现 9997.5 这种小数。这里向下取整并兜底到 1。 */
+    const t = Math.max(1, Math.min(EX.SWEEP_MAX, Math.floor(Number(times) || 1)));
     const ch = Number(ld.ch) || 1;
     const waves = Number(ld.waves) || 20;
     const per = ld.per || [8, 13];
@@ -2402,7 +2411,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     return out;
   },
   sweepPreview(p, lvId, times) {
-    const t = Math.max(1, Math.min(EX.SWEEP_MAX, times || 1));
+    /* 次数必须取整：此前 1.5 次会被原样接受，扣 1.5 点体力、发 1.5 倍奖励，
+     * 玩家体力余额会出现 9997.5 这种小数。这里向下取整并兜底到 1。 */
+    const t = Math.max(1, Math.min(EX.SWEEP_MAX, Math.floor(Number(times) || 1)));
     const lvNum = this.sweepLvNum(lvId);
     const ld = (EX.levels || []).find((x) => x.id === lvId) || null;
     const fb = EX.sweepRw(lvNum, t);
@@ -2431,7 +2442,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const lvNum = this.sweepLvNum(lvId);
     const ck = this.canSweep(p, lvId);
     if (!ck.ok) return ck;
-    const t = Math.max(1, Math.min(EX.SWEEP_MAX, times || 1));
+    /* 次数必须取整：此前 1.5 次会被原样接受，扣 1.5 点体力、发 1.5 倍奖励，
+     * 玩家体力余额会出现 9997.5 这种小数。这里向下取整并兜底到 1。 */
+    const t = Math.max(1, Math.min(EX.SWEEP_MAX, Math.floor(Number(times) || 1)));
     const dId0 = this.sweepDiff(p, lvId);
     const one = this.sweepStamina(lvId, dId0);
     const cost = one * t;
