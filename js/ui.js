@@ -17,7 +17,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270128b';
+const IMG_V = '20270129a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -2748,6 +2748,10 @@ r_tavern(p, tab) {
         style="width:64px;padding:4px;border-radius:6px;border:1px solid #555;background:#222;color:#fff"></b></div>
       <button class="btn c blk" id="swGo" ${noSt ? 'disabled style="opacity:.5"' : ''}>${noSt ? '体力不足（需 ' + _swOne + ' 点）' : '开始扫荡（最多 ' + max + ' 次）'}</button>
       <button class="btn d blk" id="swX2">取消</button></div></div></div></div>`;
+    /* 与结算页同源的 BUG：扫荡弹窗也是独立 modal，渲染不经过 open()/stampImgs()，
+     * 于是「扫荡难度：🌱 普通」里的难度图标以原始 emoji 显示。
+     * 面板里的难度栏走的是 img（d.img 分支），只有这里走 d.icon 文本分支。 */
+    stampImgs(box);
     box.classList.add('on');
     const g = document.getElementById('swGo');
     if (g) g.onclick = () => {
@@ -3964,6 +3968,16 @@ r_tavern(p, tab) {
       if (win) adBox.innerHTML = `<button class="btn c blk" id="rsAd2x">📺 看广告双倍奖励（剩 ${E.adLeft(this.P, 'AD02')} 次）</button>`;
       else if (res === 'lose') adBox.innerHTML = `<button class="btn c blk" id="rsAdRev">📺 看广告原地复活（剩 ${E.adLeft(this.P, 'AD01')} 次）</button>`;
       else adBox.innerHTML = `<div class="sub" style="text-align:center;padding:6px 0">已主动撤离，本局结束</div>`;
+      /* BUG（画面不一致）：结算面板是独立 DOM，渲染不经过 open()，
+       * 而 open() 里那句 emojify() 是全站 emoji→图片的唯一入口。
+       * 结果结算页上的 emoji 从未被替换，实测（393 宽、困难难度、有首通奖励）
+       * 玩家看到的是：
+       *   🎁 首通 +88 钻石      （映射表里有 sh01_gift.jpg）
+       *   🔥 困难难度           （映射表里有 diff_hard.jpg）
+       *   📺 看广告双倍奖励     （映射表里有 nav_act.png）
+       * 三个都有对应图片，缺的只是这一行调用。
+       * 放在 adBox 赋值之后：难度标签(#rsDiff)在它之前写入，此时一并替换。 */
+      emojify(document.getElementById('result') || adBox);
       const b2 = $('#rsAd2x');
       if (b2) b2.onclick = () => {
         const r = E.useAd(this.P, 'AD02'); if (!r.ok) return this.toast(r.msg, 'err');
