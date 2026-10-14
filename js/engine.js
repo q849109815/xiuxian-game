@@ -536,7 +536,7 @@ const E = {
     let cur = p.stamina;
     if (typeof cur === 'string') cur = Number(cur);   /* 后台表单常把数字存成字符串 */
     if (typeof cur !== 'number' || !isFinite(cur)) cur = 0;
-    cur = Math.max(0, Math.min(MAX, cur));
+    cur = clamp(MAX, 0, cur);
     const add = Math.floor((now - (p.staminaAt || now)) / EX.STAMINA_MS);
     if (add > 0) {
       cur = Math.min(MAX, cur + add);
@@ -3214,7 +3214,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    *          提示"需先进阶武器才解锁词条槽"，洗练功能完全不可用 */
   gunAffixSlots(p, gunId) {
     const base = this.gunSlots(p);                    /* 武器自带槽位 */
-    const adv = Math.max(0, Math.min(4, p.gunAdv || 0));
+    const adv = clamp(4, 0, p.gunAdv || 0);
     const row = (EX.gunAdvance || [])[adv];
     const byAdv = row ? (row.slot || 0) : 0;
     return Math.max(base, byAdv);
@@ -3599,7 +3599,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       p.gemLv = {};
       if (old > 0 && p.gemOn) p.gemLv[p.gemOn] = old;
     }
-    p.gemLv[id] = Math.max(0, Math.min(this.GEM_MAX_LV, v));
+    p.gemLv[id] = clamp(this.GEM_MAX_LV, 0, v);
   },
   /* 宝石生效档位（1 ~ GEM_MAX_LV）= 合成次数 + 1
    * BUG：此前把【合成次数】直接当档位用，未合成时 clamp 到 1、合成 1 次 clamp 后还是 1
@@ -3848,3 +3848,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
 };
 
 window.E = E;
+
+
+/* =========================================================
+ * 数值钳制归一
+ * ---------------------------------------------------------
+ * 此前全项目散落 ~30 处 Math.max(0, Math.min(x, cap)) 的重复钳制写法，
+ * 语义完全一致但每次都要读两遍才知道"这是在把 x 限制在 [0, cap]"。
+ * 这里提供具名封装，消除重复、标明意图；实现与原写法逐字等价
+ * （仍走 Math.max/Math.min，NaN / undefined 等边界行为完全不变）。
+ * ========================================================= */
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(v, hi)); }
