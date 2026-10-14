@@ -1552,6 +1552,10 @@ function onBattleEnd(res, d) {
   /* 结算写入前过一遍 safeAmt：rw.gold 若因关卡配置异常算成 NaN/负数，
    * 玩家打完一局【金币直接归零 / 倒扣】，且结算面板还会显示"获得 NaN"。 */
   rw.gold = E.safeAmt(rw.gold); rw.diamond = E.safeAmt(rw.diamond);
+  /* 图鉴解锁奖励：局内由 E.grant 直接进了 P.gold（有 toast 提示），
+   * 但结算面板原本一行都不显示，玩家看到的合计与实际到账对不上。
+   * 这里只做展示，不重复发放。 */
+  rw.cdxGold = E.safeAmt(r.cdxGold);
   /* 金币按「本次新增」发放（同上记账，防复活后重复撤离刷金币） */
   rw.gold = Math.max(0, rw.gold - (paid.gold || 0));
   paid.gold = (paid.gold || 0) + rw.gold;
