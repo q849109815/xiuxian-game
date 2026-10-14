@@ -17,7 +17,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270126a';
+const IMG_V = '20270127a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -3191,8 +3191,8 @@ r_tavern(p, tab) {
       const vm = $('#volM'), vs2 = $('#volS');
       const applyVol = () => {
         if (!S) return;
-        const m = Math.max(0, Math.min(1, (Number(vm && vm.value) || 0) / 100));
-        const sv = Math.max(0, Math.min(1, (Number(vs2 && vs2.value) || 0) / 100));
+        const m = clamp(1, 0, (Number(vm && vm.value) || 0) / 100);
+        const sv = clamp(1, 0, (Number(vs2 && vs2.value) || 0) / 100);
         S.setVol(m, sv); S.saveCfg();
         this.open('set', '音频'); this.home();
       };
@@ -3684,7 +3684,7 @@ r_tavern(p, tab) {
       const ms = Number(r.maxShield) || 0;
       if (ms > 0) {
         shw.style.display = '';
-        shb.style.width = Math.max(0, Math.min(1, (Number(r.shield) || 0) / ms)) * 100 + '%';
+        shb.style.width = clamp(1, 0, (Number(r.shield) || 0) / ms) * 100 + '%';
       } else shw.style.display = 'none';
     }
     const rl = $('#btReload');
