@@ -899,8 +899,8 @@ const BT = {
     if (!r) return;
     const cap = this.shieldCap(r);
     if (!(cap > 0)) return;
-    r.shield = Math.max(0, Math.min(Number(r.shield) || 0, cap));
-    r.maxShield = Math.max(0, Math.min(Number(r.maxShield) || 0, cap));
+    r.shield = clamp(Number(r.shield) || 0, 0, cap);
+    r.maxShield = clamp(Number(r.maxShield) || 0, 0, cap);
   },
   /* ===== 支援武器槽：自动循环 =====
    * 医疗包：按周期治疗防线；护盾发生器：按周期叠护盾。
@@ -1020,7 +1020,7 @@ const BT = {
       /* 等级钳制（防御）：炮台的伤害/射程/射速/绘制尺寸全部随 lv 线性放大，
        * 若 lv 被写成 NaN、负数或超出上限（热更/改档/旧档），
        * 会让炮台伤害失控或模型撑爆屏幕。这里统一收紧到 [1, TURRET_MAX_LV]。 */
-      t.lv = Math.min(Math.max(Number(t.lv) || 1, 1), EX.TURRET_MAX_LV != null ? EX.TURRET_MAX_LV : 20);
+      t.lv = clamp(Number(t.lv) || 1, 1, EX.TURRET_MAX_LV != null ? EX.TURRET_MAX_LV : 20);
       t.cd -= dt;
       if (t.fire > 0) t.fire -= dt;   /* 开火后坐动画计时（Q 版炮台） */
       if (t.cd > 0) continue;
@@ -2281,7 +2281,7 @@ const BT = {
      *   正常配置（0.2~0.55）数值不变。 */
     let defR = Number(z.def || 0);
     if (!isFinite(defR)) defR = 0;
-    defR = Math.max(0, Math.min(0.9, defR));
+    defR = clamp(0.9, 0, defR);
     if (defR > 0) d = Math.max(1, d * (1 - defR));
     /* 表20 公式3：最终伤害 = 基础伤害 - 怪物护甲（最低造成 1 点）
      * 此前怪物表无 armor 字段，护甲减伤完全未生效 */
@@ -2938,7 +2938,7 @@ const BT = {
   depthScale(y) {
     const wall = this.wallY || this.H;
     const hz = wall * 0.10;
-    const t = Math.max(0, Math.min(1, (y - hz) / Math.max(1, wall - hz)));
+    const t = clamp(1, 0, (y - hz) / Math.max(1, wall - hz));
     /* 强透视：远处 0.66 倍 → 近处 1.42 倍（近大远小对比拉开 = 真纵深） */
     return 0.66 + Math.pow(t, 1.25) * 0.76;
   },
@@ -2947,7 +2947,7 @@ const BT = {
   depthFog(y) {
     const wall = this.wallY || this.H;
     const hz = wall * 0.10;
-    const t = Math.max(0, Math.min(1, (y - hz) / Math.max(1, wall - hz)));
+    const t = clamp(1, 0, (y - hz) / Math.max(1, wall - hz));
     return 0.55 + Math.pow(t, 0.85) * 0.45;
   },
 
@@ -3028,7 +3028,7 @@ const BT = {
         }
         this._ambWH = { W: W, H: H };
       }
-      const d = (typeof dt === 'number' && isFinite(dt)) ? Math.max(0, Math.min(0.05, dt)) : 0.016;
+      const d = (typeof dt === 'number' && isFinite(dt)) ? clamp(0.05, 0, dt) : 0.016;
       c.save();
       c.globalCompositeOperation = 'lighter';
       for (const p of this._amb) {
@@ -3233,7 +3233,7 @@ const BT = {
         if (zn.t === 'bomb') this.drawZoneBombWarn(c, zn);
         continue;
       }
-      const a = Math.max(0, Math.min(1, zn.life / (zn.max || 1)));
+      const a = clamp(1, 0, zn.life / (zn.max || 1));
       if (zn.t === 'vortex') { this.drawZoneVortex(c, zn, a); continue; }
       if (zn.t === 'burn') { this.drawZoneBurn(c, zn, a); continue; }
       if (zn.t === 'storm') { this.drawZoneStorm(c, zn, a); continue; }
@@ -3472,7 +3472,7 @@ const BT = {
     const R = Math.max(20, zn.r || 95);
     const cx = zn.x, cy = zn.y;
     /* 越接近落点越亮越大（delay 从初值递减到 0） */
-    const k = 1 - Math.max(0, Math.min(1, (zn.delay || 0) / 0.7));
+    const k = 1 - clamp(1, 0, (zn.delay || 0) / 0.7);
     const blink = 0.45 + Math.abs(Math.sin(T * 12)) * 0.55;
     c.save();
     /* ① 外圈锁定环 */
@@ -3496,7 +3496,7 @@ const BT = {
     c.moveTo(cx, cy + g0 * 0.5); c.lineTo(cx, cy + g0 * 0.5 + 8);
     c.stroke();
     /* ④ 高空投下的炸弹（带尾焰，从画面上方落向落点） */
-    const fall = 1 - Math.max(0, Math.min(1, (zn.delay || 0) / 0.6));
+    const fall = 1 - clamp(1, 0, (zn.delay || 0) / 0.6);
     const by = cy - 260 + fall * 260;
     c.fillStyle = 'rgba(40,44,52,.95)';
     c.beginPath(); c.ellipse(cx, by, 7, 11, 0, 0, 7); c.fill();
@@ -3530,7 +3530,7 @@ const BT = {
     const len = Math.hypot(x1 - x0, y1 - y0);
     if (!isFinite(len) || len < 1) return;
     const ang = Math.atan2(y1 - y0, x1 - x0);
-    const a = Math.max(0, Math.min(1, zn.life / (zn.max || 1)));
+    const a = clamp(1, 0, zn.life / (zn.max || 1));
     c.save();
     c.translate(x0, y0); c.rotate(ang);
     /* 枪口蓄能核心 */
@@ -3713,7 +3713,7 @@ const BT = {
       if (!isFinite(t.x) || !isFinite(t.y)) continue;
       /* 与战斗循环同一道钳制：绘制高度 46+lv*1.4、射程 rng+lv*12 都随 lv 放大，
        * 首帧绘制可能早于战斗循环，故此处再收紧一次。 */
-      t.lv = Math.min(Math.max(Number(t.lv) || 1, 1), EX.TURRET_MAX_LV != null ? EX.TURRET_MAX_LV : 20);
+      t.lv = clamp(Number(t.lv) || 1, 1, EX.TURRET_MAX_LV != null ? EX.TURRET_MAX_LV : 20);
       const el = EX.elements.find((x) => x.k === t.def.el) || { c: '#ffd76a' };
       const tg = this.nearest(t.x, t.y, null, t.def.rng + t.lv * 12,
         { preferElite: t.def.preferElite });
@@ -3726,7 +3726,7 @@ const BT = {
       const _b = parseInt(_hx.slice(4, 6), 16) || 255;
       const rgb = _r + ',' + _g + ',' + _b;
       /* 开火后坐：fire 由 update 递减，fk 呈 0→1→0 的一次脉冲 */
-      const fire = Math.max(0, Math.min(0.22, t.fire || 0));
+      const fire = clamp(0.22, 0, t.fire || 0);
       const fk = fire > 0 ? Math.sin((fire / 0.22) * Math.PI) : 0;
       const bob = Math.sin(T * 2 + (t.x || 0) * 0.03) * 1.3 * sc;
       const kx = -Math.cos(a) * fk * 4.4 * sc;
@@ -3997,7 +3997,7 @@ const BT = {
     } else {
       /* 狙击（物）：蓄能红环，随冷却进度收缩 —— 快开火时环最小最亮 */
       const cdMax = 1 / (t.def.rate * (1 + t.lv * 0.12));
-      const pr = 1 - Math.max(0, Math.min(1, (t.cd || 0) / cdMax));
+      const pr = 1 - clamp(1, 0, (t.cd || 0) / cdMax);
       const rr2 = (16 - pr * 7) * sc;
       c.strokeStyle = 'rgba(255,90,90,' + (0.28 + pr * 0.6).toFixed(3) + ')';
       c.lineWidth = 1.8 + pr * 1.2;
@@ -4072,7 +4072,7 @@ const BT = {
         c.fillRect(m.x - bw / 2, m.y + 14 * sc, bw, 2.5);
         c.fillStyle = '#5cd8ff';
         c.fillRect(m.x - bw / 2, m.y + 14 * sc,
-          bw * Math.max(0, Math.min(1, m.life / mx)), 2.5);
+          bw * clamp(1, 0, m.life / mx), 2.5);
       }
     }
   },
@@ -4208,7 +4208,7 @@ const BT = {
    * 现在每种元素有自己的爆开形态、碎片与颜色。 */
   drawBoom(c, f, al) {
     if (!isFinite(f.x) || !isFinite(f.y)) return;
-    const a = Math.max(0, Math.min(1, al));
+    const a = clamp(1, 0, al);
     const k = 1 - a;
     const el = f.el || '火';
     const [c0, c1, c2] = this.elRGB(el);
@@ -4397,7 +4397,7 @@ const BT = {
    * 和冰冻新星画出来完全一样，玩家无法预判接下来要吃什么伤害。 */
   drawNova(c, f, al) {
     if (!isFinite(f.x) || !isFinite(f.y)) return;
-    const a = Math.max(0, Math.min(1, al));
+    const a = clamp(1, 0, al);
     const k = 1 - a;
     const el = f.el || '物';
     const [c0, c1, c2] = this.elRGB(el);
@@ -4521,7 +4521,7 @@ const BT = {
    * 沿光束方向做纵向渐变（近端亮、远端衰减），强化空间纵深。 */
   drawBeam3d(c, f, al) {
     if (!isFinite(f.x) || !isFinite(f.y) || !isFinite(f.a) || !isFinite(f.len)) return;
-    const a = Math.max(0, Math.min(1, al));
+    const a = clamp(1, 0, al);
     const ex = f.x + Math.cos(f.a) * f.len, ey = f.y + Math.sin(f.a) * f.len;
     const col = f.el === '火' ? '255,140,60' : f.el === '冰' ? '92,216,255'
               : f.el === '电' ? '192,140,255' : '255,236,170';
@@ -5044,7 +5044,7 @@ const BT = {
     const x = o.x, y = o.y, sz = o.sz;
     if (!isFinite(x) || !isFinite(y) || !isFinite(sz) || sz <= 0) return;
     const ph = o.ph || 0;
-    const stride = o.stride == null ? 1 : Math.max(0, Math.min(1.6, o.stride));
+    const stride = o.stride == null ? 1 : clamp(1.6, 0, o.stride);
     const skin = o.skin || '#73996d', skinHi = o.skinHi || '#a8d69f';
     const cloth = o.cloth || '#3d5140', clothHi = o.clothHi || '#6b866e';
     const frozen = !!o.frozen;
@@ -5999,7 +5999,7 @@ const BT = {
     for (const p of r.pools) {
       if (!isFinite(p.x) || !isFinite(p.y)) continue;
       const mx = Number(p.max) || Number(p.life) || 4;
-      const lk = Math.max(0, Math.min(1, (Number(p.life) || 0) / Math.max(0.001, mx)));
+      const lk = clamp(1, 0, (Number(p.life) || 0) / Math.max(0.001, mx));
       const sc = this.depthScale(p.y);
       const T = r.time || 0;
       const pr = Number(p.r) || 52;
@@ -6073,7 +6073,7 @@ const BT = {
         const R = Math.max(20, f.r || 96);
         /* ① 双层冲击环（一快一慢，体现"高压"） */
         for (let s = 0; s < 2; s++) {
-          const kk = Math.max(0, Math.min(1, k * (1.5 - s * 0.45)));
+          const kk = clamp(1, 0, k * (1.5 - s * 0.45));
           const rr = Math.max(1, R * (0.25 + kk * (1.0 - s * 0.28)));
           c.strokeStyle = 'rgba(' + (s ? '255,196,120' : '255,120,50') + ',' + ((1 - kk) * (0.75 - s * 0.25)).toFixed(3) + ')';
           c.lineWidth = Math.max(0.5, (s ? 2.2 : 4) * (1 - kk * 0.6));
@@ -7071,7 +7071,7 @@ const BT = {
         c.fillStyle = 'rgba(8,12,20,0.72)';
         c.fillRect(bx - w / 2, by - 8, w, 16);
         c.fillStyle = col;
-        c.fillRect(bx - w / 2, by + 6, w * Math.max(0, Math.min(1, ratio)), 2);
+        c.fillRect(bx - w / 2, by + 6, w * clamp(1, 0, ratio), 2);
         c.fillStyle = col;
         c.fillText(txt, bx, by);
         c.restore();
@@ -7180,7 +7180,7 @@ const BT = {
     {
       const _nt = (typeof performance !== 'undefined' && performance.now)
         ? performance.now() : Date.now();
-      const _dt = this._ambT ? Math.max(0, Math.min(0.05, (_nt - this._ambT) / 1000)) : 0.016;
+      const _dt = this._ambT ? clamp(0.05, 0, (_nt - this._ambT) / 1000) : 0.016;
       this._ambT = _nt;
       this.drawAmbient(c, W, H, r.time || 0, _dt);
     }
