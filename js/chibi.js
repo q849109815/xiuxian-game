@@ -12,8 +12,20 @@
   'use strict';
 
   var BASE = 'assets/chibi/';
-  /* 贴图缓存戳：换美术时改这里，强制玩家浏览器拉取新图（否则会一直读旧缓存） */
-  var IMG_V = '20261228a';
+  /* 贴图缓存戳：换美术时靠它强制玩家浏览器拉取新图（否则会一直读旧缓存）。
+   *
+   * BUG修复：这里原本是写死的 '20261228a'，而 ui.js / index.html / config.js
+   * 早已推进到 20270125a —— 于是僵尸、主角持枪图、炮台、佣兵，尤其是
+   * 20270104a 才换掉的 8 个 BOSS 战斗贴图，对老玩家仍是旧缓存，换了等于没换。
+   * 现在统一以 CFG.HOT_UPDATE.version 为唯一来源（config.js 在本文件之前加载），
+   * 以后只要改主版本号即可，不会再出现各文件各写一份而漂移的情况。 */
+  function imgVer() {
+    try {
+      var v = root.CFG && root.CFG.HOT_UPDATE && root.CFG.HOT_UPDATE.version;
+      if (v) return v;
+    } catch (e) { /* 读不到就用兜底值 */ }
+    return '20270125a';
+  }
   var CACHE = {};   /* key -> {im,w,h,ok} */
   var TRIED = {};   /* key -> 1  已经发起过请求 */
 
@@ -51,7 +63,7 @@
       CACHE[key] = { im: im, w: im.naturalWidth || im.width, h: im.naturalHeight || im.height, ok: true };
     };
     im.onerror = function () { CACHE[key] = { im: null, ok: false }; };
-    im.src = BASE + key + '.png?v=' + IMG_V;
+    im.src = BASE + key + '.png?v=' + imgVer();
     return null;
   }
 
