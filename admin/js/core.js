@@ -23,6 +23,21 @@ const PWD_HASH = '628183f968ea7290236440c889ed6413ab91205fe991e998f3aa4b496230f8
 const AKEY = 'zb_admin_ok';
 const AFAIL_KEY = 'zb_admin_fail';   /* 失败计数（本地节流，防在线穷举） */
 
+/* 安全读取失败计数：localStorage 里的值可能被写坏 / 手改成非 JSON。
+ * 裸 JSON.parse 会抛异常并中断后台登录流程（等于把自己锁在后台门外），
+ * 因此统一走这里，解析失败或字段非法时退化成「无记录」，保证永远能登录。 */
+function readFailRec() {
+  const empty = { n: 0, at: 0 };
+  try {
+    const raw = localStorage.getItem(AFAIL_KEY);
+    if (!raw) return empty;
+    const o = JSON.parse(raw);
+    if (!o || typeof o !== 'object') return empty;
+    const n = Number(o.n), at = Number(o.at);
+    return { n: isFinite(n) && n > 0 ? n : 0, at: isFinite(at) && at > 0 ? at : 0 };
+  } catch (e) { return empty; }
+}
+
 /* 生成新口令哈希：控制台执行 genPwdHash('新口令')，把输出填进 PWD_HASH */
 async function genPwdHash(pwd) {
   const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pwd), 'PBKDF2', false, ['deriveBits']);
@@ -432,8 +447,14 @@ const APP = {
     const btn = D('#gtBtn'), inp = D('#gtPwd');
     if (btn) btn.onclick = async () => {
       const err = D('#gtErr');
-      /* 失败节流：连错 5 次锁 60 秒，挡住在线穷举 */
-      const f = JSON.parse(localStorage.getItem(AFAIL_KEY) || '{}');
+      /* 失败节流：连错 5 次锁 60 秒，挡住在线穷举
+       *
+       * BUG修复：此处原为裸 JSON.parse(localStorage...)。该值一旦损坏（非 JSON，
+       * 例如被别的逻辑写坏 / 手动改动），解析会抛异常并让整个 onclick 处理中断 ——
+       * 结果是后台登录按钮彻底失效、管理员永远进不去，且只能靠清浏览器缓存自救。
+       * 现改为安全读取：解析失败或字段类型非法时一律当作「无失败记录」处理，
+       * 节流逻辑本身不变。 */
+      const f = readFailRec();
       if (f.n >= 5 && Date.now() - (f.at || 0) < 60000) {
         err.textContent = '尝试过于频繁，请 ' + Math.ceil((60000 - (Date.now() - f.at)) / 1000) + ' 秒后再试';
         return;
