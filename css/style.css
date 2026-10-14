@@ -1214,6 +1214,17 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
  * 按同一写法补齐：默认隐藏，加 .on 才居中覆盖显示。 */
 #sweepBox{position:absolute;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.72)}
 #sweepBox.on{display:flex}
+/* ---- 横屏/矮屏（如 852×393、640×360）弹窗内容被裁且滚不动的修复 ----
+ * #result/#pause/#choice/#cgModal/#lvup/#sweepBox 在上面已统一为
+ * align-items:flex-start + overflow-y:auto，但 #pause(477)/#cgModal(1196)/#sweepBox(1215)
+ * 三条更靠后的规则又把 align-items 覆盖回 center，于是老问题复现：
+ *   flex 容器 align-items:center 时，超高内容会往上下两个方向同时溢出，
+ *   而 scrollHeight 不增长（实测 852×393：容器 sh=ch=387，卡片底边 408 > 393），
+ *   底部按钮被裁掉且永远滚不到 → 扫荡的「取消/确定」点不到。
+ * 正解是 align-items:flex-start 配合子项 margin:auto：空间富余时视觉仍居中，
+ * 空间不足时改为向下排布并可完整滚动。 */
+#pause,#cgModal,#sweepBox{align-items:flex-start}
+#pause>*,#cgModal>*,#sweepBox>*{margin:auto}
 /* 扫荡是"小设置弹窗"，不是底部抽屉：.pn-box 原本是 absolute top:52/bottom:0 的
  * 全屏抽屉样式，直接复用会让这个只有两三行内容的弹窗被撑满整屏（实测高 794px，
  * 卡片内容仅 283px，下方空一大片）。这里改回内容自适应的居中卡片。 */
