@@ -1,3 +1,8 @@
+/* localStorage 安全读写：隐私模式/禁用站点数据/配额耗尽时 localStorage 会【抛异常】
+ * 而不是返回 null，裸调会让本模块初始化中断（实测禁用存储后整页白屏）。
+ * 这里统一走包装，读取失败回落默认值，写入失败静默忽略。 */
+function lsGet(k, dflt) { try { const v = localStorage.getItem(k); return v === null || v === undefined ? dflt : v; } catch (e) { return dflt; } }
+function lsSet(k, v) { try { lsSet(k, v); return true; } catch (e) { return false; } }
 /* =========================================================
  * user.js —— 账号密码注册 / 登录
  * ---------------------------------------------------------
@@ -99,7 +104,7 @@ const UA = {
 
   /* ---------- 本机凭据缓存 ---------- */
   cache() {
-    try { return JSON.parse(localStorage.getItem(this.K_CACHE) || '{}'); } catch (e) { return {}; }
+    try { return JSON.parse(lsGet(this.K_CACHE, '{}')); } catch (e) { return {}; }
   },
   /* =========================================================
    * 玩家索引 data/zb/index.json
@@ -152,11 +157,11 @@ const UA = {
 
   saveCache(id, name, hash) {
     const c = this.cache(); c[id] = { name, hash, at: Date.now() };
-    try { localStorage.setItem(this.K_CACHE, JSON.stringify(c)); } catch (e) {}
+    try { lsSet(this.K_CACHE, JSON.stringify(c)); } catch (e) {}
   },
   dropCache(id) {
     const c = this.cache(); delete c[id];
-    try { localStorage.setItem(this.K_CACHE, JSON.stringify(c)); } catch (e) {}
+    try { lsSet(this.K_CACHE, JSON.stringify(c)); } catch (e) {}
   },
 
   /* =========================================================
@@ -186,11 +191,11 @@ const UA = {
     this.idxAdd(id, u.name, u.nick);
     /* 云端写失败也要能玩：存本机缓存 */
     this.saveCache(id, u.name, h);
-    localStorage.setItem(this.K_NAME, u.name);
-    localStorage.setItem(this.K_NICK, u.nick);
-    localStorage.setItem(this.K_GENDER, u.gender);
-    localStorage.setItem(this.K_UID, id);
-    localStorage.setItem(this.K_AUTO, '1');
+    lsSet(this.K_NAME, u.name);
+    lsSet(this.K_NICK, u.nick);
+    lsSet(this.K_GENDER, u.gender);
+    lsSet(this.K_UID, id);
+    lsSet(this.K_AUTO, '1');
     return { ok: true, id, nick: u.nick, gender: u.gender, cloud: true };
   },
 
@@ -274,14 +279,14 @@ const UA = {
       if (c.hash !== h) return { ok: false, msg: '密码错误' };
     }
     this.saveCache(id, String(name).trim(), h);
-    localStorage.setItem(this.K_NAME, String(name).trim());
-    localStorage.setItem(this.K_NICK, (u && u.nick) || localStorage.getItem(this.K_NICK) || String(name).trim());
-    localStorage.setItem(this.K_GENDER, (u && u.gender) || localStorage.getItem(this.K_GENDER) || 'm');
-    localStorage.setItem(this.K_UID, id);
-    localStorage.setItem(this.K_AUTO, '1');
+    lsSet(this.K_NAME, String(name).trim());
+    lsSet(this.K_NICK, (u && u.nick) || lsGet(this.K_NICK, '') || String(name).trim());
+    lsSet(this.K_GENDER, (u && u.gender) || lsGet(this.K_GENDER, 'm'));
+    lsSet(this.K_UID, id);
+    lsSet(this.K_AUTO, '1');
     /* 老账号补登记索引（此前从未写过） */
-    this.idxAdd(id, String(name).trim(), (u && u.nick) || localStorage.getItem(this.K_NICK));
-    return { ok: true, id, nick: localStorage.getItem(this.K_NICK), gender: localStorage.getItem(this.K_GENDER) };
+    this.idxAdd(id, String(name).trim(), (u && u.nick) || lsGet(this.K_NICK, ''));
+    return { ok: true, id, nick: lsGet(this.K_NICK, ''), gender: lsGet(this.K_GENDER, '') };
   },
 
   /* ---------- 修改密码 ---------- */
@@ -300,10 +305,10 @@ const UA = {
   /* ---------- 记住的账号 ---------- */
   remembered() {
     return {
-      name: localStorage.getItem(this.K_NAME) || '',
-      nick: localStorage.getItem(this.K_NICK) || '',
-      gender: localStorage.getItem(this.K_GENDER) || 'm',
-      uid: localStorage.getItem(this.K_UID) || '',
+      name: lsGet(this.K_NAME, ''),
+      nick: lsGet(this.K_NICK, ''),
+      gender: lsGet(this.K_GENDER, 'm'),
+      uid: lsGet(this.K_UID, ''),
     };
   },
   /* 需求：必须输入账号登录，不再免密自动进入。
