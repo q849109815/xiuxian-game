@@ -38,6 +38,43 @@ const EPS = [
 
 const LS = { best: 'ss_best', dead: 'ss_dead', cache: 'ss_cache_', queue: 'ss_queue', net: 'ss_net', authfail: 'ss_authfail' };
 
+/* =========================================================================
+ * 服务器时间基准（防「改手机系统时间」无限刷每日重置）
+ *
+ * 漏洞实锤：dailyKey()/weekKey()/giftKey() 全部基于 Date.now()（客户端时钟）。
+ *   实测：把系统时间往后调 1 天 → dailyDate 从 2026-10-13 变 2026-10-14，
+ *   dailyClaimed 被清空、patrolFast 重置为 3、礼包 daily 限购 key 同步刷新；
+ *   往回调同样有效（无时间倒流防护），玩家可以「调到未来刷完、再调回今天」。
+ *   → 每日任务奖励 / 每日限购礼包 / 快速巡逻次数 / 签到 全部可无限刷。
+ *
+ * 方案：以 GitHub 响应头里的 Date 作为权威时间源（Date 是 CORS 安全响应头，
+ *   跨域可直接读），会话内改用 performance.now() 单调推进 ——
+ *   performance.now() 不受系统时间改动影响，只随时间真实流逝。
+ *   未校准（离线 / 请求失败）时回退本地时间，行为与修复前一致，不会卡住玩家。
+ * ========================================================================= */
+const SRV = { t: 0, perf: 0, last: 0, n: 0 };
+function noteServerTime(h) {
+  try {
+    if (!h || typeof h.get !== 'function') return;
+    const d = h.get('date') || h.get('Date');
+    if (!d) return;
+    const t = Date.parse(d);
+    if (!isFinite(t)) return;
+    SRV.t = t; SRV.perf = performance.now(); SRV.last = t; SRV.n++;
+  } catch (e) { /* 取不到不影响主流程 */ }
+}
+/** 权威当前时间（毫秒）；未校准时回退 Date.now() */
+function serverNow() {
+  if (!SRV.t) return Date.now();
+  const el = performance.now() - SRV.perf;
+  /* 会话内推进上限 12 小时：超出说明页面长期挂后台 / 时钟异常，
+   * 此时不再信任单调推算，回退本地时间并等待下次校准。 */
+  if (!isFinite(el) || el < 0 || el > 43200000) return Date.now();
+  return SRV.t + el;
+}
+function serverTimeState() { return { n: SRV.n, t: SRV.t, drift: SRV.t ? Math.round(SRV.t - Date.now()) : null }; }
+
+
 let BEST = localStorage.getItem(LS.best) || '';
 // 恢复自定义加速地址（后台/设置里保存的）
 try {
@@ -181,6 +218,8 @@ async function ghReq(path, { method = 'GET', body = null, timeout = 14000, quick
     const url = `${ep}/repos/${GH.owner}/${GH.repo}/contents/${path}?ref=${rdBr}`;
     try {
       const r = await fetchT(url, opt, timeout);
+      /* 取响应头 Date 作为权威时间源（防改系统时间刷每日重置） */
+      try { noteServerTime(r.headers); } catch (e) {}
       if (r.ok || r.status === 201) {
         return { ok: true, ep, json: await r.json() };
       }
@@ -253,6 +292,7 @@ const Net = {
       }
       try {
         const r = await fetch(path + '?t=' + Date.now(), { cache: 'no-store' });
+        try { noteServerTime(r.headers); } catch (e) {}
         if (r.ok) return { data: await r.json(), sha: null, from: 'static' };
       } catch (e) {}
     }
@@ -684,6 +724,10 @@ const Net = {
 
 window.Net = Net;
 window.GH = GH;
+/* 权威时间源（供 engine 的 dailyKey/weekKey/giftKey 使用）
+ * 未联网校准时回退 Date.now()，与修复前行为一致，不会卡住玩家。 */
+window.SERVER_NOW = serverNow;
+window.SERVER_TIME_STATE = serverTimeState;
 
 /* =========================================================
  * TMO —— 通用超时器：离线/慢网时防止界面永久卡住
