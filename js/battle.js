@@ -2496,10 +2496,19 @@ const BT = {
     } else {
       r.drops.push({ x: z.x, y: z.y, xp: z.xp || 0, gold: 0 });
     }
-    /* 图鉴解锁（表29：首次击杀解锁怪物图鉴） */
+    /* 图鉴解锁（表29：首次击杀解锁怪物图鉴）
+     * BUG（结算与到账两个数）：codexRw 的金币由 E.grant 直接进 P.gold，
+     * 而结算面板只统计「局内金币 + 关卡奖励」，这笔钱一行都不显示。
+     *   实测 1-1：面板 2260，实际到账 2360，差的 100 全部来自这里。
+     * 与「局内升级奖励」是同一类问题——玩家看到的与拿到的是两个数。
+     * 现在局内累计到 r.cdxGold，结算时单独列一行（只显示，不重复发放）。 */
     if (window.E && E.codexUnlock) {
       const u = E.codexUnlock(this.P, 'zombie', z.id);
-      if (u.ok && window.UI) UI.toast(u.msg, 'ok');
+      if (u.ok) {
+        const g = Number(u.rw && u.rw.gold) || 0;
+        if (g > 0) r.cdxGold = (Number(r.cdxGold) || 0) + g;
+        if (window.UI) UI.toast(u.msg, 'ok');
+      }
     }
   },
 
