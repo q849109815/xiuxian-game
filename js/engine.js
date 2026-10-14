@@ -2332,8 +2332,17 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const per = (ld && ld.per) || [8, 13];
     const killEst = Math.round((Number(ld && ld.waves) || 20)
       * (((Number(per[0]) || 8) + (Number(per[1]) || 13)) / 2)) * t;
+    /* 经验加成只能算一次。
+     * BUG（重复计算，实测）：attrs().xpMul 的定义就是
+     *   1 + talentVal(p,'xp') + buildVal(p,'xp')，
+     * 这里却又乘了一遍 (1 + talentVal(p,'xp')) —— 天赋经验加成被叠加两次。
+     *   实测 5-5 单次扫荡：天赋 t_xp 0 级 → 11227；20 级 → 44045（3.923 倍）
+     *   而正确倍率应为 attrsXpMul 之比 2.04 / 1.04 = 1.962 倍 → 应为 22027。
+     *   满级天赋下扫荡经验整整多发一倍，且与本文件开头
+     *   「扫荡经验必须与手动通关同口径」的约定相违背（手动只乘一次）。
+     * 现在只用 attrs().xpMul 一次。 */
     let xpMul = 1;
-    try { xpMul = (this.attrs(p).xpMul || 1) * (1 + (this.talentVal(p, 'xp') || 0)); } catch (e) { xpMul = 1; }
+    try { xpMul = (this.attrs(p).xpMul || 1); } catch (e) { xpMul = 1; }
     /* 校准系数：击杀估算按「波次 × 每波上限均值」算的是【刷怪总数】，
      * 而实际击杀受玩家火力与清场机制限制，实测击杀率随章节从 88%(第1章)
      * 降到 36%(第10章)。再叠加怪物池平均 xp 略高于实战均值，
@@ -2421,7 +2430,15 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const dId = this.sweepDiff(p, lvId);
     const dRw = (this.diffMul(dId).rw) || 1;
     /* 与 sweep() 同步走 safeAmt，保证「弹窗显示」=「实际到账」 */
-    const gold = E.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || fb.gold) * t * dRw));
+    /* 金币加成天赋（t_gold）：手动通关在 main.js 结算里乘了 attrs().goldMul，
+     * 扫荡这条路径此前【完全没乘】—— 实测 5-5 单次扫荡：
+     *   天赋 0 级 41800、20 级 41800（倍率 1.000，分文不涨）。
+     * 而天赋描述是「金币获取 +5%」，扫荡却与手动同价不同酬，
+     * 与本函数「弹窗显示 = 实际到账」「与 sweep() 同源」的约定冲突。
+     * 现在补上，sweep() 同步乘，保证预览与实发一致。 */
+    let _pvGMul = 1;
+    try { _pvGMul = this.attrs(p).goldMul || 1; } catch (e) { _pvGMul = 1; }
+    const gold = E.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || fb.gold) * t * dRw * _pvGMul));
     const mat = {};
     const src = (ld && ld.rw) ? ld.rw : { M01: fb.M01 };
     Object.keys(src).forEach((k) => {
@@ -2474,7 +2491,11 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 会导致打通恶魔后扫荡只拿 1/6.5） */
     const dId = this.sweepDiff(p, lvId);
     const dRw = (this.diffMul(dId).rw) || 1;
-    const goldGet = this.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || rw.gold) * t * dRw));
+    /* 与 sweepPreview 同口径乘上金币加成天赋（见 sweepPreview 注释）。
+     * 两处必须用同一个 _gMul 读法，否则「弹窗显示」≠「实际到账」。 */
+    let _gMul = 1;
+    try { _gMul = this.attrs(p).goldMul || 1; } catch (e) { _gMul = 1; }
+    const goldGet = this.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || rw.gold) * t * dRw * _gMul));
     p.gold = (p.gold || 0) + goldGet;
     _given.gold += goldGet;
     p.mat = p.mat || {};
