@@ -2469,7 +2469,22 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     Object.keys(matGet).forEach((k) => {
       if (k === 'gold' || k === 'diamond') return;
       const n = this.safeAmt(Math.floor((Number(matGet[k]) || 0) * t * dRw));
-      if (n > 0) p.mat[k] = (p.mat[k] || 0) + n;
+      /* 【显示 ≠ 到账】BUG 修复：这里此前只写进 p.mat，没有同步 _given.mat。
+       * 而末尾 `rw` 是用 _given.mat 覆写的 —— 于是【关卡自身的材料奖励】
+       * 被整体漏掉，只保留局内掉落部分。
+       *   实测 3-3（rw: {gold:4630, M04:10}）单次扫荡：
+       *     实际到账 M04 = 10（关卡奖励） + 29（局内掉落） = 39
+       *     r.rw.M04     = 29                        ← 少了关卡奖励那 10
+       *   sweepPreview 的口径是「关卡奖励 + 局内掉落」= 39，与实际到账一致，
+       *   于是「预览 39 / 返回值 29」自相矛盾，违背本函数顶部
+       *   「让返回值与实际发放严格一致」的承诺。
+       * 目前 UI 只读 r.msg 不读 r.rw，暂无玩家可见影响；
+       * 但只要有人拿 r.rw 去弹结算页，就会比预览少一截。
+       * 这里补上同步，使三处（预览 / 实际到账 / 返回值）完全一致。 */
+      if (n > 0) {
+        p.mat[k] = (p.mat[k] || 0) + n;
+        _given.mat[k] = (this.safeAmt(_given.mat[k])) + n;
+      }
     });
     if (ld && ld.rw && ld.rw.diamond) {
       const dn = this.safeAmt(Math.floor(ld.rw.diamond * t * dRw));
