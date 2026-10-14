@@ -215,9 +215,9 @@ const U = {
    * （旧版只列货币与物品表，皮肤/宝石/称号/头像框选不到，无法补发） */
   itemList() {
     const out = [
-      { id: 'gold', n: '金币', icon: '🪙' }, { id: 'diamond', n: '钻石', icon: '💎' },
-      { id: 'ach', n: '成就点', icon: '🏅' }, { id: 'stamina', n: '体力', icon: '⚡' },
-      { id: 'evToken', n: '活动代币', icon: '🎟️' },
+      { id: 'gold', n: '货币·金币', icon: '🪙' }, { id: 'diamond', n: '货币·钻石', icon: '💎' },
+      { id: 'ach', n: '货币·成就点', icon: '🏅' }, { id: 'stamina', n: '货币·体力', icon: '⚡' },
+      { id: 'evToken', n: '货币·活动代币', icon: '🎟️' },
     ];
     (EX.items || []).forEach((it) => out.push({ id: it.id, n: it.n, icon: it.icon || '📦' }));
     (EX.skins || []).forEach((s) => s && s.id && out.push({ id: s.id, n: '皮肤·' + (s.n || s.id), icon: s.icon || '🥼' }));
@@ -231,8 +231,12 @@ const U = {
     const id = String(name).replace(/[^\w-]/g, '');
     let h = `<select id="${id}">`;
     if (ph) h += `<option value="">${U.esc(ph)}</option>`;
+    /* 说明：下拉 <option> 内不能插入 <img>（浏览器只允许文本），
+     * 所以带 emoji 的选项无法被 admEmojify 换成图片，会一直露着 emoji 字符。
+     * 这里统一改成纯文字选项名（货币类补「货币·」前缀便于区分），
+     * 既消除 emoji，又比原来"一个符号+两个汉字"更好认。 */
     h += U.itemList().map((i) =>
-      `<option value="${i.id}"${i.id === def ? ' selected' : ''}>${i.icon} ${U.esc(i.n)}</option>`).join('');
+      `<option value="${i.id}"${i.id === def ? ' selected' : ''}>${U.esc(i.n)}</option>`).join('');
     return h + '</select>';
   },
   /* CSV 转义：昵称含逗号/引号/换行会把行结构搞坏 */
