@@ -1138,6 +1138,15 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const ch = Math.max(1, Math.min(arr.length, this.progressChapter(p)));
     return arr[ch - 1];
   },
+  /* 【挂机收益折扣】离线挂机 / 巡逻 / 快速巡逻统一打 6 折。
+   * 只有这一个常量控制，改折扣只改这里；显示与发放必须共用它，
+   * 否则面板写 100、实发 60 就成了账目不一致。 */
+  IDLE_MUL: 0.6,
+  /* 巡逻每小时【实发】金币（已含折扣）——面板显示与领取都必须用它 */
+  patrolRateReal(p) {
+    const base = Number(p && p.patrolRate) || this.patrolRateOf(p) || 16;
+    return base * this.IDLE_MUL;
+  },
   syncPatrol(p) {
     const r = this.patrolRateOf(p);
     if (p.patrolRate !== r) p.patrolRate = r;
@@ -1191,11 +1200,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (hrs < 0.05) return { hrs: 0, gold: 0, metal: 0, xp: 0, tier: t };
     const mul = lv;                                          /* 仓库等级放大金币 */
     const pick = (r) => Math.round((r[0] + (r[1] - r[0]) * 0.6) * hrs);
+    /* 挂机收益打 6 折（IDLE_MUL）：金币/金属/经验三项同折，
+     * 否则玩家会发现"金币少了、金属没少" */
+    const IDLE = this.IDLE_MUL;
     return {
       hrs, tier: t,
-      gold: pick(t.gold) * mul,
-      metal: pick(t.metal),
-      xp: pick(t.xp),
+      gold: Math.round(pick(t.gold) * mul * IDLE),
+      metal: Math.round(pick(t.metal) * IDLE),
+      xp: Math.round(pick(t.xp) * IDLE),
     };
   },
   /* 兼容旧调用：只返回金币 */
@@ -1211,7 +1223,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const lv = (p.build && p.build.warehouse) || 1;
     const t = this.offlineTier(p);
     const g = t.gold || [20, 40];
-    return Math.round((g[0] + (g[1] - g[0]) * 0.6) * lv);
+    return Math.round((g[0] + (g[1] - g[0]) * 0.6) * lv * this.IDLE_MUL);
   },
   /* 领取离线收益（金币 + 金属 + 经验） */
   offlineClaim(p) {
