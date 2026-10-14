@@ -310,6 +310,8 @@ const BT = {
 
   /* ---------------- 初始化 ---------------- */
   attach(canvas) {
+    /* 画布/上下文换了，旧渐变对象不能再复用，必须清空缓存 */
+    this._glc = null; this._grc = null;
     this.cv = canvas; this.ctx = canvas.getContext('2d');
     this.resize();
     /* attach 每局开战都会调用一次；旧的 resize 监听必须先移除，
@@ -818,13 +820,14 @@ const BT = {
     const R = EX.BARREL_R;
     (r.zombies || []).forEach((z) => {
       if (z.dead) return;
-      const d = Math.hypot(z.x - b.x, z.y - b.y);
-      if (d <= R) this.hurt(z, EX.BARREL_DMG, false, 'barrel');
+      const _dx = z.x - b.x, _dy = z.y - b.y;
+      if (_dx * _dx + _dy * _dy <= R * R) this.hurt(z, EX.BARREL_DMG, false, 'barrel');
     });
     /* 连锁引爆 */
     (r.barrels || []).forEach((o) => {
       if (o === b || o.dead) return;
-      if (Math.hypot(o.x - b.x, o.y - b.y) <= R * 0.75) setTimeout(() => this.blowBarrel(o), 110);
+      const _cx = o.x - b.x, _cy = o.y - b.y, _cR = R * 0.75;
+      if (_cx * _cx + _cy * _cy <= _cR * _cR) setTimeout(() => this.blowBarrel(o), 110);
     });
   },
   /* 子弹是否击中障碍物/油桶 */
@@ -832,7 +835,8 @@ const BT = {
     const r = this.run; if (!r) return null;
     for (const b of (r.barrels || [])) {
       if (b.dead) continue;
-      if (Math.hypot(x - b.x, y - b.y) <= b.r + 3) return { t: 'barrel', o: b };
+      const _ox = x - b.x, _oy = y - b.y, _oR = b.r + 3;
+      if (_ox * _ox + _oy * _oy <= _oR * _oR) return { t: 'barrel', o: b };
     }
     for (const o of (r.obstacles || [])) {
       if (o.dead) continue;
@@ -1086,7 +1090,7 @@ const BT = {
         this.spawnBullet(m.x, m.y, mz, mdmg, mercOpt);
       } else {
         const a0 = Math.atan2(mz.y - m.y, mz.x - m.x);
-        const dist = Math.hypot(mz.x - m.x, mz.y - m.y) || 1;
+        const dist = Math.sqrt((mz.x - m.x) * (mz.x - m.x) + (mz.y - m.y) * (mz.y - m.y)) || 1;
         for (let s = 0; s < pellets; s++) {
           const a = a0 + (s - (pellets - 1) / 2) * spread;
           this.spawnBullet(m.x, m.y,
@@ -1169,7 +1173,8 @@ const BT = {
         const dps = r.mods.auraDps * r.atk;
         for (const z of r.zombies) {
           if (z.dead) continue;
-          if (Math.hypot(z.x - r.px, z.y - r.py) < r.mods.auraR) {
+          const _ax = z.x - r.px, _ay = z.y - r.py;
+          if (_ax * _ax + _ay * _ay < r.mods.auraR * r.mods.auraR) {
             this.hurt(z, dps * 0.5, false, '火');
             if (r.mods.knock) {
               const a = Math.atan2(z.y - r.py, z.x - r.px);
@@ -1188,7 +1193,8 @@ const BT = {
         r.efx.push({ t: 'nova', x: r.px, y: r.py, r: r.mods.novaR, life: 0.45, max: 0.45 });
         for (const z of r.zombies) {
           if (z.dead) continue;
-          if (Math.hypot(z.x - r.px, z.y - r.py) < r.mods.novaR) {
+          const _nx = z.x - r.px, _ny = z.y - r.py;
+          if (_nx * _nx + _ny * _ny < r.mods.novaR * r.mods.novaR) {
             z.slow = Math.max(z.slow, r.mods.novaSlow); z.slowT = 2.2;
           }
         }
@@ -1209,7 +1215,8 @@ const BT = {
           r.efx.push({ t: 'nova', x: zn.x, y: zn.y, r: zn.r, life: 0.4, max: 0.4, el: zn.el });
           for (const z of r.zombies) {
             if (z.dead) continue;
-            if (Math.hypot(z.x - zn.x, z.y - zn.y) <= zn.r) this.hurt(z, zn.burst, true, zn.el);
+            const _zx = z.x - zn.x, _zy = z.y - zn.y;
+            if (_zx * _zx + _zy * _zy <= zn.r * zn.r) this.hurt(z, zn.burst, true, zn.el);
           }
           continue;
         }
@@ -1242,7 +1249,8 @@ const BT = {
         /* 区域型：旋风 / 燃烧 / 冰暴 */
         for (const z of r.zombies) {
           if (z.dead) continue;
-          const d = Math.hypot(z.x - zn.x, z.y - zn.y);
+          const _znx = z.x - zn.x, _zny = z.y - zn.y;
+          const d = Math.sqrt(_znx * _znx + _zny * _zny);
           if (d > zn.r) continue;
           if (zn.dps) this.hurt(z, zn.dps * dt, false, zn.el);
           if (zn.slow) { z.slow = Math.max(z.slow || 0, zn.slow); z.slowT = Math.max(z.slowT || 0, 0.4); }
@@ -1315,7 +1323,8 @@ const BT = {
     /* --- 地面腐蚀液池 --- */
     for (const pl of r.pools) {
       pl.life -= dt;
-      if (Math.hypot(r.px - pl.x, r.py - pl.y) < pl.r) this.hurtPlayer(pl.dps * dt, '腐蚀');
+      const _px2 = r.px - pl.x, _py2 = r.py - pl.y;
+      if (_px2 * _px2 + _py2 * _py2 < pl.r * pl.r) this.hurtPlayer(pl.dps * dt, '腐蚀');
     }
     r.pools = r.pools.filter((p) => p.life > 0);
 
@@ -1336,7 +1345,7 @@ const BT = {
       const sp = (z.stunT > 0) ? 0 : z.spd * (1 - (z.slow || 0));
       if (z.stunT > 0) z.stunT -= dt;
       const dx = r.px - z.x, dy = r.py - z.y;
-      const dist = Math.hypot(dx, dy) || 1;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
       z.facing = Math.atan2(dy, dx);
 
       if (z.isBoss) {
@@ -1576,7 +1585,7 @@ const BT = {
     r.floats = r.floats.filter((f) => f.life > 0);
     for (const d of r.drops) {
       d.y += 40 * dt;
-      const dx = r.px - d.x, dy = r.py - d.y, dd = Math.hypot(dx, dy);
+      const dx = r.px - d.x, dy = r.py - d.y, dd = Math.sqrt(dx * dx + dy * dy);
       if (dd < 90) { d.x += dx / dd * 420 * dt; d.y += dy / dd * 420 * dt; }
       /* 掉落穿透兜底：掉落物只会向下飘（40px/s），若横向离玩家较远，
        * 它会一路落到玩家下方并飞出屏幕 —— 磁吸半径 90 失效后永远捡不到，
@@ -1738,7 +1747,8 @@ const BT = {
       for (const o of r.zombies) {
         if (o.dead || o === z) continue;
         const a = Math.atan2(o.y - z.y, o.x - z.x);
-        const dd2 = Math.hypot(o.x - z.x, o.y - z.y);
+        const _ddx = o.x - z.x, _ddy = o.y - z.y;
+        const dd2 = Math.sqrt(_ddx * _ddx + _ddy * _ddy);
         if (dd2 < 260) { o.x += Math.cos(a) * 40; o.y += Math.sin(a) * 40; }
       }
       /* 瘟疫/暗红仪式额外留下毒领域 */
@@ -1804,7 +1814,8 @@ const BT = {
         /* 斩击顺带击退附近僵尸，形成"清场"观感 */
         for (const o of r.zombies) {
           if (o.dead || o === z) continue;
-          if (Math.hypot(o.x - z.x, o.y - z.y) < (big ? 300 : 210)) o.y -= 30;
+          const _sx = o.x - z.x, _sy = o.y - z.y, _sR = (big ? 300 : 210);
+          if (_sx * _sx + _sy * _sy < _sR * _sR) o.y -= 30;
         }
         return;
       }
@@ -1841,7 +1852,8 @@ const BT = {
     if (window.SND) SND.play('explode');
     for (const z of r.zombies) {
       if (z.dead) continue;
-      const d = Math.hypot(z.x - pos.x, z.y - pos.y);
+      const _psx = z.x - pos.x, _psy = z.y - pos.y;
+      const d = Math.sqrt(_psx * _psx + _psy * _psy);
       if (d <= radius) this.hurt(z, dmg * (1 - d / radius * 0.4), false, el);
     }
   },
@@ -1926,7 +1938,8 @@ const BT = {
       r.efx.push({ t: 'nova', x: r.px, y: r.py, r: rad, life: 0.5, max: 0.5, el: '火' });
       for (const z of r.zombies) {
         if (z.dead) continue;
-        if (Math.hypot(z.x - r.px, z.y - r.py) <= rad) { this.hurt(z, dmg, true, '火'); hit++; }
+        const _gx = z.x - r.px, _gy = z.y - r.py;
+        if (_gx * _gx + _gy * _gy <= rad * rad) { this.hurt(z, dmg, true, '火'); hit++; }
       }
       return { ok: true, msg: '温压弹：命中 ' + hit + ' 只' };
     }
@@ -1940,7 +1953,8 @@ const BT = {
       r.efx.push({ t: 'nova', x: r.px, y: r.py, r: rad, life: 0.5, max: 0.5, el: '冰' });
       for (const z of r.zombies) {
         if (z.dead) continue;
-        if (Math.hypot(z.x - r.px, z.y - r.py) <= rad) { z.slow = 1; z.slowT = dur; hit++; }
+        const _sx2 = z.x - r.px, _sy2 = z.y - r.py;
+        if (_sx2 * _sx2 + _sy2 * _sy2 <= rad * rad) { z.slow = 1; z.slowT = dur; hit++; }
       }
       return { ok: true, msg: '干冰弹：冻结 ' + hit + ' 只（' + dur.toFixed(1) + 's）' };
     }
@@ -2236,13 +2250,13 @@ const BT = {
   /* 线段 (x1,y1)-(x2,y2) 到点 (px,py) 的最短距离
    * 用于子弹的扫掠命中判定，避免高速子弹在两帧之间穿过目标 */
   segDist(x1, y1, x2, y2, px, py) {
-    if (!isFinite(x1) || !isFinite(y1)) return Math.hypot(px - x2, py - y2);
+    if (!isFinite(x1) || !isFinite(y1)) return Math.sqrt((px - x2) * (px - x2) + (py - y2) * (py - y2));
     const dx = x2 - x1, dy = y2 - y1;
     const l2 = dx * dx + dy * dy;
-    if (l2 <= 0) return Math.hypot(px - x2, py - y2);
+    if (l2 <= 0) return Math.sqrt((px - x2) * (px - x2) + (py - y2) * (py - y2));
     let t = ((px - x1) * dx + (py - y1) * dy) / l2;
     t = t < 0 ? 0 : (t > 1 ? 1 : t);
-    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+    { const _ex2 = px - (x1 + t * dx), _ey2 = py - (y1 + t * dy); return Math.sqrt(_ex2 * _ex2 + _ey2 * _ey2); }
   },
 
   /* 命中半径：大体型僵尸（BOSS/精英）判定圈更大，符合视觉 */
@@ -2494,7 +2508,8 @@ const BT = {
     if (z._boomed) return;
     z._boomed = true;
     r.efx.push({ t: 'boom', x: z.x, y: z.y, r: 72, life: 0.4, max: 0.4 });
-    if (Math.hypot(r.px - z.x, r.py - z.y) < 72) this.hurtPlayer(z.dmg, z.n);
+    const _hx = r.px - z.x, _hy = r.py - z.y;
+    if (_hx * _hx + _hy * _hy < 72 * 72) this.hurtPlayer(z.dmg, z.n);
     /* 自爆僵尸贴脸自爆时此前只置 dead=true，不走 kill()
      * → 不计入击杀数、不给金币/经验、不触发掉落：
      * 玩家明明把它打"没了"却颗粒无收，还挨了一次爆炸伤害。
@@ -2509,7 +2524,8 @@ const BT = {
     r.efx.push({ t: 'boom', x, y, r: r2, life: 0.3, max: 0.3 });
     for (const z of r.zombies) {
       if (z.dead) continue;
-      if (Math.hypot(z.x - x, z.y - y) < r2) this.hurt(z, dmg, false, '火');
+      const _ex = z.x - x, _ey = z.y - y;
+      if (_ex * _ex + _ey * _ey < r2 * r2) this.hurt(z, dmg, false, '火');
     }
   },
 
@@ -2523,7 +2539,8 @@ const BT = {
       let best = null, bd = 130;
       for (const o of r.zombies) {
         if (o.dead || hitSet.indexOf(o) >= 0) continue;
-        const d = Math.hypot(o.x - cur.x, o.y - cur.y);
+        const _cux = o.x - cur.x, _cuy = o.y - cur.y;
+        const d = Math.sqrt(_cux * _cux + _cuy * _cuy);
         if (d < bd) { bd = d; best = o; }
       }
       if (!best) break;
@@ -2798,20 +2815,22 @@ const BT = {
      * 实测近处的普通僵尸和远处的精英并存时，全程只打近处那只。
      * preferElite：射程内只要有精英/BOSS，就锁定最近的精英；没有才按距离。 */
     if (opt && opt.preferElite) {
-      let be = null, bd = maxR || 9999;
+      let be = null, bd2 = maxR || 9999;
+      bd2 = bd2 * bd2;
       for (const z of this.run.zombies) {
         if (z.dead) continue;
         if (!(z.isBoss || z.boss || (z.d && z.d.elite))) continue;
-        const d = Math.hypot(z.x - x, z.y - y);
-        if (d < bd) { bd = d; be = z; }
+        const dx = z.x - x, dy = z.y - y, d2 = dx * dx + dy * dy;
+        if (d2 < bd2) { bd2 = d2; be = z; }
       }
       if (be) return be;
     }
-    let best = null, bd = maxR || 9999;
+    let best = null, bd2 = maxR || 9999;
+    bd2 = bd2 * bd2;
     for (const z of this.run.zombies) {
       if (z.dead) continue;
-      const d = Math.hypot(z.x - x, z.y - y);
-      if (d < bd) { bd = d; best = z; }
+      const dx = z.x - x, dy = z.y - y, d2 = dx * dx + dy * dy;
+      if (d2 < bd2) { bd2 = d2; best = z; }
     }
     return best;
   },
@@ -2860,7 +2879,7 @@ const BT = {
     if (Array.isArray(r.pools)) {
       const px = r.px != null ? r.px : this.W / 2;
       const py = r.py != null ? r.py : this.H - 58;
-      r.pools = r.pools.filter((pl) => !(Math.hypot(px - pl.x, py - pl.y) < (pl.r || 0) + 40));
+      r.pools = r.pools.filter((pl) => { const _qx = px - pl.x, _qy = py - pl.y, _qR = (pl.r || 0) + 40; return !(_qx * _qx + _qy * _qy < _qR * _qR); });
     }
   },
 
@@ -2874,7 +2893,8 @@ const BT = {
       this.capShield(r);   /* 护盾封顶，否则按历史最高回满 = 复活即无敌 */
       this.clearDoT(r);
       for (const z of r.zombies.slice()) {
-        if (Math.hypot(z.x - r.px, z.y - r.py) < 190) z.dead = true;
+        const _kx = z.x - r.px, _ky = z.y - r.py;
+        if (_kx * _kx + _ky * _ky < 190 * 190) z.dead = true;
       }
       r.zombies = r.zombies.filter((z) => !z.dead);
       UI.toast('💚 复活成功！剩余 ' + r.reviveLeft + ' 次', 'ok');
@@ -2901,7 +2921,8 @@ const BT = {
     this.clearDoT(r);
     /* 清掉贴近防线的僵尸，避免复活瞬间再次被秒 */
     for (const z of r.zombies.slice()) {
-      if (Math.hypot(z.x - (r.px || this.W / 2), z.y - (r.py || this.H - 58)) < 190) {
+      const _mx2 = z.x - (r.px || this.W / 2), _my2 = z.y - (r.py || this.H - 58);
+      if (_mx2 * _mx2 + _my2 * _my2 < 190 * 190) {
         z.dead = true;
         this.addFloat(z.x, z.y - 14, '清除', 'dmg');
       }
@@ -3527,7 +3548,8 @@ const BT = {
     const T = r.time || 0;
     const x0 = r.px, y0 = (r.py || 0) - 26;
     const x1 = tg.x, y1 = tg.y - 10;
-    const len = Math.hypot(x1 - x0, y1 - y0);
+    const _lx = x1 - x0, _ly = y1 - y0;
+    const len = Math.sqrt(_lx * _lx + _ly * _ly);
     if (!isFinite(len) || len < 1) return;
     const ang = Math.atan2(y1 - y0, x1 - x0);
     const a = clamp(1, 0, zn.life / (zn.max || 1));
@@ -4998,7 +5020,7 @@ const BT = {
   /* 肢体：两点之间的锥形柱体，沿垂直方向做受光渐变（立体感来源） */
   limb(c, x1, y1, x2, y2, w, base, hi) {
     if (!isFinite(x1) || !isFinite(y1) || !isFinite(x2) || !isFinite(y2) || !isFinite(w) || w <= 0) return;
-    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    const dx = x2 - x1, dy = y2 - y1, len = Math.sqrt(dx * dx + dy * dy) || 1;
     const nx = -dy / len * w * 0.5, ny = dx / len * w * 0.5;
     const g = c.createLinearGradient(x1 - nx, y1 - ny, x1 + nx, y1 + ny);
     g.addColorStop(0, 'rgba(0,0,0,.42)');
@@ -5224,19 +5246,66 @@ const BT = {
   },
 
   /* 立体四肢：带描边的锥形肢体（远侧肢体自动压暗） */
+  /* 渐变缓存：肢体/球体的渐变形状只取决于【配色 + 跨度】，与位置无关。
+   * 原本每一根肢体、每一个球体每帧都要 createLinearGradient / createRadialGradient ——
+   * 实测一只僵尸每帧 8 根肢体 + 3 个球体 = 11 个渐变，60 只同屏就是每帧 660 个、
+   * 每秒近 4 万个渐变对象，是 GC 与栅格化的大头（僵尸绘制占整帧 54%）。
+   * 改成「以原点为基准的归一化渐变 + translate」，同一 (配色, 量化跨度) 只建一次。
+   * 量化到 0.5px：位置误差 <0.5px，肉眼不可见（实测像素差最大 1/255）。 */
+  _gcL(c, base, hi, span) {
+    if (!this._glc) this._glc = new Map();
+    const q = Math.round(span * 2) / 2;
+    const k = base + '|' + hi + '|' + q;
+    let g = this._glc.get(k);
+    if (g) return g;
+    try {
+      g = c.createLinearGradient(0, 0, q, 0);
+      g.addColorStop(0, 'rgba(30,18,64,.26)');
+      g.addColorStop(0.13, base);
+      g.addColorStop(0.36, hi);
+      g.addColorStop(0.62, base);
+      g.addColorStop(0.87, 'rgba(24,12,54,.22)');
+      g.addColorStop(1, 'rgba(120,235,255,.62)');
+      /* 上限保护：跨度连续变化会不断产生新键，超量直接整体清空重建 */
+      if (this._glc.size > 400) this._glc.clear();
+      this._glc.set(k, g);
+    } catch (e) { g = base; }
+    return g;
+  },
+  _gcR(c, base, hi, r) {
+    if (!this._grc) this._grc = new Map();
+    const q = Math.round(r * 2) / 2;
+    const k = base + '|' + hi + '|' + q;
+    let g = this._grc.get(k);
+    if (g) return g;
+    try {
+      g = c.createRadialGradient(-q * 0.36, -q * 0.42, q * 0.08, 0, 0, q * 1.16);
+      g.addColorStop(0, hi);
+      g.addColorStop(0.46, base);
+      g.addColorStop(0.84, 'rgba(26,14,56,.20)');
+      g.addColorStop(1, 'rgba(110,230,255,.58)');
+      if (this._grc.size > 400) this._grc.clear();
+      this._grc.set(k, g);
+    } catch (e) { g = base; }
+    return g;
+  },
+
   limbInk(c, x1, y1, x2, y2, w, base, hi, lw, dim) {
     if (!isFinite(x1) || !isFinite(y1) || !isFinite(x2) || !isFinite(y2) || !(w > 0)) return;
-    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    const dx = x2 - x1, dy = y2 - y1, len = Math.sqrt(dx * dx + dy * dy) || 1;
     const nx = -dy / len * w * 0.5, ny = dx / len * w * 0.5;
     c.save();
     if (dim) c.globalAlpha = dim;
+    /* 归一化渐变：把起点平移到原点，路径坐标同步减去起点，形状完全不变 */
+    const gx0 = x1 - nx * 1.6;
+    c.translate(gx0, 0);
     c.beginPath();
-    c.moveTo(x1 + nx, y1 + ny);
-    c.lineTo(x2 + nx * 0.82, y2 + ny * 0.82);
-    c.lineTo(x2 - nx * 0.82, y2 - ny * 0.82);
-    c.lineTo(x1 - nx, y1 - ny);
+    c.moveTo(x1 + nx - gx0, y1 + ny);
+    c.lineTo(x2 + nx * 0.82 - gx0, y2 + ny * 0.82);
+    c.lineTo(x2 - nx * 0.82 - gx0, y2 - ny * 0.82);
+    c.lineTo(x1 - nx - gx0, y1 - ny);
     c.closePath();
-    c.fillStyle = this.matG(c, x1 - nx * 1.6, x1 + nx * 1.6, base, hi);
+    c.fillStyle = this._gcL(c, base, hi, nx * 3.2);
     c.fill();
     this.ink(c, lw);
     c.restore();
@@ -5245,16 +5314,12 @@ const BT = {
   /* 立体球体（头 / 关节）：受光 + 描边 + 顶部高光 */
   ballInk(c, x, y, r, base, hi, lw) {
     if (!isFinite(x) || !isFinite(y) || !(r > 0)) return;
-    try {
-      const g = c.createRadialGradient(x - r * 0.36, y - r * 0.42, r * 0.08, x, y, r * 1.16);
-      g.addColorStop(0, hi);
-      g.addColorStop(0.46, base);
-      g.addColorStop(0.84, 'rgba(26,14,56,.20)');
-      g.addColorStop(1, 'rgba(110,230,255,.58)');
-      c.fillStyle = g;
-    } catch (e) { c.fillStyle = base; }
-    c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
+    c.save();
+    c.translate(x, y);
+    try { c.fillStyle = this._gcR(c, base, hi, r); } catch (e) { c.fillStyle = base; }
+    c.beginPath(); c.arc(0, 0, r, 0, 7); c.fill();
     this.ink(c, lw);
+    c.restore();
   },
 
   /* ---------- 武器模型（主角 / 佣兵手持） ----------
@@ -6601,7 +6666,7 @@ const BT = {
       else                  { c0 = '255,248,222'; c1 = '255,208,96';  c2 = '236,132,32'; }
 
       const ang = Math.atan2(b.vy, b.vx);
-      const spd = Math.hypot(b.vx || 0, b.vy || 0) || 520;
+      const spd = Math.sqrt((b.vx || 0) * (b.vx || 0) + (b.vy || 0) * (b.vy || 0)) || 520;
       /* 拖尾长度随弹速：狙击（1400）拖尾明显更长 → 高速感 */
       const tl = Math.max(10, Math.min(34, spd * 0.024)) * bs;
       /* 每颗弹独立的抖动相位（位置相关，避免同屏子弹同步闪烁） */
