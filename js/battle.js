@@ -3046,15 +3046,67 @@ const BT = {
       c.globalAlpha = 1;
       c.restore();
     }
-    /* 暗角 */
+    /* 暗角：同样只跟 W/H 有关，缓存成离屏图，每帧一次 drawImage。 */
+    const _vd = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    const _vk = W + '|' + H + '|' + _vd;
+    if (!this._vigCache || this._vigKey !== _vk) {
+      let off = null;
+      try { off = document.createElement('canvas'); } catch (e) { off = null; }
+      if (off) {
+        off.width = Math.max(1, Math.round(W * _vd));
+        off.height = Math.max(1, Math.round(H * _vd));
+        const oc = off.getContext('2d');
+        if (oc) {
+          oc.setTransform(_vd, 0, 0, _vd, 0, 0);
+          const vg = oc.createRadialGradient(W * 0.5, H * 0.52, Math.min(W, H) * 0.26,
+            W * 0.5, H * 0.52, Math.max(W, H) * 0.78);
+          vg.addColorStop(0, 'rgba(0,0,0,0)');
+          vg.addColorStop(0.62, 'rgba(0,0,0,.10)');
+          vg.addColorStop(1, 'rgba(0,0,0,.46)');
+          oc.fillStyle = vg; oc.fillRect(0, 0, W, H);
+          this._vigCache = off; this._vigKey = _vk;
+        } else { this._vigCache = null; }
+      } else { this._vigCache = null; }
+    }
     c.save();
-    const vg = c.createRadialGradient(W * 0.5, H * 0.52, Math.min(W, H) * 0.26,
-      W * 0.5, H * 0.52, Math.max(W, H) * 0.78);
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(0.62, 'rgba(0,0,0,.10)');
-    vg.addColorStop(1, 'rgba(0,0,0,.46)');
-    c.fillStyle = vg; c.fillRect(0, 0, W, H);
+    if (this._vigCache) {
+      try { c.drawImage(this._vigCache, 0, 0, W, H); } catch (e) { this._vigCache = null; }
+    }
+    if (!this._vigCache) {
+      const vg = c.createRadialGradient(W * 0.5, H * 0.52, Math.min(W, H) * 0.26,
+        W * 0.5, H * 0.52, Math.max(W, H) * 0.78);
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(0.62, 'rgba(0,0,0,.10)');
+      vg.addColorStop(1, 'rgba(0,0,0,.46)');
+      c.fillStyle = vg; c.fillRect(0, 0, W, H);
+    }
     c.restore();
+  },
+
+  /* ===== 背景底层：场景图 + 压暗 + 双色氛围光 =====
+   * 从 draw() 里抽出，这样离屏缓存和退化路径可以复用同一段绘制，
+   * 两条路的画面结果完全一致（不会缓存一开就变样）。 */
+  paintBackdrop(c, W, H, bg, bgOK) {
+    if (bgOK) {
+      try { c.drawImage(bg, 0, 0, W, H); } catch (e) {}
+      c.fillStyle = 'rgba(10,16,28,0.20)'; c.fillRect(0, 0, W, H);
+      /* 氛围光：左上青 / 右下品红，让画面有色彩倾向而不是一片灰 */
+      let ag = c.createRadialGradient(W * 0.16, H * 0.12, 0, W * 0.16, H * 0.12, Math.max(W, H) * 0.78);
+      ag.addColorStop(0, 'rgba(64,214,255,0.20)');
+      ag.addColorStop(1, 'rgba(64,214,255,0)');
+      c.fillStyle = ag; c.fillRect(0, 0, W, H);
+      ag = c.createRadialGradient(W * 0.88, H * 0.86, 0, W * 0.88, H * 0.86, Math.max(W, H) * 0.72);
+      ag.addColorStop(0, 'rgba(255,74,168,0.18)');
+      ag.addColorStop(1, 'rgba(255,74,168,0)');
+      c.fillStyle = ag; c.fillRect(0, 0, W, H);
+    } else {
+      const g = c.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#12203c'); g.addColorStop(0.55, '#1b2a52'); g.addColorStop(1, '#2a1c46');
+      c.fillStyle = g; c.fillRect(0, 0, W, H);
+      let ag = c.createRadialGradient(W * 0.18, H * 0.14, 0, W * 0.18, H * 0.14, Math.max(W, H) * 0.8);
+      ag.addColorStop(0, 'rgba(64,214,255,0.22)'); ag.addColorStop(1, 'rgba(64,214,255,0)');
+      c.fillStyle = ag; c.fillRect(0, 0, W, H);
+    }
   },
 
   /* ===== 真 3D 透视地面：消失点 + 大气雾化 + 明暗纵深条带 + 收敛网格 ===== */
@@ -5817,31 +5869,38 @@ const BT = {
       c.translate(Number(r.shakeX) || 0, Number(r.shakeY) || 0);
     }
 
-    /* 背景 */
+    /* 背景 + 2.5D 透视地面网格
+     * 这两层只取决于 W/H/场景图/防线位置，逐帧结果完全相同，
+     * 却原本每帧都要新建 4 个全屏渐变并描 47 条网格线（60fps 下每秒 240 次）。
+     * 现在合成到离屏画布缓存，每帧只做一次 drawImage。
+     * 缓存键带 dpr 与场景名：转屏、换关、场景图加载完成都会自动重建。 */
     const bg = this.img(this.scene);
-    if (bg && bg.complete && bg.naturalWidth) {
-      try { c.drawImage(bg, 0, 0, W, H); } catch (e) {}
-      c.fillStyle = 'rgba(10,16,28,0.20)'; c.fillRect(0, 0, W, H);
-      /* 氛围光：左上青 / 右下品红，让画面有色彩倾向而不是一片灰 */
-      let ag = c.createRadialGradient(W * 0.16, H * 0.12, 0, W * 0.16, H * 0.12, Math.max(W, H) * 0.78);
-      ag.addColorStop(0, 'rgba(64,214,255,0.20)');
-      ag.addColorStop(1, 'rgba(64,214,255,0)');
-      c.fillStyle = ag; c.fillRect(0, 0, W, H);
-      ag = c.createRadialGradient(W * 0.88, H * 0.86, 0, W * 0.88, H * 0.86, Math.max(W, H) * 0.72);
-      ag.addColorStop(0, 'rgba(255,74,168,0.18)');
-      ag.addColorStop(1, 'rgba(255,74,168,0)');
-      c.fillStyle = ag; c.fillRect(0, 0, W, H);
-    } else {
-      const g = c.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, '#12203c'); g.addColorStop(0.55, '#1b2a52'); g.addColorStop(1, '#2a1c46');
-      c.fillStyle = g; c.fillRect(0, 0, W, H);
-      let ag = c.createRadialGradient(W * 0.18, H * 0.14, 0, W * 0.18, H * 0.14, Math.max(W, H) * 0.8);
-      ag.addColorStop(0, 'rgba(64,214,255,0.22)'); ag.addColorStop(1, 'rgba(64,214,255,0)');
-      c.fillStyle = ag; c.fillRect(0, 0, W, H);
+    const bgOK = !!(bg && bg.complete && bg.naturalWidth);
+    const _dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    const _bk = W + '|' + H + '|' + _dpr + '|' + (bgOK ? String(this.scene) : 'none') + '|' + (this.wallY || 0);
+    if (!this._bgCache || this._bgKey !== _bk) {
+      let off = null;
+      try { off = document.createElement('canvas'); } catch (e) { off = null; }
+      if (off) {
+        off.width = Math.max(1, Math.round(W * _dpr));
+        off.height = Math.max(1, Math.round(H * _dpr));
+        const oc = off.getContext('2d');
+        if (oc) {
+          oc.setTransform(_dpr, 0, 0, _dpr, 0, 0);
+          this.paintBackdrop(oc, W, H, bg, bgOK);
+          this.drawPerspGround(oc);
+          this._bgCache = off; this._bgKey = _bk;
+        } else { this._bgCache = null; }
+      } else { this._bgCache = null; }
     }
-
-    /* 2.5D 透视地面网格（产生纵深） */
-    this.drawPerspGround(c);
+    if (this._bgCache) {
+      try { c.drawImage(this._bgCache, 0, 0, W, H); } catch (e) { this._bgCache = null; }
+    }
+    if (!this._bgCache) {
+      /* 退化路径：离屏画布不可用时按老办法现场画，保证画面不空 */
+      this.paintBackdrop(c, W, H, bg, bgOK);
+      this.drawPerspGround(c);
+    }
 
     /* 氛围层 A：斜射体积光
      * 必须画在地面【之后】：体积光是空气中的散射，若画在地面之下会被
