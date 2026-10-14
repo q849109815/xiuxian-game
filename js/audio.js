@@ -262,8 +262,8 @@ const SND = {
       const c = JSON.parse(raw);
       if (typeof c.musicOn === 'boolean') this.musicOn = c.musicOn;
       if (typeof c.sfxOn === 'boolean') this.sfxOn = c.sfxOn;
-      if (typeof c.volMusic === 'number') this.volMusic = Math.max(0, Math.min(1, c.volMusic));
-      if (typeof c.volSfx === 'number') this.volSfx = Math.max(0, Math.min(1, c.volSfx));
+      if (typeof c.volMusic === 'number') this.volMusic = clamp(1, 0, c.volMusic);
+      if (typeof c.volSfx === 'number') this.volSfx = clamp(1, 0, c.volSfx);
     } catch (e) {}
   },
   saveCfg() {
