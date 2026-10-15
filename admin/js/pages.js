@@ -2134,8 +2134,17 @@ const PAGES = {
             <div class="btns"><button class="btn pri" data-a="cuScan">🔍 扫描可清理项</button></div>
           </div>`;
         }
-        const row = (k, del, keep, note) =>
-          `<tr><td><b>${k}</b></td><td class="err">${del}</td><td class="ok">${keep}</td><td>${U.esc(note || '')}</td></tr>`;
+        /* 注意：APP.table(headers, rows) 的 rows 必须是【二维数组】
+         * （core.js 内部对每行再调一次 r.map 生成 <td>）。
+         * 这里曾错写成"每行返回一个 <tr> 字符串"，字符串没有 .map，
+         * 页面直接报 `r.map is not a function`。
+         * 单元格样式改用内层 span 承载（无法直接给 <td> 加 class）。 */
+        const row = (k, del, keep, note) => [
+          `<b>${U.esc(k)}</b>`,
+          `<span class="err">${U.esc(del)}</span>`,
+          `<span class="ok">${U.esc(keep)}</span>`,
+          U.esc(note || ''),
+        ];
         return `<div class="card">
           <h3>数据清理<span class="tag">扫描完成 · ${U.dt(s.at)}</span></h3>
           <div class="hint">真实玩家白名单来自账号目录 <b>${s.protect.length}</b> 个注册账号，
