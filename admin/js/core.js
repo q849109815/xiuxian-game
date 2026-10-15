@@ -370,6 +370,8 @@ const PERM = {
     new: 'account.create', resetpwd: 'account.resetpwd',
     ban: 'account.ban', unban: 'account.ban',
     destroy: 'account.destroy', purge: 'account.purge', purgeDead: 'account.purge',
+    /* 数据清理（批量删除，与永久删除同级） */
+    cuScan: 'account.purge', cuRun: 'account.purge',
     /* 存档 */
     saveEdit: 'save.edit', backup: 'save.edit', restore: 'save.rollback', resetSave: 'save.reset',
     /* 运营指令 */
