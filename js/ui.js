@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270210a';
+const IMG_V = '20270211a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -1364,10 +1364,16 @@ r_tavern(p, tab) {
    * 常常只有 def），界面会直接显示「undefined品」并且品质色失效
    * （EX.qColor[undefined] → undefined）。这里回退到芯片定义表的品质。 */
   chipQ(c) {
+    /* 芯片品质名：所有发放路径（rollChipById / fuse / 掉落）都取 EX.chips[].q，
+     * 合法值只有「白 / 蓝 / 红」三种中文名（EX.qColor 也只按这三色取色）。
+     * 但存档可被后台手改、也可能残留旧版本数据 —— 一旦 q 是未知值，
+     * 上面会直接拼出「xxx品」、而 EX.qColor[xxx] 为 undefined（配色丢失）。
+     * 这里统一收口：不在配色表里的品质一律回退「白」，显示与取色保持一致。 */
+    const ok = (q) => q && (window.EX && EX.qColor && Object.prototype.hasOwnProperty.call(EX.qColor, q));
     if (!c) return '白';
-    if (c.q) return c.q;
+    if (ok(c.q)) return c.q;
     const d = (window.E && E.chipDef) ? E.chipDef(c.def) : null;
-    return (d && d.q) || '白';
+    return ok(d && d.q) ? d.q : '白';
   },
   b_chip(p, tab) {
     const ce = $('#chipEquip');
@@ -1453,7 +1459,7 @@ r_tavern(p, tab) {
       return `<div class="item"><div class="ic">${t.img ? `<img src="${t.img}" alt="">` : t.icon}</div>
         <div class="info"><div class="nm">${t.n} <span class="tag y">Lv.${cur}/${t.max}</span></div>
         <div class="sub">${t.desc}</div>
-        <div class="bar"><i style="width:${cur / t.max * 100}%"></i></div>
+        <div class="bar"><i style="width:${t.max > 0 ? clamp((+cur || 0) / t.max * 100, 0, 100) : 0}%"></i></div>
         ${lock ? `<div class="sub" style="color:#ff8fa4">需通关 ${t.unlock} 解锁</div>` : ''}</div>
         <div class="act">${full ? '<span class="tag g">已满</span>' : lock ? '<span class="tag r">未解锁</span>'
           : `<button class="btn ${p.gold >= cost ? 'c' : ''} sm" data-tal="${t.id}" ${p.gold < cost ? 'disabled' : ''}>${E.fmt(cost)}</button>`}</div></div>`;
@@ -1660,13 +1666,18 @@ r_tavern(p, tab) {
       </div>`;
     }
     if (tab === '芯片') {
+      /* BUG：这里读的是 p.chips（6 个已装备槽位），空态却写「芯片背包为空」，
+       * 而真正的芯片背包是 p.bag —— 实测背包 500 颗、一件未装备时，
+       * 该页签仍显示「芯片背包为空」，与下方「分解」区（读 p.bag）自相矛盾。
+       * 现在分开表述：槽位只说已装备，背包单独给数量。 */
       const cs = Object.keys(p.chips || {});
-      return `<div class="card"><div class="card-t">芯片 <span class="sub">${cs.length} 个</span></div>
+      const bagN = (p.bag || []).length;
+      return `<div class="card"><div class="card-t">已装备芯片 <span class="sub">${cs.length}/6 槽位 · 背包 ${bagN} 颗</span></div>
         <div class="grid4">${cs.length ? cs.map((id) => {
           const c = p.chips[id];
           return `<div class="gcell"><div class="gi">${c.icon || '🔲'}</div>
             <div class="gn">${c.n || '芯片'}</div><span class="gq">Lv${c.lv || 1}</span></div>`;
-        }).join('') : '<div class="lbl">芯片背包为空</div>'}</div>
+        }).join('') : '<div class="lbl">尚未装备芯片' + (bagN ? '（背包还有 ' + bagN + ' 颗，去芯片系统装上）' : '') + '</div>'}</div>
       </div>
       <button class="btn o" id="goChip" style="width:100%;margin-top:8px">🔲 前往芯片系统</button>`;
     }
@@ -2597,7 +2608,8 @@ r_tavern(p, tab) {
           ${a.id === 'EV02' ? `<span style="font-size:11px;color:#ffd76a">今日剩余 ${E.bossRaidLeft(p)} / 3 次</span>` : ''}
           ${a.id === 'EV04' ? `<span style="font-size:11px;color:${p.firstRech ? '#7ee38a' : '#ffd76a'}">${p.firstRech ? '已使用' : '未使用 · 首次购买钻石翻倍'}</span>` : ''}
         </div>
-        ${a.id === 'EV02' ? `<button class="btn sm" data-raid="1" ${E.bossRaidLeft(p) > 0 ? '' : 'disabled'}>挑战</button>` : ''}
+        ${a.id === 'EV02' ? (() => { const _l = E.bossRaidLeft(p);
+            return `<button class="btn sm" data-raid="1" ${_l > 0 ? '' : 'disabled'}>${_l > 0 ? '挑战' : '次数已用完'}</button>`; })() : ''}
         ${a.id === 'EV01' ? `<button class="btn sm" data-evendless="1">参与</button>` : ''}
         ${a.id === 'EV06' ? `<button class="btn sm" data-evrank="1">查看</button>` : ''}
         ${this.actExtraBtn(p, a)}
