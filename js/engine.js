@@ -3081,7 +3081,22 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     Object.keys(give).forEach((k) => {
       if (k === 'gold') { const n = this.safeAmt(give[k]); if (n > 0) { p.gold = (p.gold || 0) + n; _got += n; } }
       else if (k === 'diamond') { const n = this.safeAmt(give[k]); if (n > 0) { p.diamond = (p.diamond || 0) + n; _got += n; } }
-      else if (k === 'stamina') { const n = this.safeAmt(give[k]); if (n > 0) { p.stamina = Math.min(EX.STAMINA_MAX, (p.stamina || 0) + n); _got += n; } }
+      /* 体力（唯一有上限的资源）
+       * BUG：此处原写 `_got += n` 无条件累加，而体力被 STAMINA_MAX(100) 钳制。
+       *   实测：满体力 100/100 时 grant({stamina:30}) → 体力纹丝不动，却返回 30；
+       *         90/100 时发 30 → 实际只入账 10，同样返回 30。
+       *   后果：邮件、运营补发、兑换码、活动奖励、任务奖励、成就商店等所有
+       *         经 grant 发体力的入口，对体力已满的玩家都会提示"领取成功"，
+       *         而玩家一点体力都没拿到（活动商店已单独前置拦截，其余入口全中）。
+       *   现在按【实际入账】计数，返回值语义恢复正确。 */
+      else if (k === 'stamina') {
+        const n = this.safeAmt(give[k]);
+        if (n > 0) {
+          const _b = Number(p.stamina) || 0;
+          p.stamina = Math.min(EX.STAMINA_MAX, _b + n);
+          _got += (p.stamina - _b);
+        }
+      }
       /* 成就点（表33）
        * BUG：claimTask 里单独处理了 ach，但 grant() 没有该分支，
        *      于是图鉴解锁奖励 codexRw { gold:100, ach:5 } 经 grant 发放时，
