@@ -3871,6 +3871,12 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     p.gemOn = id;
     const g = (EX.gems || []).find((x) => x.id === id);
     try { this.logAct(p, 'gem', '镶嵌 ' + (g ? g.n : id)); } catch (e) {}
+    /* 镶嵌必须落盘（与上方卸下分支同一口径）。
+     * BUG：此前只有卸下分支 save、镶嵌分支不 save。宝石页入口在调用后自行 save 所以没事，
+     *   但角色页「镶嵌」入口（ui.js b_role [data-gemon]）调用后只 open+home、没有 save，
+     *   实测镶嵌后强退 / 换设备登录：宝石数量回滚（+1）、p.gemOn 仍为空，
+     *   属性加成也没留下 —— 等于白镶嵌一次。这里补上，让所有入口都受益。 */
+    E.save && E.save(p);
     return { ok: true, msg: '已镶嵌 ' + (g ? g.n : id) };
   },
   /* 宝石属性加成
