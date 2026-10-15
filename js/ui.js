@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270209a';
+const IMG_V = '20270210a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -736,7 +736,7 @@ r_tavern(p, tab) {
         <div class="mi">${l.img ? `<img src="${l.img}" alt="">` : l.icon}</div>
         <div class="mn"><b>${l.n}</b><span>${l.desc}</span>
           <span>人数 ${l.mem} · 需要战力 ${E.fmt(l.need)}</span></div>
-        <button data-join="${l.id}" ${E.power(p) < l.need ? 'disabled' : ''}>加入</button>
+        <button data-join="${l.id}" ${E.power(p) < l.need ? 'disabled' : ''}>${E.power(p) < l.need ? '战力不足' : '加入'}</button>
       </div>`).join('')}
       <div class="sub" style="padding:6px 2px">或花费 <b>20000 金币</b> 自建军团</div>
       <button class="btn" id="lgCreate" style="width:100%;margin-top:4px">🏰 自建军团（20000 金币）</button>
@@ -746,6 +746,10 @@ r_tavern(p, tab) {
     const jb = $$('#pnBody [data-join]');
     jb.forEach((b) => { b.onclick = () => {
       const l = EX.legions.find((x) => x.id === b.dataset.join); if (!l) return;
+      /* 与按钮 disabled 同口径再挡一次：按钮的 disabled 只存在于渲染那一刻，
+       * 面板渲染后若战力发生变化而未重渲染，按钮状态不会更新，
+       * 只靠 disabled 就会出现「战力不够却能加入」。 */
+      if (E.power(p) < (l.need || 0)) return this.toast('战力不足', 'err');
       p.legion = { id: l.id, n: l.n, lv: 1, cap: 50, members: this.mkLegionMembers(p, l.mem, '成员') };
       E.save(p); this.toast('已加入 ' + l.n, 'ok');
       if (window.SND) SND.play('upgrade'); this.open('legion'); this.home();
@@ -784,8 +788,8 @@ r_tavern(p, tab) {
           return `<div class="mc-card">
             <div class="mi">${a.img ? `<img src="${a.img}" alt="">` : a.icon}</div>
             <div class="mn"><b>${a.n}</b><span>贡献 +${a.contrib} · 金币 +${E.fmt(a.gold)}</span>
-              <span>体力 ${a.cost} · 推荐战力 ${E.fmt(a.need)}${okPw ? '' : '（战力不足）'}</span></div>
-            <button data-lact="${a.id}" ${(okSt && okPw) ? '' : 'disabled'}>${okSt ? '挑战' : '体力不足'}</button>
+              <span>体力 ${a.cost} · 需要战力 ${E.fmt(a.need)}${okPw ? '' : '（战力不足）'}</span></div>
+            <button data-lact="${a.id}" ${(okSt && okPw) ? '' : 'disabled'}>${okSt ? (okPw ? '挑战' : '战力不足') : '体力不足'}</button>
           </div>`;
         }).join('')}`);
       $$('[data-lact]').forEach((b) => { b.onclick = () => {
@@ -908,10 +912,18 @@ r_tavern(p, tab) {
       <div class="sub" style="padding:4px 2px">消耗体力挑战，产出稀有材料与宝石。</div>
       ${EX.expeds.map((e) => {
         const ok = (p.stamina || 0) >= e.cost;
+        /* 门槛口径必须与行为一致：
+         *   军团副本写「推荐战力」却是【硬拦截】——战力不够直接点不了；
+         *   远征同样写「推荐战力」却【完全不校验】，任何战力都 100% 拿全额奖励。
+         *   同一个词两套行为，玩家无法从文案判断哪个能点、哪个不能。
+         * 远征是材料/宝石的主要来源，硬卡会让新手彻底拿不到，故保持不拦截，
+         *   但战力低于推荐值时明确标红提示，让玩家知道自己是「越级挑战」而非
+         *   界面忘了校验。军团副本那边则把文案改成「需要战力」，与硬拦截对齐。 */
+        const okPw = E.power(p) >= (e.need || 0);
         return `<div class="mc-card">
           <div class="mi">${e.img ? `<img src="${e.img}" alt="">` : e.icon}</div>
           <div class="mn"><b>${e.n}</b><span>${e.desc}</span>
-            <span>消耗体力 ${e.cost} · 推荐战力 ${E.fmt(e.need)}</span></div>
+            <span>消耗体力 ${e.cost} · 推荐战力 ${E.fmt(e.need)}${okPw ? '' : '<b style="color:var(--red)">（当前战力偏低，仍可挑战）</b>'}</span></div>
           <button data-exped="${e.id}" ${!ok ? 'disabled' : ''}>${ok ? '挑战' : '体力不足'}</button>
         </div>`;
       }).join('')}
