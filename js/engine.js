@@ -461,7 +461,17 @@ const E = {
      *   codex = { 类别: 已解锁ID数组 } → 实测 {z:['z1','z2']} 被 Number() 成 {z:0}
      * 即：玩家每次登录，已装备的芯片与图鉴解锁记录【全部清零】。
      * 现在移出该列表（保留 mat/gems/cleared 等真正的数量字典）。 */
-    ['mat','gems','cleared','evShopBuy','achShopBuy','lgShopBuy','giftBuy'].forEach((k) => {
+    /* build / talents / adUsed 此前【不在任何数值清洗列表里】：
+     *   build   = { 建筑id: 等级 }  读法 (p.build[id] || 1) * per
+     *   talents = { 天赋id: 等级 }  读法 (p.talents[id] || 0) * per
+     *   adUsed  = { 广告id: 今日已看次数 }
+     * 三者都是纯"数量"字典，但 sanitize 从不收敛内部值。
+     * 实测后台 GM 改档写入 'BAD' / {} 时：
+     *   · E.power() 直接变 NaN → 主界面与后台战力栏显示 NaN，榜单上传值也被污染
+     *   · 武器面板出现 NaN 文本
+     * 现在与 mat/gems 等一并按非负有限数收敛。 */
+    ['mat','gems','cleared','evShopBuy','achShopBuy','lgShopBuy','giftBuy',
+     'build','talents','adUsed'].forEach((k) => {
       if (!p[k]) return;
       /* 下限钳 0：此前只做 Number() 转换、没有 Math.max(0,…)，
        * 后台 GM 改档写入负数时残留（实测材料 -5、宝石 -2、已通关星级 -2），
@@ -1057,7 +1067,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   talentVal(p, stat) {
     const t = EX.talents.find((x) => x.stat === stat);
     if (!t) return 0;
-    return (p.talents[t.id] || 0) * t.per;
+    /* 同上：热改档写入非数字时按 0 级算，绝不让战力算出 NaN */
+    const lv = Number((p.talents || {})[t.id]);
+    return (isFinite(lv) && lv > 0 ? lv : 0) * t.per;
   },
   talentUnlocked(p, id) {
     const t = EX.talents.find((x) => x.id === id); if (!t) return false;
@@ -1105,10 +1117,24 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (!l) return this._nullBuilding();
     return l.find((x) => x.id === tab || x.n === tab) || l[0];
   },
+  /* 建筑等级的唯一读取口：主界面按钮、基地面板、换弹公式之前各自写
+   * `p.build[id] || 1`，被热改档写成 'BAD' / {} 时分别渲染成
+   * 「Lv.BAD」「Lv.[object Object]」以及换弹时间 NaN。统一走这里取 1~max 的整数。 */
+  buildLv(p, id) {
+    const n = Number((p && p.build ? p.build : {})[id]);
+    if (!isFinite(n) || n < 1) return 1;
+    const b = (EX.buildings || []).find((x) => x.id === id);
+    const mx = b && b.max ? b.max : (this.BUILD_MAX_LV || 20);
+    return Math.min(mx, Math.floor(n));
+  },
   buildVal(p, stat) {
     const b = EX.buildings.find((x) => x.stat === stat);
     if (!b) return 0;
-    return (p.build[b.id] || 1) * b.per;
+    /* 就地防御：sanitize 只在登录时跑，后台 GM 热改档后可能已把
+     * p.build[id] 写成字符串/对象（实测 'BAD' / {} 让战力变 NaN）。
+     * 这里统一转有限数，取不到就按 1 级算。 */
+    const lv = Number((p.build || {})[b.id]);
+    return (isFinite(lv) && lv > 0 ? lv : 1) * b.per;
   },
   buildCost(p, id) {
     const b = EX.buildings.find((x) => x.id === id); if (!b) return 0;
@@ -2419,10 +2445,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       * (((Number(per[0]) || 8) + (Number(per[1]) || 13)) / 2)) * (Number(t) || 1);
     const kr = this.sweepKillRate(Number(ld && ld.ch) || 1);
     const Y = (EX.SWEEP_KILL_YIELD != null && isFinite(EX.SWEEP_KILL_YIELD)) ? EX.SWEEP_KILL_YIELD : 0.78;
-    const rwMul = Math.max(1, Number(ld && (ld.rwMul != null ? ld.rwMul : ld.mul)) || 1);
+    /* 不乘 ld.mul / rwMul：手动路径 battle.kill() 的击杀金币是
+     *   z.gold × (1 + 金币天赋)，【不含】章节强度系数 ——
+     * 扫荡若乘了 mul（第10章高达 131.75），击杀金币会被放大两个数量级，
+     * 与「手动给什么扫荡给什么」背道而驰。这里与手动严格同口径。 */
     let gMul = 1;
     try { gMul = this.attrs(p).goldMul || 1; } catch (e) { gMul = 1; }
-    return Math.max(0, Math.round(killEst * kr * Y * avgG * rwMul * (dRw || 1) * gMul));
+    return Math.max(0, Math.round(killEst * kr * Y * avgG * (dRw || 1) * gMul));
   },
   /* 扫荡的【局内掉落】估算：僵尸掉落 + BOSS 掉落。
    * 严重 BUG：手动通关时 kill() 走 EX.dropFor(怪物名, 章节) 掉材料/芯片，
@@ -3024,6 +3053,18 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   },
 
   /* 通用发放 */
+  /* 反查一个裸 id 属于哪张外观表：皮肤 / 宝石 / 称号 / 头像框。
+   * 返回 grant 认识的分发键（'skin'/'gem'/'title'/'frame'），不属于则返回 ''。
+   * 后台运营发放与热更配置都可能直接写裸 id，靠这里兜住。 */
+  grantKindOf(id) {
+    if (!id || typeof id !== 'string') return '';
+    const has = (arr) => Array.isArray(arr) && arr.some((x) => x && x.id === id);
+    if (has(EX.skins)) return 'skin';
+    if (has(EX.gems)) return 'gem';
+    if (has(EX.titles)) return 'title';
+    if (has(EX.frames)) return 'frame';
+    return '';
+  },
   grant(p, give) {
     if (!give) return 0;
     /* 类型守卫
@@ -3126,6 +3167,23 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
         let gotC = 0;
         for (let i = 0; i < n; i++) if (this.giveChipByQuality(p, q)) gotC++;
         _got += gotC;
+      }
+      /* 皮肤 / 宝石 / 称号 / 头像框 的【裸 id 形态】
+       * BUG：后台「运营发放」的下拉里，皮肤、宝石、称号、头像框是以它们自己的
+       * id 作为发放键的（U.itemList() 直接把 s.id / g.id / t.id / f.id 列为 item）。
+       * 而 applyOp 的构造是 `g[op.item] = op.n` → grant({ 'sk_c01b': 1 })，
+       * 这四个键都不匹配上面的 skin/gem/title/frame 分支，直接掉进通用材料分支：
+       *   实测发放「皮肤 sk_c01b」→ p.skins 仍为空，却多出 p.mat['sk_c01b'] = 1；
+       *   宝石 G_R / 称号 ach_100 / 头像框 ev_frame 同理全部变成垃圾材料键。
+       * 后果：运营点了发放、后台提示成功、玩家什么都没收到，背包还被污染。
+       * 这里按 id 反查归属表，路由到正确的分支（n 视为数量，限 1~50）。 */
+      else if (this.grantKindOf(k)) {
+        const kind = this.grantKindOf(k);
+        const n = Math.max(1, Math.min(50, this.safeAmt(give[k]) || 1));
+        for (let i = 0; i < n; i++) {
+          const one = {}; one[kind] = k;
+          _got += this.grant(p, one) ? 1 : 0;
+        }
       }
       /* 通用材料：同样先过 safeAmt。
        * 旧行为 p.mat[k] += give[k]，字符串会拼成 "1000abc"、NaN 会毁掉整个背包。 */
