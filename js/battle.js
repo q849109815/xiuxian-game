@@ -1510,7 +1510,13 @@ const BT = {
         /* z.def 已统一在 hurt() 内应用（对所有伤害来源生效），此处不再重复 */
         if (z.front) {
           const a = Math.atan2(b.y - z.y, b.x - z.x);
-          let diff = Math.abs(a - z.facing); while (diff > Math.PI) diff = Math.abs(diff - 2 * Math.PI);
+          /* 死循环加固：原写法 `while (diff > Math.PI) diff = Math.abs(diff - 2π)`
+           * 在 diff 为 Infinity 时永远为真（Infinity - 2π 仍是 Infinity），
+           * 主线程直接卡死。z.facing 若被脏存档/GM 改档写成 Infinity 即触发。
+           * 有限值下 4 次内必定收敛，行为与原写法完全一致。 */
+          let diff = Math.abs(a - (Number(z.facing) || 0));
+          if (!isFinite(diff)) diff = 0;
+          else { let _g = 0; while (diff > Math.PI && _g++ < 4) diff = Math.abs(diff - 2 * Math.PI); }
           if (diff < 1.1) dmg *= (1 - z.front);
         }
         /* 暴击率 = 武器基础（含宝石加成）+ 技能「暴击强化」加成。
