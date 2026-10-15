@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270213a';
+const IMG_V = '20270214a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -3932,8 +3932,13 @@ r_tavern(p, tab) {
      * 玩家领了材料却看不见。现在按实际发放渲染材料格 + 星级格。 */
     const mk = Object.keys(rw.mat || {}).filter((k) => (rw.mat[k] || 0) > 0);
     const cell = (v, l) => `<div class="rs-i"><div class="v">${v}</div><div class="l">${l}</div></div>`;
-    $('#rsGrid').innerHTML = cell(E.fmt(rw.exp || 15), 'EXP')
-      + cell(E.fmt(rw.gold), '金币')   /* 原为「R币」，与全项目「金币」叫法不一致，已统一 */
+    /* 【公示必须等于实发】EXP 格此前写 `rw.exp || 15`：
+     * 只要本局实发经验算出 0（典型场景：广告复活后重复结算，
+     * xpGain 被 paid.xp 去重减成 0），面板照样显示「15 EXP」，
+     * 而 p.xp 纹丝不动 —— 玩家以为拿了经验，实际一分没有。
+     * 现在按真实发放值渲染：发多少显示多少，0 就不显示这一格。 */
+    $('#rsGrid').innerHTML = (rw.exp ? cell(E.fmt(rw.exp), 'EXP') : '')
+      + cell(E.fmt(rw.gold || 0), '金币')   /* 原为「R币」，与全项目「金币」叫法不一致，已统一 */
       + cell(d.kills, '击杀')
       + cell(win ? (d.stars || 0) : 0, '星级')
       + (rw.chip ? cell(rw.chip, '芯片') : '')
