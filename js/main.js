@@ -2,7 +2,7 @@
  * 而不是返回 null，裸调会让本模块初始化中断（实测禁用存储后整页白屏）。
  * 这里统一走包装，读取失败回落默认值，写入失败静默忽略。 */
 function lsGet(k, dflt) { try { const v = localStorage.getItem(k); return v === null || v === undefined ? dflt : v; } catch (e) { return dflt; } }
-function lsSet(k, v) { try { lsSet(k, v); return true; } catch (e) { return false; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
 /* =========================================================
  * main.js —— 启动 / 登录 / 战斗流程 / 存档
  * 依据资料 06 操作方案（自动瞄准 + PC 键盘备选）
