@@ -1046,7 +1046,7 @@ r_tavern(p, tab) {
                  : `<button class="btn sm" data-gemon="${g.id}">镶嵌</button>`}
           </div>`;
         }).join('') || '<div class="lbl">暂无宝石</div>'}
-        <button class="btn o" id="roleForge" style="width:100%;margin-top:8px">装备设造</button>
+        <button class="btn o" id="roleForge" style="width:100%;margin-top:8px">装备锻造</button>
       </div>
       <div class="card"><div class="card-t">装备槽 <span class="sub">强化 / 进阶</span></div>
         <div class="grid4">${(EX.equipSlots || []).map((sl) => {
@@ -1108,7 +1108,7 @@ r_tavern(p, tab) {
       <div class="kv"><span>下级所需</span><b>${EX.starCost[(p.charStar || 0) + 1] || '已满级'}</b></div>
       <button class="btn" id="roleStar" style="width:100%;margin-top:8px">⭐ 升星</button>
     </div>
-    <button class="btn o" id="roleForge" style="width:100%">装备设造</button>`;
+    <button class="btn o" id="roleForge" style="width:100%">装备锻造</button>`;
   },
   b_role(p, tab) {
     /* 角色切换（此前 switchChar 零调用，4 个角色只有 C01 能用） */
@@ -1172,8 +1172,18 @@ r_tavern(p, tab) {
        * 强退/换设备会读回旧档：碎片回来了、星级没升。补立即保存。 */
       if (r.ok) { if (window.SND) SND.play('upgrade'); E.save(p); this.open('role', '角色'); this.home(); }
     };
+    /* 「装备锻造」按钮：此前无论当前在哪个页签，点击都一律跳【宝石】页签。
+     * 两个后果：
+     *  1) 在宝石页签里点它 = 原地刷新，玩家感觉"点了没反应"（全量点击复测抓出）；
+     *  2) 在装备页签里点它 = 被带到宝石页，而按钮上写的是"装备锻造"，
+     *     文案与行为对不上，玩家会以为进错地方。
+     * 现在按当前页签做双向跳转，并把按钮文案改成与实际去处一致。 */
     const fb = $('#roleForge');
-    if (fb) fb.onclick = () => this.open('role', '宝石');
+    if (fb) {
+      const _inGem = (tab === '宝石');
+      fb.textContent = _inGem ? '装备锻造' : '宝石镶嵌';
+      fb.onclick = () => this.open('role', _inGem ? '装备' : '宝石');
+    }
   },
 
   r_gun(p, tab) {
@@ -1421,7 +1431,12 @@ r_tavern(p, tab) {
         const slot = this.selChipSlot
           || (EX.chipSlots.find((s) => !p.chips[s.k]) || EX.chipSlots[0]).k;
         const r = E.equipChip(p, b.dataset.wear, slot);
-        this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('chip', tab); this.home(); }
+        this.toast(r.msg, r.ok ? 'ok' : 'err');
+        /* 装备芯片必须立即落盘（与相邻「卸下 / 分解 / 首个空槽自动装备」同一口径）。
+         * BUG：此前这里只 open + home，没有 E.save —— 实测装上芯片后强退 App /
+         * 换设备登录，芯片回到背包、槽位仍显示「空」，等于白装一次，
+         * 且属性加成（暴击/生命等）也没留下。 */
+        if (r.ok) { E.save(p); this.open('chip', tab); this.home(); }
       };
     });
     $$('#pnBody [data-dec]').forEach((b) => {
