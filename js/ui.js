@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270214a';
+const IMG_V = '20270215a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -2980,7 +2980,10 @@ r_tavern(p, tab) {
     const kindMap = { '怪物': 'zombie', '武器': 'gun', '皮肤': 'skin' };
     const kind = kindMap[tab] || 'zombie';
     const list = EX.codexOf(kind) || [];
-    const got = (p.codex || {})[kind] || [];
+    /* 就地防御：热改档可能把 p.codex[kind] 写成 0 / {}，非数组一律按空数组处理，
+     * 否则 got.indexOf 抛异常会让整个图鉴面板崩溃（实测「武器」页白屏）。 */
+    const _cx = (p && typeof p.codex === 'object' && p.codex) || {};
+    const got = Array.isArray(_cx[kind]) ? _cx[kind] : [];
     const cc = E.codexCount(p);
     const rw = (EX.codexRw || {})[kind] || {};
     return `<div class="card"><div class="card-t">收集进度
