@@ -380,7 +380,12 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
 /* 名称过长时换行显示，不要省略号吞掉"火焰喷射器"这类名字 */
 .item .nm.wrap{display:block;width:100%;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35;
   -webkit-line-clamp:unset}
-.item .act{flex:0 0 auto}
+/* 窄屏（320）实测：芯片背包每行有「合成/洗练/拆解」三个按钮，
+ * 原 flex:0 0 auto 不允许收缩，act 区右侧超出面板 5.8px。
+ * 改为可收缩 + 自动换行 + 右对齐：宽度不够时按钮折到第二行，
+ * 而不是把行撑破或把左侧名字挤没。 */
+.item .act{flex:0 1 auto;display:flex;flex-wrap:wrap;align-items:center;
+  gap:5px;justify-content:flex-end;max-width:100%}
 .tag{display:inline-block;padding:1px 6px;border-radius:8px;font-size:11px;font-weight:700;margin-right:3px}
 .tag.y{background:rgba(255,215,106,.18);color:var(--gold)}
 .tag.b{background:rgba(92,216,255,.15);color:var(--blue)}
