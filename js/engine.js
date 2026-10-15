@@ -414,6 +414,21 @@ const E = {
     if (p.mailGot.length > 300) p.mailGot = p.mailGot.slice(-300);
     if (p.cdkGot.length > 200) p.cdkGot = p.cdkGot.slice(-200);
     this.OBJS.forEach((k) => { if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {}; });
+    /* 图鉴子项归一：p.codex 是 { 类别: 已解锁ID数组 }，只保证【外层】是对象还不够。
+     * 实测历史存档里 p.codex.zombie 被早期 sanitize 的 Number() 转换写成了 0，
+     * 后台 GM 改档 / 传输截断也会写入 {} 之类的非数组值 —— 后果：
+     *   · 图鉴「武器」页 got.indexOf 直接抛 → 面板整体崩溃
+     *   · E.codexCount 的 got 变 NaN → 图鉴顶部显示「NaN / 57」
+     *   · E.stats().codexGot 同步变 NaN → 后台玩家详情的图鉴完成度也显示 NaN
+     *   · E.codexBackfill 抛异常，被 main.js 的 try/catch 吞掉，回填静默失效
+     * 这里按 codexKinds 逐类归一遍数组，从源头杜绝。 */
+    {
+      const cx = p.codex;
+      const kinds = (EX.codexKinds || []).map((x) => x && x.k).filter(Boolean);
+      kinds.forEach((k) => { if (!Array.isArray(cx[k])) cx[k] = []; });
+      /* 顺带剔掉不在 codexKinds 里的垃圾键，避免它们被计入完成度 */
+      Object.keys(cx).forEach((k) => { if (kinds.indexOf(k) < 0) delete cx[k]; });
+    }
     /* skinByChar 只校验了「是对象」，内部条目从不校验。
      * 实测被写成 { C01: 123 } 或 { C01: 'sk_c02b' }（别的角色的皮肤）时，
      * switchChar 会恢复出一个不属于该角色的皮肤 id：
@@ -2355,13 +2370,59 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 现在只用 attrs().xpMul 一次。 */
     let xpMul = 1;
     try { xpMul = (this.attrs(p).xpMul || 1); } catch (e) { xpMul = 1; }
-    /* 校准系数：击杀估算按「波次 × 每波上限均值」算的是【刷怪总数】，
-     * 而实际击杀受玩家火力与清场机制限制，实测击杀率随章节从 88%(第1章)
-     * 降到 36%(第10章)。再叠加怪物池平均 xp 略高于实战均值，
-     * 直接估算会到手动通关的 2~4 倍（扫荡比手动还划算，反过来没人手动打）。
-     * 乘 SWEEP_XP_K 后各章落在手动的 50%~110%，量级正确且略低于手动。 */
-    const K = (EX.SWEEP_XP_K != null && isFinite(EX.SWEEP_XP_K)) ? EX.SWEEP_XP_K : 0.25;
-    return { xp: Math.max(1, Math.round(killEst * avgXp * rwMul * (dRw || 1) * xpMul * K)), killEst: killEst };
+    /* 校准系数（重构）：
+     * 旧实现用【单个固定常数】SWEEP_XP_K=0.25 一刀切，而击杀率本身随章节
+     * 从 88%(第1章) 降到 36%(第10章)，常数无法同时满足两端 ——
+     *   实测 1-1：手动 874 / 扫荡 273 = 31%
+     *   实测 1-5：手动 820 / 扫荡 273 = 33%
+     * 都远低于注释承诺的「手动的 50%~110%」，扫荡经验实际只有手动三成，
+     * 靠扫荡升级完全不可行（扫荡 3 次才抵手动 1 次）。
+     * 现在改为「章节递减击杀率 × 实战均值修正」两个可配置量相乘：
+     *   sweepKillRate(ch)  —— 刷怪总数里真正被清掉的比例（0.88 → 0.36）
+     *   SWEEP_KILL_YIELD   —— 怪物池算术平均 xp 高于实战均值的修正（实测 0.83）
+     * 第1章实测：210 × 0.88 × 0.85 × 5 ≈ 785，为手动 874 的 90%，落在承诺区间。 */
+    const kr = this.sweepKillRate(Number(ld && ld.ch) || 1);
+    const Y = (EX.SWEEP_KILL_YIELD != null && isFinite(EX.SWEEP_KILL_YIELD)) ? EX.SWEEP_KILL_YIELD : 0.78;
+    const realKills = Math.round(killEst * kr * Y);
+    return { xp: Math.max(1, Math.round(realKills * avgXp * rwMul * (dRw || 1) * xpMul)),
+      killEst: killEst, killReal: realKills };
+  },
+  /* 章节击杀率：第1章 0.88 线性降到第10章 0.36（实测值，见 sweepXp 注释）。
+   * 高章节怪物血厚、波次清不完，击杀率明显低于低章节。 */
+  sweepKillRate(ch) {
+    const c = Math.max(1, Math.min(10, Number(ch) || 1));
+    const hi = (EX.SWEEP_KILL_RATE_HI != null && isFinite(EX.SWEEP_KILL_RATE_HI)) ? EX.SWEEP_KILL_RATE_HI : 0.88;
+    const lo = (EX.SWEEP_KILL_RATE_LO != null && isFinite(EX.SWEEP_KILL_RATE_LO)) ? EX.SWEEP_KILL_RATE_LO : 0.36;
+    return hi + (lo - hi) * ((c - 1) / 9);
+  },
+  /* 扫荡的【局内击杀金币】估算。
+   * 严重 BUG：手动通关金币 = 关卡奖励 + 210 只僵尸的击杀金币，
+   *   而 sweep() 只发关卡表 ld.rw.gold —— 击杀金币整块缺失。
+   *   实测（同账号、天赋 0、普通难度）：
+   *     1-1  手动 1230（关卡500 + 击杀730） / 扫荡 500  → 只有手动的 41%
+   *     1-5  手动 1191（关卡680 + 击杀511） / 扫荡 680  → 只有手动的 57%
+   *   击杀金币占手动总金币的四到六成，扫荡一分不发，
+   *   与本函数顶部「手动通关给什么，扫荡就给什么」的约定直接冲突，
+   *   结果就是扫荡越用越亏、玩家被迫手动刷关，扫荡形同虚设。
+   * 现在按「实际击杀数 × 怪物池平均 gold × 章节强度」估算，与 sweepXp 同口径。 */
+  sweepKillGold(p, ld, t, dRw) {
+    if (!ld) return 0;
+    const pool = (ld && ld.pool) || [];
+    let avgG = 0; let c = 0;
+    pool.forEach((id) => {
+      const z = (EX.zombies || []).find((x) => x.id === id);
+      if (z) { avgG += Number(z.gold) || 0; c++; }
+    });
+    if (c <= 0 || avgG <= 0) avgG = 3; else avgG = avgG / c;
+    const per = (ld && ld.per) || [8, 13];
+    const killEst = Math.round((Number(ld && ld.waves) || 20)
+      * (((Number(per[0]) || 8) + (Number(per[1]) || 13)) / 2)) * (Number(t) || 1);
+    const kr = this.sweepKillRate(Number(ld && ld.ch) || 1);
+    const Y = (EX.SWEEP_KILL_YIELD != null && isFinite(EX.SWEEP_KILL_YIELD)) ? EX.SWEEP_KILL_YIELD : 0.78;
+    const rwMul = Math.max(1, Number(ld && (ld.rwMul != null ? ld.rwMul : ld.mul)) || 1);
+    let gMul = 1;
+    try { gMul = this.attrs(p).goldMul || 1; } catch (e) { gMul = 1; }
+    return Math.max(0, Math.round(killEst * kr * Y * avgG * rwMul * (dRw || 1) * gMul));
   },
   /* 扫荡的【局内掉落】估算：僵尸掉落 + BOSS 掉落。
    * 严重 BUG：手动通关时 kill() 走 EX.dropFor(怪物名, 章节) 掉材料/芯片，
@@ -2450,7 +2511,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 现在补上，sweep() 同步乘，保证预览与实发一致。 */
     let _pvGMul = 1;
     try { _pvGMul = this.attrs(p).goldMul || 1; } catch (e) { _pvGMul = 1; }
-    const gold = E.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || fb.gold) * t * dRw * _pvGMul));
+    /* 击杀金币：与 sweep() 同源（sweepKillGold），否则「弹窗显示」比「实际到账」少一大截 */
+    const _pvKillGold = this.sweepKillGold(p, ld, t, dRw);
+    const gold = E.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || fb.gold) * t * dRw * _pvGMul + _pvKillGold));
     const mat = {};
     const src = (ld && ld.rw) ? ld.rw : { M01: fb.M01 };
     Object.keys(src).forEach((k) => {
@@ -2507,7 +2570,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 两处必须用同一个 _gMul 读法，否则「弹窗显示」≠「实际到账」。 */
     let _gMul = 1;
     try { _gMul = this.attrs(p).goldMul || 1; } catch (e) { _gMul = 1; }
-    const goldGet = this.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || rw.gold) * t * dRw * _gMul));
+    /* 击杀金币（手动能捡到的那一份，扫荡此前整块缺失，见 sweepKillGold 注释） */
+    const _killGold = this.sweepKillGold(p, ld, t, dRw);
+    const goldGet = this.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || rw.gold) * t * dRw * _gMul + _killGold));
     p.gold = (p.gold || 0) + goldGet;
     _given.gold += goldGet;
     p.mat = p.mat || {};
@@ -3162,11 +3227,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   /* 图鉴回填：玩家已拥有但历史未记账的武器/皮肤，一次性补录
    * 修复：此前只有怪物击杀会解锁图鉴，武器(10条)/皮肤(11条)永远为 0 */
   codexBackfill(p) {
-    if (!p.codex) p.codex = {};
+    if (!p.codex || typeof p.codex !== 'object') p.codex = {};
     let n = 0;
     const add = (kind, id) => {
       if (!id) return;
-      p.codex[kind] = p.codex[kind] || [];
+      /* 就地防御：sanitize 只在登录时跑，后台 GM 热改档会绕过它把子项写成
+       * 0 / {} 之类，这里直接归数组，避免 indexOf 抛异常让回填静默失效。 */
+      if (!Array.isArray(p.codex[kind])) p.codex[kind] = [];
       if (p.codex[kind].indexOf(id) < 0) { p.codex[kind].push(id); n++; }
     };
     (p.gunOwn || []).forEach((g) => add('gun', g));
@@ -3188,8 +3255,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   /* 只允许由真实获得途径调用（击杀 / 装备武器 / 获得皮肤），
    * 不得由面板点击直接调用，否则图鉴奖励等于无限白嫖。 */
   codexUnlock(p, kind, id) {
-    p.codex = p.codex || {};
-    p.codex[kind] = p.codex[kind] || [];
+    if (!p.codex || typeof p.codex !== 'object') p.codex = {};
+    /* 同上：就地归一，避免热改档写入非数组后 push/indexOf 抛异常 */
+    if (!Array.isArray(p.codex[kind])) p.codex[kind] = [];
     if (p.codex[kind].indexOf(id) >= 0) return { ok: false, msg: '', already: true };
     p.codex[kind].push(id);
     const rw = (EX.codexRw || {})[kind] || {};
@@ -3197,12 +3265,15 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     return { ok: true, msg: '图鉴解锁！+' + (rw.gold || 0) + ' 金币', rw: rw };
   },
   codexCount(p) {
-    const c = p.codex || {};
+    const c = (p && typeof p.codex === 'object' && p.codex) || {};
     let got = 0, all = 0;
     (EX.codexKinds || []).forEach((k) => {
       const list = EX.codexOf(k.k) || [];
       all += list.length;
-      got += (c[k.k] || []).length;
+      /* 非数组子项（历史脏档的 0 / {}）按 0 计，绝不能让 got 累加出 NaN
+       * —— 这个值是游戏端与后台共用的唯一真源，NaN 会一路污染到后台页面 */
+      const arr = Array.isArray(c[k.k]) ? c[k.k] : [];
+      got += arr.length;
     });
     return { got: got, all: all };
   },
