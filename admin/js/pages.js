@@ -2082,5 +2082,228 @@ const PAGES = {
       },
       bind() { this.acts.ntReload.call(this); },
     };
+
+    /* 残留文件判定：与人工清理口径一致（模块级，供 cleanup 页使用） */
+    const isJunkFile = (p) => {
+      if (/^data\/frxx\//.test(p)) return '修仙版遗留';
+      if (/backup_\d+\.json$/.test(p)) return '历史备份';
+      /* 修仙模板遗留的空壳 json（现游戏读的是 data/zb/*） */
+      if (p === 'data/arena_rank.json' || p === 'data/chat.json'
+        || p === 'data/market.json' || p === 'data/sects.json') return '修仙版遗留';
+      return '';
+    };
+
+    /* =================================================================
+     * 15. 数据清理 —— 一键清除历史堆积
+     *
+     * 为什么需要它：
+     *   每次调试 / 验收都会产生一批测试号，它们的存档、玩家索引条目、
+     *   榜单条目会永久留在云端。实测清理前：
+     *     存档 139 个（真实 18）｜玩家索引 348 条（真实 22）
+     *     战力榜 100 条（真实 18）｜无尽榜 89 条（真实 18）
+     *   索引里 209 条指向的存档早已不存在（幽灵条目），
+     *   榜单前列长期被测试号占据，真实玩家看不到自己的名次。
+     *
+     * 保护规则（硬约束，不可关闭）：
+     *   以【账号目录 data/zb/users/】为真实玩家白名单。
+     *   只要还在账号表里，无论昵称多像测试号，一律不删。
+     *   这是最贴合真实数据的判据 —— 有注册记录 = 有真人。
+     *
+     * 安全设计：
+     *   ① 先扫描后执行，扫描结果明确列出"删多少 / 留多少"
+     *   ② 执行前自动把索引与榜单原样备份到 data/zb/backup/
+     *   ③ 删除走 Net.delMany（Trees API 单次原子提交），
+     *      要么全删成功、要么一个都不删，不存在清一半的状态
+     * ================================================================= */
+    A.cleanup = {
+      n: '数据清理', i: '🧹', g: '系统', perm: 'account.purge',
+
+      /* 注意：core.js 用 `p.render.call(this)` / `fn.call(this)` 分发，
+       * this 是 APP 而不是页面对象 —— 页面对象上挂的方法（如 isJunk）取不到。
+       * 因此：状态统一存 APP（this.SCAN），工具函数写成模块级。 */
+      render() {
+        const s = this.SCAN;
+        if (!s) {
+          return `<div class="card">
+            <h3>数据清理<span class="tag">清理历史堆积</span></h3>
+            <div class="lbl">云端经过多轮调试与验收，堆积了大量测试号存档、
+              玩家索引幽灵条目（存档已删除但索引还留着）和榜单脏数据，
+              真实玩家的名次被测试号长期占据。</div>
+            <div class="hint">先点「扫描」看清要删什么、保留什么，确认无误后再执行。
+              <b>已注册的账号永远不会被删。</b></div>
+            <div class="btns"><button class="btn pri" data-a="cuScan">🔍 扫描可清理项</button></div>
+          </div>`;
+        }
+        const row = (k, del, keep, note) =>
+          `<tr><td><b>${k}</b></td><td class="err">${del}</td><td class="ok">${keep}</td><td>${U.esc(note || '')}</td></tr>`;
+        return `<div class="card">
+          <h3>数据清理<span class="tag">扫描完成 · ${U.dt(s.at)}</span></h3>
+          <div class="hint">真实玩家白名单来自账号目录 <b>${s.protect.length}</b> 个注册账号，
+            名单内的存档 / 索引 / 榜单条目<b>一个都不会删</b>。</div>
+          <div class="kpis">
+            <div class="kpi"><div class="v">${s.saves.del.length}</div><div class="k">待删存档</div></div>
+            <div class="kpi"><div class="v">${s.idx.del}</div><div class="k">索引幽灵</div></div>
+            <div class="kpi"><div class="v">${s.rank.del + s.endless.del}</div><div class="k">榜单脏数据</div></div>
+            <div class="kpi"><div class="v">${s.junk.length}</div><div class="k">残留文件</div></div>
+          </div>
+          <h3 style="font-size:13px;margin:14px 0 8px">明细</h3>
+          ${this.table(['项目', '将删除', '将保留', '说明'], [
+            row('玩家存档', s.saves.del.length, s.saves.keep.length, '不在账号表的测试号存档'),
+            row('玩家索引', s.idx.del, s.idx.keep, '指向已删除存档的幽灵条目'),
+            row('战力榜', s.rank.del, s.rank.keep, '测试号条目，清完名次重排'),
+            row('无尽榜', s.endless.del, s.endless.keep, '同上'),
+            row('残留文件', s.junk.length, '—', '修仙版遗留配置与历史备份'),
+          ])}
+          ${s.junk.length ? `<div class="lbl" style="margin-top:8px">残留文件：${s.junk.slice(0, 8).map((x) => U.esc(x.path)).join('、')}${s.junk.length > 8 ? ' 等' : ''}</div>` : ''}
+          <div class="btns" style="margin-top:12px">
+            <button class="btn err" data-a="cuRun">🧹 确认清理（${s.total} 项）</button>
+            <button class="btn" data-a="cuScan">🔍 重新扫描</button>
+          </div>
+          <div class="hint err">清理不可恢复。执行前会自动把索引与榜单备份到
+            <code>data/zb/backup/</code>，需要时可人工取回。</div>
+        </div>`;
+      },
+
+      acts: {
+        /* ---------- 扫描：只统计不动手 ---------- */
+        async cuScan() {
+          this.toast('正在扫描…');
+          const s = { at: Date.now(), protect: [], saves: { del: [], keep: [] }, idx: { del: 0, keep: 0 }, rank: { del: 0, keep: 0 }, endless: { del: 0, keep: 0 }, junk: [], total: 0 };
+          try {
+            /* 1. 真实玩家白名单 = 账号目录 */
+            const us = await TMO(Net.list(UDIR), 15000, []);
+            s.protect = (us || []).filter((x) => x.endsWith('.json')).map((x) => x.replace(/\.json$/, ''));
+            const ok = {};
+            s.protect.forEach((u) => { ok[u] = 1; });
+
+            /* 2. 存档文件（Trees API，一次拿全，分支不会错） */
+            const tP = await TMO(Net.tree('players'), 20000, []) || [];
+            const all = tP.filter((p) => /^data\/zb\/players\/[^/]+\.json$/.test(p))
+              .map((p) => p.replace(/^data\/zb\/players\//, '').replace(/\.json$/, ''));
+            all.forEach((u) => { (ok[u] ? s.saves.keep : s.saves.del).push(u); });
+
+            /* 3. 玩家索引 */
+            const ri = await TMO(Net.read(DBP.index), 12000, null);
+            const iList = (ri && ri.data && Array.isArray(ri.data.list)) ? ri.data.list : [];
+            iList.forEach((x) => { if (ok[x.uid]) s.idx.keep++; else s.idx.del++; });
+
+            /* 4. 两个榜单 */
+            for (const k of ['rank', 'endless']) {
+              const r = await TMO(Net.read(DBP[k]), 12000, null);
+              const l = (r && r.data && Array.isArray(r.data.list)) ? r.data.list : [];
+              l.forEach((x) => { if (ok[x.uid]) s[k].keep++; else s[k].del++; });
+            }
+
+            /* 5. 残留文件（两个分支都扫） */
+            for (const br of ['players', 'main']) {
+              const t = await TMO(Net.tree(br), 20000, []) || [];
+              t.forEach((p) => { const why = isJunkFile(p); if (why) s.junk.push({ path: p, br: br, why: why }); });
+            }
+          } catch (e) {
+            this.toast('扫描失败：' + (e && e.message ? e.message : e), 'err');
+            return;
+          }
+          s.total = s.saves.del.length + s.idx.del + s.rank.del + s.endless.del + s.junk.length;
+          this.SCAN = s;
+          this.render();
+          this.toast('扫描完成，共 ' + s.total + ' 项可清理', 'ok');
+        },
+
+        /* ---------- 执行 ---------- */
+        async cuRun() {
+          const s = this.SCAN;
+          if (!s || !s.total) { this.toast('请先扫描', 'err'); return; }
+          /* 批量删除不可逆，要求输入「清理」二字才能按下，避免误点 */
+          const ok = await new Promise((res) => {
+            this.openModal(`
+              <h3>🧹 确认清理 ${s.total} 项</h3>
+              <div class="hint err">
+                将删除：<br>
+                · 测试号存档 <b>${s.saves.del.length}</b> 个<br>
+                · 索引幽灵条目 <b>${s.idx.del}</b> 条<br>
+                · 榜单脏数据 <b>${s.rank.del + s.endless.del}</b> 条<br>
+                · 历史残留文件 <b>${s.junk.length}</b> 个<br><br>
+                账号表里的 <b>${s.protect.length}</b> 个真实玩家完全不受影响。<br>
+                <span class="err">此操作不可恢复。</span>
+              </div>
+              <div class="fr"><label>输入「清理」二字确认</label><input id="cu_kw" placeholder="清理"></div>
+              <div class="btns">
+                <button class="btn err" data-m="ok">确认清理</button>
+                <button class="btn" data-m="close">取消</button>
+              </div>`, {
+              ok: () => {
+                if (String(this.str('#cu_kw') || '').trim() !== '清理') {
+                  this.toast('关键词不匹配，已取消', 'err'); return res(false);
+                }
+                this.closeModal(); res(true);
+              },
+            });
+          });
+          if (!ok) return;
+
+          this.toast('正在清理…');
+          const okSet = {};
+          s.protect.forEach((u) => { okSet[u] = 1; });
+          let done = 0;
+
+          /* ① 备份索引与榜单（删之前原样留一份） */
+          try {
+            const bak = { at: Date.now(), by: 'cleanup' };
+            for (const k of ['index', 'rank', 'endless']) {
+              const r = await TMO(Net.read(DBP[k]), 12000, null);
+              if (r && r.data) bak[k] = r.data;
+            }
+            await Net.write('data/zb/backup/cleanup_' + Date.now() + '.json', bak, '清理前自动备份');
+          } catch (e) {}
+
+          /* ② 索引：只留真实玩家 */
+          try {
+            const ri = await TMO(Net.read(DBP.index), 12000, null);
+            const d = (ri && ri.data) ? ri.data : { list: [] };
+            const before = (d.list || []).length;
+            d.list = (d.list || []).filter((x) => okSet[x.uid]);
+            if (before !== d.list.length) {
+              if (await DB.set(DBP.index, d, '清理：移除索引幽灵 ' + (before - d.list.length) + ' 条')) done += before - d.list.length;
+            }
+          } catch (e) {}
+
+          /* ③ 两个榜单：只留真实玩家并按战力重排 */
+          for (const k of ['rank', 'endless']) {
+            try {
+              const r = await TMO(Net.read(DBP[k]), 12000, null);
+              const d = (r && r.data) ? r.data : { list: [] };
+              const before = (d.list || []).length;
+              d.list = (d.list || []).filter((x) => okSet[x.uid]);
+              if (k === 'rank') d.list.sort((a, b) => (b.pw || 0) - (a.pw || 0));
+              d._rev = String((Number(d._rev) || 0) + 1);
+              d.updated = String(Date.now());
+              if (before !== d.list.length) {
+                if (await DB.set(DBP[k], d, '清理：移除榜单脏数据 ' + (before - d.list.length) + ' 条')) done += before - d.list.length;
+              }
+            } catch (e) {}
+          }
+
+          /* ④ 存档文件 + 残留文件：按分支分组，一次原子提交 */
+          const byBr = {};
+          s.saves.del.forEach((u) => {
+            (byBr.players = byBr.players || []).push('data/zb/players/' + u + '.json');
+          });
+          s.junk.forEach((x) => { (byBr[x.br] = byBr[x.br] || []).push(x.path); });
+          for (const br of Object.keys(byBr)) {
+            const r = await Net.delMany(byBr[br], '一键清理：删除测试存档与历史残留 ' + byBr[br].length + ' 个文件', br);
+            if (r && r.ok) done += r.n;
+            else this.toast(br + ' 分支删除失败', 'err');
+          }
+
+          AUDIT.log('一键数据清理', '', '存档' + s.saves.del.length + ' 索引' + s.idx.del
+            + ' 榜单' + (s.rank.del + s.endless.del) + ' 残留' + s.junk.length + ' 保留' + s.protect.length + '人');
+          this.SCAN = null;
+          this.toast('清理完成，共处理 ' + done + ' 项', 'ok');
+          /* 玩家列表缓存已失效，强制重拉 */
+          try { await this.loadPlayers({ force: true, silent: true }); } catch (e) {}
+          this.render();
+        },
+      },
+    };
   },
 };
