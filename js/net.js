@@ -750,6 +750,65 @@ const Net = {
     return false;
   },
 
+  /* ===============================================================
+   * 批量删除（后台「数据清理」用）
+   *
+   * 为什么不用循环 del()：
+   *   清理测试存档一次要删上百个文件，del() 是「GET 取 sha + DELETE」
+   *   两次请求一个文件 —— 121 个文件就是 242 次请求，
+   *   既慢（分钟级）又容易中途失败留下半清状态。
+   *
+   * 改用 Git Trees API：一次提交原子删除任意数量文件。
+   *   POST /git/trees   { base_tree, tree:[{path, mode, type, sha:null}] }
+   *   POST /git/commits { tree, parents:[head] }
+   *   PATCH /git/refs/heads/<br>
+   * 全部成功才算成功，失败则一个都不删。
+   *
+   * 安全约束：
+   *   - 只走官方端点（Trees API 反代普遍不支持，见tree()注释）
+   *   - paths 为空直接返回 true，不产生空提交
+   *   - 删完清掉对应读缓存，否则后台列表仍显示已删数据
+   * =============================================================== */
+  async delMany(paths, msg, branch) {
+    const list = (paths || []).filter(Boolean);
+    if (!list.length) return { ok: true, n: 0 };
+    const br = branch || (/^data\/zb\//.test(list[0]) ? (GH.dataBranch || GH.branch) : GH.branch);
+    const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
+    const eps = [...GH.extra, 'https://api.github.com'].filter((e, i, a) => e && a.indexOf(e) === i);
+    const call = async (ep, method, path, body) => {
+      const opt = { method, headers: { ...H, 'Content-Type': 'application/json' } };
+      if (body) opt.body = JSON.stringify(body);
+      const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/${path}`, opt, 25000);
+      const j = await r.json().catch(() => null);
+      return { ok: r.ok || r.status === 201, j };
+    };
+    for (const ep of eps) {
+      try {
+        const ref = await call(ep, 'GET', 'git/refs/heads/' + br);
+        if (!ref.ok || !ref.j || !ref.j.object) continue;
+        const head = ref.j.object.sha;
+        const cm = await call(ep, 'GET', 'git/commits/' + head);
+        if (!cm.ok || !cm.j || !cm.j.tree) continue;
+        const base = cm.j.tree.sha;
+        const tree = list.map((p) => ({ path: p, mode: '100644', type: 'blob', sha: null }));
+        const nt = await call(ep, 'POST', 'git/trees', { base_tree: base, tree });
+        if (!nt.ok || !nt.j || !nt.j.sha) continue;
+        const nc = await call(ep, 'POST', 'git/commits', {
+          message: msg || ('批量删除 ' + list.length + ' 个文件'),
+          tree: nt.j.sha, parents: [head],
+        });
+        if (!nc.ok || !nc.j || !nc.j.sha) continue;
+        const up = await call(ep, 'PATCH', 'git/refs/heads/' + br, { sha: nc.j.sha });
+        if (!up.ok) continue;
+        /* 清缓存：否则后台列表仍显示已删除的条目 */
+        try { for (const p of list) localStorage.removeItem(LS.cache + p); } catch (e) {}
+        this._treeCache[br] = null;
+        return { ok: true, n: list.length, commit: nc.j.sha };
+      } catch (e) {}
+    }
+    return { ok: false, n: 0 };
+  },
+
   /* 列出目录
    * ===============================================================
    * 致命 BUG 修复（后台长期只显示 1~2 个玩家的真凶）：
