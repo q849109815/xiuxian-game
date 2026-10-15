@@ -3933,8 +3933,19 @@ r_tavern(p, tab) {
     if (!b) return;
     $('#lvupNum').textContent = lv;
     /* 「R币」是早期套用参考截图时的残留叫法，全项目其余地方（商店/军团/提示/关卡面板）
-     * 一律称「金币」，玩家在结算页看到「R币」会以为是另一种货币。统一为「金币」。 */
-    $('#lvupRw').innerHTML = '获得 <b style="color:var(--yel)">' + (rw || 200) + '</b> 金币';
+     * 一律称「金币」，玩家在结算页看到「R币」会以为是另一种货币。统一为「金币」。
+     *
+     * 【公示必须等于实发】BUG：这里原写 `(rw || 200)`，而战斗外升级走
+     *   E.addXp() → UI.showLvUp(p.lv, 0) 明确传 0（addXp 只加等级属性与天赋点，
+     *   不发任何金币）。`0 || 200` 被兜成 200，弹窗于是显示「获得 200 金币」，
+     *   实测金币增量 0 —— 玩家每次在战斗外升级（领任务/邮件/扫荡/签到都会调 addXp）
+     *   都会看到一个从没发过的奖励。
+     *   现在按真实值渲染：发多少显示多少，0 就整行不显示（只留等级徽章）。
+     *   战斗内升级由 battle.js 传真实 lvRw（并确实加进 r.coin），不受影响。 */
+    const _lvRw = Math.max(0, Math.floor(Number(rw) || 0));
+    $('#lvupRw').innerHTML = _lvRw > 0
+      ? '获得 <b style="color:var(--yel)">' + E.fmt(_lvRw) + '</b> 金币'
+      : '';
     b.classList.add('on');
     if (window.SND) SND.play('upgrade');
     clearTimeout(this._lvT);
