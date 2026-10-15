@@ -331,7 +331,7 @@ const UI = {
     }
 
     $('#hmBase').innerHTML = EX.buildings.map((b) => {
-      const l = p.build[b.id] || 1;
+      const l = E.buildLv(p, b.id);
       return `<button class="bs" data-build="${b.id}"><i>${b.img ? `<img src="${b.img}" alt="">` : b.icon}</i><b>${b.n} Lv.${l}</b><span>${b.desc}</span></button>`;
     }).join('');
     $$('#hmBase .bs').forEach((el) => { el.onclick = () => this.open('base', el.dataset.build); });
@@ -1211,7 +1211,12 @@ r_tavern(p, tab) {
      *      玩家面板写着 1.8 秒，实战可能只要 1.5 秒 —— 显示与实际不符。
      * 这里按同一公式算出实战值，与「面板伤害」一样展示为「基础 → 实战」。 */
     const _rlBase = Number(g.reload) || 0;
-    const _rlReal = Math.max(0.3, _rlBase * (1 - Math.min(0.4, ((p.build && p.build.armory) || 0) * 0.01)) - (Number(a.reloadCut) || 0));
+    /* 军械库换弹：每级 -1%，上限 -40%。原写法 `(p.build.armory || 0) * 0.01`
+     * 意味着【1 级就减 1%】，这里必须保持同一口径，只补类型转换防御，
+     * 不能改成 (lv-1)，否则 1 级建筑的效果会被抹掉。 */
+    const _armLv = Number((p.build && p.build.armory) || 0);
+    const _armCut = (isFinite(_armLv) && _armLv > 0 ? _armLv : 0) * 0.01;
+    const _rlReal = Math.max(0.3, _rlBase * (1 - Math.min(0.4, _armCut)) - (Number(a.reloadCut) || 0));
     /* 等级显示兜底：gunLv 在 E.attrs / E.advOf 内部都按数字处理，
      * 唯独这里直接拼进模板。后台 GM 改档若写入非数字（如对象/字符串），
      * 实测会原样渲染成「Lv.[object Object]」「Lv.NaN」——玩家看着像存档坏了。
@@ -2818,7 +2823,7 @@ r_tavern(p, tab) {
       /* 建筑表被清空时上面两个都是 undefined，读 b.id 直接抛错，
        * 基地 4 个页签全部白屏。这里给一个占位，保证界面始终可用。 */
       || { id: 'hospital', n: '医疗站', icon: '🏥', stat: 'hp', per: 0.05, max: 20, desc: '建筑表为空' };
-    const cur = p.build[b.id] || 1;
+    const cur = E.buildLv(p, b.id);
     const cost = E.buildCost(p, b.id);
     /* 仓库（stat==='gold'）此前显示写死的 offline(120)×等级，与实际产出不符 */
     const val = b.stat === 'gold' ? E.offlineRate(p) + ' 金币/小时' : '+' + (cur * b.per * 100).toFixed(0) + '%';
