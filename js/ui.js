@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270216a';
+const IMG_V = '20270217a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -1115,7 +1115,11 @@ r_tavern(p, tab) {
     $$('#pnBody [data-chsel]').forEach((el) => { el.onclick = () => {
       const r = E.switchChar(p, el.dataset.chsel);
       this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { if (window.SND) SND.play('pickup'); this.open('role', '装备'); this.home(); }
+      /* 切换角色必须立即落盘（与相邻「皮肤穿戴 / 升星 / 宝石镶嵌」同一口径）。
+       * BUG：E.switchChar 会改写 p.char / p.skin / p.skinByChar，内部不 save，
+       *   这里此前也只 open + home —— 实测切换角色后强退 / 换设备登录会读回旧角色，
+       *   而皮肤（p.skinByChar 记忆）也一并丢失。补立即保存。 */
+      if (r.ok) { if (window.SND) SND.play('pickup'); E.save(p); this.open('role', '装备'); this.home(); }
     }; });
     $$('#pnBody [data-gemon]').forEach((b) => { b.onclick = () => {
       const g = (EX.gems || []).find((x) => x.id === b.dataset.gemon);
@@ -1124,6 +1128,8 @@ r_tavern(p, tab) {
        * 且两处卸下都不返还 —— 反复镶嵌卸下会让宝石凭空蒸发。 */
       const r = E.setGem(p, b.dataset.gemon);
       if (!r.ok) return this.toast(r.msg, 'err');
+      /* 落盘由 E.setGem 内部统一负责（镶嵌/卸下两个分支都已自带 save），
+       * 这里不重复 save —— 每多调一次就是一次云端写入。 */
       this.toast('已镶嵌 ' + g.n, 'ok'); this.open('role', '宝石'); this.home();
     }; });
     $$('#pnBody [data-gemoff]').forEach((b) => { b.onclick = () => {
@@ -2220,7 +2226,8 @@ r_tavern(p, tab) {
       if (!p.gemOn) return this.toast('当前没有镶嵌宝石', 'err');
       const r = E.setGem(p, null);
       this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { E.save(p); this.open('gem'); this.home(); }
+      /* 落盘由 E.setGem 内部统一负责，这里不重复 save */
+      if (r.ok) { this.open('gem'); this.home(); }
     };
     const ib = $('#gemInlay');
     if (ib) ib.onclick = () => {
@@ -2230,7 +2237,8 @@ r_tavern(p, tab) {
       const r = E.setGem(p, id);
       if (!r.ok) return this.toast(r.msg, 'err');
       if (window.SND) SND.play('upgrade');
-      E.save(p); this.toast('镶嵌成功：' + g.n, 'ok'); this.open('gem'); this.home();
+      /* 落盘由 E.setGem 内部统一负责，这里不重复 save */
+      this.toast('镶嵌成功：' + g.n, 'ok'); this.open('gem'); this.home();
     };
   },
 
