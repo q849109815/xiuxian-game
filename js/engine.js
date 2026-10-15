@@ -2702,18 +2702,45 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 月末同理：9/30 16:00 之后 month key 变成 202610 → 每月限购一个月能买两次。
      * 修法：既然已经 +8h 构造，就必须用 getUTC* 系列读取，才是真正的 UTC+8 业务日。 */
     const d = new Date(now + 8 * 36e5);          /* UTC+8 业务日 */
+    /* 【周期 key 缺失时的兜底】
+     * 旧写法只看「周期 key 是否等于今天」——记录里没有 key 就一律判定
+     * 「周期变了」，把已购次数 n 清零。正常流程里记录都是买完当场写的、
+     * 一定带 key，所以看不出问题；但存档在本机 localStorage，玩家可以直接
+     * 把 dk / wk / mk 字段删掉：
+     *   实测：achShopBuy={'as_AS01':{n:99}}（限购 10）→ achShopBought() 返回 0，
+     *   兑换【成功】，n 被重置成 1 —— 限购形同虚设，可无限刷。
+     * 修法：key 缺失时改用记录的最后修改时间 rec.t 反推它属于哪一周期；
+     *   t 算出来仍是本期 → 说明这就是本期的记录，保留 n、只补 key；
+     *   t 算出来是上一期 → 确实是新周期，正常清零；
+     *   t 也缺失或落在未来（改钟/手改存档）→ 无法证明已过期，【保留 n】，
+     *   宁可少给额度也不放开通刷。新建记录恒带 t 且 n=0，不受影响。 */
+    const _t = Number(rec && rec.t);
+    const _tOk = isFinite(_t) && _t > 0 && _t <= now + 864e5;
+    const _rd = _tOk ? new Date(_t + 8 * 36e5) : d;
     if (per === 'day') {
       const key = d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
-      if (rec.dk !== key) { rec.n = 0; rec.dk = key; rec.t = now; }
+      if (rec.dk !== key) {
+        if (_tOk && (_rd.getUTCFullYear() * 10000 + (_rd.getUTCMonth() + 1) * 100 + _rd.getUTCDate()) === key) rec.dk = key;
+        else if (!_tOk) rec.dk = key;
+        else { rec.n = 0; rec.dk = key; rec.t = now; }
+      }
     } else if (per === 'week') {
       /* 自然周：以周一为起点 */
-      const day = (d.getUTCDay() + 6) % 7;        /* 周一=0 */
-      const mon = new Date(d.getTime() - day * 864e5);
-      const key = mon.getUTCFullYear() * 10000 + (mon.getUTCMonth() + 1) * 100 + mon.getUTCDate();
-      if (rec.wk !== key) { rec.n = 0; rec.wk = key; rec.t = now; }
+      const _wk = (x) => { const dd = (x.getUTCDay() + 6) % 7; const m = new Date(x.getTime() - dd * 864e5);
+        return m.getUTCFullYear() * 10000 + (m.getUTCMonth() + 1) * 100 + m.getUTCDate(); };
+      const key = _wk(d);
+      if (rec.wk !== key) {
+        if (_tOk && _wk(_rd) === key) rec.wk = key;
+        else if (!_tOk) rec.wk = key;
+        else { rec.n = 0; rec.wk = key; rec.t = now; }
+      }
     } else if (per === 'month') {
       const key = d.getUTCFullYear() * 100 + (d.getUTCMonth() + 1);
-      if (rec.mk !== key) { rec.n = 0; rec.mk = key; rec.t = now; }
+      if (rec.mk !== key) {
+        if (_tOk && (_rd.getUTCFullYear() * 100 + (_rd.getUTCMonth() + 1)) === key) rec.mk = key;
+        else if (!_tOk) rec.mk = key;
+        else { rec.n = 0; rec.mk = key; rec.t = now; }
+      }
     } else if (per === 'once') { /* 终身 */ }
     /* per: 'ev'（活动期间限购）
      * BUG：此前 'ev' 不进任何分支 → 计数【永不重置】。
@@ -2729,7 +2756,12 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     else if (per === 'ev') {
       const mk2 = d.getUTCFullYear() * 100 + (d.getUTCMonth() + 1);
       if (rec.ev != null && rec.ev !== (evName || '')) { rec.n = 0; rec.t = now; }
-      if (rec.mk !== mk2) { rec.n = 0; rec.mk = mk2; rec.t = now; }
+      if (rec.mk !== mk2) {
+        /* 同上：mk 被删掉时不能无条件清零，先用 t 判断是不是本月内的记录 */
+        if (_tOk && (_rd.getUTCFullYear() * 100 + (_rd.getUTCMonth() + 1)) === mk2) rec.mk = mk2;
+        else if (!_tOk) rec.mk = mk2;
+        else { rec.n = 0; rec.mk = mk2; rec.t = now; }
+      }
       rec.ev = evName || '';
     }
     return true;
@@ -3602,17 +3634,22 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   /* 洗练：普通消耗金币，传说消耗钻石 */
   rerollAffix(p, legend) {
     const gid = p.gunId || (this.gun(p) || {}).id || 'W01';
-    p.gunAffix = p.gunAffix || {};
-    p.gunAffix[gid] = p.gunAffix[gid] || [];
+    /* 【原子性】容器初始化必须放在扣费判定【之后】。
+     * 旧写法在读到价格之前就 `p.gunAffix = p.gunAffix || {}` 并给槽位建空数组，
+     * 于是「钻石/金币不够 → 返回失败」这条路径上存档照样被改写 ——
+     * 界面上什么都没发生，存档却多出一个空的词条槽，save 后即为脏数据。
+     * 实测：洗练前 gunAffix 为 {}，洗练失败后变成 {"W01":[]}。 */
     if (legend) {
       const c = EX.AFFIX_REROLL_LEGEND_DIA;
       if ((p.diamond || 0) < c) return { ok: false, msg: EX.tip('popup.noDiamond', { v: c }) };
       p.diamond -= c;
+      p.gunAffix = p.gunAffix || {};
       p.gunAffix[gid] = [EX.rollAffixOne(true), EX.rollAffixOne(true)].slice(0, this.gunSlots(p));
     } else {
       const c = EX.AFFIX_REROLL_GOLD;
       if ((p.gold || 0) < c) return { ok: false, msg: EX.tip('popup.noCoin', { v: this.fmt(c) }) };
       p.gold -= c;
+      p.gunAffix = p.gunAffix || {};
       p.gunAffix[gid] = [];
       for (let i = 0; i < this.gunSlots(p); i++) p.gunAffix[gid].push(EX.rollAffixOne(false));
     }
