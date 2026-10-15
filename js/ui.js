@@ -2,7 +2,7 @@
  * 而不是返回 null，裸调会让本模块初始化中断（实测禁用存储后整页白屏）。
  * 这里统一走包装，读取失败回落默认值，写入失败静默忽略。 */
 function lsGet(k, dflt) { try { const v = localStorage.getItem(k); return v === null || v === undefined ? dflt : v; } catch (e) { return dflt; } }
-function lsSet(k, v) { try { lsSet(k, v); return true; } catch (e) { return false; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
 /* =========================================================
  * ui.js —— 界面层
  * 依据资料 07 模块关系表（16 界面）/ 08 跳转流程
@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270211a';
+const IMG_V = '20270213a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
