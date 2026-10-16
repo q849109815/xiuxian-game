@@ -1943,3 +1943,9 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 .hmb .nv-dot{position:absolute;top:0;right:6px;min-width:14px;height:14px;padding:0 3px;
   border-radius:7px;background:var(--red);color:#fff;font-size:9px;font-weight:800;font-style:normal;
   line-height:14px;text-align:center;box-shadow:0 0 6px rgba(255,60,60,.8)}
+
+/* 任务奖励行：图标 + 数量并排（材料/成就点走文字，货币走图标） */
+.rwRow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:2px;line-height:16px}
+.rwRow .ei{width:13px;height:13px;vertical-align:-2px;margin-right:2px}
+.rwT{color:var(--yel);font-size:11px;font-weight:600;white-space:nowrap}
+.rwT+.rwT{margin-left:2px}
