@@ -3235,10 +3235,16 @@ r_tavern(p, tab) {
         <span style="opacity:.75">注意：地址要填域名根（如 https://xxx.workers.dev），不要带 /https://api.github.com 后缀。</span></div></div>`;
     }
     if (tab === '数值') {
+      /* BUG：资料表的 note（口径澄清）与 growth 的 key（关键提示）此前【零渲染】——
+       * 界面只显示「名称 + 公式」，于是那些专门写来防玩家算错的说明
+       * （如「暴伤 150% 即 ×1.5，不是 ×2.5」「经验加成 = 天赋 + 研究所」
+       *  「护盾最多叠到防线上限 ×1.5」「吸血有节流上限」）一条都看不到。
+       * 玩家只看公式反而更容易按错误口径估算。这里补上说明行。 */
+      const _note = (s) => (s ? `<div style="grid-column:1/-1;font-size:10.5px;opacity:.72;line-height:1.5;margin:-2px 0 4px;white-space:normal;word-break:break-all">${this.esc(s)}</div>` : '');
       return `<div class="card"><div class="card-t">伤害公式 <span class="sub">资料 ${(EX.formulas || []).length} 条</span></div>
-        ${EX.formulas.map((f) => `<div class="kv"><span style="font-size:11px">${f.n}</span><b class="wrapv" style="font-size:11px">${f.f}</b></div>`).join('')}</div>
+        ${EX.formulas.map((f) => `<div class="kv"><span style="font-size:11px">${f.n}</span><b class="wrapv" style="font-size:11px">${f.f}</b></div>${_note(f.note)}`).join('')}</div>
         <div class="card"><div class="card-t">成长曲线</div>
-        ${EX.growth.map((g) => `<div class="kv"><span style="font-size:11px">${g.n}</span><b class="wrapv" style="font-size:11px">${g.curve}</b></div>`).join('')}</div>`;
+        ${EX.growth.map((g) => `<div class="kv"><span style="font-size:11px">${g.n}</span><b class="wrapv" style="font-size:11px">${g.curve}</b></div>${_note(g.key)}`).join('')}</div>`;
     }
     const ac = window.UA ? UA.remembered() : {};
     return `<div class="card"><div class="card-t">账号 <span class="sub">账号密码登录</span></div>
