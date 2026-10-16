@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270227a';
+const IMG_V = '20270228a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -431,6 +431,23 @@ const UI = {
       mn = ml.filter((m) => m && !m.got && (this.mailActive ? this.mailActive(m) : true)).length;
     } catch (e) { mn = 0; }
     set('mail', mn);
+    /* 活动：可领奖励数（各活动「领奖」+ 每日签到）
+     * BUG：此前 navDots 只给 task / mail 两个入口打点，而活动面板实测
+     *   有 4 个「领奖」按钮 + 「每日签到」共 5 个可点、主界面却完全没有提示 ——
+     *   玩家不进活动页根本不知道有东西可领，活动奖励长期被漏领。
+     *   签到按钮同理：今天没签也没有任何标识。
+     * 这里用 E.actClaimable（与 r_act 渲染 / actRwTake 拦截同口径）统一计数。 */
+    let an = 0;
+    try { an = E.actClaimable ? E.actClaimable(p) : 0; } catch (e) { an = 0; }
+    set('act', an);
+    /* 基地：离线收益可领
+     * 同样是「有东西可领却没有入口提示」，与主界面「领取离线收益」按钮同口径。 */
+    let bn = 0;
+    try {
+      const _c = E.offlineCalc ? E.offlineCalc(p) : null;
+      bn = (_c && ((_c.gold || 0) > 0 || (_c.metal || 0) > 0 || (_c.xp || 0) > 0)) ? 1 : 0;
+    } catch (e) { bn = 0; }
+    set('base', bn);
   },
 
   /* ================= 面板 ================= */
@@ -2659,8 +2676,17 @@ r_tavern(p, tab) {
       /* 未开始 / 已结束的活动此前照样渲染出「领奖」按钮（点下去也能领到，
        * engine.actRwTake 那边已加拦截）。这里同步置灰，避免玩家点了才被拒。 */
       const off = a.status && a.status !== '运行中';
+      /* 参与条件（等级 / 通关数 / 无尽波次 / 需先签到 / 需先打 BOSS 突袭）
+       * BUG：这里此前只判「有 rw / 未领 / 运行中」，完全不看 actCondOk ——
+       *   而 engine.actRwTake 是会判的。结果按钮渲染成绿油油的「领奖」且可点，
+       *   玩家点下去才弹一句「需无尽模式达到 1 波」被拒（实测 EV01/EV02/EV03/EV06
+       *   四个按钮全部如此），看着像按钮坏了。
+       *   与「体力已满」「已拥有」同一口径：条件不满足就置灰并说明，点了才被拒属于谎报。 */
+      let cd = { ok: true, msg: '' };
+      try { cd = (E.actCondOk ? E.actCondOk(p, a) : null) || { ok: true, msg: '' }; } catch (e) { cd = { ok: true, msg: '' }; }
       h += got ? '<span class="st off">已领</span>'
         : off ? `<span class="st off">${a.status === '待开启' ? '未开始' : '已结束'}</span>`
+        : !cd.ok ? `<span class="st off" title="${String(cd.msg || '').replace(/"/g, '')}">未达条件</span>`
         : `<button class="btn sm g" data-actrw="${a.id}" style="margin-left:4px">领奖</button>`;
     }
     return h;
@@ -2703,7 +2729,7 @@ r_tavern(p, tab) {
         return `<div class="gcell ${got ? 'sel' : ''}">
           <div class="gi">${got ? '✔' : '🎁'}</div><div class="gn">第${d}天</div></div>`;
       }).join('')}</div>
-      <button class="btn" id="actSign" style="width:100%;margin-top:8px">每日签到</button>
+      <button class="btn" id="actSign" ${E.signDone(p) ? 'disabled' : ''} style="width:100%;margin-top:8px">${E.signDone(p) ? '今日已签到' : '每日签到'}</button>
     </div>`;
   },
   b_act(p, tab) {
@@ -2914,7 +2940,7 @@ r_tavern(p, tab) {
       <div class="card"><div class="card-t">离线产出</div>
       <div class="kv"><span>仓库离线收益</span><b style="color:var(--gold)">${E.fmt(E.offlineIncome(p))} 金币</b></div>
       <div class="kv"><span>同时产出</span><b>${ofc.metal} 金属 · ${ofc.xp} 经验</b></div>
-      <button class="btn blk" id="buClaim">领取离线收益</button>
+      <button class="btn blk" id="buClaim" ${(ofc.gold > 0 || ofc.metal > 0 || ofc.xp > 0) ? '' : 'disabled'}>${(ofc.gold > 0 || ofc.metal > 0 || ofc.xp > 0) ? '领取离线收益' : '暂无可领（离线时间太短）'}</button>
       <div class="lbl">离线最多累计 8 小时。</div></div>`;
   },
   b_base(p, tab) {
