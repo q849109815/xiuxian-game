@@ -136,7 +136,14 @@ const MAIN = {
      * 但离线或账号文件缺失时，玩家存档里的 p.ban 也要能拦住。
      * 提示统一走 banInfo：玩家看得到封多久、何时解封、为什么。 */
     const bInfo = (window.UA && UA.banInfo) ? UA.banInfo(p)
-      : { on: !!(p && p.ban) && (!p.banUntil || p.banUntil > AUTH_NOW()), text: '' };
+      /* banUntil 未被 sanitize 的 NUMS 覆盖（它是封禁到期时间戳），
+       * 后台改档写成非数字字符串时，裸比较 `p.banUntil > AUTH_NOW()` 恒为 false
+       * → 兜底封禁判定失效，被封玩家照样能进游戏。统一按有限数字判定。 */
+      : (() => {
+        const _bu = Number(p && p.banUntil);
+        const _on = !!(p && p.ban) && (!isFinite(_bu) || _bu <= 0 || _bu > (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now()));
+        return { on: _on, text: '' };
+      })();
     if (bInfo.on) {
       const msg = bInfo.text || ('🚫 该账号已被封禁\n理由：' + ((p && p.banReason) || '违规处理'));
       const html = msg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
