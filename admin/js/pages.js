@@ -353,7 +353,26 @@ const PAGES = {
           if (changed('#e_dia')) patch.diamond = cl('#e_dia', 0, 1e15, p.diamond || 0);
           if (changed('#e_stam')) patch.stamina = cl('#e_stam', 0, 9999, p.stamina || 0);
           if (changed('#e_ach')) patch.ach = cl('#e_ach', 0, 1e12, p.ach || 0);
-          if (changed('#e_lv')) patch.lv = cl('#e_lv', 1, 999, p.lv || 1);
+          if (changed('#e_lv')) {
+            const _nl = cl('#e_lv', 1, 999, p.lv || 1);
+            const _ol = Math.max(1, Math.floor(Number(p.lv) || 1));
+            /* BUG：等级改了，攻击/生命/战力一点不涨。
+             * 战力与战斗属性读的是【累计派生值】p.lvBonusAtk / p.lvBonusHp
+             * （engine.js power()/attrs()：`(atk + (p.lvBonusAtk||0)) * …`），
+             * 它们只在 E.addXp() 里每升一级 +6 攻击 / +80 生命，
+             * 与 p.lv 本身没有换算关系。此前这里只写 patch.lv，
+             * 实测把等级改成 200：p.lv=200 而 lvBonusAtk 仍是旧值，
+             * 战力 4521 → 4521（纹丝不动），正确应为 27215 ——
+             * GM 改等级除了解锁条件外完全不生效。
+             * 现在按「每级 +6 攻击 / +80 生命」（表25）同步派生值。
+             * 正常升级路径下 lvBonusAtk 恒等于 (lv-1)*6，故对既有玩家无副作用。
+             * 天赋点只补不扣：玩家可能已消耗过，不能按 lv/10 直接覆盖。 */
+            patch.lv = _nl;
+            patch.lvBonusAtk = (_nl - 1) * 6;
+            patch.lvBonusHp = (_nl - 1) * 80;
+            const _d = Math.floor(_nl / 10) - Math.floor(_ol / 10);
+            if (_d > 0) patch.tp = (Number(p.tp) || 0) + _d;
+          }
           if (changed('#e_gunlv')) patch.gunLv = cl('#e_gunlv', 1, 999, p.gunLv || 1);
           if (changed('#e_eb')) patch.endlessBest = cl('#e_eb', 0, 1e9, p.endlessBest || 0);
           if (changed('#e_cur') && this.str('#e_cur')) patch.curLevel = this.str('#e_cur');
