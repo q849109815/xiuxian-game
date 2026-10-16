@@ -2081,8 +2081,19 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* 用权威时间判定到期：此前用设备时钟，玩家把时间往回调
      * 就能让已过期的月卡「复活」，反复领取每日钻石。 */
     const _n = this.now();
-    if (_n > mc.until) return 0;
-    return Math.ceil((mc.until - _n) / 86400000);
+    /* 到期时间必须收敛成有限数字：
+     * 后台热改档 / 旧存档可能把 until 写成 'abc'、NaN、Infinity 之类脏值。
+     * 此前直接参与比较与减法——
+     *   until='abc'  → `_n > mc.until` 恒 false → (mc.until - _n) = NaN
+     *                  → Math.ceil(NaN) = NaN → 而 `NaN <= 0` 也是 false，
+     *                    于是「已过期」判定失效，月卡永远可领，
+     *                    提示还显示「剩 NaN 天」（实测可领，钻石照发）。
+     *   until=Infinity → 剩 Infinity 天，等于永久月卡。
+     * 现在脏值一律按 0 天（未开通/已过期）处理，绝不放行。 */
+    const _u = Number(mc.until);
+    if (!isFinite(_u)) return 0;
+    if (_n > _u) return 0;
+    return Math.ceil((_u - _n) / 86400000);
   },
   /* 每日领取，返回 {ok,msg} */
   monthCardClaim(p) {
