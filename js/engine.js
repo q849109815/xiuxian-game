@@ -1138,7 +1138,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * p.build[id] 写成字符串/对象（实测 'BAD' / {} 让战力变 NaN）。
      * 这里统一转有限数，取不到就按 1 级算。 */
     const lv = Number((p.build || {})[b.id]);
-    return (isFinite(lv) && lv > 0 ? lv : 1) * b.per;
+    /* 【属性必须和显示同上限】buildLv() 会把等级钳到 b.max（配置 30），
+     * 但这里此前直接用原始 lv —— 后台 GM 热改档把 p.build[id] 写成 999 时，
+     * 面板显示「Lv.30」而属性却按 999 级结算（hospital: 999×0.06=59.94
+     * 对比 30 级的 1.8，差 33 倍），显示与实装严重不一致。
+     * 现在统一钳到 b.max，与 buildLv() 同口径。 */
+    const mx = (b.max ? b.max : (this.BUILD_MAX_LV || 20));
+    const cl = Math.min(mx, Math.max(1, Math.floor(isFinite(lv) && lv > 0 ? lv : 1)));
+    return cl * b.per;
   },
   buildCost(p, id) {
     const b = EX.buildings.find((x) => x.id === id); if (!b) return 0;
