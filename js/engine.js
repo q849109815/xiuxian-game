@@ -2738,6 +2738,42 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const d = new Date(this.now() + 8 * 3600000);
     return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
   },
+  /* 今日是否已签到（与 sign() 同一基准：UTC+8 日历日整数）
+   * 给 UI 做「按钮置灰 / 红点数」用，避免各处分头算导致口径不一致。 */
+  signDone(p) { return !!(p && p.signDay && p.signDay === this._utc8dayNum()); },
+  /* 活动面板里当前真正能领的奖励数（领奖按钮 + 每日签到），
+   * 必须与 r_act 渲染、actRwTake 拦截三者同口径，否则红点会骗人：
+   *   多算 → 玩家看到红点进去一个都领不到（此前修过任务红点同类问题）；
+   *   少算 → 玩家漏领活动奖励。
+   * 这里只数「按钮真的会渲染出来且点得动」的那些。 */
+  actClaimable(p) {
+    let n = 0;
+    if (!p) return 0;
+    try {
+      const now = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
+      const acts = (EX.acts || EX.activities || []).filter((a) => {
+        if (!a) return false;
+        if (a.status === '强制下架') return false;
+        if (a.endAt && now > a.endAt) return false;
+        if (a.startAt && now < a.startAt - 864e5 * 30) return false;
+        return true;
+      });
+      acts.forEach((a) => {
+        if (!a.rw || !Object.keys(a.rw).length) return;           /* 无奖励 → 不渲染按钮 */
+        if (a.status && a.status !== '运行中') return;             /* 未开始/已结束 → 渲染成灰标签 */
+        if (this.actRwGot(p, a.id)) return;                        /* 已领 → 渲染成「已领」 */
+        /* actRwTake 还会再判一次参与条件（等级/通关数/无尽波次/需先签到），
+         * 条件不满足时点下去会被拒 —— 与红点口径统一，这里一并排除。
+         * 注意：cond.signToday 要求「先签到」，若今天还没签到，
+         * 该活动与签到按钮各算 1，红点合计 2，玩家先签到再回来领，顺序正确。 */
+        const c = this.actCondOk(p, a);
+        if (c && !c.ok) return;
+        n++;
+      });
+    } catch (e) { return 0; }
+    if (!this.signDone(p)) n++;                                    /* 每日签到 */
+    return n;
+  },
   /* 本期是否已领（带周期重置）。旧档 actRwGot[id] 是数字 1 → 迁移为 {n:1} */
   actRwGot(p, id) {
     const a = this.actOf(id);
