@@ -2145,7 +2145,10 @@ r_tavern(p, tab) {
          * 现在：未过期则【叠加】到原到期日之后，并保留当日领取记录。 */
         const _now = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
         const _old = p.monthCard;
-        const _base = (_old && Number(_old.until) > _now) ? Number(_old.until) : _now;
+        /* 叠加基准同样要排除脏值：until 为 Infinity / 非数字时
+         * `Number(x) > _now` 会成立，导致 until 算出 Infinity → 永久月卡。 */
+        const _u0 = _old ? Number(_old.until) : 0;
+        const _base = (isFinite(_u0) && _u0 > _now) ? _u0 : _now;
         const _last = (_old && _old.last) ? _old.last : '';
         p.monthCard = { until: _base + 30 * 86400000, last: _last };
         this.toast('月卡开通成功！剩余 ' + E.monthCardLeft(p) + ' 天，每日可领 钻石50+体力60', 'ok');
