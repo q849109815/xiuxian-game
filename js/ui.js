@@ -257,6 +257,11 @@ const UI = {
   },
   toast(msg, cls) {
     const box = $('#toasts'); if (!box) return;
+    /* 失败提示配反馈音（audio.js 的 'error'）：
+     * 这条音效此前整项目零调用 —— 玩家点下"金币不足/条件不满足"这类操作时
+     * 只有一行文字飘过，屏幕角落一闪就没了，很容易以为自己没点到。
+     * 'error' 已在 SND.MIN_GAP 登记 300ms 节流，连点不会变成连续蜂鸣。 */
+    if (cls === 'err') { try { if (window.SND) SND.play('error'); } catch (e) {} }
     const d = document.createElement('div');
     d.className = 'toast ' + (cls || ''); d.innerHTML = msg;
     emojify(d);
@@ -4050,7 +4055,11 @@ r_tavern(p, tab) {
       ? '获得 <b style="color:var(--yel)">' + E.fmt(_lvRw) + '</b> 金币'
       : '';
     b.classList.add('on');
-    if (window.SND) SND.play('upgrade');
+    /* 角色/局内等级提升走 'levelup'（audio.js 里专门做的「上行三音」），
+     * 此前这里播的是 'upgrade' —— 那条在音效表里的注释是「强化成功」，
+     * 与武器强化、装备打造共用同一个音，玩家分不清自己是升级了还是强化了。
+     * 'levelup' 此前整项目零调用，属于配了没接线的死音效。 */
+    if (window.SND) SND.play('levelup');
     clearTimeout(this._lvT);
     this._lvT = setTimeout(() => b.classList.remove('on'), 2200);
   },
