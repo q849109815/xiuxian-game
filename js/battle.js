@@ -2415,6 +2415,25 @@ const BT = {
         if (!r._chillToast) { r._chillToast = 1; try { if (window.VO) VO.say('VO_006'); } catch (e) {} }
         if (window.SND) SND.play('chill');
       }
+      /* poison → 防线中毒 DoT（每 0.5s 扣一次，持续 4 秒，刷新不叠加）
+       * 此前 poison 只在【远程】分支生效（shootEnemy → enemyBulletHit 里
+       * `b.kind === 'poison'` 才写 r.poison/poisonT），近战僵尸撞墙/接触
+       * 走的是 hurtPlayer(z.dmg, z.n, z)，从不经过那条路径。
+       * 实测：护士僵尸（ai:'chase'、poison:8、skill「毒素注射」）打满 10 秒，
+       *   r.poisonT 恒为 0 —— 配置承诺的「注射毒素，持续掉血」从未发生，
+       *   它实际只是一只普通近战僵尸（同场对照：远程的毒僵尸 poisonT=4 正常）。
+       * 这里与 fire/chill 同处补齐，近战与远程统一按 d.poison 结算。
+       * 远程毒僵尸即便同时触发也只取 max，不会叠加两层。 */
+      const pv = Number(zo.d && zo.d.poison);
+      if (isFinite(pv) && pv > 0) {
+        r.poison = Math.max(Number(r.poison) || 0, pv);
+        r.poisonT = Math.max(Number(r.poisonT) || 0, 4);
+        if (!r._poisonToast) {
+          r._poisonToast = 1;
+          try { if (window.SND) SND.play('hit'); } catch (e) {}
+          setTimeout(() => { r._poisonToast = 0; }, 1200);
+        }
+      }
     }
     let d = dmg;
     if (r.shield > 0) {
