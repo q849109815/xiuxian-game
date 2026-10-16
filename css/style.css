@@ -1830,8 +1830,16 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 /* 名称与描述改为完整显示：此前 line-clamp:2 把「金币2000+金属50+枪械碎片10+急救包3」
    这类描述砍掉一半（内容 58px / 可视 29px），玩家看不到商品到底给什么。
    格子已是 aspect-ratio:auto + min-height 自适应，去掉截断不会把布局顶坏。 */
+/* overflow-wrap:anywhere —— 窄屏（320/360px）下格子被压得很窄时，
+ * 「幸存者-杰克」+「使用中」标签这类内容会顶破格子横向溢出（实测 320px：
+ * 内容 38px / 可视 25px，文字压到相邻格子上）。加断行后长内容换行不溢出。 */
 .gcell .gn{white-space:normal;overflow:visible;display:block;text-overflow:clip;
+  overflow-wrap:anywhere;word-break:break-word;
   -webkit-line-clamp:unset;text-align:center}
+/* 格子内的「使用中 / 穿戴中」小标签在 320px 窄屏下实测 33px 宽，
+ * 而格子只有 25px —— 标签把文字顶出格子、压到相邻格子上。
+ * 限宽后标签内部自动折行，不再横向溢出。 */
+.gcell .tag{max-width:100%;overflow-wrap:anywhere}
 .gcell .lbl{display:block;-webkit-line-clamp:unset;-webkit-box-orient:vertical;
   overflow:visible;text-align:center;line-height:1.35}
 
