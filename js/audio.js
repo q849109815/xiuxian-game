@@ -70,7 +70,10 @@ const SND = {
    * 若每发都新建一个振荡器 + 噪声 buffer，成片清怪时会叠成爆音、
    * 同时频繁 createBuffer 造成 GC 抖动。这里只对高频音效设最小间隔，
    * 低频音效（upgrade/win/lose/panel…）不受影响，行为完全不变。 */
-  MIN_GAP: { shoot: 55, shotgun: 90, hit: 45, kill: 85, pickup: 60, hurt: 130, crit: 70, explode: 90 },
+  /* 节流表：高频音效按此表限流，防止连发/成片清怪时叠成爆音。
+   * error 也登记在内（300ms）：操作失败提示可能连点触发，
+   *   不限流会变成刺耳的连续蜂鸣。 */
+  MIN_GAP: { shoot: 55, shotgun: 90, hit: 45, kill: 85, pickup: 60, hurt: 130, crit: 70, explode: 90, error: 300 },
   _last: {},
   play(name) {
     if (!this.ctx || !this.sfxOn) return;
