@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270222a';
+const IMG_V = '20270223a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -1517,6 +1517,33 @@ r_tavern(p, tab) {
    * 直接 .indexOf 会抛 "indexOf is not a function"（实测点领取直接崩面板）。
    * 这里只对真数组做查询，其它一律按【未领取】处理（宁可再给一次按钮，
    * 也不能让面板崩掉）。 */
+  /* 奖励的带图标渲染（任务 / 通用列表共用）
+   * BUG：主线任务此前硬写 `💎${rw.diamond || 0} 🪙${rw.gold || 0}`，
+   *   —— 只认金币与钻石两项，其余奖励【一个都不显示】。
+   *   实测主线 M03「击杀100僵尸」配置 rw:{P01:3}（3 个合金），
+   *   界面却写「💎0 🪙0」，玩家以为这个任务没有任何奖励；
+   *   日常 D02「通关1次关卡」rw:{M01:5, ach:3}、
+   *   周常 W02「每周击杀1000僵尸」rw:{M03:2, ach:10} 所在的两个页签
+   *   连这一行都没有 —— 奖励完全不可见。
+   *   全项目 12 条任务里 7 条奖励不含金币/钻石，全部中招。
+   * 现在统一渲染所有奖励项：金币/钻石/体力走货币图标，材料与成就点走文字。 */
+  rwIcons(rw) {
+    const ci = EX.curIcon || {};
+    const ks = Object.keys(rw || {}).filter((k) => {
+      const v = rw[k];
+      if (typeof v === 'number') return isFinite(v) && v > 0;
+      return v != null && String(v).trim() !== '' && String(v) !== '0';
+    });
+    if (!ks.length) return '<span class="sub">无奖励</span>';
+    return ks.map((k) => {
+      const v = rw[k], n = Number(v);
+      const q = isFinite(n) ? Math.floor(n) : 1;
+      const src = ci[k];
+      if (src) return `<img class="ei" src="${src}?v=${IMG_V}" alt="">${E.fmt(q)}`;
+      return `<span class="rwT">${E.itemName(k)}×${q}</span>`;
+    }).join(' ');
+  },
+
   _claimed(p, type, id) {
     const key = { main: 'mainClaimed', daily: 'dailyClaimed', weekly: 'weeklyClaimed', achieve: 'achieveClaimed' }[type];
     if (!key || !p || !p.tasks) return false;
@@ -1543,7 +1570,8 @@ r_tavern(p, tab) {
           const got = this._claimed(p, 'weekly', t.id);
           return `<div class="zrow">
             <div class="zav">🏆</div>
-            <div class="zi"><b>${t.n}</b><span>${cur}/${need} · ${t.desc || ''}</span></div>
+            <div class="zi"><b>${t.n}</b><span>${cur}/${need} · ${t.desc || ''}</span>
+              <span class="rwRow">${this.rwIcons(t.rw)}</span></div>
             ${got ? '<span class="st on">已领取</span>'
               : (done ? `<button class="btn sm g" data-wq="${t.id}">领取</button>`
                       : '<span class="st off">未完成</span>')}</div>`;
@@ -1559,7 +1587,8 @@ r_tavern(p, tab) {
           const got = this._claimed(p, 'daily', t.id);
           return `<div class="zrow">
             <div class="zav">${this.taskIcon(t)}</div>
-            <div class="zi"><b>${t.n}</b><span>${cur}/${need}</span></div>
+            <div class="zi"><b>${t.n}</b><span>${cur}/${need}</span>
+              <span class="rwRow">${this.rwIcons(t.rw)}</span></div>
             ${got ? '<span class="st on">已领取</span>'
               : (done ? `<button class="btn sm g" data-dq="${t.id}">领取</button>`
                       : '<span class="st off">未完成</span>')}</div>`;
@@ -1599,7 +1628,7 @@ r_tavern(p, tab) {
         return `<div class="zrow">
           <div class="zav">${this.taskIcon(t)}</div>
           <div class="zi"><b>${t.n}</b><span>${Math.min(cur, need)}/${need}</span>
-            <span>💎${t.rw.diamond || 0} 🪙${t.rw.gold || 0}</span></div>
+            <span class="rwRow">${this.rwIcons(t.rw)}</span></div>
           ${got ? '<span class="st on">已领取</span>'
             : (done ? `<button class="btn sm g" data-mq="${t.id}">领取</button>`
                     : '<span class="st off">进行中</span>')}</div>`;
