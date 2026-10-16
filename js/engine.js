@@ -47,8 +47,12 @@ const E = {
     else if (a >= 1e8) s = (n / 1e8).toFixed(2) + '亿';
     else if (a >= 1e4) s = (n / 1e4).toFixed(1) + '万';
     else s = String(n);
-    /* 极端大数兜底：不再让「99999999999.00亿」这类超长串撑破 UI */
-    if (s.length > 10) s = n.toExponential(2);
+    /* 极端大数兜底：不再让「99999999999.00亿」这类超长串撑破 UI。
+     * BUG：a >= 1e37 时 (n/1e16).toFixed(2) 自己就返回科学计数法「1e+292」，
+     *   拼上单位后变成「1e+292京」——长度只有 8，绕过了下面的长度检查，
+     *   玩家（或后台误填超大值）会看到一串既不是数字也不是单位的怪文本。
+     * 现在连同 toFixed 产出科学计数法的情况一并兜底。 */
+    if (s.length > 10 || /e/i.test(s)) s = n.toExponential(2);
     return s;
   },
   qi(q) { return EX.qualities.indexOf(q); },
