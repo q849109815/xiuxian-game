@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270223a';
+const IMG_V = '20270224a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -1263,7 +1263,7 @@ r_tavern(p, tab) {
       <div class="kv"><span>射程</span><b>${a.range || 380} <span class="sub">（${(a.range || 380) >= 620 ? '覆盖全场' : '近身压制'}</span>）</b></div>
       <div class="kv"><span>子弹类型</span><b>${g.bullet}</b></div>
       <button class="btn c blk" id="gunUp" ${p.gold < c ? 'disabled' : ''}>强化 · ${E.fmt(c)} 金币</button>
-      <div class="lbl">每级 +${(E.GUN_GROW * 100).toFixed(0)}% 伤害；每 5 级进阶一次（${adv.q}→${nextAdv.q}），进阶解锁词条槽。</div></div>
+      <div class="lbl">每级 ×${E.GUN_GROW_RATE || 1.078}（+${(((E.GUN_GROW_RATE || 1.078) - 1) * 100).toFixed(1)}%）伤害，复利叠加；每 5 级进阶一次（${adv.q}→${nextAdv.q}），进阶解锁词条槽。</div></div>
       <div class="card"><div class="card-t">已解锁词条
         <span class="sub">${Object.keys(p.gunStats || {}).length} / ${E.gunAffixSlots(p, p.gun)} 槽</span></div>
       ${Object.keys(p.gunStats || {}).length ? Object.values(p.gunStats || {}).map((st) => {
@@ -1774,8 +1774,16 @@ r_tavern(p, tab) {
           const _v = EX.dropDisp(_d);
           return '<div class="sub">开启可得：' + E.itemName(_d.item) + ' ' + _v.min + '-' + _v.max + ' 个（' + _v.pct + '% 概率）</div>';
         })()}
-        <button class="btn blk" id="bagChest1">开启 1 个</button>
-        <button class="btn o blk" id="bagChest10">开启 10 个</button>
+        ${(() => {
+          /* 按钮置灰必须与点击后的拦截条件一致：
+           * 此前两个按钮无条件可点，背包里一个宝箱都没有时点下去
+           * 只弹一句「宝箱不足」，玩家还以为是自己点错了。
+           * 现在数量不够就置灰并直接写明差多少。 */
+          const _n = Number((p.mat || {}).I04) || 0;
+          const _d1 = _n < 1, _d10 = _n < 10;
+          return `<button class="btn blk" id="bagChest1" ${_d1 ? 'disabled' : ''}>${_d1 ? '宝箱不足' : '开启 1 个'}</button>`
+            + `<button class="btn o blk" id="bagChest10" ${_d10 ? 'disabled' : ''}>${_d10 ? '宝箱不足（需 10）' : '开启 10 个'}</button>`;
+        })()}
       </div>
       <div class="card"><div class="card-t">消耗品
         <span class="sub">点击使用</span></div>
@@ -2231,9 +2239,12 @@ r_tavern(p, tab) {
         ${g ? ' · ' + g.desc : ''}
         ${g && p.gemOn === g.id ? '<span class="st on" style="margin-left:6px">已镶嵌</span>' : ''}
       </div>
-      <button class="btn ${inlayOK ? '' : 'd'}" id="gemInlay" style="width:100%;margin-top:10px">${inlayTxt}</button>
+      /* 置灰样式（class d）之外必须同时加 disabled：
+       * 此前只加了灰样式、按钮其实仍可点，玩家点了灰按钮照样弹一句「数量不足」，
+       * 看起来像界面坏了。现在两处口径统一。 */
+      <button class="btn ${inlayOK ? '' : 'd'}" id="gemInlay" ${inlayOK ? '' : 'disabled'} style="width:100%;margin-top:10px">${inlayTxt}</button>
       <button class="btn g" id="gemOff" style="width:100%;margin-top:6px">卸 下（返还背包）</button>
-      <button class="btn o ${fuseOK ? '' : 'd'}" id="gemFuse" style="width:100%;margin-top:6px">${fuseTxt}</button>
+      <button class="btn o ${fuseOK ? '' : 'd'}" id="gemFuse" ${fuseOK ? '' : 'disabled'} style="width:100%;margin-top:6px">${fuseTxt}</button>
       <div class="sub" style="margin-top:6px">当前宝石等级：<b style="color:var(--yel)">Lv.${g ? E.gemTier(p, g.id) : (p.gemOn ? E.gemTier(p, p.gemOn) : 1)}</b>
         加成：${E.gemBonusTxt ? E.gemBonusTxt(p) : '—'}
         <span style="opacity:.7">（百分比加成，只随宝石合成等级提升，与角色等级无关）</span></div>
