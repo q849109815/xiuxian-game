@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270217a';
+const IMG_V = '20270219a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -2899,6 +2899,17 @@ r_tavern(p, tab) {
     if ((p.guide || {})[id]) return;
     const box = document.getElementById('guide');
     if (!box) return;
+    /* BUG（后一条引导顶掉前一条，玩家只看得到一半）：
+     *   main.js 结算处会连续调 guideTrigger('home') 与 guideTrigger('win')，
+     *   两条都走 420ms 延迟，几乎同时到达；而这里原本是「直接覆盖」——
+     *   后到的把先弹的那条的标题/文案改掉，玩家只看到最后一条，
+     *   先到的那条既没展示、也（在旧写法下）被预标记成已完成。
+     * 现在改成排队：已有引导在展示时，后来的进队列，点「知道了」后再弹下一条。 */
+    if (this._curGuide != null) {
+      this._guideQueue = this._guideQueue || [];
+      if (this._guideQueue.indexOf(id) < 0) this._guideQueue.push(id);
+      return;
+    }
     const t = document.getElementById('gdTitle'), c = document.getElementById('gdText');
     if (t) t.textContent = g.n;
     if (c) c.textContent = g.txt || g.desc || '';
@@ -2927,6 +2938,12 @@ r_tavern(p, tab) {
       if (this._guidePaused && window.BT) { BT.paused = false; this._guidePaused = false; }
       this._curGuide = null;
       if (window.MAIN && MAIN.save) MAIN.save();
+      /* 弹下一条排队中的引导（等当前遮罩的过渡动画走完再弹，避免视觉闪烁） */
+      const q = this._guideQueue || [];
+      if (q.length) {
+        const nx = q.shift();
+        setTimeout(() => this.showGuide(nx), 320);
+      }
     };
   },
   /* 战斗内按事件触发（表21 触发时机） */
