@@ -1630,9 +1630,19 @@ function onBattleEnd(res, d) {
   });
   if (endless) P.endlessTime = Math.max(P.endlessTime || 0, Math.floor(r.time));
 
-  /* 引导标记 */
-  if (res === 'win') { P.guide[5] = 1; P.guide[6] = 1; }
-  if (!P.guide[3]) P.guide[3] = 1;
+  /* 引导标记
+   * BUG（两条强制引导永不显示，进度却显示已完成）：
+   *   这里原本在【触发弹窗之前】就写了 P.guide[5]=1 / P.guide[6]=1，
+   *   而 UI.showGuide() 开头有 `if (p.guide[id]) return;` 的判重 ——
+   *   于是下面 guideTrigger('win') / ('home') 排队弹窗时，
+   *   两条引导已被标记完成 → 直接 return，玩家一次都没看到。
+   *   实测：未预标记时弹窗正常出现（标题「通关引导」「基地引导」），
+   *        预标记后 box.classList 始终不含 on —— 弹窗被自己吞掉。
+   *   同时设置页「引导进度」会把这两条算成已完成，显示虚高。
+   *   引导完成标记只应由玩家点「知道了」（UI.showGuide 内的 E.guideDone）写入，
+   *   这里只负责触发，不再代打标记。
+   *   P.guide[3]（升级引导）同理：它在战斗中由 firstUpgrade 事件触发并弹窗，
+   *   此处额外补标记会让「第一次升级」之后的引导状态与实际展示脱节。 */
   /* home 引导（返回基地）——此前同样是零调用事件 */
   if (window.UI && UI.guideTrigger) UI.guideTrigger('home');
 
