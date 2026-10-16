@@ -595,6 +595,9 @@ const BT = {
      * 'upgrade'/'rare'）全都做好了却从没触发过 —— 玩家进关与每波开打
      * 都听不到、也看不到任何提示。这里补上开局这一句。 */
     try { if (window.VO) VO.say('VO_001'); } catch (e) {}
+    /* 进关号角音（audio.js 的 'start'）：
+     * 台词 VO_001 已接线，但配套音效 'start' 零调用 —— 进关只有字幕没有号角声。 */
+    try { if (window.SND) SND.play('start'); } catch (e) {}
     this.startWave(1);
     this.startLoop();
     if (opt.cb) this.cb = opt.cb;
@@ -612,7 +615,12 @@ const BT = {
   startWave(w) {
     const r = this.run, d = r.def;
     /* 表04 VO_002 波次开始：第 1 波由 VO_001（进入战斗）覆盖，避免开局连出两句 */
-    if (w > 1) { try { if (window.VO) VO.say('VO_002'); } catch (e) {} }
+    if (w > 1) {
+      try { if (window.VO) VO.say('VO_002'); } catch (e) {}
+      /* 新波次警报音（audio.js 的 'wave'）：同样是有音效零调用，
+       * 每波开打只有台词没有警报声（第 1 波由 'start' 覆盖，避免开局叠音）。 */
+      try { if (window.SND) SND.play('wave'); } catch (e) {}
+    }
     r.wave = w;
     r.waveT = 0;              /* 重置波次计时（配合超时推进） */
     r.waveMaxT = (d.cond === 'boss' || d.cond === 'bossAll') && w === d.waves ? 999 : 20;
@@ -655,6 +663,9 @@ const BT = {
   spawnBoss(id) {
     const d = EX.bosses.find((x) => x.id === id) || EX.bosses[0];
     const r = this.run;
+    /* BOSS 登场警告音（audio.js 的 'boss'：低沉警告长音）
+     * BUG：音效已做好但零调用 —— BOSS 出场只有血条和立绘，没有任何声音提示。 */
+    try { if (window.SND) SND.play('boss'); } catch (e) {}
     const mul = (r.mul || 1) * (r.endless ? 1 + (r.wave - 1) * 0.35 : 1);
     /* BOSS 血量：bosses 表里的 hp 已是「按章节设计好的最终值」
      * （依据对应武器等级 DPS × 25~40 秒），若再乘关卡 mul，
@@ -2181,6 +2192,13 @@ const BT = {
     if (r.efx && r.gunId !== 'W09' && r.gunId !== 'W12') {
       r.efx.push({ t: 'shell', x: r.px + 6, y: r.py - 24, a: -1.1, life: 0.5, max: 0.5 });
     }
+    /* 枪声音效（audio.js 的 'shoot' / 'shotgun'）：
+     * BUG：这两条音效早已做好，但全项目零调用 —— 玩家从头到尾开火、
+     *     打完一整局都听不到一声枪响，射击完全没有听觉反馈。
+     *     多弹丸武器（散弹枪 pellets>1）走更厚重的 'shotgun'，
+     *     单发武器走短促的 'shoot'；高频重复由 SND.MIN_GAP 节流，
+     *     不会在连发时叠成爆音。 */
+    try { if (window.SND) SND.play(n > 1 ? 'shotgun' : 'shoot'); } catch (e) {}
     /* 枪口火光 / 后坐力：供绘制层做开火反馈 */
     r.muzzleT = 0.07;
     /* 屏幕震动：按武器表 recoil 倍率（低0.55/中1.0/高1.6），高后坐力枪体感更猛 */
@@ -2212,6 +2230,10 @@ const BT = {
   reload() {
     const r = this.run; if (!r || r.reloading || r.mag >= r.magMax) return;
     r.reloading = true;
+    /* 换弹开始音效（audio.js 的 'reload'：两声金属咔）
+     * BUG：换弹【完成】音 'reloadDone' 有接线，但【开始】音 'reload' 零调用
+     *     —— 玩家只听到上膛的确认声，听不到退弹匣的那一下，换弹过程缺前半段。 */
+    try { if (window.SND) SND.play('reload'); } catch (e) {}
     /* 换弹时间：军械库加成 + 词条 AF08 换弹-0.2秒 */
     let _rt = E.gun(this.P).reload * (1 - Math.min(0.4, (this.P.build?.armory || 0) * 0.01));
     _rt = Math.max(0.3, _rt - (r.reloadCut || 0));
@@ -2429,6 +2451,10 @@ const BT = {
   kill(z) {
     const r = this.run; if (z.dead) return;
     z.dead = true; r.kills++;
+    /* 击杀音效（audio.js 的 'kill'：低沉闷响）
+     * BUG：与枪声同类 —— 音效早已做好但零调用，打死僵尸只有画面消散、
+     *     没有声音。成片清怪时由 SND.MIN_GAP 节流到每 85ms 一次。 */
+    try { if (window.SND) SND.play('kill'); } catch (e) {}
     /* 无伤连杀 +1（受伤时在 hurt() 里清零），并刷新本场最大连杀段 */
     r.noHitStreak = (Number(r.noHitStreak) || 0) + 1;
     if (r.noHitStreak > (Number(r.noHitMax) || 0)) r.noHitMax = r.noHitStreak;
