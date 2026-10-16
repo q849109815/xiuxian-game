@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270224a';
+const IMG_V = '20270225a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -407,7 +407,16 @@ const UI = {
         (arr || []).forEach((t) => {
           if (!t) return;
           if (Array.isArray(got) && got.indexOf(t.id) >= 0) return;
-          if (E.taskDone(p, t)) tn++;
+          if (!E.taskDone(p, t)) return;
+          /* 与 claimTask 同口径：奖励配置不可用（rw 缺失/全为 0 或非法）时
+           * claimTask 会拒绝发放，这条任务实际【领不到】。
+           * BUG：此前红点只判 taskDone，不判奖励是否可发 ——
+           *   运营一旦把某条任务的 rw 配错（如 gold:0），玩家看到红点、
+           *   点进去却弹出「该任务奖励配置异常，暂不可领取」，
+           *   而红点因为从未写入 claimed 永远消不掉（实测领完仍是同一个数）。
+           * 这里补上同口径判断，领不到的任务不再计入红点。 */
+          if (E.rwUsable && !E.rwUsable(t.rw)) return;
+          tn++;
         });
       });
     } catch (e) { tn = 0; }
