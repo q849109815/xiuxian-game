@@ -807,6 +807,13 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
  * 用 min-height 抬到 32px：只在高度不足时补，不改动已有较宽按钮的布局。 */
 .btn.sm{padding:6px 12px;font-size:11px;min-height:32px;
   display:inline-flex;align-items:center;justify-content:center}
+/* 格子(.gcell)里的「价格 / 操作」按钮：
+ * .btn.sm 的横向内边距 6px 12px 让按钮最小宽约 55px，而 320px 窄屏下
+ * 格子可视宽只有 47px（实测网格列宽 51px − 格子左右内边距 4px×2）。
+ * 格子带 overflow:hidden，于是按钮右侧被切掉 8px ——
+ * 「🪙200」这类价格数字被削掉一角，玩家看不清到底要花多少钱。
+ * 这里收窄横向内边距并限宽，让整枚按钮完整落在格子内（高度仍是 32px，不影响点按）。 */
+.gcell .btn.sm{padding:6px 4px;max-width:100%;min-width:0}
 
 /* 分类网格（背包/商店/芯片，截图 4 列网格） */
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
