@@ -1273,8 +1273,8 @@ r_tavern(p, tab) {
       <div class="kv"><span>子弹类型</span><b>${g.bullet}</b></div>
       <button class="btn c blk" id="gunUp" ${p.gold < c ? 'disabled' : ''}>强化 · ${E.fmt(c)} 金币</button>
       <div class="lbl">每级 ×${E.GUN_GROW_RATE || 1.078}（+${(((E.GUN_GROW_RATE || 1.078) - 1) * 100).toFixed(1)}%）伤害，复利叠加；每 5 级进阶一次（${adv.q}→${nextAdv.q}），进阶解锁词条槽。</div></div>
-      <div class="card"><div class="card-t">已解锁词条
-        <span class="sub">${Object.keys(p.gunStats || {}).length} / ${E.gunAffixSlots(p, p.gun)} 槽</span></div>
+      <div class="card"><div class="card-t">进阶词条
+        <span class="sub">${Object.keys(p.gunStats || {}).length} / ${Number((E.advInfo(p.gunLv) || {}).slot) || 0} 槽</span></div>
       ${Object.keys(p.gunStats || {}).length ? Object.values(p.gunStats || {}).map((st) => {
         const d = EX.gunStats.find((x) => (st.id ? x.id === st.id : x.k === st.k));
         const qc = st.q === '红' ? '#ff5c7a' : st.q === '紫' ? '#c98bff' : st.q === '蓝' ? '#5cb8ff' : '#9fb3d0';
