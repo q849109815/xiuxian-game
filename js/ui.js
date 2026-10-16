@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270219a';
+const IMG_V = '20270220a';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -574,6 +574,12 @@ r_tavern(p, tab) {
       <span class="sub">战斗中协同作战（已雇 ${hired.length}/${EX.mercs.length}）</span></div>
       ${EX.mercs.map((m) => {
         const own = hired.indexOf(m.id) >= 0;
+        /* 已雇佣的佣兵此前【没有 disabled】：按钮显示「已雇佣」却依然可点，
+         * 点下去走 b_tavern 的「已在阵容中」分支直接 return —— 不扣钱、
+         * 不提示、界面不动，玩家只会以为按钮坏了。
+         * 现在与「金币不足」同一口径：已完成态一并置灰。
+         * 注意：注释必须写在模板字符串【外面】，写在里面会被当成文本渲染到面板上，
+         *   玩家会在酒馆里看到这一整段开发备注（与「表31 DR11」同类）。 */
         return `<div class="mc-card">
           <div class="mi">${m.img
             ? `<img src="${m.img}" style="width:40px;height:40px;border-radius:8px;object-fit:cover">`
@@ -581,10 +587,6 @@ r_tavern(p, tab) {
           <div class="mn"><b>${m.n}</b>
             <span>${m.desc}</span>
             <span>伤害 ${m.dmg} · 射速 ${m.rate}/s · 射程 ${m.rng}</span></div>
-          /* 已雇佣的佣兵此前【没有 disabled】：按钮显示「已雇佣」却依然可点，
-           * 点下去走 b_tavern 的「已在阵容中」分支直接 return —— 不扣钱、
-           * 不提示、界面不动，玩家只会以为按钮坏了。
-           * 现在与「金币不足」同一口径：已完成态一并置灰。 */
           <button data-hire="${m.id}" class="${own ? 'hired' : ''}"
             ${own ? 'disabled' : (p.gold < m.cost ? 'disabled' : '')}>
             ${own ? '已雇佣' : '🪙' + m.cost}</button>
