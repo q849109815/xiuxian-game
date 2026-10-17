@@ -272,6 +272,8 @@ const UI = {
   /* ================= 基地主界面 ================= */
   home() {
     const p = this.P; if (!p) return;
+    /* 同 open()：热改档绕过 sanitize 时补字段，避免主界面整体抛错白屏 */
+    if (window.E && E.ensureDicts) E.ensureDicts(p);
     E.resetTasks(p); E.tickStamina(p);
     $('#hmName').textContent = p.name;
     /* 已装备称号显示在代号旁（此前称号发放后玩家完全看不到） */
@@ -500,6 +502,10 @@ const UI = {
 
   open(key, tab) {
     if (window.SND) SND.play('panel');
+    /* 字段缺失就地兜底：后台 GM 热改档会在 session 内直接改写 P 的子对象，
+     * 绕过登录时那一次 sanitize（实测删掉 talents/build/cleared/tasks 任一
+     * 会让 4~6 个面板整体抛错白屏）。这里在每次打开面板前补齐，成本 O(字段数)。 */
+    if (window.E && E.ensureDicts) E.ensureDicts(this.P);
     /* 面板内跳转导航栈
      * ── ID 问题：面板里到处都有"跳到另一个面板"的入口（角色→武器、背包→芯片…
      *    实测全项目 20 个面板共 80+ 处跨面板跳转），但左上角「◀」只会 close()。
@@ -3458,7 +3464,7 @@ r_tavern(p, tab) {
       <button class="btn n blk" id="setSwitchAcct">🔁 退出登录 / 切换账号</button></div>
     <div class="card"><div class="card-t">账号信息</div>
       <div class="kv"><span>代号</span><b>${this.esc(p.name)}</b></div>
-      <div class="kv"><span>UID</span><b style="font-size:12px">${p.uid}</b></div>
+      <div class="kv"><span>UID</span><b style="font-size:12px">${this.esc(p.uid || '—')}</b></div>
       <div class="kv"><span>角色</span><b>${E.char(p).n}</b></div>
       <div class="kv"><span>通关关卡</span><b>${Object.keys(p.cleared || {}).length} / ${EX.levels.length}</b></div>
       <div class="kv"><span>体力</span><b>${Math.floor(p.stamina || 0)}/${EX.STAMINA_MAX} <button class="btn sm" id="setAdStam">看广告+10</button></b></div>
