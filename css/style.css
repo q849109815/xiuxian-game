@@ -12,7 +12,7 @@
   --yel:#f6bc5e; --grn:#6fae72; --grn2:#5a8f5c;
   --red:#d96a58; --blue:#8fb8d0; --pp:#a882c4; --green:#5a8f5c;
   --zombie:#5aa567; --zombie2:#47834f;
-  --txt:#f2e3c6; --txt2:#cdb793; --txt3:#8f8168;
+  --txt:#f2e3c6; --txt2:#cdb793; --txt3:#a2917a;
   --line:rgba(255, 236, 204, .18);
   --stone:#947032; --stone2:#7d5c28;
 }
@@ -1336,7 +1336,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   --yel:#f6bc5e; --grn:#6fae72; --grn2:#5a8f5c;
   --red:#d96a58; --blue:#8fb8d0; --pp:#a882c4; --green:#5a8f5c;
   --zombie:#5aa567; --zombie2:#47834f;
-  --txt:#f2e3c6; --txt2:#cdb793; --txt3:#8f8168;
+  --txt:#f2e3c6; --txt2:#cdb793; --txt3:#a2917a;
   --line:rgba(255, 236, 204, .20);
 }
 /* 卡片/按钮：与全局保持一致（黑体优先），避免这两类容器内的文字
