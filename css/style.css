@@ -88,7 +88,12 @@ input{font-family:inherit}
 #loading{align-items:center;justify-content:center;
   background:radial-gradient(ellipse at 50% 40%,#3f332a,#1c1714)}
 .ld-logo{font-size:64px;animation:ldPop 1.2s ease-in-out infinite}
-@keyframes ldPop{0%,100%{transform:scale(1) rotate(-180deg)}50%{transform:scale(1.14) rotate(180deg)}}
+/* BUG修复：此前这里写的是 rotate(±180deg)，与登录框 rotateX(180deg) 同一类错误。
+   实测加载屏 logo 的 transform 矩阵 m11 在 -1.14 ~ +0.66 之间来回摆动：
+   ① 每 1.2 秒整整转满 360°（0%:-180° → 50%:+180°），logo 一直在疯狂打转；
+   ② 静止帧（0%/100%）正好停在 -180°，logo 是【上下颠倒】的。
+   本意是轻微呼吸/摇摆，改成 ±3° 小角度摆动 + 缩放，文字与画面不再倒置。 */
+@keyframes ldPop{0%,100%{transform:scale(1) rotate(-3deg)}50%{transform:scale(1.08) rotate(3deg)}}
 .ld-title{margin:12px;font-size:26px;font-weight:800;letter-spacing:6px;
   background:linear-gradient(180deg,#a3d6f0,var(--gold) 55%,#ffb027);
   -webkit-background-clip:text;background-clip:text;color:transparent;
@@ -1067,11 +1072,14 @@ html[data-kb] #login{justify-content:flex-start;padding:12px}
 .bw-heart{color:#ff5f62;font-size:13px;filter:drop-shadow(0 1px 2px rgba(0, 0, 0, .6))}
 /* 技能卡 NEW 角标（截图47） */
 .ccard{position:relative}
+/* BUG修复：.cc-new 此前带 transform:rotate(180deg)，实测计算值 matrix(-1,0,0,-1,0,0)
+   （m11=-1 且 m22=-1）——技能卡右上角的「新」角标是上下颠倒显示的，
+   与登录框 rotateX(180deg) 属同一类错误。角标是纯文字，去掉旋转即可。 */
 .cc-new{position:absolute;right:-4px;top:-6px;z-index:3;
   padding:2px 8px;border-radius:8px;font-size:12px;font-weight:500;font-style:normal;
   color:#a3d6f0;background:linear-gradient(135deg,#ff5f62,#e04649);
   border:1.5px solid rgba(51, 47, 41, .7);
-  box-shadow:0 0 6px rgba(51, 16, 17, .6);transform:rotate(180deg)}
+  box-shadow:0 0 6px rgba(51, 16, 17, .6)}
 /* 刷新次数（截图47） */
 .ch-rfnum{text-align:center;font-size:12px;color:var(--txt2);margin:4px 0 2px}
 /* 结算：新纪录 / 技能伤害 / 剩余次数（截图51） */
