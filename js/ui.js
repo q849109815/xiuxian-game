@@ -1231,16 +1231,21 @@ r_tavern(p, tab) {
     return `<div class="card"><div class="card-t">选择角色
         <span class="sub">已解锁 ${un} / ${(EX.chars || []).length}</span></div>
       <div class="lbl" style="text-align:left;margin-bottom:6px">点击已解锁角色切换（属性与外观同时生效）</div>
-      <div class="grid4">${(EX.chars || []).map((ch2) => {
+      <div class="chr-grid">${(EX.chars || []).map((ch2) => {
         const ok2 = E.charUnlocked(p, ch2.id);
         const on2 = (p.char || 'C01') === ch2.id;
+        /* 属性拆成两行短句：合成一行时 18 个字在窄格子里会被逐字堆成方块
+         * （实测 393px 屏下 4 列每格仅 57px，堆成 45×78）。
+         * 拆行后每行 ≤ 7 个字，2 列布局下每格 95~120px，可正常单行显示。 */
+        const statLine = ok2
+          ? `<div class="lbl" style="font-size:12px">生命 ${ch2.hp}</div>
+             <div class="lbl" style="font-size:12px">护甲 ${ch2.armor} · 暴击 ${Math.round((ch2.crit || 0) * 100)}%</div>`
+          : `<div class="lbl" style="font-size:12px">${ch2.unlockTxt || '未解锁'}</div>`;
         return `<div class="gcell ${on2 ? '' : 'sel'}" data-chsel="${ch2.id}"
           style="${ok2 ? '' : 'opacity:.45'}">${ch2.img
             ? `<img src="${ch2.img}">` : `<div class="gi">${ch2.icon}</div>`}
           <div class="gn">${ch2.n}${on2 ? '<span class="tag y" style="font-size:12px">使用中</span>' : ''}</div>
-          <div class="lbl" style="font-size:12px;line-height:1.3">${ok2
-            ? `生命${ch2.hp} · 护甲${ch2.armor} · 暴击${Math.round((ch2.crit || 0) * 100)}%`
-            : (ch2.unlockTxt || '未解锁')}</div>
+          ${statLine}
           ${ch2.talent ? `<div class="lbl" style="font-size:12px;line-height:1.25;color:#7dffa8">${ch2.talent.n}</div>` : ''}</div>`;
       }).join('') || '<div class="lbl">暂无角色</div>'}</div>
     </div>
