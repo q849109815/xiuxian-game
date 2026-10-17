@@ -1490,7 +1490,16 @@ html,body,button,input,select,textarea{
 #panel[data-tp="side"] .pn-back{left:10px !important;top:8px !important}
 /* 头部是绝对定位、横贯整个宽度（高 48px），内容区必须让开它，
  * 否则左侧竖排 tab 的第一个、以及正文顶部会被 ◀ / ✕ 两个圆钮压住。 */
-#panel[data-tp="side"] .pn-main{padding:52px !important}
+/* 本意只是给顶部 48px 高的绝对定位头部让出空间，但写成了四边全 52px ——
+ * 左右各被吃掉 52px，内容区被挤掉 104px。实测（393px 屏，面板宽 385px）：
+ *   385 − 52×2 = 281px，再减去左侧页签栏 72px → 正文只剩 【209px】，
+ *   只占面板宽度的 54%，右侧留下大片空白，整体严重偏斜。
+ * 连锁后果（这才是「界面又挤又怪」的真正源头）：
+ *   正文 209 → 卡片 175 → 三列网格 147 → 每个格子仅 【44px 宽】；
+ *   格子里的 12px 文字在 44px 内被迫逐字换行，把格子纵向撑到 343px 高 ——
+ *   商品名/描述/价格全变成一根根细长条。
+ * 只需顶部让位，左右与底部交回布局。 */
+#panel[data-tp="side"] .pn-main{padding:52px 0 0 0 !important}
 #panel[data-tp="side"] .pn-body{padding:8px !important}
 
 /* ---------- 面板 Tabs：胶囊 + 立体 ---------- */
@@ -1839,6 +1848,20 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 .gcell .tag{max-width:100%;overflow-wrap:anywhere}
 .gcell .lbl{display:block;-webkit-line-clamp:unset;-webkit-box-orient:vertical;
   overflow:visible;text-align:center;line-height:1.35}
+
+/* 【修复：格子里的文字被压成「一字一行」的细长条 —— 界面看着又挤又怪】
+ * .gcell 是 flex-column + align-items:center，子元素的宽度会收缩到 min-content；
+ * 而 .gn / .lbl 带着 word-break:break-word + overflow-wrap:anywhere，
+ * 这使得 min-content 宽度 = 【单个字符的宽】（12px 的字 → 含内边距约 19px）。
+ * 于是文字被塞进 19px 宽里逐字换行，纵向拉成一根长条，实测：
+ *   角色页「幸存者-杰克 + 使用中」→ 19px 宽 × 150px 高（9 个字堆 9 行）
+ *   商城页「金属50+金币2000 · 每日2次」→ 32px 宽 × 94px 高
+ *   商城页「今日可买 3 次」→ 24px 宽 × 81px 高
+ *   商城页价格按钮「体力已满」→ 32px 宽 × 76px 高
+ * 让这些文字块撑满格子内容宽度，换行恢复到正常行宽（不再是逐字断行）。
+ * 注意只作用于文字块：img 仍走 .gcell img 的 max-width:76% 居中排布。 */
+.gcell .gn,.gcell .lbl,.gcell .tag,.gcell .gi{width:100%;box-sizing:border-box}
+.gcell .btn.sm{width:100%;box-sizing:border-box}
 
 /* 矮屏（≤700px 高，如 360×640 的小屏手机）结算页内容比可视区高约 200px，
  * 不压缩就得滚动才能点到「下一关 / 再挑战 / 返回」。整体收紧一档。 */
