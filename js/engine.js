@@ -423,7 +423,18 @@ const E = {
       else if (this.gunCanFight(_g2) && !this.gunIsSupport(_g2)) p.gun2 = null;
     }
     if (!p.lv || p.lv < 1) p.lv = 1;   /* 等级最小 1，补 0 会让升级/经验计算异常 */
-    if (p.charStar != null) p.charStar = Math.min(5, Math.max(0, p.charStar));
+    /* 【修复：charStar 脏值污染角色页与整条战力链】
+     * 原写法 `if (p.charStar != null) p.charStar = Math.min(5, Math.max(0, p.charStar))`
+     * 两个漏洞：
+     *   1) 只在字段非 null 时才修正 —— null 原样保留，后续 `p.charStar || 0` 虽能兜住，
+     *      但任何直接读 p.charStar 的地方都拿到 null；
+     *   2) 没有做数字强转 —— Math.max(0, {}) === NaN、Math.max(0,'abc') === NaN，
+     *      Math.min(5, NaN) 仍是 NaN。脏值原封不动写回存档。
+     * 实测后果：角色页显示「[object Object] / 5 星」「当前 +NaN%」；
+     *   且 EX.starBonus(p.charStar) 参与攻击/生命/战力乘法，NaN 会沿乘法链传染，
+     *   让战力也变成 NaN（榜单上传同样被污染）。
+     * 现统一用 N() 收敛为有限数字再钳制到 0~STAR_MAX，null 也一并归 0。 */
+    p.charStar = Math.min(EX.STAR_MAX || 5, Math.max(0, N(p.charStar, 0)));
     /* BUG修复（旧存档/损坏存档白屏）：
      * 原写法是 `if (p[k] != null && ...)` —— 只在【字段存在但类型错】时才修正，
      * 字段【整个缺失】时直接跳过，保持 undefined。
@@ -2728,7 +2739,11 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 角色升星（表15/42：角色碎片升星，每星 +8% 全属性）
    * ======================================================== */
   starUp(p) {
-    const cur = p.charStar || 0;
+    /* 星级收口：脏值（{} / 'abc'）下 `p.charStar || 0` 会拿到对象/字符串本身，
+     * 后续 `cur + 1` 变成 "[object Object]1"，写回存档后污染整条链路。
+     * 与 sanitize / starBonus 同一口径：先转有限数字，再钳制 0~STAR_MAX。 */
+    const cur = Math.min(EX.STAR_MAX || 5,
+      Math.max(0, (isFinite(Number(p.charStar)) ? Number(p.charStar) : 0)));
     if (cur >= EX.STAR_MAX) return { ok: false, msg: '已达最高星级' };
     const need = EX.starCost[cur + 1] || 999;
     const have = (p.mat || {}).P02 || 0;
