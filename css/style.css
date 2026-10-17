@@ -1965,3 +1965,36 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 .rwRow .ei{width:13px;height:13px;vertical-align:-2px;margin-right:2px}
 .rwT{color:var(--yel);font-size:11px;font-weight:600;white-space:nowrap}
 .rwT+.rwT{margin-left:2px}
+
+/* =========================================================
+   战斗底部 HUD 统一堆叠（修复「UI 压着 UI」）
+   ---------------------------------------------------------
+   原实现：bt-wall / bt-skills / bt-turret / bt-bottom / bt-tip
+   五层各自 position:absolute + 手写 bottom，间距靠人算。
+   实测 393×852：炮台栏高 70px，却只与技能栏留 150-106=44px，
+   炮台栏向上侵入技能栏 26px（技能图标下半截被完全盖住）；
+   bt-bottom 底边 838 与 bt-tip 顶边 834 再叠 4px。
+   现改由 .bt-dock 单容器纵向流式排列，层高自适内容，不再互相压盖。
+   ========================================================= */
+.bt-dock{position:absolute;left:0;right:0;bottom:calc(6px + var(--sab,0px));z-index:6;
+  display:flex;flex-direction:column;align-items:stretch;gap:6px;
+  pointer-events:none}
+.bt-dock > *{pointer-events:auto}
+/* 关键：抹掉各层遗留的 absolute 定位与手写 bottom，改为流式 */
+.bt-dock .bt-wall,
+.bt-dock .bt-skills,
+.bt-dock .bt-turret,
+.bt-dock .bt-bottom,
+.bt-dock .bt-tip{
+  position:static !important;
+  top:auto !important;bottom:auto !important;left:auto !important;right:auto !important;
+  width:auto !important;transform:none !important}
+.bt-dock .bt-wall{height:auto !important;margin:0 10px}
+.bt-dock .bt-skills{height:auto !important;margin:0 8px}
+.bt-dock .bt-turret{height:auto !important;margin:0 8px}
+.bt-dock .bt-bottom{height:auto !important;margin:0 10px;justify-content:center}
+.bt-dock .bt-tip{margin:0;line-height:14px}
+/* 右上角冗余资源栏：与 .bt-cur 的金币/钻石完全重复（btTick 同时更新
+   #btGold/#btDia2 与 #btCoin/#btDia），保留含击杀数的 .bt-cur，
+   隐藏纯重复的 .bt-coin，避免右上角堆四层。 */
+.bt-coin{display:none !important}
