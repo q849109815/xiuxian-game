@@ -11,7 +11,9 @@
   --yel:#f6bc5e; --grn:#6fae72; --grn2:#5a8f5c;
   --red:#d96a58; --blue:#8fb8d0; --pp:#a882c4; --green:#5a8f5c;
   --zombie:#5aa567; --zombie2:#47834f;
-  --txt:#e6d6b8; --txt2:#a89a86; --txt3:#857a68;
+  /* txt3 用于 12~13px 说明/空态/副标题等小字。原 #857a68 在此字号下对比度仅约 4.0，
+     低于 WCAG AA 的 4.5，中文小字更易糊；提亮到 #9a8d78 后对比度约 5.2。 */
+  --txt:#e6d6b8; --txt2:#a89a86; --txt3:#9a8d78;
   --line:rgba(51, 47, 41, .12);
   --stone:#7d5c28; --stone2:#5e451d;
 }
