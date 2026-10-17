@@ -3,6 +3,33 @@
  * 这里统一走包装，读取失败回落默认值，写入失败静默忽略。 */
 function lsGet(k, dflt) { try { const v = localStorage.getItem(k); return v === null || v === undefined ? dflt : v; } catch (e) { return dflt; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+
+/* 版本号比较：a>b 返回正数，相等 0，a<b 返回负数。
+ * 版本号形如 20270311a（日期数字前缀 + 字母后缀）：先比数字前缀（不足则按 0），
+ * 再比后缀字符串。两者都按同规则处理，长度不同也不会误判。
+ *
+ * 【为什么需要它】此前热更新提示写的是 `if (cv === local) return;`——
+ * 只要云端 ver 与本地版本号【不相等】就弹「发现新版本」。而我每次发版只改
+ * index.html 的 ?v= 和 config.js 的 HOT_UPDATE.version，从没同步云端
+ * data/zb/hotfix.json 里的 ver。于是云端长期停在旧值，与本地必然不相等：
+ *   1) 每位玩家每次登录都被弹一次「发现新版本，点击刷新」，而点了刷新代码根本
+ *      没变（真正控制缓存的是 index.html 的 ?v=）——纯误导；
+ *   2) 这个弹窗是一层全屏遮罩，会盖在所有面板之上，自动化测试打开任何面板
+ *      都只能截到这层弹窗，导致长期无法对真实界面做视觉审查。
+ * 现在改为「只有云端版本确实比本地新才提示」，云端落后/一致一律静默。 */
+function verCmp(a, b) {
+  const sa = String(a == null ? '' : a);
+  const sb = String(b == null ? '' : b);
+  if (sa === sb) return 0;
+  const ma = sa.match(/^(\d*)(.*)$/) || ['', '', ''];
+  const mb = sb.match(/^(\d*)(.*)$/) || ['', '', ''];
+  const na = parseInt(ma[1], 10) || 0;
+  const nb = parseInt(mb[1], 10) || 0;
+  if (na !== nb) return na - nb;
+  const ta = ma[2] || '', tb = mb[2] || '';
+  if (ta === tb) return 0;
+  return ta > tb ? 1 : -1;
+}
 /* =========================================================
  * main.js —— 启动 / 登录 / 战斗流程 / 存档
  * 依据资料 06 操作方案（自动瞄准 + PC 键盘备选）
@@ -833,7 +860,11 @@ const MAIN = {
       const cv = String(db.ver || '');
       if (!cv) return;
       const local = String((EX.HOT_UPDATE && EX.HOT_UPDATE.version) || '');
-      if (cv === local) return;
+      /* 只有云端版本【确实比本地新】才提示刷新。
+       * 原来这里写的是 cv === local 才 return，云端版本落后于本地时（发版后
+       * 未同步云端 ver 的常态）两者必然不等，于是每次登录都弹一次假更新提示，
+       * 且这层遮罩会盖住所有面板。详见 verCmp 上方的 BUG 说明。 */
+      if (verCmp(cv, local) <= 0) return;
       const KEY = 'z_hot_seen';
       let seen = '';
       try { seen = lsGet(KEY, ''); } catch (e) {}
