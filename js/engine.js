@@ -59,7 +59,20 @@ const E = {
     for (const [base, u] of UNITS) {
       if (a >= base) { s = (n / base).toFixed(2) + u; break; }
     }
-    if (s === null) s = a >= 1e4 ? (n / 1e4).toFixed(1) + '万' : String(n);
+    if (s === null) {
+      if (a >= 1e4) {
+        /* 万档只保留 1 位小数；若恰好为 .0 则去掉尾零，避免出现「1000.0万」这种冗余写法 */
+        const w = n / 1e4;
+        if (w >= 9999.95) {
+          /* 四舍五入后满 10000 万，进位到亿档，避免出现「10000万」这种别扭写法 */
+          s = (n / 1e8).toFixed(2) + '亿';
+        } else {
+          let v = w.toFixed(1);
+          if (v.slice(-2) === '.0') v = v.slice(0, -2);
+          s = v + '万';
+        }
+      } else s = String(n);
+    }
     /* 兜底：仅当数值大到超出单位链（>=1e40）时才会触发 */
     if (s.length > 10 || /e/i.test(s)) s = n.toExponential(2);
     return s;
