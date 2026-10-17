@@ -500,6 +500,19 @@ const UI = {
 
   open(key, tab) {
     if (window.SND) SND.play('panel');
+    /* 面板内跳转导航栈
+     * ── ID 问题：面板里到处都有"跳到另一个面板"的入口（角色→武器、背包→芯片…
+     *    实测全项目 20 个面板共 80+ 处跨面板跳转），但左上角「◀」只会 close()。
+     *    玩家从角色点进武器，想回角色，点 ◀ 却直接关掉整个面板回到主界面
+     *    —— 期待"返回上一级"，得到"回到主界面"，这是导航层级错位。
+     * 这里记录来源：从另一个面板内跳过来时压栈，◀ 优先出栈回到上一级。 */
+    const _prev = this.curPanel;
+    if (_prev && _prev !== key) {
+      this._pnStack = this._pnStack || [];
+      const top = this._pnStack[this._pnStack.length - 1];
+      if (!top || top.k !== _prev) this._pnStack.push({ k: _prev, t: this.curTab[_prev] });
+      if (this._pnStack.length > 8) this._pnStack.shift();
+    }
     this.curPanel = key;
     const def = this.PANELS[key]; if (!def) return;
     if (tab) this.curTab[key] = tab;
@@ -540,7 +553,21 @@ const UI = {
       }
     }
   },
+  /* 面板返回：有上级就回上级，没有才真正关闭 */
+  back() {
+    const st = this._pnStack;
+    if (st && st.length) {
+      const up = st.pop();
+      const k = up.k;
+      this.curPanel = null;          // 防止这次 open 又把自己压回栈里
+      this.open(k, up.t);
+      return true;
+    }
+    this.close();
+    return false;
+  },
   close() { $('#panel').classList.remove('on'); this.curPanel = null; this._pnScrollSig = null;
+    this._pnStack = [];
     /* 关面板时把滚动位置一并归零：下次再打开（哪怕同一个面板同一个页签）
      * 都从顶部开始，不会残留上一次的滚动偏移。 */
     const bd = $('#pnBody'); if (bd) bd.scrollTop = 0; },
@@ -573,6 +600,108 @@ const UI = {
   closeSheet() {
     const box = document.getElementById('sweepBox');
     if (box) { box.classList.remove('on'); box.innerHTML = ''; }
+  },
+  /* 游戏内统一确认弹窗（替代浏览器原生 confirm / alert）
+   * ── ID 视角为什么必须换掉原生弹窗：
+   *   ① 风格割裂：账号注销、永久删除、清空进度这类操作弹的是操作系统灰框，
+   *      跟游戏卡通画风完全两套语言，玩家会被"弹出游戏"打断沉浸感；
+   *   ② 文案太轻：原生只有「确定 / 取消」，而"永久删除"需要的不是确定，
+   *      是"我明确知道这会删掉什么"——按钮必须能写「永久删除」；
+   *   ③ 无分级：危险操作和普通确认长得一模一样，玩家养成了无脑点确定的习惯；
+   *   ④ 无防误点：原生弹窗位置固定在屏幕中央偏上，手滑正好落在「确定」上。
+   *
+   * 用法：const ok = await UI.ask('标题','说明',{danger:true,yes:'永久删除'});
+   * danger=true 时：红色主按钮 + 「此操作不可撤销」警示条 + 0.9s 冷却防误点。 */
+  ask(title, msg, opts) {
+    opts = opts || {};
+    const box0 = document.getElementById('sweepBox');
+    /* 兜底：容器不存在时退回原生，绝不因为改样式而让操作点不动 */
+    if (!box0) { try { return Promise.resolve(!!window.confirm(String(msg || title || ''))); } catch (e) { return Promise.resolve(false); } }
+    return new Promise((resolve) => {
+      const danger = !!opts.danger;
+      const yes = opts.yes || '确定';
+      const no = opts.no || '取消';
+      box0.innerHTML =
+        `<div class="pn-box ask-box${danger ? ' danger' : ''}">` +
+          `<div class="pn-hd"><b>${this.esc(title || '确认')}</b><button id="shX">✕</button></div>` +
+          `<div class="pn-main"><div class="pn-body">` +
+            (danger ? '<div class="ask-warn">⚠ 此操作不可撤销</div>' : '') +
+            `<div class="ask-msg">${this.esc(String(msg || '')).replace(/\n/g, '<br>')}</div>` +
+            `<div class="ask-btns">` +
+              `<button class="btn wxa-no" id="askNo">${this.esc(no)}</button>` +
+              `<button class="btn ${danger ? 'wxa-danger' : 'wxa-yes'}" id="askYes">${this.esc(yes)}</button>` +
+            `</div>` +
+          `</div></div>` +
+        `</div>`;
+      box0.classList.add('on');
+      try { stampImgs(box0); } catch (e) {}
+      const done = (v) => { box0.classList.remove('on'); box0.innerHTML = ''; resolve(!!v); };
+      const bY = document.getElementById('askYes');
+      const bN = document.getElementById('askNo');
+      const bX = document.getElementById('shX');
+      if (bN) bN.onclick = () => done(false);
+      if (bX) bX.onclick = () => done(false);
+      box0.onclick = (e) => { if (e.target === box0) done(false); };
+      if (bY) {
+        /* 危险操作：按钮先禁用 0.9s 倒计时再可点。
+         * 玩家从上一屏点进来的惯性点击会落在"还不可用"的按钮上，
+         * 这 0.9 秒既是缓冲也是一次强制阅读——ID 上叫"减速带"。 */
+        if (danger) {
+          bY.disabled = true;
+          let left = 0.9;
+          const t0 = yes;
+          bY.textContent = t0 + '（' + left.toFixed(1) + 's）';
+          const tm = setInterval(() => {
+            left -= 0.1;
+            if (left <= 0.05) {
+              clearInterval(tm);
+              bY.disabled = false; bY.textContent = t0;
+            } else bY.textContent = t0 + '（' + left.toFixed(1) + 's）';
+          }, 100);
+          box0.__askTm = tm;
+        }
+        bY.onclick = () => {
+          if (box0.__askTm) { clearInterval(box0.__askTm); box0.__askTm = null; }
+          done(true);
+        };
+      }
+    });
+  },
+  /* 游戏内统一通知（替代 alert）——不会打断、到时自动消失 */
+  notify(msg) {
+    try { this.toast(String(msg || ''), 'ok'); } catch (e) {}
+  },
+  /* 连点操作汇总反馈
+   * ── ID 视角的真实伤害：
+   *   强化 / 升级 / 捐献这类按钮玩家会连续点十几下，每点一下弹一条 toast，
+   *   而新 toast 会立刻把旧的顶掉（#toasts 最多只留 4 条）。玩家点完只看到
+   *   最后一条"强化成功"，完全不知道自己一共点了几次、总共花了多少钱。
+   *   实测：武器强化连点 6 次扣 4495 金币、基地建筑连点 6 次扣 14745 金币，
+   *   全程没有任何"总共花了多少"的反馈 —— 这是"钱莫名其妙就没了"的头号来源。
+   *
+   * 方案：同一 key 的连续点击在 1.3s 静默期内累积，只弹一条汇总：
+   *   "强化 ×6 · 共消耗 4495 金币"。既保留连点的爽快感，又把账算清楚。 */
+  burst(key, info) {
+    info = info || {};
+    const now = Date.now();
+    const s = this._burst || (this._burst = {});
+    let b = s[key];
+    if (!b || now - b.t > 1300) {
+      if (b && b.tm) clearTimeout(b.tm);
+      b = s[key] = { t: now, n: 0, cost: 0, label: info.label, unit: info.unit || '', tm: null };
+    }
+    b.t = now;
+    b.n += (info.n || 1);
+    b.cost += (info.cost || 0);
+    if (info.label) b.label = info.label;
+    clearTimeout(b.tm);
+    b.tm = setTimeout(() => {
+      let msg = (b.label || '操作') + ' ×' + b.n;
+      if (b.cost > 0) msg += ' · 共消耗 ' + (window.E && E.fmt ? E.fmt(b.cost) : b.cost) + b.unit;
+      this.toast(msg, 'ok');
+      try { if (window.SND) SND.play('upgrade'); } catch (e) {}
+      b.n = 0; b.cost = 0;
+    }, 1300);
   },
   render(key, tab) {
     const p = this.P; if (!p) return '<div class="empty">无数据</div>';
@@ -1331,9 +1460,15 @@ r_tavern(p, tab) {
       if (r.ok) { try { E.save(p); } catch (e) {} if (window.SND) SND.play('upgrade'); this.open('gun', tab); this.home(); }
     };
     const u = $('#gunUp'); if (u) u.onclick = () => {
-      const r = E.upgradeGun(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      const g0 = p.gold;
+      const r = E.upgradeGun(p);
       try { OPS.track('weapon_upgrade', { lv: p.gunLv }); } catch (e) {}
-      if (r.ok) { E.saveSoon(p); this.open('gun', tab); this.home(); }
+      if (r.ok) {
+        /* 连点改为汇总反馈：只弹一条"强化 ×N · 共消耗 X 金币"，
+         * 不再每点一次弹一条互相覆盖的 toast（玩家看不到总共花了多少）。 */
+        this.burst('gunUp', { cost: Math.max(0, g0 - p.gold), label: '强化', unit: ' 金币' });
+        E.saveSoon(p); this.open('gun', tab); this.home();
+      } else this.toast(r.msg, 'err');
     };
     /* 表30 武器词条洗练 */
     const ar = $('#gunAfReroll');
@@ -2957,7 +3092,14 @@ r_tavern(p, tab) {
        * 基地 4 个页签全部白屏。这里给一个占位，保证界面始终可用。 */
       || { id: 'hospital', n: '医疗站', icon: '🏥', stat: 'hp', per: 0.05, max: 20, desc: '建筑表为空' };
     const u = $('#buUp'); if (u) u.onclick = () => {
-      const r = E.upBuild(p, b.id); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { E.saveSoon(p); this.open('base', tab); this.home(); }
+      const g0 = p.gold;
+      const r = E.upBuild(p, b.id);
+      if (r.ok) {
+        /* 连点改为汇总反馈：实测连点 6 次扣 14745 金币却只有最后一条 toast 可见，
+         * 玩家完全不知道总共花了多少。现在弹"升级 ×6 · 共消耗 14745 金币"。 */
+        this.burst('buUp', { cost: Math.max(0, g0 - p.gold), label: '升级', unit: ' 金币' });
+        E.saveSoon(p); this.open('base', tab); this.home();
+      } else this.toast(r.msg, 'err');
     };
     const c = $('#buClaim'); if (c) c.onclick = () => {
       /* 此前只取 E.offlineIncome（仅金币）然后手动 +=，
@@ -3420,7 +3562,10 @@ r_tavern(p, tab) {
       const ac = UA.remembered();
       const w = ($('#spDel') || {}).value || '';
       if (!w) { this.toast('请输入密码确认', 'err'); return; }
-      if (!confirm('确定注销账号「' + (ac.name || '') + '」？\n云端存档将一并删除，无法恢复！')) return;
+      /* 原生 confirm → 游戏内危险确认弹窗（含"不可撤销"警示 + 0.9s 冷却防误点） */
+      const okDel = await this.ask('注销账号', '账号「' + (ac.name || '') + '」将被注销，云端存档一并删除，无法恢复！',
+        { danger: true, yes: '注销账号' });
+      if (!okDel) return;
       /* 防连点（与下方「永久删除」同一口径）：
        * 注销是【不可恢复】操作（删云端存档 + 封禁账号 + 清榜单），
        * 但此前这个按钮点下去【既不置灰也不改字】，await 期间还能继续点 ——
@@ -3445,8 +3590,12 @@ r_tavern(p, tab) {
       const w = ($('#spPurge') || {}).value || '';
       const tip = $('#spPurgeTip');
       if (!w) { if (tip) tip.textContent = '请输入密码确认'; this.toast('请输入密码确认', 'err'); return; }
-      if (!confirm('⚠️ 永久删除账号「' + (ac.name || '') + '」？\n账号 / 存档 / 索引 / 榜单将全部物理删除，删除后不再显示且无法恢复！')) return;
-      if (!confirm('最后确认：此操作不可撤销，确定继续？')) return;
+      /* 原生 confirm 连用两次（玩家会养成无脑连点两次确定的习惯，等于没有确认）
+       * → 合并为一次游戏内危险弹窗，按钮文案直接写后果，冷却结束后才可按。 */
+      const okPurge = await this.ask('永久删除账号',
+        '账号「' + (ac.name || '') + '」及其存档 / 索引 / 榜单将全部物理删除，删除后不再显示且无法恢复！',
+        { danger: true, yes: '永久删除' });
+      if (!okPurge) return;
       spg.disabled = true; spg.textContent = '删除中…';
       const r = await UA.purge(ac.name, w);
       spg.disabled = false; spg.textContent = '🔥 永久删除';
@@ -3456,8 +3605,9 @@ r_tavern(p, tab) {
     };
     /* 退出登录 / 切换账号 */
     const sw = $('#setSwitchAcct');
-    if (sw) sw.onclick = () => {
-      if (!confirm('退出当前账号？')) return;
+    if (sw) sw.onclick = async () => {
+      const okSw = await this.ask('退出当前账号', '退出后需要重新输入账号密码才能进入。', { yes: '退出登录' });
+      if (!okSw) return;
       if (window.UA) UA.logout();
     };
     /* 礼包码兑换 */
@@ -3500,7 +3650,10 @@ r_tavern(p, tab) {
       sv.disabled = false; sv.textContent = _t || '☁️ 立即上传存档';
     };
     const rs = $('#setReset'); if (rs) rs.onclick = async () => {
-      if (!confirm('确定清空全部进度？\n云端存档与本地缓存将一并删除，账号保留但进度归零，此操作不可恢复！')) return;
+      const okRs = await this.ask('清空全部进度',
+        '云端存档与本地缓存将一并删除，账号保留但进度归零，此操作不可恢复！',
+        { danger: true, yes: '清空进度' });
+      if (!okRs) return;
       rs.disabled = true; rs.textContent = '重置中…';
       /* 置位「重置中」：阻止 beforeunload/pagehide 的同步快照、
        * 30 秒定时存档、以及离线队列把刚删掉的进度重新写回去 */
@@ -3585,7 +3738,8 @@ r_tavern(p, tab) {
     const se = $('#setSaveEps'); if (se) se.onclick = () => {
       const v = ($('#setEps').value || '').split('\n').map((x) => x.trim()).filter(Boolean);
       GH.extra = v; try { lsSet('zb_extra', JSON.stringify(v)); } catch (e) {}
-      alert('已保存 ' + v.length + ' 个加速地址'); Net.reset();
+      /* 原生 alert → 游戏内 toast（alert 会阻塞整个页面直至手动点掉） */
+      this.notify('已保存 ' + v.length + ' 个加速地址'); Net.reset();
     };
   },
 
