@@ -1266,13 +1266,18 @@ r_tavern(p, tab) {
       <div class="kv"><span>吸血</span><b>${(a.ls * 100).toFixed(1)}%</b></div>
       ${c.talent ? `<div class="kv"><span>天赋</span><b style="font-size:12px">${c.talent.n}：${c.talent.desc || ''}</b></div>` : ''}
     </div>
+    /* 星级渲染前先收口：后台改档/旧存档可能把 charStar 写成 {} / 'abc' / null / NaN，
+     * 直接插值会显示「[object Object] / 5 星」「当前 +NaN%」。
+     * 这里按有限数字钳制到 0~STAR_MAX，保证界面永远是合法数字。 */
+    const cs = Math.min(EX.STAR_MAX || 5,
+      Math.max(0, (isFinite(Number(p.charStar)) ? Number(p.charStar) : 0)));
     <div class="card"><div class="card-t">角色升星
-      <span class="sub">${p.charStar || 0} / ${EX.STAR_MAX} 星</span></div>
+      <span class="sub">${cs} / ${EX.STAR_MAX} 星</span></div>
       <div class="stars">${[1, 2, 3, 4, 5].map((i) =>
-        `<span class="star ${(p.charStar || 0) >= i ? 'on' : ''}">★</span>`).join('')}</div>
-      <div class="sub">每星全属性 +8%，当前 +${Math.round((p.charStar || 0) * 8)}%</div>
+        `<span class="star ${cs >= i ? 'on' : ''}">★</span>`).join('')}</div>
+      <div class="sub">每星全属性 +8%，当前 +${Math.round(cs * 8)}%</div>
       <div class="kv"><span>角色碎片</span><b>${(p.mat || {}).P02 || 0}</b></div>
-      <div class="kv"><span>下级所需</span><b>${EX.starCost[(p.charStar || 0) + 1] || '已满级'}</b></div>
+      <div class="kv"><span>下级所需</span><b>${EX.starCost[cs + 1] || '已满级'}</b></div>
       <button class="btn" id="roleStar" style="width:100%;margin-top:8px">⭐ 升星</button>
     </div>
     <button class="btn o" id="roleForge" style="width:100%">装备锻造</button>`;
