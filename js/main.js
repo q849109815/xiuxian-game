@@ -1695,7 +1695,7 @@ const BACK_GAP = 2000;
 let __zbLastBack = 0;
 function bindBackGuard() {
   try { history.pushState({ zbGuard: 1 }, '', location.href); } catch (e) { return; }
-  window.addEventListener('popstate', () => {
+  window.addEventListener('popstate', async () => {
     /* 无论是否放行，先把垫子补回去，否则下一次左滑就真的退出去了 */
     try { history.pushState({ zbGuard: 1 }, '', location.href); } catch (e) {}
 
@@ -1719,7 +1719,8 @@ function bindBackGuard() {
     }
     __zbLastBack = 0;
     /* 2 秒内第二次：确认后才退出，避免手滑掉线 */
-    const ok = window.confirm('确定要退出游戏吗？');
+    /* 原生 confirm → 游戏内确认弹窗（与游戏画风一致，不再弹出系统灰框） */
+    const ok = await UI.ask('退出游戏', '退出后需要重新登录才能继续。', { yes: '退出游戏' });
     if (!ok) return;
     try { if (window.MAIN && MAIN.logout) MAIN.logout(); } catch (e) {
       try { localStorage.removeItem('zb_uid'); localStorage.removeItem('zb_auto'); } catch (e2) {}
@@ -1848,20 +1849,24 @@ function bindAll() {
   /* BUG：面板左上角「◀」(#pnBack) 全项目 0 处绑定 onclick —— 实测 22 个面板里
    * 它都可见（32×32、可命中、无遮挡），但点了【完全没反应】，玩家只能去找右上角的 ✕。
    * 这里补上：行为与 ✕ 一致（关闭面板回到主界面）。 */
-  const pb = document.getElementById('pnBack'); if (pb) pb.onclick = () => UI.close();
+  /* 「◀」改为 UI.back()：从别的面板跳进来的先回上一级，没有上级才关闭。
+   * 此前一律 close()，玩家从角色→武器后再点 ◀ 会直接掉回主界面。 */
+  const pb = document.getElementById('pnBack'); if (pb) pb.onclick = () => UI.back();
 
   const bp = document.getElementById('btPause');
   if (bp) bp.onclick = () => { BT.paused = true; document.getElementById('pause').classList.add('on'); };
   const pr = document.getElementById('psResume');
   if (pr) pr.onclick = () => { BT.paused = false; document.getElementById('pause').classList.remove('on'); };
   const pq = document.getElementById('psQuit');
-  if (pq) pq.onclick = () => {
+  if (pq) pq.onclick = async () => {
     /* BUG修复：此前「放弃本关」是裸调 quit()，没有任何二次确认。
      * 暂停面板里「继续战斗」与「放弃本关」是相邻按钮，误点一下本关奖励就只剩一半金币，
      * 且不可撤销。配置表 tips.popup.quitConfirm 早就写了这条提示文案，却从未被使用。
      * 现在按文案弹出确认，取消则保持暂停面板打开、战斗继续处于暂停态。 */
     const msg = (window.EX && EX.tip && EX.tip('popup.quitConfirm')) || '退出将放弃本关奖励，确定退出？';
-    if (!window.confirm(msg)) return;
+    /* 原生 confirm → 游戏内确认弹窗；取消则保持暂停面板打开、战斗继续暂停 */
+    const okQuit = await UI.ask('放弃本关', msg, { danger: true, yes: '放弃本关', no: '继续战斗' });
+    if (!okQuit) return;
     document.getElementById('pause').classList.remove('on');
     BT.quit();
   };
