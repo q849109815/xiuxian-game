@@ -120,6 +120,31 @@ const E = {
     return ALIAS[id] || id;
   },
 
+  /* 【字段缺失就地兜底】—— 与 sanitize 同一口径，但可在运行中随时调用。
+   * 为什么需要它（实测）：
+   *   sanitize 只在【登录读档】时跑一次。后台 GM 热改档 / 云端热更覆盖会
+   *   在 session 内直接改写 P 的子对象，绕过 sanitize。实测逐个删掉存档字段后
+   *   打开全部面板，5 个字段会让 4~6 个面板整体抛 TypeError 白屏：
+   *     talents → role/gun/legion/exped 抛（engine 战力链 p.talents.t_armor）
+   *     build   → base 抛
+   *     cleared → role/chip/task/talent 抛
+   *     tasks   → task/set 抛
+   *   而同样的缺失【经过 sanitize 后】81 个字段全部正常（已实测 0 处异常），
+   *   说明缺口只在"运行中改写"这一条路径上。
+   * 这里只做【存在性】补齐（不做数值钳制），成本 O(字段数)，可在 UI.open 里常驻调用。 */
+  ensureDicts(p) {
+    if (!p || typeof p !== 'object') return p;
+    for (const k of this.ARRS) if (!Array.isArray(p[k])) p[k] = [];
+    for (const k of this.OBJS) if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {};
+    /* build 缺失要补默认值而不是 {}：各建筑"未建造"语义是 1 级，
+     * 补 {} 会让基地面板渲染出 Lv.undefined。与 main.js 读档兜底同口径。 */
+    if (!p.build || typeof p.build !== 'object' || Array.isArray(p.build)
+        || !Object.keys(p.build).length) {
+      p.build = { hospital: 1, armory: 1, lab: 1, warehouse: 1 };
+    }
+    return p;
+  },
+
   /* =================================================
    * 新玩家
    * ================================================ */
