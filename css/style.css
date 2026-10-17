@@ -651,11 +651,20 @@ html[data-kb] #login{justify-content:flex-start;padding:12px}
 .hm-nav2 .hn2.on{color:#ffb027;background:rgba(51, 31, 8, .13)}
 .hm-nav .hn.on{color:#ffb027}
 /* 酒馆佣兵卡 */
+/* 【修复：窄屏下卡片里的文字被按钮挤成 10px 宽，逐字换行拉成 170px 高的长条】
+ * 这行 flex 是「图标(42px 固定) + 文字区(.mn flex:1) + 按钮(flex:0 0 auto)」。
+ * .mn 写的 min-width:0 —— 意味着它可以被无限压缩。320px 窄屏下卡片实测仅
+ * 162px 宽：162 − 16(内边距) − 42(图标) − 16(两处 gap) − 按钮 ≈ 14px，
+ * 于是「人数 25 · 需要战力 2万」被塞进 10px 宽，逐字堆成 【10×170】 的长条；
+ * 远征页「消耗体力 10 · 推荐战力 3000（当前战力偏低）」同理堆到 34×242。
+ * 给文字区一个最小宽度，并允许卡片换行：放不下时按钮自动落到下一行，
+ * 文字整行可用，而不是被挤成一根竖条。 */
 .mc-card{display:flex;gap:8px;align-items:center;padding:8px;border-radius:10px;margin:8px;
+  flex-wrap:wrap;
   background:rgba(51, 47, 41, .045);border:1px solid rgba(51, 47, 41, .09)}
 .mc-card .mi{width:42px;height:42px;border-radius:8px;display:flex;align-items:center;justify-content:center;
   font-size:20px;background:rgba(51, 31, 8, .12);border:1px solid rgba(51, 31, 8, .3);flex:0 0 auto}
-.mc-card .mn{flex:1;min-width:0}
+.mc-card .mn{flex:1 1 auto;min-width:96px}
 .mc-card .mn b{display:block;font-size:14px;color:#a3d6f0}
 .mc-card .mn span{font-size:12px;color:#abc1cc;display:block;margin:2px}
 /* 佣兵「🪙800」、军团「加入」、远征「挑战」等卡片内按钮实测仅 28px 高，
@@ -820,6 +829,15 @@ html[data-kb] #login{justify-content:flex-start;padding:12px}
 /* 分类网格（背包/商店/芯片，截图 4 列网格） */
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+/* 窄屏（≤360px，如 320×568 的小屏手机）：4 列网格每格实测只剩 27px 宽，
+ * 12px 的文字在里面一行只能排 2 个字 —— 角色页「幸存者-杰克 + 使用中」被挤成
+ * 【27×135】的细长条，「生命1000 · 护甲0 · 暴击5%」挤成 27×109。
+ * 降为 3 列后每格约 60px，一行能排 5 个字，恢复成正常卡片。
+ * （只收窄屏：393/430 等常规屏下 4 列每格 57px 以上，排列正常，保持不变。） */
+@media (max-width:360px){
+  .grid4{grid-template-columns:repeat(3,1fr)}
+  .grid3{grid-template-columns:repeat(2,1fr)}
+}
 .gcell{position:relative;aspect-ratio:1/1;border-radius:12px;overflow:hidden;
   background:linear-gradient(180deg,rgba(51, 47, 41, .13),rgba(0, 0, 0, .28));
   border:2px solid rgba(51, 47, 41, .16);
