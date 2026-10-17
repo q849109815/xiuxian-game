@@ -646,17 +646,17 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270313a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270314a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/style.css', ver:'20270313a', size: 0 },
-      { p: 'js/net.js', ver:'20270313a', size: 0 },
-      { p: 'js/config.js', ver:'20270313a', size: 0 },
-      { p: 'js/engine.js', ver:'20270313a', size: 0 },
-      { p: 'js/battle.js', ver:'20270313a', size: 0 },
-      { p: 'js/ui.js', ver:'20270313a', size: 0 },
-      { p: 'js/main.js', ver:'20270313a', size: 0 },
-      { p: 'js/audio.js', ver:'20270313a', size: 0 },
+      { p: 'css/style.css', ver:'20270314a', size: 0 },
+      { p: 'js/net.js', ver:'20270314a', size: 0 },
+      { p: 'js/config.js', ver:'20270314a', size: 0 },
+      { p: 'js/engine.js', ver:'20270314a', size: 0 },
+      { p: 'js/battle.js', ver:'20270314a', size: 0 },
+      { p: 'js/ui.js', ver:'20270314a', size: 0 },
+      { p: 'js/main.js', ver:'20270314a', size: 0 },
+      { p: 'js/audio.js', ver:'20270314a', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -984,7 +984,18 @@ const EX = {
    * =================================================== */
   starCost: [0, 10, 20, 40, 80, 160],   /* 升到 1~5 星各需角色碎片 */
   STAR_MAX: 5,
-  starBonus(star) { return (star || 0) * 0.08; },   /* 每星 +8% */
+  /* 【修复：starBonus 未收口，脏星级会污染整条战力链】
+   * 原写法 `return (star || 0) * 0.08`：
+   *   {} → NaN   'abc' → NaN   999 → 79.92（×80 倍）   -3 → -0.24
+   * 而本函数的返回值直接参与 攻击/生命/战力 的乘法链（engine 三处），
+   * 实测 charStar=999 时战力被放大到 632 万，{} / 'abc' 时战力变 NaN，
+   * NaN 还会经榜单上传写进排行榜。
+   * 现统一收敛为有限数字并钳制到 0~STAR_MAX，与 engine.sanitize 口径一致。 */
+  starBonus(star) {
+    const s = Math.min((typeof EX !== 'undefined' && EX.STAR_MAX) || 5,
+      Math.max(0, (isFinite(Number(star)) ? Number(star) : 0)));
+    return s * 0.08;
+  },
 
   /* =====================================================
    * 【商城表】资料：10 个商品（RMB 直购）
