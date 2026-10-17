@@ -1998,3 +1998,29 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
    #btGold/#btDia2 与 #btCoin/#btDia），保留含击杀数的 .bt-cur，
    隐藏纯重复的 .bt-coin，避免右上角堆四层。 */
 .bt-coin{display:none !important}
+
+/* ============================================================
+   游戏内统一确认弹窗 .ask-box（替代浏览器原生 confirm / alert）
+   ── 为什么要自建：原生弹窗是操作系统灰框，与游戏卡通画风割裂，
+      且按钮只能是「确定/取消」，无法承载"永久删除"这种后果级文案。
+   危险态(danger)：红色主按钮 + 顶部警示条 + 0.9s 冷却（见 ui.js UI.ask）
+   ============================================================ */
+.ask-box .ask-msg{padding:16px 18px 4px;font-size:13px;line-height:1.75;
+  color:#e8dcc8;text-align:center;word-break:break-word}
+.ask-box .ask-warn{margin:14px 14px 0;padding:9px 12px;border-radius:10px;
+  background:linear-gradient(180deg,rgba(255,92,92,.22),rgba(255,92,92,.12));
+  border:2px solid rgba(255,92,92,.5);
+  color:#ff9b9b;font-size:12px;font-weight:800;text-align:center;letter-spacing:.5px}
+.ask-box .ask-btns{display:flex;gap:10px;padding:16px 18px 20px}
+.ask-box .ask-btns button{flex:1;padding:11px 0;border:none;border-radius:10px;
+  font-size:14px;font-weight:800;cursor:pointer;transition:.15s}
+.ask-box .wxa-no{background:#a3d6f0;color:#4a6577}
+.ask-box .wxa-no:active{background:#9fd1ea;transform:scale(.97)}
+.ask-box .wxa-yes{background:linear-gradient(180deg,#4ac16b,#3fae5e);color:#fff}
+.ask-box .wxa-yes:active{transform:scale(.97)}
+/* 危险主按钮：红色 + 描边，与"确定"在视觉上一眼可分 */
+.ask-box .wxa-danger{background:linear-gradient(180deg,#ff7c79,#e85c58);color:#fff;
+  border:2px solid #a33a37 !important}
+.ask-box .wxa-danger:active{transform:scale(.97)}
+/* 冷却期：明确"不可点"，而不是看起来能点却没反应 */
+.ask-box .wxa-danger:disabled{opacity:.55;cursor:not-allowed;transform:none}
