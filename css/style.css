@@ -5,7 +5,7 @@
  * ========================================================= */
 :root{
   /* ===== 卡通 Q 版明亮主题（按真实截图） ===== */
-  --bg:#2b211a; --bg2:#3a2c22; --bg3:#4a392c;
+  --bg:#2e241b; --bg2:#4a3928; --bg3:#5f4a35;
   --soil:#6b4a2a; --soil2:#8a5f34; --acc:#f7b955;
   --gold:#f6bc5e; --gold2:#e2943e;
   --orange:#f2a93f; --orange2:#cf8329;
@@ -1329,7 +1329,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   /* Q 版圆角：比原版更大更圆 */
   --r-card:18px; --r-btn:999px; --r-chip:13px;
   /* 更鲜艳明快的 Q 版配色（原色偏灰暗，与 Q 版立绘不搭） */
-  --bg:#2f241c; --bg2:#3d2f24; --bg3:#4e3c2e;
+  --bg:#372b21; --bg2:#503e2d; --bg3:#654e39;
   --acc:#f7b955;
   --gold:#f6bc5e; --gold2:#e2943e;
   --orange:#f2a93f; --orange2:#cf8329;
@@ -1407,7 +1407,7 @@ html[data-kb] #login{justify-content:flex-start;padding-top:14px}
   --q-v1:#d7bdc9; --q-v2:#a882c4; --q-v3:#7d6093;   /* 糖果紫 */
   --q-o1:#ffb95e; --q-o2:#e0902f; --q-o3:#b06d1c;   /* 糖果橙 */
   /* 背景与文字 */
-  --q-bg1:#4e3c2e; --q-bg2:#33271e; --q-bg3:#2b211a;
+  --q-bg1:#7d6449; --q-bg2:#6a5138; --q-bg3:#584530;
   --q-txt:#f2e3c6; --q-txt2:#cdb793;
 }
 /* 字体：清晰度优先
@@ -1463,7 +1463,7 @@ html,body,button,input,select,textarea{
   border-radius:16px 26px 0 0 !important;
   background:linear-gradient(180deg,var(--q-bg1),var(--q-bg2) 38%,var(--q-bg3)) !important;
   border:3px solid var(--q-ink) !important;border-bottom:none !important;
-  box-shadow:0 10px 26px rgba(0, 0, 0, .6), inset 0 3px 0 rgba(255, 236, 204, .14) !important;
+  box-shadow:0 10px 26px rgba(0, 0, 0, .6), inset 0 3px 0 rgba(255, 214, 150, .30) !important;
 }
 /* ---------- 面板头：返回左 / 标题居中 / 关闭右（逻辑清晰） ---------- */
 .pn-hd{
