@@ -2070,7 +2070,7 @@ r_tavern(p, tab) {
     return `<div class="card"><div class="card-t">${tab}
       <span class="sub">🪙 ${E.fmt(p.gold)} · 💎 ${E.fmt(p.diamond)}</span></div>
       <div class="grid3" style="grid-template-columns:repeat(2,1fr)">${(tab === '直购') ? `
-        <div class="card" style="grid-column:1/-1"><div class="card-t">月卡 <span class="sub">SH05 每日领</span></div>
+        <div class="card" style="grid-column:1/-1"><div class="card-t">月卡 <span class="sub">每日领 钻石50 + 体力60</span></div>
           ${E.monthCardLeft(p) > 0 ? `
             <div class="kv"><span>剩余天数</span><b>${E.monthCardLeft(p)} 天</b></div>
             <div class="kv"><span>今日状态</span><b>${(p.monthCard && p.monthCard.last === new Date((typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now())+8*3600000).toISOString().slice(0,10)) ? '已领取' : '待领取'}</b></div>
@@ -2397,6 +2397,10 @@ r_tavern(p, tab) {
     const fuseTxt = !g ? '请选择宝石'
       : gMaxed ? '✔ 宝石已满级 Lv.' + E.GEM_MAX_LV
       : (_bag >= 3 ? '🔨 宝石合成（3 颗 → 升一级）' : '数量不足（需 3 颗，当前 ' + _bag + '）');
+    /* 置灰样式（class d）之外必须同时加 disabled：
+     * 此前只加了灰样式、按钮其实仍可点，玩家点了灰按钮照样弹一句「数量不足」，
+     * 看起来像界面坏了。现在两处口径统一。
+     * 注：本注释必须写在模板字符串【外面】——写在里面会被当普通文本渲染到面板上。 */
     return `<div class="stone-panel">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         ${this.zAvatarHTML('gem')}
@@ -2421,9 +2425,6 @@ r_tavern(p, tab) {
         ${g ? ' · ' + g.desc : ''}
         ${g && p.gemOn === g.id ? '<span class="st on" style="margin-left:6px">已镶嵌</span>' : ''}
       </div>
-      /* 置灰样式（class d）之外必须同时加 disabled：
-       * 此前只加了灰样式、按钮其实仍可点，玩家点了灰按钮照样弹一句「数量不足」，
-       * 看起来像界面坏了。现在两处口径统一。 */
       <button class="btn ${inlayOK ? '' : 'd'}" id="gemInlay" ${inlayOK ? '' : 'disabled'} style="width:100%;margin-top:10px">${inlayTxt}</button>
       <button class="btn g" id="gemOff" style="width:100%;margin-top:6px">卸 下（返还背包）</button>
       <button class="btn o ${fuseOK ? '' : 'd'}" id="gemFuse" ${fuseOK ? '' : 'disabled'} style="width:100%;margin-top:6px">${fuseTxt}</button>
