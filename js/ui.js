@@ -1228,6 +1228,13 @@ r_tavern(p, tab) {
      * UI 里也只有设置页显示一行角色名 —— 玩家永远只能玩 C01，
      * 另外 3 个角色及其专属皮肤（11 款中的 8 款）全部无法使用。 */
     const un = (EX.chars || []).filter((x) => E.charUnlocked(p, x.id)).length;
+    /* 星级渲染前先收口：后台改档/旧存档可能把 charStar 写成 {} / 'abc' / null / NaN，
+     * 直接插值会显示「[object Object] / 5 星」「当前 +NaN%」。
+     * 这里按有限数字钳制到 0~STAR_MAX，保证界面永远是合法数字。
+     * 注意：必须写在模板字符串【之外】——曾误插进模板内，变成 HTML 文本
+     * 且 ${cs} 引用未定义变量，导致角色面板打开即抛 ReferenceError。 */
+    const cs = Math.min(EX.STAR_MAX || 5,
+      Math.max(0, (isFinite(Number(p.charStar)) ? Number(p.charStar) : 0)));
     return `<div class="card"><div class="card-t">选择角色
         <span class="sub">已解锁 ${un} / ${(EX.chars || []).length}</span></div>
       <div class="lbl" style="text-align:left;margin-bottom:6px">点击已解锁角色切换（属性与外观同时生效）</div>
@@ -1266,11 +1273,6 @@ r_tavern(p, tab) {
       <div class="kv"><span>吸血</span><b>${(a.ls * 100).toFixed(1)}%</b></div>
       ${c.talent ? `<div class="kv"><span>天赋</span><b style="font-size:12px">${c.talent.n}：${c.talent.desc || ''}</b></div>` : ''}
     </div>
-    /* 星级渲染前先收口：后台改档/旧存档可能把 charStar 写成 {} / 'abc' / null / NaN，
-     * 直接插值会显示「[object Object] / 5 星」「当前 +NaN%」。
-     * 这里按有限数字钳制到 0~STAR_MAX，保证界面永远是合法数字。 */
-    const cs = Math.min(EX.STAR_MAX || 5,
-      Math.max(0, (isFinite(Number(p.charStar)) ? Number(p.charStar) : 0)));
     <div class="card"><div class="card-t">角色升星
       <span class="sub">${cs} / ${EX.STAR_MAX} 星</span></div>
       <div class="stars">${[1, 2, 3, 4, 5].map((i) =>
@@ -1906,11 +1908,11 @@ r_tavern(p, tab) {
       const cs = Object.keys(p.chips || {});
       const bagN = (p.bag || []).length;
       return `<div class="card"><div class="card-t">已装备芯片 <span class="sub">${cs.length}/6 槽位 · 背包 ${bagN} 颗</span></div>
-        <div class="grid4">${cs.length ? cs.map((id) => {
+        ${cs.length ? `<div class="grid4">${cs.map((id) => {
           const c = p.chips[id];
           return `<div class="gcell"><div class="gi">${c.icon || '🔲'}</div>
             <div class="gn">${c.n || '芯片'}</div><span class="gq">Lv${c.lv || 1}</span></div>`;
-        }).join('') : '<div class="lbl">尚未装备芯片' + (bagN ? '（背包还有 ' + bagN + ' 颗，去芯片系统装上）' : '') + '</div>'}</div>
+        }).join('')}</div>` : `<div class="lbl" style="padding:10px 4px;line-height:1.5">尚未装备芯片${bagN ? '（背包还有 ' + bagN + ' 颗，去芯片系统装上）' : ''}</div>`}
       </div>
       <button class="btn o" id="goChip" style="width:100%;margin-top:8px">🔲 前往芯片系统</button>`;
     }
@@ -2067,7 +2069,7 @@ r_tavern(p, tab) {
     const goods = (EX.shopGoods || {})[tab] || [];
     return `<div class="card"><div class="card-t">${tab}
       <span class="sub">🪙 ${E.fmt(p.gold)} · 💎 ${E.fmt(p.diamond)}</span></div>
-      <div class="grid3">${(tab === '直购') ? `
+      <div class="grid3" style="grid-template-columns:repeat(2,1fr)">${(tab === '直购') ? `
         <div class="card" style="grid-column:1/-1"><div class="card-t">月卡 <span class="sub">SH05 每日领</span></div>
           ${E.monthCardLeft(p) > 0 ? `
             <div class="kv"><span>剩余天数</span><b>${E.monthCardLeft(p)} 天</b></div>
@@ -2117,7 +2119,8 @@ r_tavern(p, tab) {
         return `<div class="gcell">
           ${g.img ? `<img src="${g.img}">` : `<div class="gi">${g.icon}</div>`}
           <div class="gn">${g.n}${g.rmb ? `<span class="tag y" style="font-size:12px">${g.rmb}</span>` : ''}</div>
-          ${g.desc ? `<div class="lbl" style="font-size:12px;line-height:1.3;margin:2px 0">${g.desc}</div>` : ''}
+          ${g.desc ? `<div class="lbl" style="font-size:12px;line-height:1.3;margin:2px 0;
+            display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${g.desc}</div>` : ''}
           ${(E.isRechargeGoods && E.isRechargeGoods(g, tab) && !p.firstRech)
             ? `<div class="lbl" style="font-size:12px;color:#ffd76a">🎉 首充双倍 → 💎${Number(g.give.diamond) * 2}</div>` : ''}
           <button class="btn sm" data-buy="${g.id}" ${(can && !noBuy) ? '' : 'disabled'}
