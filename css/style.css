@@ -2148,3 +2148,20 @@ b { font-weight: 600 !important; }
 .tag, .tag.y, .tag.r, .tag.g, .tag.b { font-weight: 600 !important; }
 .pt.on { font-weight: 600 !important; }
 .btn.c.sm, .btn.c.blk { font-weight: 600 !important; }
+
+/* ===== 选中态可见性修复 (.lvc.cur) =====
+ * 缺陷：V2 统一层里 .lvc 被三条 !important 规则锁死
+ *   （1616 `border:2px solid var(--q-ink)!important`、
+ *    2123 `background:var(--v3)!important;border:1px solid var(--ln)!important`、
+ *    2128 `background:var(--v2)!important`）
+ *   而 .lvc.cur 只用了普通声明 —— !important 恒胜于选择器权重，
+ *   于是「当前选中」的边框/底色/描边全部失效，肉眼完全看不出选了哪个。
+ * 影响三处（全部实测为 0 差异）：
+ *   ① 芯片面板·槽位选择  ② 关卡页·难度选择  ③ 关卡页·章节选择
+ * 玩家点了没反应感，且可能选错难度直接开打。
+ * 放在文件末尾 + !important，确保压过上面所有规则。 */
+.lvc.cur{
+  background:linear-gradient(180deg, rgba(255,208,122,.26), rgba(255,208,122,.10)) !important;
+  border-color:var(--gold) !important;
+  box-shadow:0 0 0 2px rgba(255,208,122,.30), inset 0 1px 0 rgba(255,240,210,.22) !important;
+}
