@@ -1,0 +1,305 @@
+/* =========================================================================
+ * Design Tokens —— 全站设计令牌「单一真源」
+ * -------------------------------------------------------------------------
+ * 架构分层（改配色/字号/间距，只改本文件，全站生效）：
+ *   L0 原始色板 --c-*        ：具体色值，唯一允许出现 #hex 的地方
+ *   L1 语义令牌 --surface/text/accent/... ：不写色值，只引用 L0
+ *   L2 尺度令牌 --sp/fs/fw/radius/shadow/z/dur ：间距/字号/字重/圆角/阴影/层级/动效
+ *   L3 兼容别名 --bg / --txt / --q-* / --r-* ：旧变量名，指向 L1/L2，保证存量代码不失效
+ *
+ * 纪律（由 tools/archguard.cjs 强制）：
+ *   1. style.css / js 中禁止再出现新的硬编码 #hex（L0 定义处除外）
+ *   2. 间距必须落在 4pt 栅格，字号/字重必须取自阶梯
+ *   3. 新增 var(--x) 必须先在本文件定义
+ * ========================================================================= */
+:root{
+  /* ===== L0 原始色板：暖棕黑末日底 + 琥珀金主色 ===== */
+
+  /* ink 墨：表面阶梯（由深到浅）
+   * 档位不连续是刻意的：每一档都对应线上真实在用的色值，保证迁移后视觉零漂移。 */
+  --c-ink-950:#0d0b09;
+  --c-ink-900:#0d0906;
+  --c-ink-880:#0e0c0a;
+  --c-ink-850:#150e07;
+  --c-ink-800:#1c1714;
+  --c-ink-750:#1e150c;
+  --c-ink-700:#271c11;
+  --c-ink-650:#2a1e13;
+  --c-ink-600:#372c24;
+  --c-ink-560:#2c241d;
+  --c-ink-550:#3a2a18;
+  --c-ink-500:#3f332a;
+  --c-ink-450:#45321f;
+  --c-ink-400:#4a3520;
+  --c-ink-350:#5b4840;
+  --c-ink-300:#5e451d;
+  --c-ink-250:#715e4f;
+  --c-ink-200:#7d5c28;
+  --c-ink-150:#554436;
+  --c-ink-100:#504033;
+
+  /* amber 琥珀：主色/强调/金币 */
+  --c-amber-800:#946412;
+  --c-amber-750:#946618;
+  --c-amber-700:#a36519;
+  --c-amber-600:#c98f34;
+  --c-amber-500:#e2943e;
+  --c-amber-400:#f2a93f;
+  --c-amber-350:#ffb027;
+  --c-amber-320:#ffb535;
+  --c-amber-310:#e89f20;
+  --c-amber-300:#f6bc5e;
+  --c-amber-200:#f7b955;
+  --c-amber-150:#ffbb45;
+  --c-amber-120:#ffbc48;
+  --c-amber-110:#ffb93f;
+  --c-amber-105:#ffb83c;
+  --c-amber-100:#ffd07a;
+  --c-amber-090:#ffdb92;
+  --c-amber-050:#ffb95e;
+  --c-amber-450:#efa73a;
+
+  /* 语义色：低饱和、与暖底兼容 */
+  --c-red-600:#8e4436;
+  --c-red-550:#ff5657;
+  --c-red-520:#ff5f62;
+  --c-red-500:#d96a58;
+  --c-red-450:#ff6f71;
+  --c-red-400:#f08a80;
+  --c-red-350:#ff7c79;
+
+  --c-green-700:#1a3a26;
+  --c-green-600:#3d6b47;
+  --c-green-550:#5a8f5c;
+  --c-green-500:#5a9a68;
+  --c-green-450:#6fae72;
+  --c-green-420:#6dd092;
+  --c-green-400:#8cd6a4;
+  --c-green-350:#4cc17f;
+  --c-green-300:#86f0a2;
+  --c-green-250:#4ac16b;
+
+  --c-blue-650:#7093a5;
+  --c-blue-600:#5c7a8c;
+  --c-blue-580:#658494;
+  --c-blue-560:#6a8b9c;
+  --c-blue-550:#83acc0;
+  --c-blue-500:#8fb8d0;
+  --c-blue-400:#bcd6e4;
+  --c-blue-350:#abc1cc;
+  --c-blue-330:#a1d4ed;
+  --c-blue-320:#9ecfe8;
+  --c-blue-300:#a3d6f0;
+
+  --c-violet-600:#6d5290;
+  --c-violet-500:#a882c4;
+  --c-violet-400:#d7bdc9;
+
+  --c-orange-600:#a36519;
+  --c-orange-500:#cf8329;
+  --c-orange-400:#ffb95e;
+
+  /* 中性 / 文字阶梯 */
+  --c-n-700:#6b6155;
+  --c-n-600:#857a68;
+  --c-n-500:#9a8d78;
+  --c-n-400:#a89a86;
+  --c-n-350:#c5b494;
+  --c-n-300:#ccbcab;
+  --c-n-250:#ccb7a7;
+  --c-n-200:#e6d6b8;
+  --c-n-100:#f2e5c8;
+  --c-white:#ffffff;
+
+  /* 补充档位：收尾线上残留的低频色值，使迁移后硬编码归零 */
+  --c-red-750:#b8472f;
+  --c-red-650:#e04649;
+  --c-red-620:#d64e4b;
+  --c-red-300:#ff8fa4;
+  --c-red-250:#ff9b9b;
+  --c-red-200:#ffb4b4;
+  --c-blue-200:#5cd8ff;
+  --c-amber-850:#b87d16;
+  --c-amber-250:#ffd93d;
+  --c-blue-750:#455a64;
+  --c-blue-250:#8fb4ff;
+
+  /* 僵尸绿 */
+  --c-zombie-600:#47834f;
+  --c-zombie-500:#5aa567;
+
+  /* ===== L1 语义令牌：只引用 L0，不写色值 ===== */
+
+  /* 表面（面板/卡片/输入框：由深到浅形成明度阶梯） */
+  --surface-0:var(--c-ink-900);
+  --surface-1:var(--c-ink-800);
+  --surface-2:var(--c-ink-700);
+  --surface-3:var(--c-ink-600);
+  --surface-4:var(--c-ink-500);
+  --surface-5:var(--c-ink-400);
+
+  /* 文字（1 最强 → 4 最弱） */
+  --text-1:var(--c-n-100);
+  --text-2:var(--c-n-200);
+  --text-3:var(--c-n-500);
+  --text-4:var(--c-n-600);
+  --text-disabled:var(--c-n-700);
+
+  /* 强调与语义 */
+  --accent:var(--c-amber-200);
+  --accent-strong:var(--c-amber-500);
+  --accent-deep:var(--c-amber-700);
+  --gold:var(--c-amber-300);
+  --danger:var(--c-red-500);
+  --danger-soft:var(--c-red-400);
+  --success:var(--c-green-500);
+  --success-soft:var(--c-green-450);
+  --info:var(--c-blue-500);
+  --violet:var(--c-violet-500);
+  --orange:var(--c-orange-500);
+
+  /* 描边 */
+  --border:rgba(51,47,41,.12);
+  --border-strong:rgba(51,47,41,.24);
+  --border-accent:rgba(247,185,85,.42);
+  /* 暖光描边（原遗留 --ln / --ln2，用于卡片高光与分隔线） */
+  --border-glow:rgba(255,231,190,.14);
+  --border-glow-strong:rgba(255,231,190,.28);
+
+  /* ===== L2 尺度令牌 ===== */
+
+  /* 间距：4pt 栅格 */
+  --sp-0:0px;
+  --sp-1:4px;
+  --sp-2:8px;
+  --sp-3:12px;
+  --sp-4:16px;
+  --sp-5:20px;
+  --sp-6:24px;
+  --sp-8:32px;
+
+  /* 字号阶梯（最小 12px：中文 11px 以下必然糊） */
+  --fs-xs:12px;
+  --fs-sm:13px;
+  --fs-md:14px;
+  --fs-lg:16px;
+  --fs-xl:18px;
+  --fs-2xl:20px;
+  --fs-3xl:24px;
+  --fs-4xl:28px;
+  --fs-display:36px;
+  --fs-hero:44px;
+  --fs-5xl:32px;
+  --fs-mega:64px;
+
+  /* 字重阶梯 */
+  --fw-regular:400;
+  --fw-medium:500;
+  --fw-semibold:600;
+  --fw-bold:700;
+
+  /* 圆角 */
+  --radius-sm:6px;
+  --radius-md:10px;
+  --radius-lg:14px;
+  --radius-xl:18px;
+  --radius-pill:999px;
+
+  /* 阴影（卡通立体：硬边底 + 柔化投影） */
+  --shadow-1:0 1px 2px rgba(0,0,0,.30);
+  --shadow-2:0 3px 0 rgba(0,0,0,.34), 0 2px 8px rgba(0,0,0,.28);
+  --shadow-3:0 6px 18px rgba(0,0,0,.42);
+  --shadow-inset:inset 0 1px 0 rgba(255,255,255,.06);
+
+  /* 层级 */
+  --z-base:1;
+  --z-panel:100;
+  --z-modal:1000;
+  --z-toast:2000;
+
+  /* 动效时长 */
+  --dur-fast:120ms;
+  --dur-base:220ms;
+  --dur-slow:360ms;
+
+  /* ===== L3 兼容别名：旧变量名 → 语义令牌（存量代码零改动） ===== */
+  --bg:var(--surface-1);
+  --bg2:var(--surface-2);
+  --bg3:var(--surface-3);
+  --soil:var(--surface-4);
+  --soil2:var(--surface-5);
+
+  --acc:var(--accent);
+  --gold2:var(--c-amber-500);
+  --yel:var(--gold);
+  --orange2:var(--c-orange-500);
+  --grn:var(--success-soft);
+  --grn2:var(--c-green-550);
+  --green:var(--c-green-550);
+  --red:var(--danger);
+  --blue:var(--info);
+  --pp:var(--violet);
+  --zombie:var(--c-zombie-500);
+  --zombie2:var(--c-zombie-600);
+
+  --txt:var(--text-2);
+  --txt2:var(--c-n-400);
+  --txt3:var(--text-3);
+  --line:var(--border);
+  --stone:var(--c-ink-200);
+  --stone2:var(--c-ink-300);
+
+  /* Q 版糖果主题旧变量 → 统一到同一色板（此前是第二套语言，与主界面割裂） */
+  --q-ink:var(--surface-1);
+  --q-ink2:var(--surface-0);
+  --q-y1:var(--c-amber-100);
+  --q-y2:var(--c-amber-300);
+  --q-y3:var(--c-amber-600);
+  --q-p1:var(--c-red-400);
+  --q-p2:var(--danger);
+  --q-p3:var(--c-red-600);
+  --q-g1:var(--c-green-400);
+  --q-g2:var(--success);
+  --q-g3:var(--c-green-600);
+  --q-b1:var(--c-blue-400);
+  --q-b2:var(--info);
+  --q-b3:var(--c-blue-600);
+  --q-v1:var(--c-violet-400);
+  --q-v2:var(--violet);
+  --q-v3:var(--c-violet-600);
+  --q-o1:var(--c-amber-050);
+  --q-o2:var(--c-amber-500);
+  --q-o3:var(--c-amber-700);
+  --q-bg1:var(--surface-1);
+  --q-bg2:var(--surface-2);
+  --q-bg3:var(--surface-3);
+  --q-txt:var(--text-2);
+  --q-txt2:var(--c-n-400);
+
+  --r-card:var(--radius-lg);
+  --r-btn:var(--radius-pill);
+  --r-chip:var(--radius-md);
+
+  /* 第三套遗留语言（原 style.css 2122 行）：表面 v0~v4 / 文字 tx1~3 / 金色 gd1~3。
+   * 此前与主界面色板并存且互不一致，是「面板与主界面割裂」的直接成因。
+   * 现统一并入同一色板：改 L0 即全站同步，无需再维护三套值。 */
+  --v0:var(--surface-1);
+  --v1:var(--surface-2);
+  --v2:var(--surface-3);
+  --v3:var(--surface-4);
+  --v4:var(--surface-5);
+  --tx1:var(--text-1);
+  --tx2:var(--c-n-350);
+  --tx3:var(--text-3);
+  --gd1:var(--c-amber-090);
+  --gd2:var(--c-amber-450);
+  --gd3:var(--c-amber-600);
+  --ln:var(--border-glow);
+  --ln2:var(--border-glow-strong);
+
+  /* 安全区（刘海屏/手势条），由系统环境提供 */
+  --sab:env(safe-area-inset-bottom,0px);
+
+  /* --vvh：软键盘弹出时由 JS 写入可视高度，未写入回落 100vh */
+  --vvh:100vh;
+}
