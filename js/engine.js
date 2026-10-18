@@ -251,13 +251,16 @@ const E = {
     const src = (EX.cgImg || {})[id]; if (!src) return null;
     return { id: id, src: src };
   },
-  /* 是否已播放过；首次进入该章节时返回 CG 数据并登记 */
+  /* 是否已播放过；首次进入该章节时返回 CG 数据并登记。
+   * 【BUG修复】此前按 cg.id 登记，而第 4 章与第 10 章共用同一张 cg02_defense，
+   *   玩家在第 4 章看过之后，最终章第 10 章的过场被判定为「已看过」而永久跳过。
+   *   改为按「章节号 ch」登记：每章只播一次，且各章互不影响。 */
   cgTake(p, ch) {
     const cg = this.cgOf(ch);
     if (!cg) return null;
     p.cgSeen = p.cgSeen || {};
-    if (p.cgSeen[cg.id]) return null;
-    p.cgSeen[cg.id] = 1;
+    if (p.cgSeen[ch]) return null;
+    p.cgSeen[ch] = 1;
     return cg;
   },
   /* 体力消耗：普通 1 / BOSS 3 / 无尽 2，高难度【递增】而不是相乘
