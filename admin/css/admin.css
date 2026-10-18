@@ -197,6 +197,9 @@ select{appearance:none;padding-right:30px;
 /* ================= 表格 ================= */
 .tw{overflow:auto;border:1px solid var(--bd);border-radius:var(--r2);background:var(--sf);box-shadow:var(--sh)}
 table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
+/* 超长昵称 / 军团名 / UID 会把 4 列表格撑到容器两倍宽（实测 2292px vs 1100px），
+ * 运营必须横向滚动才能看到 UID 列。允许在词内换行，表格不再被单个长词顶开。 */
+table th,table td{overflow-wrap:anywhere;word-break:break-word}
 th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap}
 th{background:var(--sf2);color:var(--tx2);font-weight:600;font-size:12px;height:44px;
   position:sticky;top:0;z-index:2;letter-spacing:.2px}
