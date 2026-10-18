@@ -39,7 +39,8 @@
   --c-ink-100:#504033;
 
   /* amber 琥珀：主色/强调/金币 */
-  --c-amber-800:#946412;
+  --ts-legible:0 1px 2px rgba(0,0,0,.85), 0 0 3px rgba(0,0,0,.55);  /* 压图文字描边：保证图片背景上可读 */
+  --c-amber-800:#4a2f05;
   --c-amber-900:#3d2703;  /* 金底上的深字：对比度 5.5+，用于主CTA/徽标文字 */
   --c-amber-750:#946618;
   --c-amber-700:#a36519;
@@ -65,9 +66,9 @@
   --c-red-550:#ff5657;
   --c-red-520:#ff5f62;
   --c-red-500:#d96a58;
-  --c-red-450:#ff6f71;
+  --c-red-450:#ff8f90;
   --c-red-700:#d92d2a;
-  --c-red-800:#b01a17;  /* 红点底：配白字实测 4.5+（勿用 -750，已被下方 #b8472f 占用） */
+  --c-red-800:#8f1410;  /* 红点底：配白字实测 4.5+（勿用 -750，已被下方 #b8472f 占用） */
   --c-red-400:#f08a80;
   --c-red-350:#ff7c79;
 
@@ -111,7 +112,7 @@
   --c-leather-400:#6a5646;
   --c-leather-600:#483a2e;
   --c-n-350:#c5b494;
-  --c-n-300:#ccbcab;
+  --c-n-300:#d8c9b4;
   --c-n-250:#ccb7a7;
   --c-n-200:#e6d6b8;
   --c-n-100:#f2e5c8;
@@ -256,16 +257,16 @@
   --yel:var(--gold);
   --orange2:var(--c-orange-500);
   --grn:var(--success-soft);
-  --grn2:var(--c-green-550);
-  --green:var(--c-green-550);
+  --grn2:var(--c-green-420);
+  --green:var(--c-green-420);
   --red:var(--danger);
   --blue:var(--info);
   --pp:var(--violet);
   --zombie:var(--c-zombie-500);
   --zombie2:var(--c-zombie-600);
 
-  --txt:var(--text-2);
-  --txt2:var(--c-n-400);
+  --txt:var(--text-1);
+  --txt2:var(--text-2);
   --txt3:var(--text-3);
   --line:var(--border);
   --stone:var(--c-ink-200);
@@ -274,14 +275,14 @@
   /* Q 版糖果主题旧变量 → 统一到同一色板（此前是第二套语言，与主界面割裂） */
   --q-ink:var(--surface-1);
   --q-ink2:var(--surface-0);
-  --q-y1:var(--c-amber-100);
-  --q-y2:var(--c-amber-300);
+  --q-y1:var(--c-amber-090);
+  --q-y2:var(--c-amber-250);
   --q-y3:var(--c-amber-600);
   --q-p1:var(--c-red-400);
   --q-p2:var(--danger);
   --q-p3:var(--c-red-600);
   --q-g1:var(--c-green-400);
-  --q-g2:var(--success);
+  --q-g2:var(--c-green-400);
   --q-g3:var(--c-green-600);
   --q-b1:var(--c-blue-400);
   --q-b2:var(--info);
@@ -290,13 +291,13 @@
   --q-v2:var(--violet);
   --q-v3:var(--c-violet-600);
   --q-o1:var(--c-amber-050);
-  --q-o2:var(--c-amber-500);
+  --q-o2:var(--c-amber-320);
   --q-o3:var(--c-amber-700);
   --q-bg1:var(--surface-1);
   --q-bg2:var(--surface-2);
   --q-bg3:var(--surface-3);
-  --q-txt:var(--text-2);
-  --q-txt2:var(--c-n-400);
+  --q-txt:var(--text-1);
+  --q-txt2:var(--text-2);
 
   --r-card:var(--radius-lg);
   --r-btn:var(--radius-pill);
