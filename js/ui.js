@@ -3003,7 +3003,7 @@ r_tavern(p, tab) {
         return `<button class="lvc ${cur ? 'cur' : ''}" data-df="${d.id}" style="${cur ? 'background:' + (d.color || '#5fd97a') + '22 !important;border-color:' + (d.color || '#5fd97a') + ' !important' : ''}">
           <i style="font-size:var(--fs-4xl);font-style:normal;display:block">${d.img ? `<img src="${d.img}" style="width:30px;height:30px;object-fit:cover;border-radius:6px">` : d.icon}</i>
           <b style="font-size:var(--fs-xs)">${d.n}</b>
-          <span style="font-size:var(--fs-xs);opacity:.85">奖励×${dd.rw} · 体力+${Math.max(0, dd.stam - 1)}</span></button>`;
+          <span style="font-size:var(--fs-xs);opacity:.85">奖励×${dd.rw} · 体力×${dd.stam}</span></button>`;
       }).join('')}</div>
       <div class="sub" style="margin-top:6px">${E.diffDef(dm.id).desc || ''}</div></div>`;
     return diffBar + `<div class="card"><div class="card-t">${cd.img ? `<img src="${cd.img}" style="width:20px;height:20px;object-fit:cover;border-radius:5px;vertical-align:-4px">` : cd.icon} ${cd.n}</div>
@@ -3927,6 +3927,22 @@ r_tavern(p, tab) {
   showNotice() {
     const un = this.noticeUnread();
     if (!un.length) return;
+    /* 【PM 体验】公告不得打断战斗。
+     * showNotice 由云端配置同步完成后异步触发（main.js startCfgSync 末尾），
+     * 时机不可控：玩家点「出击」进战斗后配置才同步完，公告全屏遮罩就会
+     * 盖在战斗画面上，与战斗引导叠在一起（实测首场战斗同时出现
+     * 「📢 画面特效全新升级」横幅 + 「战斗引导」弹窗）。
+     * 这里在战斗中改为延迟重试，等战斗结束再弹。 */
+    try {
+      const scr = document.getElementById('battle');
+      const inBattle = (typeof BT !== 'undefined' && BT && BT.on) ||
+        (scr && scr.offsetParent !== null);
+      if (inBattle) {
+        clearTimeout(this._ntDefer);
+        this._ntDefer = setTimeout(() => { try { this.showNotice(); } catch (e) {} }, 2000);
+        return;
+      }
+    } catch (e) {}
     /* 遮罩已被占用（例如「发现新版本」正弹着）→ 排队，等前一个关闭后再弹，
      * 否则会把前一个整份覆盖掉 */
     if (this.maskQueue(() => this.showNotice())) return;
