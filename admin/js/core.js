@@ -346,11 +346,11 @@ const PERM = {
     admin: { n: '超级管理员', p: ['all'] },
     ops: {
       n: '运营', p: ['account.*', 'save.view', 'save.log', 'ops.*', 'rank.*',
-        'mail.*', 'cdkey.*', 'config.*', 'bi.view', 'shop.*', 'ad.*', 'social.*', 'notice.*'],
+        'mail.*', 'cdkey.*', 'config.*', 'bi.view', 'bi.upload', 'shop.*', 'ad.*', 'social.*', 'notice.*'],
     },
     gm: { n: 'GM', p: ['account.query', 'account.ban', 'account.resetpwd', 'save.*', 'ops.*', 'mail.single'] },
-    plan: { n: '策划', p: ['config.*', 'hotfix.*', 'rank.rw', 'shop.*', 'ad.cfg', 'bi.view'] },
-    devops: { n: '运维', p: ['server.*', 'hotfix.*', 'bi.view', 'log.*'] },
+    plan: { n: '策划', p: ['config.*', 'hotfix.*', 'rank.rw', 'shop.*', 'ad.cfg', 'bi.view', 'bi.upload'] },
+    devops: { n: '运维', p: ['server.*', 'hotfix.*', 'bi.view', 'bi.upload', 'log.*'] },
     audit: { n: '只读审计', p: ['account.query', 'save.view', 'bi.view', 'log.view'] },
   },
   curRole() { try { return localStorage.getItem('zb_role') || 'admin'; } catch (e) { return 'admin'; } },
@@ -379,6 +379,8 @@ const PERM = {
     saveEdit: 'save.edit', backup: 'save.edit', restore: 'save.rollback', resetSave: 'save.reset',
     /* 运营指令 */
     grant: 'ops.grant', odAdd: 'ops.grant', odFix: 'ops.grant',
+    /* 按行补发：直接给玩家发物品，与 odAdd/odFix 同级，此前漏映射导致任何角色可发 */
+    odFixRow: 'ops.grant',
     banNow: 'ops.ban', unbanNow: 'ops.ban',
     /* 邮件 */
     sendMail: 'mail.send', mDel: 'mail.send',
@@ -395,12 +397,23 @@ const PERM = {
     adSave: 'config.edit', lgSave: 'config.edit', scSave: 'config.edit', spEdit: 'config.edit',
     /* 热更 / 版本 */
     hvSave: 'hotfix.push', hvPush: 'hotfix.push',
+    /* 数值热更「立即生效 / 加入定时计划」：改写 cfg.json 并推给全体玩家，
+     * 影响面大于任何单点操作，此前完全不受权限约束 */
+    hkNow: 'hotfix.push', hkPlan: 'hotfix.push',
     /* 服务器运维 */
     svSave: 'server.maint',
     /* 公告 */
     ntAdd: 'notice.edit', ntDel: 'notice.edit',
     /* 埋点 */
     biClear: 'bi.clear',
+    /* 上传本地埋点到云端：会写云端 stats，只读审计角色不应可写 */
+    biUpload: 'bi.upload',
+    /* 清空本地审计日志：会抹掉本机操作留痕，只允许运维做
+     * （云端 gmlog 不受影响，但本机这条链会断，属毁迹级操作） */
+    clrLog: 'log.clear',
+    /* 多语言文案「编辑并下发」：写进 cfg.json 的 I18N 推给全体玩家，
+     * 与运营配置同级，此前漏映射 */
+    txEdit: 'config.edit',
   },
   /* 该动作当前角色是否可做（未映射的动作放行） */
   canAct(a) {
