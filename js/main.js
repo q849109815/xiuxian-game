@@ -1073,20 +1073,46 @@ const MAIN = {
           if (BOARDS.indexOf(s) >= 0) return s;
           return '';
         };
-        const incoming = db.list.filter((x) => x && x.item).map((x, i) => ({
-          id: x.id || ('RW' + i),
-          board: normBoard(x.board) || '无尽生存榜',
-          rank: '第' + (x.a || 1) + '-' + (x.b || 1) + '名',
-          lo: Number(x.a) || 1, hi: Number(x.b) || 1,
-          rw: { [x.item]: Number(x.n) || 1 },
-          /* settle 可能是天数（数字）也可能是「每日 / 每周 / 活动结束」；
-           * 一律拼「天」会显示成「每周 天」这种怪文案 */
-          cyc: x.settle ? (/^\d+$/.test(String(x.settle).trim()) ? String(x.settle).trim() + ' 天' : String(x.settle)) : '每期',
-          stack: !!x.stack,
-        }));
-        /* 后台覆盖到的榜单 → 用后台数据；未覆盖的榜单 → 保留默认配置 */
-        const touched = Array.from(new Set(incoming.map((x) => x.board)));
-        const base = (EX.rankRewards || []).filter((x) => touched.indexOf(x.board) < 0);
+        /* 名次区间字段契约
+         * BUG（实测）：后台旧版本只写 from/to，而这里读的是 a/b。
+         *   Number(x.a)||1 → lo=hi=1，【名次区间整体塌成「仅第 1 名」】。
+         *   线上现存记录 {"board":"endless","from":1,"to":3,"item":"diamond","n":100}
+         *   本意是第 1~3 名各 100 钻，实际只有第 1 名能领，第 2、3 名白等。
+         * 现在 a/b 优先，缺失时回退 from/to，旧数据无需迁移即可生效。 */
+        const rgA = (x) => (x.a != null && x.a !== '' ? x.a : x.from);
+        const rgB = (x) => (x.b != null && x.b !== '' ? x.b : x.to);
+        /* 奖励支持【多物品对象】
+         * 后台表单只有单个 item/n，无法表达内置的复合奖励
+         * （如第1名 = 传说芯片×1 + 钻石500 + 称号「无尽之王」）。
+         * 现在若后台写了 rw 对象则整体采用，否则沿用单物品形态，向下兼容。 */
+        const rwOf = (x) => {
+          if (x.rw && typeof x.rw === 'object' && !Array.isArray(x.rw) && Object.keys(x.rw).length) return x.rw;
+          return { [x.item]: Number(x.n) || 1 };
+        };
+        const incoming = db.list.filter((x) => x && (x.item || (x.rw && typeof x.rw === 'object'))).map((x, i) => {
+          const lo = Math.max(1, Math.floor(Number(rgA(x)) || 1));
+          const hi = Math.max(lo, Math.floor(Number(rgB(x)) || lo));
+          return {
+            id: x.id || ('RW' + i),
+            board: normBoard(x.board) || '无尽生存榜',
+            /* 与内置文案口径一致：单名次不显示成「第1-1名」 */
+            rank: lo === hi ? ('第' + lo + '名') : ('第' + lo + '-' + hi + '名'),
+            lo, hi,
+            rw: rwOf(x),
+            /* settle 可能是天数（数字）也可能是「每日 / 每周 / 活动结束」；
+             * 一律拼「天」会显示成「每周 天」这种怪文案 */
+            cyc: x.settle ? (/^\d+$/.test(String(x.settle).trim()) ? String(x.settle).trim() + ' 天' : String(x.settle)) : '每期',
+            stack: !!x.stack,
+          };
+        });
+        /* 榜单内【按名次区间】合并
+         * BUG（实测）：此前「后台配到的榜单 → 整榜替换」。
+         *   线上只给无尽榜配了 1 条，内置的 4 档（第1/2-5/6-20/21-100名）
+         *   被一次性抹掉 → 第 2~100 名玩家没有任何奖励可领。
+         * 现在改成：后台区间覆盖到的名次段用后台数据，没覆盖到的保留内置默认，
+         * 这样后台只配 1 档也不会把其余档位清空。 */
+        const covered = (bd, lo, hi) => incoming.some((y) => y.board === bd && lo <= y.hi && y.lo <= hi);
+        const base = (EX.rankRewards || []).filter((x) => !covered(x.board, x.lo, x.hi));
         EX.rankRewards = base.concat(incoming);
       } else if (key === 'cfg') {
         /* 后台「配置热更新」上传的是用户手填的裸 JSON（如 {"STAMINA_MAX":200}），
