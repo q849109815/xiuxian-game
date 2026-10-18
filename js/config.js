@@ -646,7 +646,7 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270402a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270403a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/tokens.css', ver:'20270330a', size: 0 },
@@ -2031,15 +2031,32 @@ const EX = {
     'cg01_horde': 'assets/cg/cg01_horde.jpg',
     'cg02_defense': 'assets/cg/cg02_defense.jpg',
     'cg03_rebuild': 'assets/cg/cg03_rebuild.jpg',
+    /* 第 2/3/5/6/8/9/10 章过场图：此前 10 章复用 3 张，且第 10 章与第 4 章同图 */
+    'cg04_tunnel': 'assets/cg/cg04_tunnel.jpg',
+    'cg05_bridge': 'assets/cg/cg05_bridge.jpg',
+    'cg06_field': 'assets/cg/cg06_field.jpg',
+    'cg07_fallout': 'assets/cg/cg07_fallout.jpg',
+    'cg08_rift': 'assets/cg/cg08_rift.jpg',
+    'cg09_nest': 'assets/cg/cg09_nest.jpg',
+    'cg10_final': 'assets/cg/cg10_final.jpg',
   },
   /* 章节 CG 对应 */
-  chapterCg: { 1: 'cg01_horde', 4: 'cg02_defense', 7: 'cg03_rebuild', 10: 'cg02_defense' },
+  chapterCg: {
+    1: 'cg01_horde', 2: 'cg04_tunnel', 3: 'cg05_bridge', 4: 'cg02_defense', 5: 'cg06_field',
+    6: 'cg07_fallout', 7: 'cg03_rebuild', 8: 'cg08_rift', 9: 'cg09_nest', 10: 'cg10_final',
+  },
   /* 章节过场文案（配合 CG 展示） */
   chapterDesc: {
-    1: '尸潮初现，城市沦陷。守住最后一道防线。',
-    4: '深入工厂区，机械与尸群交织的死亡地带。',
-    7: '废墟之上重建据点，人类最后的希望。',
-    10: '最终决战，直面尸王的老巢。',
+    1:  '尸潮初现，城市在一夜之间沦陷。你握紧最后一把枪，守住街区出口。',
+    2:  '地铁隧道成了避难所，也成了屠宰场。黑暗里，回声比枪声更让人发抖。',
+    3:  '穿过中央大桥，广播仍在循环播放撤离通知——那已是三个月前的录音。',
+    4:  '深入工厂区，传送带还在空转。机械的轰鸣掩盖了尸群逼近的脚步。',
+    5:  '风吹过麦浪，却闻不到收割的味道。田埂下，埋着来不及逃走的人。',
+    6:  '盖革计数器响得像心跳。这里的怪物，连辐射都不怕。',
+    7:  '废墟之上重建据点。篝火燃起的那晚，人们第一次敢说出「明天」。',
+    8:  '地裂深处传来低吼。它在下面，一直在等我们下去。',
+    9:  '蛛网般的巢道通向地心。每走一步，都有东西在暗处看着你。',
+    10: '最终决战。推开母巢大门，直面尸王——这一次，没有退路。',
   },
 
   /* 场景图映射 */
@@ -2050,7 +2067,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270402a',
+  sceneV: '20270403a',
 
   /* 品质与元素 */
   qualities: ['白', '绿', '蓝', '紫', '橙', '红'],
