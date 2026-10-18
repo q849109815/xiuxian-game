@@ -2006,12 +2006,19 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
  *   高频的养成/资源排在前面，低频的排行/设置收在最后。
  * 菜单区可纵向滚动，小屏也不会把基地卡片挤出可视区。
  * ===================================================== */
-.hm-menu{position:relative;flex:1 1 auto;min-height:0;overflow-y:auto;
+/* 菜单改为自然高度（flex:0 0 auto）+ 底部安全区内边距交给 .hm-today 承担。
+   原先 flex:1 1 auto 让菜单吃满剩余空间，内容却只到 y=748，底部空出 104px；
+   现在由底部今日条吸底（margin-top:auto），屏幕被真正填满。
+   菜单仍保留 overflow-y:auto 作为小屏兜底（内容超高时可滚），
+   但正常屏宽下 20 个入口一屏可见、不产生滚动。 */
+.hm-menu{position:relative;flex:0 1 auto;min-height:0;overflow-y:auto;
   background:linear-gradient(180deg,rgba(38, 27, 19, .34) 0%,rgba(38, 27, 19, .52) 100%);
-  padding:var(--sp-1) 8px calc(8px + env(safe-area-inset-bottom,0px));
+  padding:var(--sp-1) 8px var(--sp-2);
   scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .hm-menu::-webkit-scrollbar{display:none}
-.hmg{margin:var(--sp-1);padding:var(--sp-1) 2px 4px;border-radius:10px;
+/* 分组间距由 4px 收到 2px：底部今日条吸底后菜单可用高度减少 62px，
+   原间距会让 20 个入口差 6px 放不下而被迫出现滚动（历史上修过的问题，不能回退）。 */
+.hmg{margin:var(--sp-half) var(--sp-1);padding:var(--sp-1) 2px 4px;border-radius:10px;
   background:linear-gradient(180deg,rgba(72, 52, 34, .72),rgba(48, 35, 23, .78));
   border:1px solid var(--border);
   box-shadow:inset 0 1px 0 rgba(255, 231, 190, .09), 0 2px 6px rgba(0, 0, 0, .32)}
@@ -2392,3 +2399,23 @@ b { font-weight: var(--fw-semibold) !important; }
   font-size:var(--fs-xs);color:var(--txt2);display:flex;align-items:center;gap:var(--sp-1);cursor:pointer}
 .hm-guide b{color:var(--yel);font-weight:var(--fw-semibold)}
 .hm-guide .hg-go{margin-left:auto;color:var(--yel);font-size:var(--fs-xs)}
+
+/* 出击卡副行：章节进度 / 总星数。
+   此前主 CTA 只有一行关卡名，10 章 100 关的体量完全不可感知。 */
+.ha-sub{display:block;font-size:var(--fs-xs);color:var(--txt3);margin-top:2px;
+  line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* 主界面底部「今日进度」条：填掉菜单末尾到屏幕底的 104px 空白，
+   并把体力 ETA / 今日任务 / 主线进度三项常驻信息摆出来。 */
+.hm-today{flex:0 0 auto;display:flex;gap:var(--sp-1);
+  margin:var(--sp-2) var(--sp-3) calc(var(--sp-3) + env(safe-area-inset-bottom,0px));
+  margin-top:auto;
+  padding:var(--sp-2) var(--sp-1);border-radius:var(--radius-md);
+  background:var(--surface-2);border:1px solid var(--line)}
+.hm-today .htd{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px;
+  align-items:center;cursor:pointer;padding:var(--sp-1) 2px;border-radius:var(--radius-sm)}
+.hm-today .htd+.htd{border-left:1px solid var(--line)}
+.hm-today .htd span{font-size:var(--fs-xs);color:var(--txt3);white-space:nowrap}
+.hm-today .htd b{font-size:var(--fs-xs);color:var(--text-1);font-weight:var(--fw-semibold);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.hm-today .htd:active{background:var(--surface-3)}
