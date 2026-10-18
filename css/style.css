@@ -2380,3 +2380,15 @@ b { font-weight: var(--fw-semibold) !important; }
 /* 未解锁卡片：区分度改由图标灰化+背景压暗承担。
  * 此前靠 opacity:.45 整体淡化，结果把最该看清的「通关 X-X 解锁」压到对比 3.19（不可读）。 */
 .gcell.sel img,.gcell.sel .gi{filter:grayscale(.7) brightness(.68)}
+
+/* 任务面板页签级红点：把主菜单红点下沉到具体页签（主线/日常/周常/成就） */
+.pt-dot{display:inline-block;min-width:14px;height:14px;padding:0 var(--sp-1);margin-left:var(--sp-1);
+  border-radius:var(--radius-sm);background:var(--c-red-400);color:var(--c-white);
+  font-size:var(--fs-xs);line-height:14px;text-align:center;vertical-align:middle;font-style:normal}
+
+/* 主界面「下一步」目标指引：新号不知道先做什么 */
+.hm-guide{margin:0 var(--sp-3) var(--sp-2);padding:var(--sp-1) var(--sp-2);border-radius:var(--radius-md);
+  background:var(--surface-2);border:1px solid var(--line);
+  font-size:var(--fs-xs);color:var(--txt2);display:flex;align-items:center;gap:var(--sp-1);cursor:pointer}
+.hm-guide b{color:var(--yel);font-weight:var(--fw-semibold)}
+.hm-guide .hg-go{margin-left:auto;color:var(--yel);font-size:var(--fs-xs)}
