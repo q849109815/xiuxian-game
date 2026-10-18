@@ -3821,6 +3821,34 @@ r_tavern(p, tab) {
    * 真正挡住战斗入口，而不是只弹一行提示就放行。
    * ========================================================= */
   MAINT: null,
+
+  /* ---------- 全屏遮罩排队 ----------
+   * BUG（实测确认）：「发现新版本」「公告」「维护中」三个弹窗共用 #maintMask
+   * 同一个容器，后弹的会整份 innerHTML 覆盖先弹的。
+   * 登录流程的实际顺序是 applyHotfix(showUpdate) → syncCloudCfg 末尾 showNotice，
+   * 于是「发现新版本」被公告整份吞掉：玩家只看到公告，点「知道了」直接进游戏，
+   * 拿不到新代码 —— 而 z_hot_seen 已把该版本号记为已提示，本次版本内不会再弹，
+   * 等于永久错过（正是「修好了但你刷新看不到」的老毛病）。
+   * 维护优先级最高，仍然直接覆盖（维护期间其它提示都不重要）。 */
+  maskBusy() {
+    const box = document.getElementById('maintMask');
+    return !!(box && box.style.display === 'flex');
+  },
+  maskHide() {
+    const box = document.getElementById('maintMask');
+    if (box) box.style.display = 'none';
+  },
+  maskQueue(fn) {
+    if (!this.maskBusy()) return false;
+    (this._maskQ || (this._maskQ = [])).push(fn);
+    return true;
+  },
+  maskNext() {
+    const q = this._maskQ || (this._maskQ = []);
+    const f = q.shift();
+    if (f) { try { f(); } catch (e) {} }
+  },
+
   showMaint(d) {
     this.MAINT = d || {};
     const box = document.getElementById('maintMask');
@@ -3859,6 +3887,9 @@ r_tavern(p, tab) {
   showNotice() {
     const un = this.noticeUnread();
     if (!un.length) return;
+    /* 遮罩已被占用（例如「发现新版本」正弹着）→ 排队，等前一个关闭后再弹，
+     * 否则会把前一个整份覆盖掉 */
+    if (this.maskQueue(() => this.showNotice())) return;
     const x = un[0];
     const KIND = { info: ['📢', '普通'], warn: ['⚠️', '重要'], hot: ['🎉', '活动'] };
     const k = KIND[x.kind] || KIND.info;
@@ -3881,7 +3912,7 @@ r_tavern(p, tab) {
       '<button class="mt-btn" id="ntOk">知道了</button>' +
       '<button class="mt-btn" id="ntAll" style="margin-top:8px;background:rgba(255,255,255,.1)">查看全部公告</button>' +
       '</div>';
-    const hide = () => { box.style.display = 'none'; };
+    const hide = () => { this.maskHide(); this.maskNext(); };
     const okBtn = box.querySelector('#ntOk');
     if (okBtn) okBtn.onclick = () => { this.noticeMarkRead(x.id); hide(); this.showNotice(); };
     const allBtn = box.querySelector('#ntAll');
@@ -3923,6 +3954,8 @@ r_tavern(p, tab) {
   showUpdate(ver) {
     const box = document.getElementById('maintMask');
     if (!box) return;
+    /* 遮罩已被占用 → 排队，等前一个关闭后再弹，避免互相覆盖 */
+    if (this.maskQueue(() => this.showUpdate(ver))) return;
     /* 与 showNotice 同一类属性注入：ver 来自云端推送，却同时被拼进
      * 正文与内联 onclick（外层双引号）。这里也改成 DOM 绑定 + textContent。 */
     const esc = (v) => String(v == null ? '' : v).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -3942,7 +3975,7 @@ r_tavern(p, tab) {
       } catch (e) { location.reload(); }
     };
     const lb = box.querySelector('#upLater');
-    if (lb) lb.onclick = () => { box.style.display = 'none'; };
+    if (lb) lb.onclick = () => { this.maskHide(); this.maskNext(); };
     box.style.display = 'flex';
   },
   /* 统一的战斗入口守卫：维护中一律不放行 */
