@@ -885,6 +885,15 @@ const EX = {
    * 0.25 时各章落在手动的 50%~110%（扫荡略低于手动，鼓励手动打）。
    * 想让扫荡经验更高就调大这个数，改一处全局生效。 */
   SWEEP_XP_K: 0.25,
+  /* 扫荡击杀率与产出修正（与 E.sweepXp / sweepKillGold / sweepDropEst 同源）
+   * 死配置修复：这三个量在 engine.js 里被当成【可配置常量】读取
+   *   （EX.SWEEP_KILL_YIELD / _RATE_HI / _RATE_LO），但 EX 中从未定义，
+   *   全项目一直靠代码内的兜底值 0.78 / 0.88 / 0.36 运行 ——
+   *   运营在配置里改不动，注释承诺的「想调就改一处」是假的。
+   * 这里补进配置表，取值与已跑通的兜底值严格一致，行为零变化。 */
+  SWEEP_KILL_YIELD: 0.78,    /* 怪物池算术平均 xp/gold 高于实战均值的修正 */
+  SWEEP_KILL_RATE_HI: 0.88,  /* 第 1 章击杀率 */
+  SWEEP_KILL_RATE_LO: 0.36,  /* 第 10 章击杀率 */
   sweepRw(lv, times) {
     /* 产出随关卡章节递增 */
     const ch = Math.floor((lv - 1) / 10) + 1;
