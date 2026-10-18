@@ -1255,7 +1255,7 @@ r_tavern(p, tab) {
              <div class="lbl" style="font-size:var(--fs-xs)">护甲 ${ch2.armor} · 暴击 ${Math.round((ch2.crit || 0) * 100)}%</div>`
           : `<div class="lbl" style="font-size:var(--fs-xs)">${ch2.unlockTxt || '未解锁'}</div>`;
         return `<div class="gcell ${on2 ? '' : 'sel'}" data-chsel="${ch2.id}"
-          style="${ok2 ? '' : 'opacity:.45'}">${ch2.img
+          style="${ok2 ? '' : 'opacity:.72'}">${ch2.img
             ? `<img src="${ch2.img}">` : `<div class="gi">${ch2.icon}</div>`}
           <div class="gn">${ch2.n}${on2 ? '<span class="tag y" style="font-size:var(--fs-xs)">使用中</span>' : ''}</div>
           ${statLine}
@@ -1987,7 +1987,7 @@ r_tavern(p, tab) {
          * 实际 p.mat.I01/I02/I03 里躺着一堆。
          * 同时格子没有任何 data-* / onclick，点了完全没反应。 */
         const n = (p.mat || {})[it.id] || 0;
-        return `<div class="gcell ${n ? '' : 'sel'}" data-bu="${it.id}" style="${n ? '' : 'opacity:.45'}">${it.img
+        return `<div class="gcell ${n ? '' : 'sel'}" data-bu="${it.id}" style="${n ? '' : 'opacity:.72'}">${it.img
           ? `<img src="${it.img}">` : `<div class="gi">${it.icon}</div>`}
           <div class="gn">${it.n}</div>${n ? `<span class="gq">×${n}</span>` : ''}</div>`;
       }).join('')}</div>
