@@ -46,6 +46,10 @@ function AUTH_NOW() {
 
 let P = null, UID = null, saveT = null, hudT = null, MAINT = null;
 let battleMode = 'normal', battleLevel = '1-1', battleDiff = 'normal';
+/* 本次战斗是否为「表22 EV02 BOSS突袭」发起。
+ * 用于在结算时判定是否掷【活动掉落】（表31 DR12 精英芯片 30%）。
+ * 只由 startBattle 的第 4 个参数写入，每次开战都会重置，不会跨局残留。 */
+let battleRaid = false;
 
 const MAIN = {
   savePath: null,
@@ -1382,8 +1386,11 @@ const MAIN = {
 /* =========================================================
  * 战斗流程（资料 08 跳转流程）
  * ========================================================= */
-function startBattle(mode, levelId, diff) {
+function startBattle(mode, levelId, diff, raid) {
   if (!P) return;
+  /* 活动战斗标记：BOSS突袭（EV02）传入 raid=true。
+   * 每次开战都在这里重置，避免上一局的标记残留到下一局。 */
+  battleRaid = !!raid;
   /* 维护模式守卫：后台开启后一律不放行（此前完全没拦截） */
   if (window.UI && UI.guardBattle && !UI.guardBattle()) return;
   battleMode = mode;
@@ -1563,6 +1570,22 @@ function onBattleEnd(res, d) {
     if (n > 0) rw.mat[k] = (rw.mat[k] || 0) + n;
   }
   if (r.chipGain) rw.chip = (rw.chip || 0) + E.safeAmt(r.chipGain);
+  /* 表31 DR12【活动掉落】结算：精英芯片 30% ×1。
+   * eventDropRoll() 此前全项目零调用 —— 掉落表里配好了这条掉率，
+   * 却没有任何一处会掷它，等于「活动掉落」这项来源从未真正存在过（死配置）。
+   * 接线位置：表22 EV02「BOSS突袭」的战斗通关时（每日仅 3 次，收益可控）。
+   * 只在胜利时结算，避免靠反复开局/撤离刷取。
+   * eventDropRoll 内部已直接写入 p.mat，这里只把数量并进 rw.mat 供结算面板显示，
+   * 保证「面板写的数」与「实际到账」一致（与局内掉落同一口径）。 */
+  if (battleRaid && res === 'win') {
+    try {
+      const _evr = E.eventDropRoll(P) || [];
+      _evr.forEach((g) => {
+        const n = E.safeAmt(g && g.n);
+        if (n > 0 && g && g.item) rw.mat[g.item] = (rw.mat[g.item] || 0) + n;
+      });
+    } catch (e) {}
+  }
   if (res !== 'win') {
     /* 失败 / 中途退出
      * BUG：battle 回调里的 rw.gold 已经是「按比例折算后」的局内金币
