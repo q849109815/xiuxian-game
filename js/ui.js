@@ -1453,7 +1453,7 @@ r_tavern(p, tab) {
       ${Object.keys(p.gunStats || {}).length ? Object.values(p.gunStats || {}).map((st) => {
         const d = EX.gunStats.find((x) => (st.id ? x.id === st.id : x.k === st.k));
         const qc = st.q === '红' ? '#ff5c7a' : st.q === '紫' ? '#c98bff' : st.q === '蓝' ? '#5cb8ff' : '#9fb3d0';
-        return `<div class="kv"><span style="color:${qc}">${d ? d.n : st.k}${st.q ? ' <span class="tag" style="background:' + qc + '22;color:' + qc + '">' + st.q + '</span>' : ''}</span>
+        return `<div class="kv"><span style="color:${qc}">${d ? d.n : st.k}${st.q ? ' <span class="tag" style="background:' + qc + '22 !important;color:' + qc + ' !important">' + st.q + '</span>' : ''}</span>
           <b style="color:var(--green)">+${d && d.unit === '%' ? (st.v * 100).toFixed(1) + '%' : st.v.toFixed(2)}</b></div>`;
       }).join('') : '<div class="lbl">尚未进阶，暂无词条</div>'}
       <button class="btn o blk" id="gunReroll" ${Object.keys(p.gunStats || {}).filter((k) => p.gunStats[k]).length <= 0 ? 'disabled' : ''}>🔄 洗练词条（💎${EX.REROLL_GUN_COST}）</button>
@@ -1463,7 +1463,7 @@ r_tavern(p, tab) {
       ${E.gunAffixes(p).map((af, i) => {
         const a = EX.affixOf(af.id); if (!a) return '';
         const qc = EX.qColor[a.q] || '#ccc';
-        return `<div class="kv"><span><span class="tag" style="background:${qc}22;color:${qc}">${a.q}</span> ${EX.affixTxt(af)}</span>
+        return `<div class="kv"><span><span class="tag" style="background:${qc}22 !important;color:${qc} !important">${a.q}</span> ${EX.affixTxt(af)}</span>
           <b style="color:var(--green)">${a.eff}</b></div>`;
       }).join('') || '<div class="lbl">暂无词条</div>'}
       <div class="sub" style="margin-top:4px">词条加成已计入战斗属性（伤害/攻速/暴击/穿透/吸血/弹夹…）</div>
@@ -1590,7 +1590,7 @@ r_tavern(p, tab) {
   },
   b_chip(p, tab) {
     const ce = $('#chipEquip');
-    if (ce) ce.onclick = () => {
+    if (ce) ce.onclick = () => { if (window.__MUT) return;
       const bag = p.bag || [];
       if (!bag.length) return this.toast('背包内暂无芯片', 'err');
       const free = EX.chipSlots.find((s) => !p.chips[s.k]);
@@ -2427,7 +2427,7 @@ r_tavern(p, tab) {
           const n = (p.gems || {})[x.id] || 0;
           const on = x.id === sel;
           const inlaid = p.gemOn === x.id;
-          return `<div class="zrow" data-gsel="${x.id}" style="${on ? 'border-color:var(--yel);background:rgba(255,201,60,.12)' : ''}">
+          return `<div class="zrow" data-gsel="${x.id}" style="${on ? 'border-color:var(--yel) !important;background:rgba(255,201,60,.12) !important' : ''}">
             <div class="gem ${x.c === 'r' ? 'r' : x.c === 'b' ? 'b' : x.c === 'g' ? 'g' : 'p'}">${x.img
               ? `<img src="${x.img}" style="width:26px;height:26px;object-fit:contain">` : (x.icon || '💎')}</div>
             <div class="zi"><b>${x.n}</b><span>${x.desc}</span></div>
@@ -2997,7 +2997,10 @@ r_tavern(p, tab) {
       ${diffs.map((d) => {
         const cur = d.id === dm.id;
         const dd = E.diffMul(d.id);
-        return `<button class="lvc ${cur ? 'cur' : ''}" data-df="${d.id}" style="${cur ? 'background:' + (d.color || '#5fd97a') + '22;border-color:' + (d.color || '#5fd97a') : ''}">
+        /* 难度选中色：行内样式同样会被 V2 统一层的 !important 压掉
+         * （.lvc 的 background/border 都带了 !important），
+         * 导致「普通/困难/噩梦」选了看不出。这里显式加 !important 保住配色。 */
+        return `<button class="lvc ${cur ? 'cur' : ''}" data-df="${d.id}" style="${cur ? 'background:' + (d.color || '#5fd97a') + '22 !important;border-color:' + (d.color || '#5fd97a') + ' !important' : ''}">
           <i style="font-size:30px;font-style:normal;display:block">${d.img ? `<img src="${d.img}" style="width:30px;height:30px;object-fit:cover;border-radius:6px">` : d.icon}</i>
           <b style="font-size:12px">${d.n}</b>
           <span style="font-size:12px;opacity:.85">奖励×${dd.rw} · 体力+${Math.max(0, dd.stam - 1)}</span></button>`;
@@ -3015,7 +3018,7 @@ r_tavern(p, tab) {
         for (const k in (l.rw || {})) rwv[k] = k === 'gold' ? Math.round(l.rw[k] * dm.rw) : Math.round(l.rw[k] * dm.rw);
         return `<div class="item"><div class="ic">${isBoss ? '👹' : '🎯'}</div>
           <div class="info"><div class="nm">${l.id} ${l.n} ${isBoss ? '<span class="tag r">BOSS</span>' : ''}
-            ${st ? '<span class="tag" style="background:' + (E.diffDef(diff).color || '#5fd97a') + '33">' + E.diffDef(diff).icon + '★' + st + '</span>' : ''}</div>
+            ${st ? '<span class="tag" style="background:' + (E.diffDef(diff).color || '#5fd97a') + '33 !important">' + E.diffDef(diff).icon + '★' + st + '</span>' : ''}</div>
           <div class="sub wrap">${l.waves} 波 · 强度 ×${(Number(l.mul) || 1).toFixed(2)} · ${(Array.isArray(l.pool) ? l.pool : []).map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')}</div>
           <div class="sub wrap">${st ? '★'.repeat(st) : '未通关'} · 体力 ${cost} · 奖励：${this.rwTxt(rwv)}</div>
           ${lock ? '<div class="sub" style="color:#ff8fa4">需先通关 ' + l.unlock + '</div>' : ''}
@@ -4355,8 +4358,8 @@ r_tavern(p, tab) {
     if (rsDf) {
       const d = E.diffDef((BT.run && BT.run.diff) || 'normal');
       rsDf.innerHTML = BT.run && BT.run.endless ? '<span class="tag">无尽模式</span>'
-        : `<span class="tag" style="background:${d.color || '#5fd97a'}33">${d.icon || ''} ${d.n}难度</span>`
-          + (rw.firstBonus ? `<span class="tag" style="background:#ffd93d33">🎁 首通 +${rw.firstBonus} 钻石</span>` : '');
+        : `<span class="tag" style="background:${d.color || '#5fd97a'}33 !important">${d.icon || ''} ${d.n}难度</span>`
+          + (rw.firstBonus ? `<span class="tag" style="background:#ffd93d33 !important">🎁 首通 +${rw.firstBonus} 钻石</span>` : '');
       rsDf.style.display = '';
     }
     /* 伤害来源统计
