@@ -3076,9 +3076,104 @@ r_tavern(p, tab) {
           <div class="gi">${got ? '✔' : '🎁'}</div><div class="gn">第${d}天</div></div>`;
       }).join('')}</div>
       <button class="btn" id="actSign" ${E.signDone(p) ? 'disabled' : ''} style="width:100%;margin-top:8px">${E.signDone(p) ? '今日已签到' : '每日签到'}</button>
-    </div>`;
+    </div>
+    ${this.rNewbie7(p)}
+    ${this.rActBox(p)}
+    ${this.rComeback(p)}`;
+  },
+
+  /* v1.0 新手 7 日：一次性，按注册天数推进，断签不重置 */
+  rNewbie7(p) {
+    const list = EX.NEWBIE7 || [];
+    if (!list.length) return '';
+    const cur = E.newbieDay(p);
+    const got = E.newbieClaimable(p);
+    const allDone = list.every((it) => E.newbieGot(p, it.d));
+    if (allDone) return '';   // 7 天全领完就不再占位
+    return `<div class="card"><div class="card-t">新手七日 <span class="sub">注册第 ${cur} 天${got.length ? ' · ' + got.length + ' 份待领' : ''}</span></div>
+      <div style="font-size:var(--fs-xs);color:var(--txt3);margin-bottom:6px">每日登录领取，断签不清空进度</div>
+      <div class="grid4">${list.map((it) => {
+        const g = E.newbieGot(p, it.d);
+        const can = cur >= it.d && !g;
+        return `<div class="gcell ${g ? 'sel' : (can ? 'hl' : '')}" data-nb7="${it.d}" title="${this.rwText(it.rw)}">
+          <div class="gi">${g ? '✔' : it.icon}</div>
+          <div class="gn">第${it.d}天</div>
+          ${g ? '' : `<button class="btn sm" data-nb7t="${it.d}" ${can ? '' : 'disabled'} style="width:100%;margin-top:2px">${can ? '领取' : '未到'}</button>`}
+        </div>`;
+      }).join('')}</div></div>`;
+  },
+
+  /* v1.0 每日活跃度宝箱 */
+  rActBox(p) {
+    const list = EX.DAILY_ACT || [];
+    if (!list.length) return '';
+    const pt = E.dailyActPoint(p);
+    const maxV = list[list.length - 1].v;
+    return `<div class="card"><div class="card-t">今日活跃 <span class="sub">${pt} / ${maxV}</span></div>
+      <div class="bar" style="margin-bottom:8px"><i style="width:${Math.min(100, Math.round(pt / maxV * 100))}%"></i></div>
+      <div class="grid3">${list.map((b) => {
+        const g = E.actBoxGot(p, b.v);
+        const can = pt >= b.v && !g;
+        return `<div class="gcell ${g ? 'sel' : (can ? 'hl' : '')}" title="${this.rwText(b.rw)}">
+          <div class="gi">${g ? '✔' : b.icon}</div>
+          <div class="gn">${b.v}点</div>
+          ${g ? '' : `<button class="btn sm" data-abt="${b.v}" ${can ? '' : 'disabled'} style="width:100%;margin-top:2px">${can ? '开启' : '未达'}</button>`}
+        </div>`;
+      }).join('')}</div></div>`;
+  },
+
+  /* v1.0 回归奖励 */
+  rComeback(p) {
+    const c = EX.COMEBACK;
+    if (!c || !c.days || !c.days.length) return '';
+    if (!E.comebackOn(p)) return '';
+    const can = E.comebackClaimable(p);
+    return `<div class="card"><div class="card-t">回归礼包 <span class="sub">离线 ${E.awayDays(p)} 天</span></div>
+      <div style="font-size:var(--fs-xs);color:var(--txt3);margin-bottom:6px">欢迎回来！连续登录 3 天领取补给</div>
+      ${c.days.map((it) => {
+        const g = E.comebackGot(p, it.d);
+        const ok = can.indexOf(it.d) >= 0;
+        return `<div class="zrow"><div class="zav">🎁</div>
+          <div class="zi"><b>${it.n}</b><span>${this.rwText(it.rw)}</span></div>
+          <button class="btn sm" data-cbt="${it.d}" ${g ? 'disabled' : (ok ? '' : 'disabled')}>${g ? '已领取' : (ok ? '领取' : '第' + it.d + '天')}</button>
+        </div>`;
+      }).join('')}</div>`;
+  },
+
+  /* 奖励对象的展示文案（供 title / 说明行共用，避免各处各写一套） */
+  rwText(rw) {
+    if (!rw || typeof rw !== 'object') return '';
+    const MAP = { gold: '金币', diamond: '钻石', stamina: '体力', ach: '成就点', evToken: '活动代币',
+      M01: '金属', M02: '合金', M03: '稀有金属', M04: '火药', M05: '宝石材料', P01: '零件', P02: '图纸',
+      chipN: '普通芯片', chipE: '精英芯片', chipL: '传说芯片', chipRed: '传说芯片' };
+    const out = [];
+    Object.keys(rw).forEach((k) => {
+      if (k === 'gun') out.push('武器·' + ((EX.guns || []).find((x) => x.id === rw[k]) || {}).n || rw[k]);
+      else if (k === 'skin') out.push('皮肤·' + ((EX.skins || []).find((x) => x.id === rw[k]) || {}).n || rw[k]);
+      else if (k === 'title') out.push('称号');
+      else out.push((MAP[k] || k) + '×' + rw[k]);
+    });
+    return out.join(' · ');
   },
   b_act(p, tab) {
+    /* v1.0 新手 7 日 */
+    $$('#pnBody [data-nb7t]').forEach((b) => { b.onclick = () => {
+      const r = E.newbieTake(p, b.getAttribute('data-nb7t'));
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.saveSoon(p); this.open('act'); this.home(); }
+    }; });
+    /* v1.0 活跃度宝箱 */
+    $$('#pnBody [data-abt]').forEach((b) => { b.onclick = () => {
+      const r = E.actBoxTake(p, b.getAttribute('data-abt'));
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.saveSoon(p); this.open('act'); this.home(); }
+    }; });
+    /* v1.0 回归礼包 */
+    $$('#pnBody [data-cbt]').forEach((b) => { b.onclick = () => {
+      const r = E.comebackTake(p, b.getAttribute('data-cbt'));
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.saveSoon(p); this.open('act'); this.home(); }
+    }; });
     const sb = $('#actSign');
     if (sb) sb.onclick = () => {
       const r = E.sign(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
