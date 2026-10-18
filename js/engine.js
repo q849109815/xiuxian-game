@@ -1801,6 +1801,36 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     return true;
   },
   totalStars(p) { return Object.values(p.cleared || {}).reduce((s, v) => s + v, 0); },
+  /* 章节进度：某章在某难度下的通关数与星数。
+   * 主界面「出击」卡与关卡选择页共用，用来把 100 关的内容量呈现出来——
+   * 此前玩家只看到「1-1 废弃街道」一行字，10 章 100 关的体量完全不可感知。 */
+  chapterStat(p, ch, diff) {
+    const d = diff || 'normal';
+    const list = (this.levels ? this.levels() : []).filter((x) => Number(x.ch) === Number(ch));
+    let cleared = 0, stars = 0, unlocked = 0;
+    list.forEach((l) => {
+      const st = this.diffStars ? this.diffStars(p, l.id, d) : 0;
+      if (st) { cleared++; stars += st; }
+      if (this.levelUnlocked ? this.levelUnlocked(p, l.id) : true) unlocked++;
+    });
+    return { total: list.length, cleared: cleared, stars: stars, maxStars: list.length * 3, unlocked: unlocked };
+  },
+  /* 体力恢复倒计时：距离回满 / 距离下一点还差多久（毫秒）。
+   * 满体力返回 0（界面据此隐藏倒计时）。 */
+  staminaEta(p) {
+    const max = Number(EX.STAMINA_MAX) || 100;
+    const per = Number(EX.STAMINA_MS) || 300000;
+    const now = Date.now();
+    const st = Math.max(0, Number(p.stamina) || 0);
+    if (st >= max) return { full: true, nextMs: 0, fullMs: 0 };
+    const last = Number(p.staminaAt) || now;
+    /* 回满时 staminaAt 会被重置为 now，故未满状态下 elapsed 恒 < per */
+    const elapsed = Math.max(0, now - last);
+    const nextMs = Math.max(0, per - (elapsed % per));
+    const need = Math.ceil(max - st);
+    const fullMs = nextMs + Math.max(0, need - 1) * per;
+    return { full: false, nextMs: nextMs, fullMs: fullMs };
+  },
   /* 无尽解锁：默认解锁（此前要求通关 10-10，新手前期没有稳定刷材料的出口） */
   endlessUnlocked(p) { return true; },
   /* 各系统解锁（资料 05 表） */
