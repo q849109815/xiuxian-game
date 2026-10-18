@@ -209,7 +209,10 @@ const U = {
   },
   uid() { return 'u' + Math.random().toString(36).slice(2, 10); },
   pw(p) { try { return E.power(p) || 0; } catch (e) { return 0; } },
-  itemName(id) { try { return E.itemName(id) || id; } catch (e) { return id; } },
+  /* 订单表里存在字段缺失的历史脏数据（item/n 都没写），此前原样返回 undefined，
+   * 运营看到的是「undefined×undefined」，既不知道买了什么也无法补发。
+   * 缺失一律降级为可读文案，不再把 undefined 显示在界面上。 */
+  itemName(id) { try { return E.itemName(id) || id || '未知物品'; } catch (e) { return id || '未知物品'; } },
 
   /* 全部可发放物品：货币 + 物品表 + 皮肤 + 宝石 + 称号 + 头像框
    * （旧版只列货币与物品表，皮肤/宝石/称号/头像框选不到，无法补发） */
