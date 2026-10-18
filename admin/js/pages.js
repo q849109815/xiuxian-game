@@ -1866,11 +1866,41 @@ const PAGES = {
           const box = D('#odBox'); if (!box) return;
           const d = await DB.reload('data/zb/order.json');
           const l = (d && d.list) || [];
-          box.innerHTML = l.length ? this.table(['订单', 'UID', '内容', '状态', '时间'],
-            l.slice(0, 50).map((x) => [U.esc(x.id), U.esc(x.uid),
-              U.itemName(x.item) + '×' + x.n,
-              x.state === 'done' ? '<span class="bd g">已补发</span>' : '<span class="bd y">待处理</span>',
-              U.dt(x.at)])) : this.empty('暂无订单');
+          /* BUG：历史脏订单缺 id / uid / item / n，此前整行渲染成
+           * 「(空) (空) undefined×undefined 待处理」—— 运营既看不出是谁买的、
+           * 也不知道买了什么；而「补单」按钮只认订单号，订单号还是空的，
+           * 等于这些订单永远无法补发。
+           * 现在：① 缺失字段一律显示「—」，不再出现 undefined；
+           *       ② 每行带「补发」按钮，按行下标定位（不依赖可能缺失的 id）。 */
+          box.innerHTML = l.length ? this.table(['订单', 'UID', '内容', '状态', '时间', '操作'],
+            l.slice(0, 50).map((x, i) => {
+              const done = x.state === 'done';
+              const noUid = !x.uid;
+              return [U.esc(x.id || '—'), U.esc(x.uid || '—'),
+                U.itemName(x.item) + '×' + (x.n == null ? '—' : x.n),
+                done ? '<span class="bd g">已补发</span>' : '<span class="bd y">待处理</span>',
+                U.dt(x.at),
+                done ? '<span class="bd g">已发</span>'
+                  : `<button class="btn sm" data-a="odFixRow" data-i="${i}" ${noUid ? 'disabled title="缺 UID，无法补发"' : ''}>${noUid ? '缺UID' : '补发'}</button>`];
+            })) : this.empty('暂无订单');
+        },
+        /* 按行补发：不依赖订单号（脏订单没订单号，顶部那个补单按钮对它们永远失效） */
+        async odFixRow(t) {
+          const i = parseInt(t.dataset.i, 10);
+          const d = await DB.reload('data/zb/order.json');
+          const o = (d.list || [])[i];
+          if (!o) { this.toast('未找到该订单', 'err'); return; }
+          if (o.state === 'done') { this.toast('该订单已补过', 'warn'); return; }
+          if (!o.uid) { this.toast('该订单缺 UID，无法补发', 'err'); return; }
+          if (!o.item) { this.toast('该订单缺物品字段，无法确定补发内容', 'err'); return; }
+          if (!this.confirm('给 ' + o.uid + ' 补发 ' + U.itemName(o.item) + '×' + (o.n || 0) + '？')) return;
+          if (await this.pushOp(o.uid, { t: 'grant', item: o.item, n: Number(o.n) || 0, mail: { t: '订单补发', b: '订单 ' + (o.id || '(无单号)') } })) {
+            o.state = 'done'; o.doneAt = Date.now();
+            await DB.set('data/zb/order.json', d, '补单 ' + (o.id || '#' + i));
+            AUDIT.log('补单', o.id || '#' + i, o.uid);
+            this.toast('已补发', 'ok');
+            this.acts.odReload.call(this);
+          }
         },
       },
       bind() {
