@@ -177,6 +177,16 @@ const E = {
       stats: { kills: 0, runs: 0, bossKill: 0, noHitBest: 0, endlessBest: 0 },
       adUsed: {}, adDate: '',
       guide: {},               // 引导完成标记
+      /* v1.0 留存系统字段
+       * regDay：注册当天(YYYYMMDD)，新手7日的唯一判据。
+       *         必须在建号时就写死 —— 若留空由 _regDay() 兜底取"今天"，
+       *         老玩家每次读档都会被当成"今天注册"，7 日奖励永远停在第 1 天。
+       * newbie7 / actBox / comeback：三项留存的领取记录。 */
+      regDay: (function () { const d = new Date(Date.now() + 8 * 3600000);
+        return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); })(),
+      newbie7: [],
+      actBox: { k: 0, got: [] },
+      comeback: { on: false, got: [] },
       offlineAt: Date.now(),
       /* 离线收益【结算基准】：只由 offlineClaim 推进，绝不被自动存档刷新。
        * offlineAt 另作「最后活跃时间」供回档守卫使用（见 main.js syncSnap/save），
@@ -364,14 +374,21 @@ const E = {
   NUMS: ['gold','diamond','stamina','lv','xp','tp','ach','evToken','evScore',
          'patrolAcc','patrolT','patrolFast','legionExp','legionContrib',
          'charStar','gunLv','gunAdv','endlessBest','adTotal','staminaAt',
-         'endlessTime','offBase','offlineAt','created','lastSeen'],
+         'endlessTime','offBase','offlineAt','created','lastSeen',
+         /* v1.0 注册日(YYYYMMDD)：新手7日唯一判据。
+          * 被写成字符串/NaN 时 newbieDay 会算出 NaN → 面板显示「注册第 NaN 天」，
+          * 且 cur >= it.d 恒 false → 7 天奖励永远领不到。 */
+         'regDay'],
   /* mailGot / cdkGot 是【数组】（存已领邮件ID、已兑换码），
    * 此前误列进 OBJS → sanitize 把数组改写成对象 {}，
    * 实测：登录后 mailGot=['m1','m2'] → {}，接着执行
    *   `P.mailGot.indexOf(...)` 直接抛 "indexOf is not a function"，
    * 且已领记录清空意味着【邮件、兑换码可以无限重复领取】（可刷奖励）。
    * 现在归入 ARRS。 */
-  ARRS: ['bag','skins','titles','frames','mercs','chars','gunOwn','friends',
+  ARRS: [/* v1.0 新手7日已领天数数组（老存档缺失时必须补成 []，
+           * 否则 newbieGot 里 p.newbie7.indexOf 直接抛异常 → 活动面板白屏） */
+         'newbie7',
+         'bag','skins','titles','frames','mercs','chars','gunOwn','friends',
          'friendReq','chat',
          'sendStTo','tempBuff','logs','mailGot','cdkGot',
          /* mail 此前【不在任何列表里】：存档里 p.mail 被写成对象时，
@@ -381,6 +398,10 @@ const E = {
   OBJS: ['mat','chips','cleared','codex','equip','gems','build','talents',
          'tasks','stats','giftBuy','evShopBuy','achShopBuy','lgShopBuy',
          'adUsed','gunStats',
+         /* v1.0 留存：actBox {k:日期, got:[档位]}、comeback {on, got:[天数]}。
+          * 老存档没有这两个字段，且被误存成字符串时 actBoxGot/comebackGot
+          * 读 .got 会抛错 → 活动面板白屏。归入 OBJS 统一兜底。 */
+         'actBox','comeback',
          /* gunAffix 此前【不在任何列表里】：它是 { 枪id: 词条数组 }，
           * 被写成字符串/数组时，gunAffixes 里的补齐逻辑与 role/gun/chip
           * 等 6 个面板全部抛错白屏。归入 OBJS 统一重置为 {}。 */
@@ -980,7 +1001,12 @@ const E = {
       p.gunStats['s' + slot] = { id: st.id, k: st.k, n: st.n, q: st.q, v: +(st.v * (1 + newA * 0.5)).toFixed(4) };
       extra = ' ⬆进阶至' + EX.gunAdvance[newA].q + '品，解锁词条：' + st.n;
     }
-        this.logAct(p, 'gunup', '武器升级 Lv.' + p.gunLv);
+    this.logAct(p, 'gunup', '武器升级 Lv.' + p.gunLv);
+    /* v1.0 每日任务「强化1次」进度 */
+    try {
+      this.resetTasks(p);
+      p.tasks.dailyProg.up = (p.tasks.dailyProg.up || 0) + 1;
+    } catch (e) {}
     /* 表04 VO_009 武器升级：台词与合成音效（sfx 'upgrade'）此前零触发 */
     try { if (window.VO) VO.say('VO_009'); } catch (e) {}
 return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra };
@@ -1915,6 +1941,10 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       case 'login': return 1;
       case 'dailyClear': return dp.clear || 0;
       case 'dailyKill': return dp.kill || 0;
+      /* v1.0 新增三条每日任务的条件读数 */
+      case 'dailyUp': return dp.up || 0;
+      case 'dailySweep': return dp.sweep || 0;
+      case 'dailyEndless': return dp.endless || 0;
       case 'weekClear': return wp.clear || 0;
       case 'weekKill': return wp.kill || 0;
       case 'noHitKill': return st.noHitBest || 0;
@@ -2806,6 +2836,11 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
         boss: (ld && (ld.cond === 'boss' || ld.cond === 'bossAll')) ? t : 0,
       });
     } catch (e) {}
+    /* v1.0 每日任务「扫荡3次」进度：按次数累加，与 clear 同理不能 +1 */
+    try {
+      this.resetTasks(p);
+      p.tasks.dailyProg.sweep = (p.tasks.dailyProg.sweep || 0) + t;
+    } catch (e) {}
     return { ok: true, msg: '扫荡 ' + t + ' 次完成！' + (lr.msg ? ' ' + lr.msg : ''), rw: rw, cost: cost, ups: lr.ups, kills: _killEst };
   },
 
@@ -2843,6 +2878,135 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   /* 今日是否已签到（与 sign() 同一基准：UTC+8 日历日整数）
    * 给 UI 做「按钮置灰 / 红点数」用，避免各处分头算导致口径不一致。 */
   signDone(p) { return !!(p && p.signDay && p.signDay === this._utc8dayNum()); },
+
+  /* =========================================================
+   * 【v1.0 留存系统】新手7日 / 活跃度宝箱 / 回归奖励
+   * ======================================================= */
+
+  /* 注册当天(YYYYMMDD)。老存档没有 regDay 时，用首次登录时间兜底，
+   * 再没有就取今天 —— 老玩家不会凭空获得「第7天」的大奖。 */
+  _regDay(p) {
+    if (p.regDay) return Number(p.regDay);
+    const t = p.createdAt || p.firstLogin || 0;
+    if (!t) return this._utc8dayNum();
+    const d = new Date(Number(t) + 8 * 3600000);
+    return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+  },
+  /* 今天是注册后的第几天（1 起）。不满 1 天算第 1 天。 */
+  newbieDay(p) { return Math.max(1, this.dayDiff(this._regDay(p), this._utc8dayNum()) + 1); },
+  /* 新手7日：某天是否已领 */
+  newbieGot(p, d) { return !!(p.newbie7 && p.newbie7.indexOf(Number(d)) >= 0); },
+  /* 当前可领的天数列表（第 N 天且注册已满 N 天且未领） */
+  newbieClaimable(p) {
+    const out = [];
+    const list = EX.NEWBIE7 || [];
+    const cur = this.newbieDay(p);
+    for (const it of list) {
+      if (cur >= it.d && !this.newbieGot(p, it.d)) out.push(it.d);
+    }
+    return out;
+  },
+  /* 领取新手7日第 d 天 */
+  newbieTake(p, d) {
+    const it = (EX.NEWBIE7 || []).find((x) => x.d === Number(d));
+    if (!it) return { ok: false, msg: '奖励不存在' };
+    if (this.newbieDay(p) < it.d) return { ok: false, msg: '第' + it.d + '天尚未到达' };
+    if (this.newbieGot(p, it.d)) return { ok: false, msg: '第' + it.d + '天已领取' };
+    p.newbie7 = p.newbie7 || [];
+    p.newbie7.push(Number(it.d));
+    const got = this.grant(p, it.rw);
+    this.logAct(p, 'newbie7', '新手7日第' + it.d + '天');
+    return { ok: true, msg: '🎁 ' + it.n + ' 领取成功', rw: it.rw, got: got };
+  },
+
+  /* 今日活跃度：已完成（已领取）的每日任务数 × 每任务活跃点 */
+  dailyActPoint(p) {
+    const done = (p.tasks && p.tasks.dailyClaimed || []).length;
+    return done * (EX.DAILY_ACT_POINT || 20);
+  },
+  /* 活跃宝箱是否已领（按日期重置） */
+  actBoxGot(p, v) {
+    const k = this._utc8dayNum();
+    return !!(p.actBox && p.actBox.k === k && (p.actBox.got || []).indexOf(Number(v)) >= 0);
+  },
+  /* 当前可开的活跃宝箱档位 */
+  actBoxClaimable(p) {
+    const pt = this.dailyActPoint(p);
+    return (EX.DAILY_ACT || []).filter((b) => pt >= b.v && !this.actBoxGot(p, b.v)).map((b) => b);
+  },
+  actBoxTake(p, v) {
+    const b = (EX.DAILY_ACT || []).find((x) => x.v === Number(v));
+    if (!b) return { ok: false, msg: '宝箱不存在' };
+    if (this.dailyActPoint(p) < b.v) return { ok: false, msg: '活跃度不足 ' + b.v + '（当前 ' + this.dailyActPoint(p) + '）' };
+    if (this.actBoxGot(p, b.v)) return { ok: false, msg: '今日已领取' };
+    const k = this._utc8dayNum();
+    if (!p.actBox || p.actBox.k !== k) p.actBox = { k: k, got: [] };
+    p.actBox.got.push(Number(b.v));
+    this.grant(p, b.rw);
+    this.logAct(p, 'actbox', '活跃宝箱 ' + b.v);
+    return { ok: true, msg: '📦 ' + b.n + ' 开启成功', rw: b.rw };
+  },
+
+  /* 回归：离线天数（按上次登录） */
+  awayDays(p) {
+    const last = p.signLast || p.lastLogin || p.saveT || 0;
+    if (!last) return 0;
+    const ld = new Date(Number(last) + 8 * 3600000);
+    const ldn = ld.getUTCFullYear() * 10000 + (ld.getUTCMonth() + 1) * 100 + ld.getUTCDate();
+    return Math.max(0, this.dayDiff(ldn, this._utc8dayNum()));
+  },
+  /* 是否处于回归状态（离线 ≥ minDays） */
+  comebackOn(p) {
+    const c = EX.COMEBACK; if (!c) return false;
+    if (p.comeback && p.comeback.on) return true;
+    return this.awayDays(p) >= (c.minDays || 3);
+  },
+  comebackGot(p, d) { return !!(p.comeback && (p.comeback.got || []).indexOf(Number(d)) >= 0); },
+  /* 可领的回归天数（每天领 1 档，从第 1 档起）
+   * 「每天 1 档」由 lastDay 保证：今天领过就不再出下一档。
+   * BUG：初版只判「前面几档都领了」，领完第 1 档后第 2 档立刻满足 prevAll，
+   *      于是同一天内可以一口气领完 3 档 —— 与面板上写的
+   *      「连续登录 3 天领取补给」自相矛盾，回归激励被一天吃干。 */
+  comebackClaimable(p) {
+    if (!this.comebackOn(p)) return [];
+    const c = EX.COMEBACK || { days: [] };
+    const got = (p.comeback && p.comeback.got) || [];
+    /* 今天已经领过 → 当日不再出新档 */
+    if (p.comeback && p.comeback.lastDay === this._utc8dayNum()) return [];
+    const out = [];
+    for (const it of c.days) {
+      if (got.indexOf(it.d) >= 0) continue;
+      const prevAll = c.days.filter((x) => x.d < it.d).every((x) => got.indexOf(x.d) >= 0);
+      if (prevAll) { out.push(it.d); break; }
+    }
+    return out;
+  },
+  comebackTake(p, d) {
+    const c = EX.COMEBACK || { days: [] };
+    const it = c.days.find((x) => x.d === Number(d));
+    if (!it) return { ok: false, msg: '奖励不存在' };
+    if (!this.comebackOn(p)) return { ok: false, msg: '未满足回归条件' };
+    if (this.comebackGot(p, it.d)) return { ok: false, msg: '已领取' };
+    /* 强制逐日解锁：必须前面几档都领了才能领这一档。
+     * BUG：此前只在 comebackClaimable（渲染层）做了逐日判断，
+     *      而 comebackTake 本身没判 —— 玩家可以绕过 UI 直接领第 3 档，
+     *      一天领完全部回归礼。渲染与拦截必须同口径。 */
+    const prevAll = c.days.filter((x) => x.d < it.d)
+      .every((x) => this.comebackGot(p, x.d));
+    if (!prevAll) return { ok: false, msg: '需先领取前一天的回归礼' };
+    /* 每天只能领 1 档：与 comebackClaimable 的 lastDay 判断同口径，
+     * 否则玩家可以绕过 UI 在同一天领完全部三档。 */
+    if (p.comeback && p.comeback.lastDay === this._utc8dayNum()) {
+      return { ok: false, msg: '今日已领取，明天再来' };
+    }
+    p.comeback = p.comeback || { on: true, got: [] };
+    p.comeback.on = true;
+    p.comeback.got.push(Number(it.d));
+    p.comeback.lastDay = this._utc8dayNum();
+    this.grant(p, it.rw);
+    this.logAct(p, 'comeback', '回归礼第' + it.d + '天');
+    return { ok: true, msg: '🎁 ' + it.n + ' 领取成功', rw: it.rw };
+  },
   /* 活动面板里当前真正能领的奖励数（领奖按钮 + 每日签到），
    * 必须与 r_act 渲染、actRwTake 拦截三者同口径，否则红点会骗人：
    *   多算 → 玩家看到红点进去一个都领不到（此前修过任务红点同类问题）；
@@ -2874,6 +3038,12 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       });
     } catch (e) { return 0; }
     if (!this.signDone(p)) n++;                                    /* 每日签到 */
+    /* v1.0 三项留存：与各自渲染 / 领取拦截同口径，红点才不会骗人 */
+    try {
+      n += (this.newbieClaimable(p) || []).length;
+      n += (this.actBoxClaimable(p) || []).length;
+      n += (this.comebackClaimable(p) || []).length;
+    } catch (e) {}
     return n;
   },
   /* 本期是否已领（带周期重置）。旧档 actRwGot[id] 是数字 1 → 迁移为 {n:1} */
@@ -3354,6 +3524,18 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
         }
       }
       else if (k === 'frame') { const v = give[k]; if (typeof v === 'string' && v) { p.frames = p.frames || []; if (p.frames.indexOf(v) < 0) p.frames.push(v); _got++; } }
+      /* 武器直发（v1.0 新手7日 D7 送 W02 散弹）
+       * 走 unlockGun 而不是直接塞 gunOwn：unlockGun 内部会做图鉴解锁，
+       * 否则玩家拿到武器但图鉴里那一格永远是问号。 */
+      else if (k === 'gun') {
+        const gid = give[k];
+        if (typeof gid === 'string' && gid) {
+          try {
+            const r = this.unlockGun(p, gid);
+            if (r && r.ok) { _got++; try { this.codexUnlock(p, 'gun', gid); } catch (e) {} }
+          } catch (e) {}
+        }
+      }
       /* 可镶嵌宝石：give: { gem: 'G_R' } → p.gems['G_R'] += 1
        * 修复：此前商城「红宝石/蓝宝石/绿宝石/紫宝石」发放的是 M05 材料，
        *       买了之后在宝石页永远显示数量 0，镶嵌/合成功能完全用不了 */
@@ -4266,6 +4448,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (endlessSec) p.endlessTime = Math.max(p.endlessTime || 0, Math.floor(endlessSec));
     this.resetTasks(p);
     const dp = p.tasks.dailyProg, wp = p.tasks.weeklyProg;
+    /* v1.0 每日任务「参与无尽 1 次」：一场无尽记 1 次，不看时长 */
+    if (endlessSec) dp.endless = (dp.endless || 0) + 1;
     /* clear 是「次數」不是布尔：手动通关传 1，扫荡传次数 t。
      * 此前写成 +1，导致一次扫荡 5 次只记 1 次通关。 */
     const cn = Number(clear) || 0;
