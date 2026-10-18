@@ -299,6 +299,25 @@ const UI = {
     if (eb) eb.textContent = '最佳 ' + (p.endlessBest || 0) + ' 层';
     const st = $('#hmStamina');
     if (st) st.textContent = Math.floor(p.stamina || 0) + '/' + EX.STAMINA_MAX;
+    /* 体力恢复倒计时：满体力不显示，否则玩家不知道还要等多久才能继续推图 */
+    if (st) {
+      const eta = E.staminaEta ? E.staminaEta(p) : null;
+      st.textContent += (eta && !eta.full) ? '（' + this.msTxt(eta.nextMs) + '后 +1）' : '';
+    }
+    /* 出击卡副行：章节进度 + 本章星数，把 10 章 100 关的体量呈现出来 */
+    const _gs = $('#hmGoSub');
+    if (_gs) {
+      const _ch = E.chapterOf ? E.chapterOf(cur) : 1;
+      const _cs = E.chapterStat ? E.chapterStat(p, _ch, 'normal') : null;
+      _gs.textContent = _cs ? ('第' + _ch + '章 ' + _cs.cleared + '/' + _cs.total + ' 关 · ★' + _cs.stars + '/' + _cs.maxStars) : '';
+    }
+    const _es = $('#hmEndSub');
+    if (_es) {
+      const _tb = E.totalStars ? E.totalStars(p) : 0;
+      _es.textContent = '总星 ' + _tb + '/300';
+    }
+    /* 今日进度条：填掉菜单底部到屏幕的空白，同时给出今日该做的事 */
+    this.renderToday(p);
     const avEl = $('#hmAvIco');
     /* 头像：优先用玩家自己选的，没选过才回退到当前角色图标 */
     if (avEl) {
@@ -527,6 +546,60 @@ const UI = {
       el.onclick = go;
     } catch (e) {
       /* 指引条属于增强，任何异常都不允许影响主界面渲染 */
+      try { el.style.display = 'none'; } catch (x) {}
+    }
+  },
+
+  /* 毫秒转「3分20秒 / 1小时5分」短文本 */
+  msTxt(ms) {
+    const s = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+    if (s < 60) return s + '秒';
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + '分' + (s % 60 ? (s % 60) + '秒' : '');
+    const h = Math.floor(m / 60);
+    return h + '小时' + (m % 60 ? (m % 60) + '分' : '');
+  },
+
+  /* 主界面底部「今日进度」条
+   *
+   * 逻辑问题：菜单最后一行结束在 y=748，而视口高 852 —— 底部 104px 是空的，
+   *   整屏内容没填满，看起来发空发飘。同时玩家在主界面看不到：
+   *   体力什么时候回满、今天还有几件事没做、主线总进度到哪了。
+   * 这里补一条信息条：体力 ETA + 今日任务 x/y + 主线总进度。 */
+  renderToday(p) {
+    const el = $('#hmToday');
+    if (!el) return;
+    try {
+      p = p || window.P || {};
+      const cells = [];
+      /* 1) 体力：满则显示「已满」，否则显示回满倒计时 */
+      const eta = E.staminaEta ? E.staminaEta(p) : null;
+      const stc = Math.floor(p.stamina || 0);
+      cells.push({ k: '体力', v: eta && eta.full ? stc + '/' + EX.STAMINA_MAX + ' 已满'
+        : stc + '/' + EX.STAMINA_MAX + ' · ' + this.msTxt(eta ? eta.fullMs : 0) + '回满', go: () => this.open('base') });
+      /* 2) 今日任务：已完成 / 总数 */
+      let done = 0, totalN = 0;
+      try {
+        const tk = (E.tasks ? E.tasks() : []);
+        const tstate = (p.taskState || {});
+        tk.forEach((t) => {
+          if (t && t.period === '每日') {
+            totalN++;
+            if (tstate[t.id] && tstate[t.id].got) done++;
+          }
+        });
+      } catch (e) {}
+      cells.push({ k: '今日任务', v: totalN ? (done + '/' + totalN + (done >= totalN ? ' 已完成' : '')) : '—', go: () => this.open('task', '日常') });
+      /* 3) 主线总进度：10 章 100 关 */
+      let cleared = 0;
+      try { cleared = Object.keys(p.cleared || {}).filter((k) => (p.cleared[k] || 0) > 0 && /^\d+-\d+$/.test(k)).length; } catch (e) {}
+      const stars = E.totalStars ? E.totalStars(p) : 0;
+      cells.push({ k: '主线', v: cleared + '/100 关 · ★' + stars, go: () => this.open('level') });
+      el.innerHTML = cells.map((c, i) =>
+        `<div class="htd" data-i="${i}"><span>${c.k}</span><b>${c.v}</b></div>`).join('');
+      Array.from(el.querySelectorAll('.htd')).forEach((d, i) => { d.onclick = cells[i].go; });
+      el.style.display = '';
+    } catch (e) {
       try { el.style.display = 'none'; } catch (x) {}
     }
   },
@@ -3084,7 +3157,24 @@ r_tavern(p, tab) {
           <span style="font-size:var(--fs-xs);opacity:.85">奖励×${dd.rw} · 体力×${dd.stam}</span></button>`;
       }).join('')}</div>
       <div class="sub" style="margin-top:6px">${E.diffDef(dm.id).desc || ''}</div></div>`;
-    return diffBar + `<div class="card"><div class="card-t">${cd.img ? `<img src="${cd.img}" style="width:20px;height:20px;object-fit:cover;border-radius:5px;vertical-align:-4px">` : cd.icon} ${cd.n}</div>
+    /* 章节导航：原先放在页面最底部，玩家要滚过该章全部 10 关才能切章。
+     * 现在提到关卡列表上方，与难度条并列 —— 10 章 100 关必须能一步跳转。 */
+    const chBar = `<div class="card"><div class="card-t">章节</div>
+      <div class="lvgrid" style="grid-template-columns:repeat(5,1fr)">
+      ${E.chapters().map((c) => {
+        const cs = E.chapterStat ? E.chapterStat(p, c.id, diff) : null;
+        const cur = c.id === ch;
+        const done = cs && cs.cleared >= cs.total;
+        return `<button class="lvc ${cur ? 'cur' : ''}" data-ch="${c.id}" style="${cur ? 'border-color:' + (E.diffDef(diff).color || '#5fd97a') + ' !important;background:' + (E.diffDef(diff).color || '#5fd97a') + '22 !important' : ''}">
+          <i style="font-size:var(--fs-4xl);font-style:normal;display:block">${c.img ? `<img src="${c.img}" style="width:30px;height:30px;object-fit:cover;border-radius:6px">` : c.icon}</i>
+          <b style="font-size:var(--fs-xs)">${c.n.split(' · ')[0]}</b>
+          ${cs ? `<span style="font-size:var(--fs-xs);opacity:.9;${done ? 'color:' + (E.diffDef(diff).color || '#5fd97a') : ''}">${done ? '✓' : cs.cleared + '/' + cs.total}</span>` : ''}</button>`;
+      }).join('')}</div></div>`;
+    /* 章节进度摘要：把「这章打到哪了、拿了多少星」直接摆出来 */
+    const stat = E.chapterStat ? E.chapterStat(p, ch, diff) : null;
+    const chHead = stat ? `<div class="card-t">${cd.img ? `<img src="${cd.img}" style="width:20px;height:20px;object-fit:cover;border-radius:5px;vertical-align:-4px">` : cd.icon} ${cd.n}
+      <span class="sub" style="float:right;font-size:var(--fs-xs)">通关 ${stat.cleared}/${stat.total} · ★${stat.stars}/${stat.maxStars}</span></div>` : '';
+    return chBar + diffBar + `<div class="card">${chHead || `<div class="card-t">${cd.n}</div>`}
       ${list.map((l) => {
         const lock = !E.levelUnlocked(p, l.id);
         const st = E.diffStars(p, l.id, diff);
@@ -3094,11 +3184,20 @@ r_tavern(p, tab) {
         /* 奖励按当前难度倍率展示（与实际发放同源，避免面板与实际不符） */
         const rwv = {};
         for (const k in (l.rw || {})) rwv[k] = k === 'gold' ? Math.round(l.rw[k] * dm.rw) : Math.round(l.rw[k] * dm.rw);
+        /* 星级可视化：实心/空心星一眼看出打了几星，比「★3」的纯数字直观 */
+        const starTxt = '★'.repeat(st || 0) + '☆'.repeat(Math.max(0, 3 - (st || 0)));
+        /* 原本第二行「20 波 · 强度 ×1.00 · 普通僵尸、疾跑僵尸」在该章 10 关里
+         * 完全相同，纯占版面（实测卡片高 128px，一屏仅 3~4 关）。
+         * 现在波次并入第二行，僵尸种类只在 BOSS 关展示（普通关构成一致，无信息量）。 */
+        const poolTxt = isBoss
+          ? ' · ' + (Array.isArray(l.pool) ? l.pool : []).map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')
+          : '';
         return `<div class="item"><div class="ic">${isBoss ? '👹' : '🎯'}</div>
           <div class="info"><div class="nm">${l.id} ${l.n} ${isBoss ? '<span class="tag r">BOSS</span>' : ''}
             ${st ? '<span class="tag" style="background:' + (E.diffDef(diff).color || '#5fd97a') + '33 !important">' + E.diffDef(diff).icon + '★' + st + '</span>' : ''}</div>
-          <div class="sub wrap">${l.waves} 波 · 强度 ×${(Number(l.mul) || 1).toFixed(2)} · ${(Array.isArray(l.pool) ? l.pool : []).map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')}</div>
-          <div class="sub wrap">${st ? '★'.repeat(st) : '未通关'} · 体力 ${cost} · 奖励：${this.rwTxt(rwv)}</div>
+          <div class="sub wrap" style="letter-spacing:1px;color:${st ? (E.diffDef(diff).color || '#5fd97a') : 'inherit'}">${starTxt}</div>
+          <div class="sub wrap">强度 ×${(Number(l.mul) || 1).toFixed(2)} · ${l.waves} 波 · 体力 ${cost}${poolTxt}</div>
+          <div class="sub wrap">${st ? '已通关' : '未通关'} · 奖励：${this.rwTxt(rwv)}</div>
           ${lock ? '<div class="sub" style="color:var(--c-red-300)">需先通关 ' + l.unlock + '</div>' : ''}
           ${(!lock && dlock) ? '<div class="sub" style="color:var(--c-red-300)">需先通关「' + E.diffDef(E.diffDef(diff).unlock).n + '」难度</div>' : ''}</div>
           <div class="act">${lock ? '<span class="tag r">未解锁</span>'
@@ -3106,9 +3205,6 @@ r_tavern(p, tab) {
             : `<button class="btn c sm" data-lv="${l.id}" data-df="${diff}">挑战</button>`
             + (st ? `<button class="btn sm o" data-sw="${l.id}" style="margin-top:4px">扫荡</button>` : '')}</div></div>`;
       }).join('')}</div>
-      <div class="card"><div class="card-t">章节</div>
-      <div class="lvgrid">${E.chapters().map((c) => `<button class="lvc ${c.id === ch ? 'cur' : ''}" data-ch="${c.id}">
-        <i style="font-size:var(--fs-5xl);font-style:normal;display:block;margin-bottom:2px">${c.img ? `<img src="${c.img}" style="width:34px;height:34px;object-fit:cover;border-radius:7px">` : c.icon}</i><b style="font-size:var(--fs-xs)">${c.n.split(' · ')[0]}</b></button>`).join('')}</div></div>
       <div class="card"><div class="card-t">无尽模式</div>
       ${`<div class="kv"><span>最佳层数</span><b>${p.endlessBest || 0}</b></div>
          <div class="sub">默认解锁 · 掉落/收益随进度章节提升</div>
