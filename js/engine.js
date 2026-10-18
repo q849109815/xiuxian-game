@@ -2584,18 +2584,34 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     });
     /* BOSS：一局只杀一只 → 按【次数】发，不乘击杀数 */
     if (ld.boss) {
-      const bd = (EX.bosses || []).find((x) => x.id === ld.boss);
-      const bn = 'BOSS' + ((bd && bd.n) || '');
-      (EX.dropFor(bn, ch) || []).forEach((d) => {
-        const avg = EX.dropAvg(d);
-        const key = bn + d.item;
-        const firstKill = d.first && !(p.firstBossDrop || {})[key];
-        if (firstKill && commit) {
-          p.firstBossDrop = p.firstBossDrop || {};
-          p.firstBossDrop[key] = 1;
-        }
-        /* 首杀必掉（与 battle.kill 同口径）；之后按 rate × 次数 */
-        add(d.item, firstKill ? avg : avg * EX.dropRate(d) * t);
+      /* 双 BOSS 关（3-10 / 8-10）的 boss 字段是数组 ["kaiken","mama"]，
+       * 而这里此前写死字符串比较 x.id === ld.boss → 数组恒不等 → bd 为 undefined
+       * → bn = 'BOSS' → dropFor('BOSS', ch) 返回空数组。
+       * 实测：3-10 扫荡 M03/P01/芯片 全部为 0，8-10 的 C03 红芯片与 P02 同样为 0；
+       * 而手动路径 battle.js 用 Array.isArray 逐个 spawnBoss，两只都刷、都掉。
+       * 扫荡因此比手动少掉两只 BOSS 的全部产出（稀有金属/芯片/角色碎片）。
+       * 现在与手动同口径：统一成数组后逐个结算。 */
+      const bossIds = Array.isArray(ld.boss) ? ld.boss : [ld.boss];
+      bossIds.filter(Boolean).forEach((bid) => {
+        const bd = (EX.bosses || []).find((x) => x.id === bid);
+        const bn = 'BOSS' + ((bd && bd.n) || '');
+        (EX.dropFor(bn, ch) || []).forEach((d) => {
+          const avg = EX.dropAvg(d);
+          const key = bn + d.item;
+          const firstKill = d.first && !(p.firstBossDrop || {})[key];
+          if (firstKill && commit) {
+            p.firstBossDrop = p.firstBossDrop || {};
+            p.firstBossDrop[key] = 1;
+          }
+          /* 首杀必掉（与 battle.kill 同口径）；之后按 rate × 次数。
+           * BUG：此前首杀那一次只发 avg（1 只的量），而玩家付的是 t 次的体力，
+           *   第 2~t 只的掉落被整个吃掉。
+           *   实测 2-10 扫荡 ×10：首杀 M03 仅 4，之后每次 28（差 7 倍）；
+           *   10-10 的红芯片首杀 2，之后每次 9。
+           *   正确口径 = 首杀那 1 只必掉 + 其余 (t-1) 只按概率。 */
+          const n = (firstKill ? 1 : 0) + EX.dropRate(d) * (firstKill ? (t - 1) : t);
+          add(d.item, avg * n);
+        });
       });
     }
     Object.keys(out.mat).forEach((k) => { out.mat[k] = this.safeAmt(out.mat[k]); });
