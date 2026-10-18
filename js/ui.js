@@ -2787,11 +2787,28 @@ r_tavern(p, tab) {
           this.toast(m.expireAt && m.expireAt < Date.now() ? '该邮件已过期' : '该邮件尚未生效', 'err');
           return;
         }
+        /* 【严重 BUG 修复】两处都与项目内已统一的口径脱节：
+         * ① p.gold += g 是裸加、完全没过 E.safeAmt。
+         *    后台/运营发的邮件里 gold 若是字符串（表单取值极易如此），
+         *    1000 + '100' = "2000100" —— p.gold 从【数字变成字符串】。
+         *    实测：金币 2000 领一封 gold:'100' 的邮件 → p.gold 变成字符串
+         *    "2000100"，界面还提示「金币×100」。
+         *    它一旦写进 JSON 存档，读回来所有算术全变 NaN —— 商店、结算、
+         *    升级全线崩坏，且玩家看到的数字完全正常，无从察觉。
+         *    现在一律过 safeAmt（非有限值/<=0/字符串数字都按规范处理）。
+         * ② 先 `m.got = true` 再 grant —— 附件里的物品键写错时 grant 一项都
+         *    发不出去，邮件却已被标记已领，提示还说「领取成功」。
+         *    玩家以为拿到了，实际永久丢失（运营改好配置也补不回来）。
+         *    与 claimTask / actRwTake 同一道防线：发得出去才允许标记。 */
+        const _rw = (m.rw && Object.keys(m.rw).length) ? m.rw : null;
+        if (_rw && E.validGive && !E.validGive(_rw)) {
+          this.toast('该邮件附件配置异常，暂不可领取', 'err'); return;
+        }
         m.got = true;
-        const g = m.gold || 0, d = m.dia || 0;
-        p.gold = (p.gold || 0) + g;
-        p.diamond = (p.diamond || 0) + d;
-        if (m.rw && Object.keys(m.rw).length) E.grant(p, m.rw);
+        const g = E.safeAmt(m.gold), d = E.safeAmt(m.dia);
+        p.gold = E.safeAmt(p.gold) + g;
+        p.diamond = E.safeAmt(p.diamond) + d;
+        if (_rw) E.grant(p, _rw);
         E.save(p);
         if (window.SND) SND.play('get');
         this.toast('领取成功：' + this.rwText(Object.assign({}, m.rw || {}, g ? { gold: g } : {}, d ? { diamond: d } : {})), 'ok');
@@ -2804,8 +2821,16 @@ r_tavern(p, tab) {
       const ms = (p.mail || []).filter((m) => !m.got && this.mailActive(m));
       if (!ms.length) return this.toast('没有可领取的邮件', 'err');
       let g = 0, d = 0; const all = {};
+      /* 与单条领取同一口径：
+       * ① gold/dia 过 safeAmt —— 字符串金额会把 p.gold 拼成字符串
+       *    （1000 + '100' = "2000100"），落盘后整个金币系统变 NaN。
+       * ② 附件键无效的那封【跳过且不标记已领】，避免"提示成功、永久丢失"。 */
+      let doneN = 0;
       ms.forEach((m) => {
-        m.got = true; g += m.gold || 0; d += m.dia || 0;
+        const _rw = (m.rw && Object.keys(m.rw).length) ? m.rw : null;
+        if (_rw && E.validGive && !E.validGive(_rw)) return;
+        m.got = true; doneN++;
+        g += E.safeAmt(m.gold); d += E.safeAmt(m.dia);
         /* 后端/后台邮件常把奖励放在 rw（物品）而非 gold/dia，
          * 此前一键领取只算 gold/dia，rw 里的材料、芯片、皮肤全部漏发。 */
         if (m.rw && Object.keys(m.rw).length) {
@@ -2819,9 +2844,10 @@ r_tavern(p, tab) {
           });
         }
       });
+      if (!doneN) return this.toast('没有可领取的邮件（附件配置异常）', 'err');
       if (g) all.gold = (all.gold || 0) + g;
       if (d) all.diamond = (all.diamond || 0) + d;
-      p.gold += g; p.diamond += d; E.save(p);
+      p.gold = E.safeAmt(p.gold) + g; p.diamond = E.safeAmt(p.diamond) + d; E.save(p);
       if (window.SND) SND.play('get');
       this.toast('领取成功：' + this.rwText(all), 'ok');
       this.open('mail'); this.home();
@@ -2917,7 +2943,9 @@ r_tavern(p, tab) {
       if (r.ok) {
         E.save(p);
         const bId = E.bossRaidLevel ? E.bossRaidLevel(p) : null;
-        this.close(); startBattle('normal', bId || null);
+        /* 第 4 个参数 raid=true：标记为活动战斗，
+         * 结算时会掷【活动掉落】（表31 DR12 精英芯片 30%）。 */
+        this.close(); startBattle('normal', bId || null, null, true);
       }
       else this.open('act');
     }; });
