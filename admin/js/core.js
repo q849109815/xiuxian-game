@@ -570,8 +570,26 @@ const APP = {
     }
     /* 把当前页的动作表挂到 APP 上：
      * bind / acts 内部回调的 this 都是 APP，而 acts 定义在页面对象里，
-     * 不挂上去的话 this.acts 恒为 undefined（页内互相调用会全部抛错） */
-    this.acts = p.acts || {};
+     * 不挂上去的话 this.acts 恒为 undefined（页内互相调用会全部抛错）
+     *
+     * 【健壮性修复】this.acts 是共享可变属性，切页时会被整体替换成新页面的表。
+     * 页面内的列表刷新多为 async（await DB.reload 等网络往来），若运营点了按钮后
+     * 立刻切换页面，该 async 回调返回时 this.acts 已指向新页面，
+     * 于是 this.acts.xxx 为 undefined，`.call(this)` 直接抛
+     *   TypeError: Cannot read properties of undefined (reading 'call')
+     * 且异常发生在 async 内 —— 同步 try/catch 捕获不到，变成未处理的 promise rejection，
+     * 在控制台留下报错且该次刷新静默丢失。
+     *
+     * 这里包一层：访问当前页不存在的动作时返回空函数，让「已过期的回调」安全降级
+     * （界面早已切走，本来也不需要再刷新它）。
+     * 注意：按钮分发走的是 p.acts（见下方 onclick），不经过 this.acts，
+     * 因此动作名写错时仍由 `if (fn)` 如实拦下，不会被这里掩盖。 */
+    this.acts = new Proxy(p.acts || {}, {
+      get(t, k) {
+        if (k in t) return t[k];
+        return (typeof k === 'string') ? function () {} : t[k];
+      },
+    });
     /* 加载进度条：读 200 份存档要几十秒，不提示会被误认为"读不到玩家" */
     const pg = this.LOAD_PROG;
     const bar = (pg && pg.total)
