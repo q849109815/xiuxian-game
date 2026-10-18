@@ -1944,6 +1944,10 @@ function bindAll() {
     };
   });
 
+  /* 顶栏设置齿轮（新增入口，与菜单网格里的按钮走同一套打开逻辑） */
+  const hset = document.getElementById('hmSet');
+  if (hset) hset.onclick = () => { if (window.SND) SND.play('click'); UI.open('set'); };
+
   const px = document.getElementById('pnX'); if (px) px.onclick = () => UI.close();
   const pm = document.getElementById('pnMask'); if (pm) pm.onclick = () => UI.close();
   /* BUG：面板左上角「◀」(#pnBack) 全项目 0 处绑定 onclick —— 实测 22 个面板里
