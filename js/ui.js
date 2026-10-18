@@ -4072,6 +4072,14 @@ r_tavern(p, tab) {
     /* 顶部波次 */
     const bw = $('#btWave'); if (bw) bw.textContent = r.wave;
     const bwm = $('#btWaveMax'); if (bwm) bwm.textContent = r.waveTotal;
+    /* 波次进度条（战斗 HUD 重构）：把「还要打多久」从纯数字变成可扫读的进度条。
+     * 无尽模式 waveTotal 可能极大，用 clamp 收在 0~1；r.wave 从 1 开始，
+     * 因此第 1/N 波显示 1/N 而不是 0，玩家不会误以为没开始。 */
+    const wbp = $('#btWaveBar');
+    if (wbp) {
+      const tot = Number(r.waveTotal) || 0;
+      wbp.style.width = (tot > 0 ? clamp((Number(r.wave) || 1) / tot, 0, 1) : 0) * 100 + '%';
+    }
     /* P 判空：战斗 HUD 每帧刷新，若玩家对象异常会连续抛错打断渲染。
      * 此前 this.P 为 null 时 E.power(null) / this.P.diamond 直接崩溃。 */
     if (!this.P) return;
