@@ -1571,7 +1571,9 @@ html,body,button,input,select,textarea{
 #panel[data-tp="side"] .pt,#panel[data-tp="right"] .pt{
   border-radius:12px !important;padding:var(--sp-2) 4px !important}
 #panel[data-tp="right"] .pt{
-  background:linear-gradient(180deg,var(--c-blue-550),var(--c-blue-560)) !important}
+  /* 原为蓝色渐变：在暖棕主题里是冷暖冲突（不协调），且蓝底压米字对比仅 2.38。
+   * 统一为与其它面板一致的暖色暗底，视觉语言一致且可读。 */
+  background:rgba(51, 47, 41, .22) !important}
 #panel[data-tp="right"] .pt.on{
   background:linear-gradient(180deg,var(--q-y1),var(--q-y2) 55%,var(--q-o2)) !important;
   color:var(--c-amber-800) !important;box-shadow:none}
@@ -1588,7 +1590,7 @@ html,body,button,input,select,textarea{
   font-size:var(--fs-md) !important;font-weight:var(--fw-semibold) !important;letter-spacing:1px;
   color:var(--q-y2);text-shadow:0 2px 0 var(--q-ink);
 }
-.card-t .sub{color:var(--q-txt2) !important;opacity:.85}
+.card-t .sub{color:var(--q-txt2) !important}
 /* 列表行 */
 .item,.zrow,.mc-card{
   border-radius:16px !important;
@@ -1610,7 +1612,7 @@ html,body,button,input,select,textarea{
 .eq{background:linear-gradient(180deg,var(--c-leather-400),var(--c-leather-600)) !important}
 .eq.on{border-color:var(--q-y2) !important;box-shadow:0 0 0 3px rgba(51, 33, 8, .35)}
 /* 空状态 */
-.empty{color:var(--q-txt2) !important;opacity:.8}
+.empty{color:var(--q-txt2) !important}
 
 /* ---------- 标签：胶囊糖果色 ---------- */
 .tag,.pill{
@@ -2344,3 +2346,23 @@ b { font-weight: var(--fw-semibold) !important; }
 /* 主行动：出击占 1.7 份宽度，副行动（无尽）占 1 份 */
 .hm-acts .ha{flex:1 1 0;min-width:0}
 .hm-acts .ha.go{flex:1.7 1 0}
+
+/* 【压图文字可读：背景压暗遮罩】
+ * 商品/角色格子使用背景图，实测底亮度高达 L≈0.22 —— 在该亮度上【任何字色】都无法达到
+ * 4.5:1（连纯白也只有 3.89）。唯一解是把底压暗，而不是无限提亮文字。
+ * 曾用 text-shadow 描边，但 12px 细字会被 2px 模糊描边糊住笔画，反而更差，故改为遮罩。
+ * 遮罩 pointer-events:none，不影响点击；内容 z-index 抬到遮罩之上。 */
+.gcell{position:relative;isolation:isolate}
+.gcell::before{content:"";position:absolute;inset:0;background:rgba(10,7,3,.45);
+  border-radius:inherit;pointer-events:none;z-index:0}
+.gcell>*{position:relative;z-index:1}
+/* 面板主体/卡片同样压在背景图上，明暗不均会让同一行文字在不同位置对比度 2.9~6.8 波动。
+ * 这里压一层较轻的遮罩，把亮部拉下来、减小波动（卡片底色同时提亮一档以保住层次）。 */
+.stone-panel,.card{position:relative;isolation:isolate}
+.stone-panel::before,.card::before{content:"";position:absolute;inset:0;
+  background:rgba(10,7,3,.40);border-radius:inherit;pointer-events:none;z-index:0}
+.stone-panel>*,.card>*{position:relative;z-index:1}
+
+/* 未解锁卡片：区分度改由图标灰化+背景压暗承担。
+ * 此前靠 opacity:.45 整体淡化，结果把最该看清的「通关 X-X 解锁」压到对比 3.19（不可读）。 */
+.gcell.sel img,.gcell.sel .gi{filter:grayscale(.7) brightness(.68)}
