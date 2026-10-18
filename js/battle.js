@@ -658,6 +658,8 @@ const BT = {
     if (w > 1 && r.efx && r.efx.length < 90) {
       r.efx.push({ t: 'wavestart', x: 0, y: (r.py || 400) - 40, w: this.w || 480, life: 0.7, max: 0.7 });
     }
+    /* JUICE：波次推进的冲击反馈（此前换波只有一行扫描带，画面毫无动静） */
+    try { if (window.JUICE && w > 1) JUICE.onWave(w); } catch (e) {}
   },
 
   spawnBoss(id) {
@@ -879,9 +881,15 @@ const BT = {
     const loop = (t) => {
       this.raf = requestAnimationFrame(loop);
       const dt = Math.min(0.05, (t - this.last) / 1000); this.last = t;
-      if (!this.paused) this.tick(dt * (BT.speed || 1));
+      /* JUICE：顿帧 / 慢镜头用【真实 dt】推进内部计时，返回本帧战斗时间缩放。
+       * 缺失时退化为 1，逻辑与改造前完全一致（纯表现层，不会卡住战斗）。 */
+      let k = 1;
+      try { if (window.JUICE) k = JUICE.frame(dt); } catch (e) { k = 1; }
+      if (!this.paused) this.tick(dt * (BT.speed || 1) * k);
       this.draw();
     };
+    /* 每局开始重置打击感状态（连杀计数、震屏、闪屏不跨局残留） */
+    try { if (window.JUICE) JUICE.reset(); } catch (e) {}
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = requestAnimationFrame(loop);
   },
@@ -2369,6 +2377,8 @@ const BT = {
       r.skillDmg[k] = (r.skillDmg[k] || 0) + d;
     }
     this.addFloat(z.x, z.y - 14, Math.round(d), crit ? 'crit' : 'dmg');
+    /* JUICE：暴击额外顿帧 + 震屏（此前暴击与普通命中在手感上毫无区别） */
+    try { if (window.JUICE) JUICE.onHit(d, crit); } catch (e) {}
     /* 暴击星芒：暴击此前只有数字变色，画面上与普通命中无异 */
     if (crit && r.efx) r.efx.push({ t: 'crit', x: z.x, y: z.y, life: 0.35, max: 0.35 });
     /* 命中火花：3D 粒子向外飞散（子弹打击感，此前命中只有飘字、无任何特效） */
@@ -2458,6 +2468,8 @@ const BT = {
     if (d > 0) r.noHitStreak = 0;
     r.hitFlash = 0.18;
     this.addFloat(r.px, r.py - 26, '-' + Math.round(dmg), 'hurt');
+    /* JUICE：受伤横甩 + 红闪。此前掉血只有一行飘字，玩家常常没察觉。 */
+    try { if (window.JUICE && d > 0) JUICE.onPlayerHurt(d); } catch (e) {}
     if (window.SND) SND.play('hurt');
     /* 表04 VO_004 防线告急：低于 30% 提示一次（此前完全没有预警） */
     if (!r._lowWarn && r.wallMax && r.wallHp > 0 && r.wallHp / r.wallMax < 0.3) {
@@ -2488,7 +2500,14 @@ const BT = {
     if (r.kills === 1 && window.UI && UI.guideTrigger) UI.guideTrigger('firstKill');
     /* 吸血技能（xixue）的回血已移到 hurt() 按「造成伤害的百分比」结算，
      * 此处不再按固定值加血（原写法 Lv8 只回 0.12 点，等同无效，且会重复回血）。 */
-    const gAdd = Math.round(z.gold * (1 + E.talentVal(this.P, 'gold')));
+    /* JUICE 连杀：返回本只怪的金币倍率（1.00 ~ 1.48，封顶）。
+     * 此前连杀只累加 noHitStreak 却既不显示也不给收益 —— 打出一串连杀
+     * 和一只只慢慢磨，反馈与收益完全一样，"爽"这件事没有任何回报。
+     * 现在连杀越高金币越多（最高 +48%），并同步触发顿帧 / 震屏 / 分级演出。 */
+    let _cm = 1;
+    try { if (window.JUICE) _cm = JUICE.onKill(z, r); } catch (e) { _cm = 1; }
+    if (!(_cm > 0)) _cm = 1;
+    const gAdd = Math.round(z.gold * (1 + E.talentVal(this.P, 'gold')) * _cm);
     r.gold += gAdd;
     /* 局内金币（coin）：只用于建造/升级炮台，【不随章节倍率 rwMul 放大】。
      * 严重失衡：coin 此前与 r.gold 共用同一个 gAdd，而 z.gold 内含 rwMul，
@@ -2568,6 +2587,7 @@ const BT = {
     if (z._boomed) return;
     z._boomed = true;
     r.efx.push({ t: 'boom', x: z.x, y: z.y, r: 72, life: 0.4, max: 0.4 });
+    try { if (window.JUICE) JUICE.onBlast(72); } catch (e) {}
     const _hx = r.px - z.x, _hy = r.py - z.y;
     if (_hx * _hx + _hy * _hy < 72 * 72) this.hurtPlayer(z.dmg, z.n);
     /* 自爆僵尸贴脸自爆时此前只置 dead=true，不走 kill()
@@ -2582,6 +2602,7 @@ const BT = {
   explode(x, y, r2, dmg) {
     const r = this.run;
     r.efx.push({ t: 'boom', x, y, r: r2, life: 0.3, max: 0.3 });
+    try { if (window.JUICE) JUICE.onBlast(r2); } catch (e) {}
     for (const z of r.zombies) {
       if (z.dead) continue;
       const _ex = z.x - x, _ey = z.y - y;
@@ -2916,6 +2937,8 @@ const BT = {
     try { if (window.VO) VO.say('VO_007'); } catch (e) {}
     const r = this.run; if (r.over) return;
     r.over = true; r.win = true;   /* r.win 此前从未赋值，外部无法判定胜负 */
+    /* 结算前把本局最大连杀存进 run（JUICE.reset() 会清掉，必须先落档） */
+    try { if (window.JUICE) { r.comboBest = JUICE.comboBest; JUICE.reset(); } } catch (e) {}
     /* 表37 埋点：endless_time / level_finish */
     try { if (r.endless) OPS.track('endless_time', { t: Math.floor(r.time) }); } catch (e) {}
     this.sweepDrops(1);
@@ -2946,6 +2969,7 @@ const BT = {
   onLose() {
     try { if (window.VO) VO.say('VO_008'); } catch (e) {}
     const r = this.run; if (r.over) return;
+    try { if (window.JUICE) { r.comboBest = JUICE.comboBest; JUICE.reset(); } } catch (e) {}
     if (r.reviveLeft > 0) {
       r.reviveLeft--;
       r.wallHp = r.wallMax != null ? r.wallMax : r.maxHp;
@@ -2997,6 +3021,7 @@ const BT = {
 
   quit() {
     const r = this.run; if (!r || r.over) return;
+    try { if (window.JUICE) { r.comboBest = JUICE.comboBest; JUICE.reset(); } } catch (e) {}
     r.over = true; this.on = false; this.stopLoop();
     this.sweepDrops(0.5);
     if (this.cb) this.cb('quit', { kills: r.kills, time: r.time, rw: { gold: Math.floor(r.gold * 0.5), diamond: 0 }, lv: r.lv });
@@ -5989,9 +6014,13 @@ const BT = {
 
     /* 屏幕震动：开火后整场画面轻微抖动，强度按武器表 recoil（低0.55/中1.0/高1.6） */
     const _shk = (r && r.shakeT > 0) ? 1 : 0;
-    if (_shk) {
+    /* JUICE 震屏叠加在开火后坐力之上（两者同时存在时相加，不会互相覆盖） */
+    let _jsh = 0, _jx = 0, _jy = 0;
+    try { if (window.JUICE && JUICE.shT > 0) { _jsh = 1; const o = JUICE.offset(); _jx = o[0]; _jy = o[1]; } } catch (e) { _jsh = 0; }
+    if (_shk || _jsh) {
       c.save();
-      c.translate(Number(r.shakeX) || 0, Number(r.shakeY) || 0);
+      c.translate((_shk ? (Number(r.shakeX) || 0) : 0) + _jx,
+                  (_shk ? (Number(r.shakeY) || 0) : 0) + _jy);
     }
 
     /* 背景 + 2.5D 透视地面网格
