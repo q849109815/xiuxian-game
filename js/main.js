@@ -653,9 +653,29 @@ const MAIN = {
        * save() 每 30 秒跑一次，提示必须节流，否则会一直弹。 */
       this.dropSnap(P.uid);
       const now = Date.now();
-      if (now - (this._staleAt || 0) > 300000) {
+      /* BUG（实测确认）：原实现只做 5 分钟节流的 toast。
+       * 于是落后端玩家在第 2 次及之后的每次自动存档都【静默失败】——
+       *   实测：A 端存到 3000；B 端加到 3400 保存 → 提示一次；
+       *        B 端再加 200 保存 → 提示为空（被节流），云端仍是 3000；
+       *        B 端重登 → 回到 3000，这 600 金币白玩，玩家全程不知情。
+       * 更糟：dropSnap 已删掉本机快照，玩家关页面后连快照兜底都没有。
+       * 现在首次冲突就弹明确选择，让玩家知情并可切回最新进度；
+       * 玩家若选择继续，之后才降级为节流 toast（save 每 30 秒一次，不能每次弹）。 */
+      if (!this._staleWarned) {
+        this._staleWarned = true;
         this._staleAt = now;
-        try { UI.toast('⚠️ 检测到其他设备有更新的进度，已保留最新的一份', 'err'); } catch (e) {}
+        /* 不 await：save() 是这个流程的同步主干，弹窗不能阻塞它 */
+        (async () => {
+          try {
+            const sw = await UI.ask('进度冲突',
+              '检测到其他设备有更新的进度。\n本机继续玩下去的进度无法保存，刷新后会回到云端的最新进度。\n建议切换到最新进度，避免白玩一场。',
+              { yes: '切换到最新进度', no: '仍用本机继续' });
+            if (sw) { try { location.reload(); } catch (e) {} }
+          } catch (e) {}
+        })();
+      } else if (now - (this._staleAt || 0) > 300000) {
+        this._staleAt = now;
+        try { UI.toast('⚠️ 本机进度落后，继续玩将无法保存，建议刷新页面', 'err'); } catch (e) {}
       }
     } else {
       /* 写入失败（断网 / 令牌失效 / 接口配额耗尽）。
