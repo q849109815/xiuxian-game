@@ -1310,11 +1310,17 @@ r_tavern(p, tab) {
       if (!r.ok) return this.toast(r.msg, 'err');
       /* 落盘由 E.setGem 内部统一负责（镶嵌/卸下两个分支都已自带 save），
        * 这里不重复 save —— 每多调一次就是一次云端写入。 */
+      /* 音效与宝石面板入口统一：此前只有宝石面板「镶嵌」播 upgrade，
+       * 角色页镶嵌/卸下与宝石页卸下三个分支全都没声 —— 同一操作四个入口
+       * 有的响有的不响，玩家在角色页操作会以为没生效。 */
+      if (window.SND) SND.play('upgrade');
       this.toast('已镶嵌 ' + g.n, 'ok'); this.open('role', '宝石'); this.home();
     }; });
     $$('#pnBody [data-gemoff]').forEach((b) => { b.onclick = () => {
       const r = E.setGem(p, null);
-      this.toast(r.msg, r.ok ? 'ok' : 'err'); this.open('role', '宝石'); this.home();
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok && window.SND) SND.play('upgrade');
+      this.open('role', '宝石'); this.home();
     }; });
     $$('#pnBody [data-forge]').forEach((b) => { b.onclick = () => {
       const r = E.forgeEquip(p, b.dataset.forge);
@@ -1831,7 +1837,10 @@ r_tavern(p, tab) {
     if (gb) gb.onclick = () => { this.close(); this.open('level', '章节'); };
     $$('#pnBody [data-mq]').forEach((b) => { b.onclick = () => {
       const r = E.claimTask(p, 'main', b.dataset.mq); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { E.saveSoon(p); this.open('task'); this.home(); }
+      /* 音效此前只有 achieve / weekly 两个分支播，main / daily 漏接：
+       * 同一块面板里四个页签，领成就和周常有拾取音、领主线和日常却安静无声，
+       * 玩家只会以为「点了没反应」。四个入口统一。 */
+      if (r.ok) { if (window.SND) SND.play('pickup'); E.saveSoon(p); this.open('task'); this.home(); }
     }; });
     $$('#pnBody [data-wq]').forEach((b) => { b.onclick = () => {
       const r = E.claimTask(p, 'weekly', b.dataset.wq); this.toast(r.msg, r.ok ? 'ok' : 'err');
@@ -1839,7 +1848,7 @@ r_tavern(p, tab) {
     }; });
     $$('#pnBody [data-dq]').forEach((b) => { b.onclick = () => {
       const r = E.claimTask(p, 'daily', b.dataset.dq); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { E.saveSoon(p); this.open('task'); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('pickup'); E.saveSoon(p); this.open('task'); this.home(); }
     }; });
   },
 
@@ -2458,7 +2467,7 @@ r_tavern(p, tab) {
       const r = E.setGem(p, null);
       this.toast(r.msg, r.ok ? 'ok' : 'err');
       /* 落盘由 E.setGem 内部统一负责，这里不重复 save */
-      if (r.ok) { this.open('gem'); this.home(); }
+      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('gem'); this.home(); }
     };
     const ib = $('#gemInlay');
     if (ib) ib.onclick = () => {
