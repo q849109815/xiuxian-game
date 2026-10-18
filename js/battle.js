@@ -623,7 +623,7 @@ const BT = {
     }
     r.wave = w;
     r.waveT = 0;              /* 重置波次计时（配合超时推进） */
-    r.waveMaxT = (d.cond === 'boss' || d.cond === 'bossAll') && w === d.waves ? 999 : 20;
+    r.waveMaxT = (d.cond === 'boss' || d.cond === 'bossAll') && w === d.waves ? 999 : 15;
     /* BOSS 关：最后一波出 BOSS（资料通关条件：击杀BOSS） */
     const isBossWave = (d.cond === 'boss' || d.cond === 'bossAll') && w === d.waves;
     if (isBossWave) {
@@ -1630,7 +1630,7 @@ const BT = {
      *       僵尸卡在射程外（远程/飞行）整关就永不推进。
      * 改为：清空 或 波次超时 任一满足即推进（真实尸潮是持续压上的） */
     r.waveT = (r.waveT || 0) + dt;
-    const waveTimeout = r.waveT >= (r.waveMaxT || 20);
+    const waveTimeout = r.waveT >= (r.waveMaxT || 15);
     if ((r.spawnLeft === 0 && r.zombies.length === 0) || waveTimeout) {
       if (r.wave >= r.waveTotal) {
         /* 最后一波：仍需清完场上僵尸才算通关 */
