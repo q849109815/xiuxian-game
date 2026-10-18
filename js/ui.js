@@ -343,6 +343,7 @@ const UI = {
     }).join('');
     $$('#hmBase .bs').forEach((el) => { el.onclick = () => this.open('base', el.dataset.build); });
     this.navDots();
+    this.renderGuide();
   },
 
   /* ---------- 头像更换 ----------
@@ -457,6 +458,79 @@ const UI = {
     set('base', bn);
   },
 
+  /* 任务面板「页签级」红点：主线/日常/周常/成就各档"已完成但未领取"的数量。
+   *
+   * 逻辑问题：此前红点只打在主菜单「任务」入口上（四档合计），
+   *   而任务面板默认打开的是「主线」页签 —— 若实际可领的是「日常」，
+   *   玩家看到主菜单红点=1、点进来在主线页却找不到任何领取按钮，
+   *   会以为奖励丢了 / 红点是坏的（与上一轮"活动领奖按钮点了全被拒"同源）。
+   * 这里把红点下沉到具体页签，与 navDots 的计数口径完全一致。 */
+  taskTabCount(tab) {
+    const MAP = { '主线': 'main', '日常': 'daily', '周常': 'weekly', '成就': 'achieve' };
+    const k = MAP[tab];
+    if (!k) return 0;
+    try {
+      const p = window.P || {};
+      const T = EX.tasks || {};
+      const tk = p.tasks || {};
+      const gotMap = { main: tk.mainClaimed, daily: tk.dailyClaimed, weekly: tk.weeklyClaimed, achieve: tk.achieveClaimed };
+      const arr = T[k] || [], got = gotMap[k];
+      let n = 0;
+      arr.forEach((t) => {
+        if (!t) return;
+        if (Array.isArray(got) && got.indexOf(t.id) >= 0) return;
+        if (!E.taskDone(p, t)) return;
+        /* 与 claimTask / navDots 同口径：奖励配置不可用的任务领不到，不计入红点 */
+        if (E.rwUsable && !E.rwUsable(t.rw)) return;
+        n++;
+      });
+      return n;
+    } catch (e) { return 0; }
+  },
+
+  /* 主界面「下一步」目标指引
+   *
+   * 逻辑问题：新号进来 Lv.1、2000 金币、100 体力，界面不告诉玩家先做什么 ——
+   *   21 个入口平铺，没有"当前最该做的一件事"，新手会卡在"我该点哪个"。
+   * 这里按优先级算出一个动作（可领奖励 > 推图 > 强化 > 基地），
+   *   显示成一条可点的指引条，点一下直接进对应面板，降低决策成本。 */
+  renderGuide() {
+    const el = $('#hmGuide');
+    if (!el) return;
+    try {
+      const p = window.P || {};
+      let txt = '', go = null;
+      /* 1) 最优先：有东西可领（任务/活动/邮件/离线），避免玩家白放着 */
+      const tn = this.taskTabCount('主线') + this.taskTabCount('日常') + this.taskTabCount('周常') + this.taskTabCount('成就');
+      const an = (E.actClaimable ? E.actClaimable(p) : 0);
+      const mailN = ((p.mail || []).filter((m) => m && !m.got && (this.mailActive ? this.mailActive(m) : true)).length);
+      const oc = E.offlineCalc ? E.offlineCalc(p) : null;
+      const offN = (oc && ((oc.gold || 0) > 0 || (oc.metal || 0) > 0 || (oc.xp || 0) > 0)) ? 1 : 0;
+      if (tn > 0) { txt = '有 <b>' + tn + '</b> 个任务奖励待领取'; go = () => this.open('task'); }
+      else if (an > 0) { txt = '活动有 <b>' + an + '</b> 项奖励可领'; go = () => this.open('act'); }
+      else if (mailN > 0) { txt = '有 <b>' + mailN + '</b> 封邮件未领取'; go = () => this.open('mail'); }
+      else if (offN > 0) { txt = '有离线收益可领取'; go = () => this.open('base'); }
+      else {
+        /* 2) 无可领：推进当前关卡 */
+        const cur = E.curLevel(p);
+        const cost = E.staminaCost(cur) || 1;
+        if ((p.stamina || 0) >= cost) {
+          txt = '下一步：出击 <b>' + E.levelName(cur) + '</b>（体力 ' + cost + '）';
+          go = () => this.open('level');
+        } else {
+          txt = '体力不足，去基地领取或看广告恢复体力';
+          go = () => this.open('base');
+        }
+      }
+      el.innerHTML = '<span>' + txt + '</span><span class="hg-go">前往 ›</span>';
+      el.style.display = '';
+      el.onclick = go;
+    } catch (e) {
+      /* 指引条属于增强，任何异常都不允许影响主界面渲染 */
+      try { el.style.display = 'none'; } catch (x) {}
+    }
+  },
+
   /* ================= 面板 ================= */
   /* PANELS: [标题, 分类, tab位置]
      位置: side=左侧竖排(截图35/38/39/41) bottom=底部横排(截图34背包) right=右侧竖标(截图40) */
@@ -527,8 +601,12 @@ const UI = {
     const pos = this.tabPos(key);
     const box = $('#panel');
     if (box) box.dataset.tp = pos;
-    const tabsHTML = def[1].map((t) =>
-      `<button class="pt ${t === this.curTab[key] ? 'on' : ''}" data-t="${t}">${t}</button>`).join('');
+    const tabsHTML = def[1].map((t) => {
+      /* 任务面板：页签级红点，解决"主菜单有红点、进面板却找不到"的逻辑不一致 */
+      const _dn = (key === 'task') ? this.taskTabCount(t) : 0;
+      const _dot = _dn > 0 ? `<i class="pt-dot">${_dn > 99 ? '99+' : _dn}</i>` : '';
+      return `<button class="pt ${t === this.curTab[key] ? 'on' : ''}" data-t="${t}">${t}${_dot}</button>`;
+    }).join('');
     /* 单分类时不显示 tab 区 */
     $('#pnTabs').innerHTML = def[1].length > 1 ? tabsHTML : '';
     $('#pnTabs').style.display = def[1].length > 1 ? '' : 'none';
