@@ -2065,6 +2065,60 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
    #btGold/#btDia2 与 #btCoin/#btDia），保留含击杀数的 .bt-cur，
    隐藏纯重复的 .bt-coin，避免右上角堆四层。 */
 .bt-coin{display:none !important}
+/* 顺带修正：行高 1.65px 会把文字压成一条几乎不可读的细线（应为 1.65 倍） */
+.bt-dock .bt-tip{line-height:1.65}
+
+/* =========================================================
+   JUICE 打击感层：连杀 Combo HUD + 全屏冲击闪
+   ---------------------------------------------------------
+   连杀此前只在内存里累加（noHitStreak），界面从不显示、也从不给收益；
+   全屏冲击闪全项目 0 处，玩家受伤与爆炸没有任何画面反馈。
+   这两层都是 pointer-events:none 的纯表现层，不拦截任何点击。
+   ========================================================= */
+.jc-wrap{
+  position:absolute;left:50%;top:84px;z-index:60;
+  transform:translateX(-50%) scale(1);
+  transform-origin:50% 40%;
+  display:none;flex-direction:column;align-items:center;
+  pointer-events:none;
+  transition:transform .13s cubic-bezier(.34,1.56,.64,1);
+  text-shadow:0 2px 0 rgba(0,0,0,.6),0 0 16px rgba(0,0,0,.55);
+  font-style:italic}
+.jc-wrap.on{display:flex}
+.jc-n{display:flex;align-items:baseline;gap:var(--sp-1)}
+.jc-n b{font-size:var(--fs-4xl);line-height:1;font-weight:var(--fw-bold);
+  color:var(--c-n-300);letter-spacing:-1px}
+.jc-x{font-size:var(--fs-xs);font-weight:var(--fw-semibold);color:var(--c-n-400);font-style:normal}
+.jc-bar{margin-top:var(--sp-1);width:88px;height:4px;border-radius:2px;
+  background:rgba(0,0,0,.55);overflow:hidden}
+.jc-bar i{display:block;height:100%;width:100%;border-radius:2px;
+  background:var(--c-n-500);transform-origin:left center;transform:scaleX(1)}
+.jc-mul{margin-top:var(--sp-1);font-size:var(--fs-xs);font-weight:var(--fw-semibold);
+  color:var(--c-n-400);font-style:normal}
+/* 连杀分级：只改观感，不改倍率 */
+.jc-wrap.t0 .jc-n b{color:var(--c-n-300)}
+.jc-wrap.t0 .jc-bar i{background:var(--c-n-500)}
+.jc-wrap.t1 .jc-n b{color:var(--c-amber-200)}
+.jc-wrap.t1 .jc-bar i{background:var(--c-amber-200)}
+.jc-wrap.t1 .jc-mul{color:var(--c-amber-200)}
+.jc-wrap.t2 .jc-n b{color:var(--c-amber-100);font-size:var(--fs-5xl)}
+.jc-wrap.t2 .jc-bar i{background:var(--c-amber-100)}
+.jc-wrap.t2 .jc-mul{color:var(--c-amber-100)}
+.jc-wrap.t3 .jc-n b{color:var(--c-red-450);font-size:var(--fs-5xl)}
+.jc-wrap.t3 .jc-bar i{background:var(--c-red-450)}
+.jc-wrap.t3 .jc-mul{color:var(--c-red-450)}
+.jc-wrap.t4 .jc-n b{color:var(--c-violet-500);font-size:var(--fs-display)}
+.jc-wrap.t4 .jc-bar i{background:var(--c-violet-500)}
+.jc-wrap.t4 .jc-mul{color:var(--c-violet-500)}
+.jc-wrap.t5 .jc-n b{color:var(--c-amber-350);font-size:var(--fs-display);
+  filter:drop-shadow(0 0 10px rgba(255,176,39,.65))}
+.jc-wrap.t5 .jc-bar i{background:var(--c-amber-350)}
+.jc-wrap.t5 .jc-mul{color:var(--c-amber-350)}
+
+/* 全屏冲击闪 */
+.jc-flash{position:absolute;inset:0;z-index:55;pointer-events:none;
+  opacity:0;background:rgb(255,255,255);
+  transition:opacity .07s linear}
 
 /* ============================================================
    游戏内统一确认弹窗 .ask-box（替代浏览器原生 confirm / alert）
