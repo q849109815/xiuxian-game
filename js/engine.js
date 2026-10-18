@@ -2891,6 +2891,11 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       return { ok: false, msg: '该活动' + w };
     }
     if (this.actRwGot(p, id)) return { ok: false, msg: '本期奖励已领取' };
+    /* 发得出去才允许标记已领。
+     * 旧行为先打已领标记、再 grant —— 奖励键写错时 grant 一项都发不出去，
+     * 却照样返回"已领取"，而 actRwGot 已置位 → 本期永久领不到，
+     * 运营改好配置也补不回来（与 claimTask 的 rwUsable 同一道防线）。 */
+    if (!this.validGive(a.rw)) return { ok: false, msg: '该活动奖励配置异常，暂不可领取' };
     const c = this.actCondOk(p, a);
     if (!c.ok) return c;
     const g = p.actRwGot || (p.actRwGot = {});
@@ -3008,7 +3013,26 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     return (isFinite(n) && n > 0) ? n : (dft == null ? 1 : dft);
   },
   validGive(g) {
-    return !!(g && typeof g === 'object' && Object.keys(g).length);
+    if (!g || typeof g !== 'object' || Array.isArray(g)) return false;
+    const K = Object.keys(g);
+    if (!K.length) return false;
+    /* 收紧：必须【至少有一项能真正发出去】。
+     * 旧实现只判"非空对象"——后台把 item 写成中文名或拼错键时照样放行，
+     * 于是扣完成就点/活动代币，奖励全部掉进 grant 的兜底分支变成垃圾材料键，
+     * 玩家一分没拿到，界面还提示"兑换成功"。这是最伤玩家的一类账实不符。
+     * 这里按 grant 的分发口径逐键判定，全部不可发放时在【扣费之前】拒绝。 */
+    const STR = { title: 1, skin: 1, frame: 1, gem: 1 };
+    const RES = { gold: 1, diamond: 1, stamina: 1, ach: 1, evToken: 1, ev: 1 };
+    const CHIP = /^(chipN|chipE|chipL|chipRed|C0[123]|U0[12])$/;
+    for (let i = 0; i < K.length; i++) {
+      const k = K[i];
+      if (STR[k]) { if (g[k]) return true; continue; }
+      if (RES[k]) { if (this.safeAmt(g[k]) > 0) return true; continue; }
+      if (CHIP.test(k)) { if (this.safeAmt(g[k]) > 0) return true; continue; }
+      if (this.grantKindOf(k)) return true;
+      if (this.matKeyOk(k) && this.safeAmt(g[k]) > 0) return true;
+    }
+    return false;
   },
   /* 奖励数量校验（上一轮只收紧了【商店价格】，奖励侧漏了）
    * 实测三类脏数据（旧行为，p.gold += v 裸加）：
@@ -3201,6 +3225,19 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (has(EX.frames)) return 'frame';
     return '';
   },
+  /* 一个键是否为"真实可发放的物品"
+   * 用于 grant 兜底分支的白名单，以及兑换前的奖励合法性校验。
+   * EX.items 为空（配置尚未加载 / 拉取失败）时一律放行，避免误伤正常发放。 */
+  matKeyOk(k) {
+    if (!k || typeof k !== 'string') return false;
+    const items = EX.items || [], chips = EX.chips || [];
+    if (!items.length && !chips.length) return true;
+    for (let i = 0; i < items.length; i++) if (items[i] && items[i].id === k) return true;
+    for (let i = 0; i < chips.length; i++) if (chips[i] && chips[i].id === k) return true;
+    /* 皮肤 / 宝石 / 称号 / 头像框的裸 id */
+    if (this.grantKindOf(k)) return true;
+    return false;
+  },
   grant(p, give) {
     if (!give) return 0;
     /* 类型守卫
@@ -3338,7 +3375,23 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       }
       /* 通用材料：同样先过 safeAmt。
        * 旧行为 p.mat[k] += give[k]，字符串会拼成 "1000abc"、NaN 会毁掉整个背包。 */
-      else { const n = this.safeAmt(give[k]); if (n > 0) { p.mat[k] = (p.mat[k] || 0) + n; _got += n; } }
+      else {
+        const n = this.safeAmt(give[k]);
+        if (n > 0) {
+          /* 【未知键白名单拦截】
+           * 此前任何键都会无条件写进 p.mat —— 配置里写个中文名或拼错的键
+           * （如 { '钻石': 100 }、{ 'diamon': 100 }），就会往材料背包塞一个
+           * 垃圾键：p.mat['钻石']=100。玩家在背包里永远看不到它、也用不了，
+           * 而发放方（成就商店/活动商店/排名奖励/运营补发）照样提示"兑换成功"。
+           * 实测：花 400 成就点兑换，成就点照扣，p.ach -400，到账的是 p.mat 里
+           * 一个没人认识的键 —— 纯粹的白扣。
+           * 现在只对"物品表里真实存在"的键放行，其余一律跳过且【不计入 _got】，
+           * 调用方据此能拿到 0，从而不再谎报成功。
+           * 注意：EX.items 为空（配置未加载）时不做拦截，避免误伤正常发放。 */
+          if (!this.matKeyOk(k)) { console.warn('[grant] 忽略未知物品键：' + k); return; }
+          p.mat[k] = (p.mat[k] || 0) + n; _got += n;
+        }
+      }
     });
     return _got;
   },
@@ -3420,6 +3473,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* 就地防御：污染成字符串/数字时赋值失效 → 排名奖励可重复领取 */
     if (!p.rankRwGot || typeof p.rankRwGot !== 'object' || Array.isArray(p.rankRwGot)) p.rankRwGot = {};
     if (p.rankRwGot[key]) return { ok: false, msg: '本期已领取过该奖励' };
+    /* 同上：奖励键无效时不要先记已领，否则本期名额白白作废 */
+    if (!this.validGive(rw.rw)) return { ok: false, msg: '该名次奖励配置异常，暂不可领取' };
     /* 清理同一奖励的旧周期记录：避免 rankRwGot 随天数/小时无限膨胀 */
     const prefix = 'rk_' + board + '_' + rw.id + '_';
     Object.keys(p.rankRwGot).forEach((k) => {
