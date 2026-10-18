@@ -167,8 +167,10 @@ html[data-kb] #login{justify-content:flex-start;padding:var(--sp-3)}
 .hm-pw{display:flex;align-items:center;gap:var(--sp-1);margin: var(--sp-half)}
 .hm-pw span{font-size:var(--fs-xs)}
 .hm-pw b{font-size:var(--fs-md);color:var(--gold);font-weight:var(--fw-semibold)}
-.hm-cur{display:flex;flex-direction:column;gap: var(--sp-half);align-items:flex-end}
-.cu{display:flex;align-items:center;gap:var(--sp-1);padding: 2px 8px;border-radius:10px;
+.hm-cur{display:flex;flex-direction:column;gap:var(--sp-half);align-items:flex-end;flex:0 0 auto}
+/* 三枚货币等宽：此前宽度随内容变化（64/50/76），左缘参差成锯齿，是顶部最刺眼的失对齐 */
+.cu{display:flex;align-items:center;justify-content:flex-end;gap:var(--sp-1);
+  width:78px;box-sizing:border-box;padding: 2px 8px;border-radius:10px;
   background:rgba(64, 46, 30, .78);border:1px solid var(--border);
   box-shadow:inset 0 1px 0 rgba(255, 231, 190, .10)}
 .cu i{font-size:var(--fs-xs);font-style:normal}
@@ -570,6 +572,8 @@ html[data-kb] #login{justify-content:flex-start;padding:var(--sp-3)}
 .ha span{font-size:var(--fs-xs);color:var(--txt3);text-shadow:0 1px 3px rgba(0, 0, 0, .85)}
 .ha.go{background:linear-gradient(180deg,rgba(51, 34, 11, .22),rgba(51, 31, 6, .12));border-color:rgba(51, 34, 11, .45)}
 .ha.go b{color:var(--gold)}
+/* 金色主 CTA 上必须用深色字：三级正文(#ccbcab)压在亮金上实测仅 1.2，近乎隐形 */
+.ha.go span,.hm-acts .ha.go span{color:var(--c-amber-900) !important}
 
 /* 基地建筑：原 2 列网格占 281px（33% 屏高），把下方功能菜单挤到需要滚动才能看到「设置」。
  * 改为横向滑动单行卡片（≈96px），省出约 180px 给菜单，21 个入口一屏装下。 */
@@ -582,9 +586,9 @@ html[data-kb] #login{justify-content:flex-start;padding:var(--sp-3)}
 .bs i{font-size:var(--fs-xl);font-style:normal}
 .bs i img{width:28px;height:28px;object-fit:contain;display:block;margin:0 auto}
 .bs b{font-size:var(--fs-sm);display:block;margin: 2px 0 1px;line-height:1.25}
-/* 96px 窄卡：说明最多 2 行后省略，避免撑成一长条 */
+/* 96px 窄卡：说明固定占 2 行高 → 四张卡的文字块底部齐平（此前 1 行/2 行混排导致底缘参差） */
 .bs span{font-size:var(--fs-xs);color:var(--txt3);display:-webkit-box;-webkit-line-clamp:2;
-  -webkit-box-orient:vertical;overflow:hidden;line-height:1.3}
+  -webkit-box-orient:vertical;overflow:hidden;line-height:1.35;min-height:2.7em}
 .bs .dot{position:absolute;right:7px;top:7px;width:7px;height:7px;border-radius:50%;
   background:var(--green);box-shadow:0 1px 4px var(--green)}
 
@@ -1513,7 +1517,7 @@ html,body,button,input,select,textarea{
 }
 .pn-back{
   flex:0 0 auto;width:32px;height:32px;border-radius:50%;
-  background:linear-gradient(180deg,var(--c-blue-650),var(--c-ink-350)) !important;
+  background:linear-gradient(180deg,var(--c-leather-400),var(--c-leather-600)) !important;
   border:2px solid var(--q-ink) !important;color:var(--tw-2) !important;font-size:var(--fs-sm);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
   box-shadow:0 3px 0 var(--q-ink2) !important;
@@ -1594,16 +1598,16 @@ html,body,button,input,select,textarea{
 }
 .item .ic,.mc-card .mi{
   border-radius:12px !important;border:2px solid var(--q-ink) !important;
-  background:linear-gradient(180deg,var(--c-blue-650),var(--c-ink-350)) !important;
+  background:linear-gradient(180deg,var(--c-leather-400),var(--c-leather-600)) !important;
 }
 /* 格子（背包/装备/商店） */
 .gcell,.eq,.lvgrid .lvc,.bs,.ha{
   border-radius:16px !important;border:2px solid var(--q-ink) !important;
   box-shadow:inset 0 2px 0 rgba(51, 47, 41, .18) !important;
 }
-.gcell{background:linear-gradient(180deg,var(--c-blue-650),var(--c-ink-250)) !important}
+.gcell{background:linear-gradient(180deg,var(--c-leather-400),var(--c-leather-600)) !important}
 .gcell.sel{border-color:var(--q-y2) !important;box-shadow:0 0 0 3px rgba(51, 33, 8, .35)}
-.eq{background:linear-gradient(180deg,var(--c-blue-650),var(--c-ink-250)) !important}
+.eq{background:linear-gradient(180deg,var(--c-leather-400),var(--c-leather-600)) !important}
 .eq.on{border-color:var(--q-y2) !important;box-shadow:0 0 0 3px rgba(51, 33, 8, .35)}
 /* 空状态 */
 .empty{color:var(--q-txt2) !important;opacity:.8}
@@ -1630,7 +1634,7 @@ html,body,button,input,select,textarea{
 /* ---------- 三选一技能卡：Q 版厚描边 + 弹入 ---------- */
 .ccard{
   border-radius:16px !important;
-  background:linear-gradient(180deg,var(--c-blue-650),var(--c-ink-350)) !important;
+  background:linear-gradient(180deg,var(--c-leather-400),var(--c-leather-600)) !important;
   border:3px solid var(--q-ink) !important;
   box-shadow:inset 0 2px 0 rgba(51, 47, 41, .2) !important;
   animation:ccIn .28s cubic-bezier(.2,1.5,.4,1) backwards !important;
@@ -1652,15 +1656,16 @@ html,body,button,input,select,textarea{
 /* ---------- 主界面：导航气泡 + 大按钮 ---------- */
 .hm-acts .ha{
   border-radius:16px !important;padding:var(--sp-3) 4px !important;
-  background:linear-gradient(180deg,var(--c-blue-650),var(--c-ink-250)) !important;
+  background:linear-gradient(180deg,var(--c-leather-400),var(--c-leather-600)) !important;
   box-shadow:inset 0 2px 0 rgba(51, 47, 41, .18) !important;
 }
 .hm-acts .ha.go{
   background:linear-gradient(180deg,var(--q-o1),var(--q-o2) 55%,var(--c-amber-310)) !important;
   box-shadow:inset 0 2px 0 rgba(51, 47, 41, .45) !important;
 }
-.hm-acts .ha.go b{color:var(--c-amber-800) !important}
-.hm-base .bs{background:linear-gradient(180deg,var(--c-blue-650),var(--c-ink-250)) !important}
+/* 金底主 CTA：原 --c-amber-800(#946412) 对比度仅 3.25，未达 AA；改用深棕 #4a3005 → 5.5 */
+.hm-acts .ha.go b{color:var(--c-amber-900) !important}
+.hm-base .bs{background:linear-gradient(180deg,var(--c-leather-400),var(--c-leather-600)) !important}
 .hm-nav .hn,.hm-nav2 .hn2{border-radius:12px !important}
 .hm-nav .hn.on,.hm-nav2 .hn2.on{
   background:linear-gradient(180deg,var(--q-y1),var(--q-y2)) !important;
@@ -1768,7 +1773,7 @@ textarea,select{ font-size:var(--fs-lg) !important; }
   padding:var(--sp-1) 7px calc(4px + env(safe-area-inset-bottom));align-items:end}
 .hm-nav .hn{
   position:relative;padding:var(--sp-2) 2px;border-radius:16px;
-  background:linear-gradient(180deg,var(--c-blue-650),var(--c-ink-250));
+  background:linear-gradient(180deg,var(--c-leather-400),var(--c-leather-600));
   border:2px solid var(--q-ink);
   box-shadow:0 4px 0 var(--q-ink2), inset 0 2px 0 rgba(51, 47, 41, .18);
   display:flex;flex-direction:column;align-items:center;gap: var(--sp-half);
@@ -1812,9 +1817,10 @@ textarea,select{ font-size:var(--fs-lg) !important; }
 .nv-dot{
   position:absolute;right:-3px;top:-3px;z-index:3;
   min-width:17px;height:17px;padding:0 4px;border-radius:16px;
-  background:linear-gradient(180deg,var(--c-red-450),var(--c-red-550));
+  background:linear-gradient(180deg,var(--c-red-800),var(--c-red-800));
   border:2px solid var(--q-ink);
-  color:var(--tw-2);font-size:var(--fs-xs);font-weight:var(--fw-medium);line-height:1.65;text-align:center;
+  color:var(--c-white);font-size:var(--fs-xs);font-weight:var(--fw-semibold);line-height:17px;text-align:center;
+  display:flex;align-items:center;justify-content:center;box-sizing:border-box;
   font-style:normal;box-shadow:0 2px 4px rgba(0, 0, 0, .45);
   animation:nvPulse 1.4s ease-in-out infinite;
 }
@@ -2026,7 +2032,8 @@ input[type="range"]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;
 .hmb:active span{color:var(--c-amber-110)}
 /* 红点：沿用 navDots() 的 .nv-dot，位置适配新的小网格按钮 */
 .hmb .nv-dot{position:absolute;top:0;right:6px;min-width:14px;height:14px;padding:0 2px;
-  border-radius:8px;background:var(--red);color:var(--tw-2);font-size:var(--fs-xs);font-weight:var(--fw-medium);font-style:normal;
+  /* 原 --red(#f05a5a)+--tw-2(#d6c2a0) 实测对比度 1.14：亮字压亮红底，数字不可读 */
+  border-radius:8px;background:var(--c-red-800);color:var(--c-white);font-size:var(--fs-xs);font-weight:var(--fw-semibold);font-style:normal;
   /* BUG：原为 line-height:1.65，数字被压成一团几乎不可读 */
   line-height:14px;text-align:center;box-shadow:0 0 6px rgba(51, 18, 17, .8)}
 
