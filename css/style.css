@@ -2279,6 +2279,11 @@ b { font-weight: var(--fw-semibold) !important; }
 #battle .bs-res span{display:flex;align-items:center;gap:var(--sp-half);
   font-size:var(--fs-xs);color:var(--c-n-100);font-variant-numeric:tabular-nums}
 #battle .bs-res img{width:15px;height:15px}
+/* 战斗内金币是独立记账（从 0 起算，结算时并入总金币），
+ * 主界面余额此时仍是 2000 —— 不标注玩家会误以为金币清零。
+ * 「本局」二字把两个口径区分开。 */
+#battle .bs-res .bs-lb{font-style:normal;font-size:var(--fs-xs);
+  opacity:.7;letter-spacing:0;margin-right:var(--sp-half)}
 
 /* ---- 右侧功能键 ---- */
 #battle .bt-side{position:absolute;right:var(--sp-2);
@@ -2292,6 +2297,10 @@ b { font-weight: var(--fw-semibold) !important; }
   background:rgba(8,6,4,.66);border:1px solid var(--border);padding:0}
 #battle .bt-side .bts img{width:22px;height:22px}
 #battle .bt-side .bts.on{border-color:var(--border-accent);background:rgba(148,100,18,.42)}
+/* 战斗侧键 38px 同样低于 44px 可点标准，扩热区不改视觉尺寸 */
+#battle .bt-side .bts{position:relative}
+#battle .bt-side .bts::after{content:'';position:absolute;left:50%;top:50%;
+  width:44px;height:44px;transform:translate(-50%,-50%)}
 
 /* ---- 底部操作区 ---- */
 #battle .bt-dock{
@@ -2342,6 +2351,11 @@ b { font-weight: var(--fw-semibold) !important; }
   background:rgba(8,6,4,.62);border:1px solid var(--border);box-shadow:var(--shadow-1)}
 .hm-set img{width:20px;height:20px;object-fit:contain}
 .hm-set:active{transform:translateY(1px)}
+/* 触摸目标 34px 低于 44px 可点标准（实测 34x34），手指容易点空。
+ * 用 ::after 把热区扩到 44x44，视觉尺寸不变，因此不影响与 .hm-cur 的间距。 */
+.hm-set{position:relative}
+.hm-set::after{content:'';position:absolute;left:50%;top:50%;
+  width:44px;height:44px;transform:translate(-50%,-50%)}
 
 /* 主行动：出击占 1.7 份宽度，副行动（无尽）占 1 份 */
 .hm-acts .ha{flex:1 1 0;min-width:0}
