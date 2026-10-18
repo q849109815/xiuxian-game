@@ -4341,6 +4341,10 @@ r_tavern(p, tab) {
     $('#rsGrid').innerHTML = (rw.exp ? cell(E.fmt(rw.exp), 'EXP') : '')
       + cell(E.fmt(rw.gold || 0), '金币')   /* 原为「R币」，与全项目「金币」叫法不一致，已统一 */
       + cell(d.kills, '击杀')
+      /* 最大连杀：JUICE 连杀系统的战后回执。
+       * 连杀此前只在内存累加、界面从不显示，玩家打出一串连杀与一只只慢慢磨
+       * 反馈完全相同；现在结算给出本局最高连杀，让「打得漂亮」被看见。 */
+      + ((BT.run && BT.run.comboBest) ? cell(BT.run.comboBest, '最大连杀') : '')
       + cell(win ? (d.stars || 0) : 0, '星级')
       + (rw.chip ? cell(rw.chip, '芯片') : '')
       + (rw.diamond ? cell(rw.diamond, '钻石') : '')
