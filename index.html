@@ -128,8 +128,8 @@
   </div>
 
   <div class="hm-acts">
-    <button class="ha go" id="hmGo"><i><img src="assets/icon/nav_go.png?v=20270402a"></i><b>出击</b><span id="hmLevelName">第 1 关</span></button>
-    <button class="ha" id="hmEndless"><i><img src="assets/icon/nav_endless.png?v=20270402a"></i><b>无尽模式</b><span id="hmEndBest">最佳 0 层</span></button>
+    <button class="ha go" id="hmGo"><i><img src="assets/icon/nav_go.png?v=20270402a"></i><b>出击</b><span id="hmLevelName">第 1 关</span><span class="ha-sub" id="hmGoSub"></span></button>
+    <button class="ha" id="hmEndless"><i><img src="assets/icon/nav_endless.png?v=20270402a"></i><b>无尽模式</b><span id="hmEndBest">最佳 0 层</span><span class="ha-sub" id="hmEndSub"></span></button>
   </div>
 
   <!-- 主界面「下一步」目标指引：新号/回归玩家不知道先做什么。
@@ -182,6 +182,13 @@
       </div>
     </div>
   </div>
+
+  <!-- 主界面底部「今日进度」条：此前菜单最后一行结束在 y=748 而视口高 852，
+       底部 104px 是空的，整屏内容没填满、视觉发空。这里补上体力回满倒计时、
+       今日任务进度与主线总进度，并靠 margin-top:auto 吸底。
+       注意：本条必须放在 #hmMenu 【之后】且菜单改为自然高度（不滚动），
+       否则会挤占菜单空间导致 20 个入口一屏放不下（历史上修过的老问题）。 -->
+  <div class="hm-today" id="hmToday"></div>
 </div>
 
 <!-- ========== 战斗 ========== -->
