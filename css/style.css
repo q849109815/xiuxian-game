@@ -2201,3 +2201,139 @@ b { font-weight: var(--fw-semibold) !important; }
   border-color:var(--gold) !important;
   box-shadow:0 0 0 2px rgba(255,208,122,.30), inset 0 1px 0 rgba(255,240,210,.22) !important;
 }
+
+/* =========================================================================
+ * 战斗 HUD 重构（产品 / 交互设计视角）
+ * -------------------------------------------------------------------------
+ * 原布局问题（可测量）：
+ *   1. 四角悬浮：左上「等级/战力」、右上「金币/钻石」、右上「武器/弹药」、
+ *      右上「金币/钻石/击杀」—— 金币钻石渲染两遍、弹药渲染两遍，
+ *      四块独立面板各占一角，把 canvas 可视区挤掉近三分之一。
+ *   2. 底部五层各自 absolute 手写 bottom，炮台栏侵入技能栏 26px。
+ *   3. 底部另有一整行提示文字「自动瞄准开火 · 点技能释放 · 金币建炮台」，
+ *      是新手说明却长期占用永久版面。
+ *
+ * 重构原则（ID 第一性）：
+ *   A. 玩家在战斗中只关心三件事：还要打多久（波次）、会不会死（生命）、
+ *      赚了多少（金币/击杀）—— 这三类信息压进顶部一条状态带。
+ *   B. 操作区收拢到屏幕底部拇指热区，武器/换弹不再独占一行，
+ *      改为浮动在技能栏右端（右手拇指最短路径）。
+ *   C. 一次性说明文字从永久版面移除。
+ * ========================================================================= */
+
+/* ---- 顶栏 ---- */
+#battle .bt-topbar{
+  position:absolute;left:0;right:0;top:0;height:auto;z-index:8;
+  display:flex;align-items:flex-start;gap:var(--sp-2);
+  padding:calc(env(safe-area-inset-top,0px) + var(--sp-2)) var(--sp-2) var(--sp-2);
+  background:linear-gradient(180deg,rgba(8,6,4,.88),rgba(8,6,4,.62) 60%,rgba(8,6,4,0));
+  pointer-events:none;
+}
+#battle .bt-topbar>*{pointer-events:auto}
+#battle .btb-mid{flex:1;min-width:0;text-align:center}
+#battle .btb-lv{font-size:var(--fs-md);font-weight:var(--fw-semibold);color:var(--tw-1);
+  text-shadow:0 2px 4px var(--c-ink-950);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#battle .btb-sub{display:flex;align-items:center;justify-content:center;gap:var(--sp-2);
+  margin-top:var(--sp-half);font-size:var(--fs-xs);color:var(--tw-3);text-shadow:0 1px 3px var(--c-ink-950)}
+#battle .btb-sub b{color:var(--gold);font-weight:var(--fw-semibold)}
+#battle .btb-tm{font-variant-numeric:tabular-nums}
+/* 波次进度条：把「还要打多久」从纯数字变成可一眼扫读的条 */
+#battle .btb-prog{margin:var(--sp-1) auto 0;width:min(240px,72%);height:4px;
+  border-radius:var(--radius-pill);background:rgba(255,255,255,.14);overflow:hidden}
+#battle .btb-prog i{display:block;height:100%;width:0;border-radius:var(--radius-pill);
+  background:linear-gradient(90deg,var(--c-amber-600),var(--gold));transition:width var(--dur-base)}
+
+/* ---- 状态带：生命 + 资源 ---- */
+#battle .bt-status{
+  position:absolute;left:var(--sp-2);right:var(--sp-2);
+  top:calc(env(safe-area-inset-top,0px) + 70px);z-index:7;
+  display:flex;align-items:center;gap:var(--sp-2);min-width:0;
+}
+#battle .bs-hp{display:flex;align-items:center;gap:var(--sp-1);flex:1;min-width:0;
+  padding:var(--sp-1) var(--sp-2);border-radius:var(--radius-pill);
+  background:rgba(8,6,4,.66);border:1px solid var(--border);backdrop-filter:blur(2px)}
+#battle .bs-hp>img{width:16px;height:16px;flex:0 0 auto}
+#battle .bs-bar{flex:1;min-width:0;height:8px;border-radius:var(--radius-pill);
+  background:rgba(255,255,255,.12);overflow:hidden}
+#battle .bs-bar i{display:block;height:100%;width:100%;border-radius:var(--radius-pill);
+  background:linear-gradient(90deg,var(--c-red-650),var(--c-red-350));transition:width var(--dur-fast)}
+#battle .bs-hp b{flex:0 0 auto;font-size:var(--fs-xs);font-weight:var(--fw-semibold);
+  color:var(--c-n-100);font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
+/* 护盾：与血条分开一条细线，并配独立图标语义 */
+#battle .bs-sh{flex:0 0 auto;width:44px;height:6px;border-radius:var(--radius-pill);
+  background:rgba(255,255,255,.12);overflow:hidden}
+#battle .bs-sh i{display:block;height:100%;width:0;border-radius:var(--radius-pill);
+  background:linear-gradient(90deg,var(--c-blue-600),var(--c-blue-300))}
+#battle .bs-res{display:flex;align-items:center;gap:var(--sp-2);flex:0 0 auto;
+  padding:var(--sp-1) var(--sp-2);border-radius:var(--radius-pill);
+  background:rgba(8,6,4,.66);border:1px solid var(--border);backdrop-filter:blur(2px)}
+#battle .bs-res span{display:flex;align-items:center;gap:var(--sp-half);
+  font-size:var(--fs-xs);color:var(--c-n-100);font-variant-numeric:tabular-nums}
+#battle .bs-res img{width:15px;height:15px}
+
+/* ---- 右侧功能键 ---- */
+#battle .bt-side{position:absolute;right:var(--sp-2);
+  top:calc(env(safe-area-inset-top,0px) + 98px);z-index:7;
+  /* 旧规则 .bt-side 带 transform:translateY(-50%)（垂直居中于整屏），
+   * 未重置会让 top 被上移自身一半高度，从而压住状态带。 */
+  transform:none;
+  display:flex;flex-direction:column;gap:var(--sp-2)}
+#battle .bt-side .bts{width:38px;height:38px;border-radius:var(--radius-md);
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(8,6,4,.66);border:1px solid var(--border);padding:0}
+#battle .bt-side .bts img{width:22px;height:22px}
+#battle .bt-side .bts.on{border-color:var(--border-accent);background:rgba(148,100,18,.42)}
+
+/* ---- 底部操作区 ---- */
+#battle .bt-dock{
+  position:absolute;left:0;right:0;bottom:0;z-index:9;
+  display:flex;flex-direction:column;gap:var(--sp-1);
+  padding:var(--sp-2) var(--sp-2) calc(env(safe-area-inset-bottom,0px) + var(--sp-2));
+  background:linear-gradient(0deg,rgba(8,6,4,.90),rgba(8,6,4,.58) 62%,rgba(8,6,4,0));
+}
+#battle .bt-turret{position:static;display:flex;gap:var(--sp-1);justify-content:center;flex-wrap:wrap}
+#battle .bt-turret button{flex:0 0 auto;padding:var(--sp-1) var(--sp-2);border-radius:var(--radius-md);
+  font-size:var(--fs-xs);background:rgba(8,6,4,.72);border:1px solid var(--border);color:var(--tw-2)}
+#battle .bt-turret button.on{border-color:var(--border-accent);color:var(--gold);background:rgba(148,100,18,.36)}
+#battle .bt-turret button:disabled{opacity:.4}
+#battle .bt-act{display:flex;align-items:center;gap:var(--sp-2)}
+#battle .bt-skills{position:static;flex:1;min-width:0;display:flex;gap:var(--sp-1);justify-content:center;flex-wrap:wrap}
+#battle .bt-skills .bs{width:42px;height:42px;border-radius:var(--radius-md)}
+/* 武器/换弹：圆形浮动在技能行右端，右手拇指最短路径 */
+#battle .bt-reload{position:relative;right:auto;bottom:auto;flex:0 0 auto;
+  width:58px;height:58px;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sp-half);
+  background:radial-gradient(circle at 50% 32%,var(--c-ink-450),var(--c-ink-750));
+  border:2px solid var(--border-accent);box-shadow:var(--shadow-2);padding:0}
+#battle .bt-reload .gun-ic{width:26px;height:26px;object-fit:contain}
+#battle .bt-reload span{font-size:var(--fs-xs);font-weight:var(--fw-semibold);color:var(--gold);line-height:1.2}
+#battle .bt-reload em{position:absolute;left:6px;right:6px;bottom:5px;height:3px;width:auto;
+  border-radius:var(--radius-pill);background:var(--gold);box-shadow:none}
+#battle .bt-reload.reloading{opacity:.6}
+
+/* ---- 中央对话气泡：上移到战斗区中部，避免压住底部操作 ---- */
+#battle .bt-talk{position:absolute;left:50%;transform:translateX(-50%);
+  top:calc(env(safe-area-inset-top,0px) + 150px);z-index:10;max-width:76%}
+
+/* ---- 兼容层：绝不渲染 ---- */
+#battle .bt-legacy{display:none !important}
+
+/* =========================================================================
+ * 主界面重构（产品 / 交互设计视角）
+ * -------------------------------------------------------------------------
+ * 1. 设置入口上移顶栏：全局设置是跨平台惯例的右上角入口，
+ *    原混在菜单最后一格「其他」组里，玩家要滑到最底部才找得到。
+ * 2. 「其他」是典型的收纳垃圾桶命名（无语义），已删除该分组：
+ *    排行并入「玩法」（竞争本身就是玩法），菜单收敛为 4 组语义清晰的分区。
+ * 3. 主行动加权：出击是玩家每次进入主界面的第一目标，
+ *    原与「无尽模式」等宽并列，视觉权重不足，现按 1.7 : 1 分配宽度。
+ * ========================================================================= */
+.hm-set{flex:0 0 auto;width:34px;height:34px;border-radius:var(--radius-pill);
+  display:flex;align-items:center;justify-content:center;padding:0;
+  background:rgba(8,6,4,.62);border:1px solid var(--border);box-shadow:var(--shadow-1)}
+.hm-set img{width:20px;height:20px;object-fit:contain}
+.hm-set:active{transform:translateY(1px)}
+
+/* 主行动：出击占 1.7 份宽度，副行动（无尽）占 1 份 */
+.hm-acts .ha{flex:1 1 0;min-width:0}
+.hm-acts .ha.go{flex:1.7 1 0}
