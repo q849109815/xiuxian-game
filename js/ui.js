@@ -304,6 +304,9 @@ const UI = {
       const eta = E.staminaEta ? E.staminaEta(p) : null;
       st.textContent += (eta && !eta.full) ? '（' + this.msTxt(eta.nextMs) + '后 +1）' : '';
     }
+    /* 【V1.1.0】主行动按钮文案走运营热改层（TXT_001），默认「出击」不变 */
+    const _gb = document.querySelector('#hmGo b');
+    if (_gb) _gb.textContent = EX.txt('TXT_001');
     /* 出击卡副行：章节进度 + 本章星数，把 10 章 100 关的体量呈现出来 */
     const _gs = $('#hmGoSub');
     if (_gs) {
@@ -609,7 +612,7 @@ const UI = {
      位置: side=左侧竖排(截图35/38/39/41) bottom=底部横排(截图34背包) right=右侧竖标(截图40) */
   PANELS: {
     role: ['角色', ['装备', '宝石', '皮肤'], 'side'],
-    gun: ['武器', ['强化', '武器库'], 'side'],
+    gun: ['武器', [EX.txt('TXT_005'), '武器库'], 'side'],
     /* BUG：tab 原先只有 ['芯片']，而 r_chip() 里「背包」页签（芯片背包，
      *      含【合成 / 洗练 / 拆解】三个按钮）是一个独立分支 if (tab === '背包')。
      *      由于 '背包' 不在 tab 列表里，该分支永远进不去 ——
@@ -626,7 +629,8 @@ const UI = {
     mail: ['邮件', ['邮件'], 'top'],
     act: ['活动', ['活动'], 'top'],
     rank: ['排行榜', ['全服'], 'top'],
-    set: ['设置', ['账号', '音频', '兑换码', '网络', '数值', '语言', '运营'], 'side'],
+    /* 【V1.1.0】关键文案走运营热改层 EX.txt()，默认与原文一致 */
+    set: [EX.txt('TXT_002'), ['账号', '音频', '兑换码', '网络', '数值', '语言', '运营'], 'side'],
     level: ['关卡选择', ['章节'], 'top'],
     /* BUG：此前 tab 只有 ['建筑'] 一项，而 r_base 用 tab 去匹配建筑 id，
      *      匹配不到就永远回退 EX.buildings[0]（医疗站）。
@@ -4772,7 +4776,7 @@ r_tavern(p, tab) {
       return;
     }
     /* 截图特征：顶部「选择技能」+ 15 秒倒计时 */
-    const chT = $('#chTitle'); if (chT) chT.textContent = '选择技能';
+    const chT = $('#chTitle'); if (chT) chT.textContent = EX.txt('TXT_006');
     this.chTime = 15;
     const tm = $('#chTimer');
     if (tm) {
@@ -4890,7 +4894,8 @@ r_tavern(p, tab) {
     /* 表37 埋点：level_finish */
     try { OPS.track('level_finish', { win: win, t: Math.floor(d.time || 0) }); } catch (e) {}
     /* 截图51/52：标题「恭喜获得」+ 剩余血量% + 新纪录 */
-    $('#rsTitle').textContent = win ? '恭 喜 获 得' : (res === 'lose' ? '防 线 失 守' : '撤 离 战 场');
+    /* 【V1.1.0】胜利标题走运营热改层（TXT_003），败/撤离保持硬编码（运营暂不可改，避免误改负面文案） */
+    $('#rsTitle').textContent = win ? EX.txt('TXT_003') : (res === 'lose' ? '防 线 失 守' : '撤 离 战 场');
     $('#rsTitle').className = 'rs-t ' + (win ? 'win' : 'lose');
     const r = BT.run || {};
     const hpPct = r.wallMax ? Math.round(Math.max(0, r.wallHp) / r.wallMax * 100) : 0;
@@ -4985,7 +4990,7 @@ r_tavern(p, tab) {
        * 但撤离后结算面板照样给「看广告原地复活」，玩家复活→再撤离即可重复领奖。
        * 现在只有「防线失守」才提供复活；主动撤离不给。 */
       if (win) adBox.innerHTML = `<button class="btn c blk" id="rsAd2x">📺 看广告双倍奖励（剩 ${E.adLeft(this.P, 'AD02')} 次）</button>`;
-      else if (res === 'lose') adBox.innerHTML = `<button class="btn c blk" id="rsAdRev">📺 看广告原地复活（剩 ${E.adLeft(this.P, 'AD01')} 次）</button>`;
+      else if (res === 'lose') adBox.innerHTML = `<button class="btn c blk" id="rsAdRev">📺 ${EX.txt('TXT_004')}（剩 ${E.adLeft(this.P, 'AD01')} 次）</button>`;
       else adBox.innerHTML = `<div class="sub" style="text-align:center;padding:6px 0">已主动撤离，本局结束</div>`;
       /* BUG（画面不一致）：结算面板是独立 DOM，渲染不经过 open()，
        * 而 open() 里那句 emojify() 是全站 emoji→图片的唯一入口。
