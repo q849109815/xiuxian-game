@@ -1920,6 +1920,62 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const mon = new Date(d.getTime() - day * 864e5);
     return mon.getUTCFullYear() + '-' + (mon.getUTCMonth() + 1) + '-' + mon.getUTCDate();
   },
+  /* ---------- O-03 商业化反作弊：存档完整性哨兵 ---------- */
+  /* 理论上限常数（宁可放宽，绝不误伤真实玩家） */
+  INTEG_LIMIT: {
+    /* 钻石：已知产出源（任务/活动/签到/排行/成就）单日理论上限约 800，
+       累计按「注册天数 × 800 + 1200 缓冲」，再与 999999 取小。 */
+    diamondPerDay: 800, diamondBuffer: 1200,
+    /* 金币：单关掉落上限 × 每日可打关数，放宽 3 倍 */
+    goldPerDay: 300000, goldBuffer: 500000,
+    /* 战力：该等级理论养成上限的 2.5 倍（满配号实测第10章约 6.3e6 级别） */
+    powerRatio: 2.5,
+  },
+  integrityCheck(p) {
+    if (!p) return null;
+    const L = this.INTEG_LIMIT;
+    const dk = this.dailyKey();
+    if (p._integDay === dk) return null;   /* 每日至多一次 */
+    p._integDay = dk;
+    const flags = [];
+    const num = (v) => { const n = Number(v); return isFinite(n) ? n : 0; };
+
+    /* 已注册天数（至少 1 天） */
+    let days = 1;
+    try {
+      const dd = new Date(this.now() + 8 * 36e5);
+      const todayNum = dd.getUTCFullYear() * 10000 + (dd.getUTCMonth() + 1) * 100 + dd.getUTCDate();
+      days = Math.max(1, p.regDay ? (this.dayDiff(p.regDay, todayNum) + 1) : 1);
+    } catch (e) {}
+
+    /* 1) 钻石 */
+    const dCap = Math.min(999999, days * L.diamondPerDay + L.diamondBuffer);
+    if (num(p.diamond) > dCap) flags.push('TAMPER_DIAMOND');
+
+    /* 2) 金币 */
+    const gCap = days * L.goldPerDay + L.goldBuffer;
+    if (num(p.gold) > gCap) flags.push('TAMPER_GOLD');
+
+    /* 3) 战力 / 等级 严重不匹配 */
+    let pw = 0; try { pw = num(this.power(p)); } catch (e) {}
+    const lv = Math.max(1, num(p.lv) || 1);
+    /* 等级理论战力粗模：每级约 6.5e4，取 2.5 倍容差 */
+    const pwCap = lv * 65000 * L.powerRatio;
+    if (pw > pwCap && lv < 60) flags.push('TAMPER_POWER');
+
+    /* 4) 时钟倒退：存档记录的最后在线时间晚于当前 */
+    const lastOn = num(p.lastOnline || p._lastSave || 0);
+    if (lastOn > 0 && this.now() > 0 && lastOn - this.now() > 864e5) flags.push('TAMPER_CLOCK');
+
+    if (flags.length) {
+      p._integFlags = flags;
+      try { if (window.OPS) OPS.track('save_tamper', { f: flags.join(','), lv: lv, d: days }); } catch (e) {}
+    } else {
+      p._integFlags = null;
+    }
+    return flags.length ? flags : null;
+  },
+
   resetTasks(p) {
     const dk = this.dailyKey(), wk = this.weekKey();
     if (p.tasks.dailyDate !== dk) { p.tasks.dailyDate = dk; p.tasks.dailyClaimed = []; p.tasks.dailyProg = {}; }
@@ -1940,6 +1996,19 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       }
     }
     if (p.tasks.weeklyKey !== wk) { p.tasks.weeklyKey = wk; p.tasks.weeklyClaimed = []; p.tasks.weeklyProg = {}; }
+
+    /* 【运营部 O-03 · 商业化反作弊哨兵】
+     * 背景：令牌在客户端（D-01 未部署 Worker 前），玩家可自改存档；
+     *       排行榜、首充、排行榜奖励因此缺乏公信力，商业化等于送钱。
+     * 这里做【只记录、不阻断】的完整性哨兵：检测 4 类异常并上报审计，
+     * 由运营在后台决定处置（回档/封禁），绝不误伤正常玩家。
+     * 检测项：
+     *   TAMPER_DIAMOND   钻石超出理论上限（充值+所有已知产出都算进去仍超）
+     *   TAMPER_GOLD      金币超出理论上限
+     *   TAMPER_POWER     战力远高于该等级的理论养成上限
+     *   TAMPER_CLOCK     存档时间戳倒退（改系统时间刷体力/签到）
+     * 每天最多上报一次，避免刷屏。 */
+    try { this.integrityCheck(p); } catch (e) {}
     /* 【快速巡逻次数】每日重置
      * BUG：p.patrolFast 全项目【只有读取、没有任何赋值】——
      *      UI 显示 `${p.patrolFast||0}/3`，新号恒为 0；
