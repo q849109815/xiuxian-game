@@ -1945,6 +1945,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const firstOfDiff = !p.diffCleared[did][id];
     p.diffCleared[did][id] = Math.max(p.diffCleared[did][id] || 0, st);
     p.cleared[id] = Math.max(p.cleared[id] || 0, st);
+    /* 赛季积分：通关关卡（V1.1.0 P-13） */
+    this.addSeasonScore(p, 'level');
     /* 解锁下一关（关卡表 unlock 链自动生效）
      * BUG：此处原为无条件 `p.curLevel = nx`，会把进度【打回过去】——
      *   玩家回头重打低章节关卡（刷材料 / 补星级，非常常见的行为）时，
@@ -3142,6 +3144,82 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   _utc8dayNum() {
     const d = new Date(this.now() + 8 * 3600000);
     return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+  },
+
+  /* =================================================
+   * 赛季远征（V1.1.0 冲刺3 · 策划 P-13）
+   * 赛季 = 4 周一期。积分来自 4 个真实结算点，阶梯奖励 5 档。
+   * 赛季切换时按 key 比对自动重置积分与领取记录。
+   * ================================================ */
+  /* 赛季序号：从纪元起算的第几个赛季（0 起） */
+  seasonKey() {
+    const S = (window.EX && EX.SEASON) || null;
+    if (!S) return 0;
+    const ep = Number(String(S.EPOCH || '2027-01-04').replace(/-/g, '')) || 20270104;
+    const days = this.dayDiff(ep, this._utc8dayNum());
+    const per = Math.max(1, (Number(S.WEEKS) || 4) * 7);
+    return Math.max(0, Math.floor(days / per));
+  },
+  /* 面向玩家的赛季编号（第 N 季） */
+  seasonNo() { return this.seasonKey() + 1; },
+  /* 赛季剩余天数（用于面板展示倒计时） */
+  seasonLeftDays() {
+    const S = (window.EX && EX.SEASON) || null;
+    const per = Math.max(1, (Number(S && S.WEEKS) || 4) * 7);
+    const ep = Number(String((S && S.EPOCH) || '2027-01-04').replace(/-/g, '')) || 20270104;
+    const days = this.dayDiff(ep, this._utc8dayNum());
+    return per - (((days % per) + per) % per);
+  },
+  /* 赛季数据：key 变化即重置；脏档就地修复 */
+  seasonOf(p) {
+    if (!p || typeof p !== 'object') return { k: 0, score: 0, got: [] };
+    const k = this.seasonKey();
+    if (!p.season || typeof p.season !== 'object' || Array.isArray(p.season) || p.season.k !== k) {
+      p.season = { k: k, score: 0, got: [] };
+    }
+    if (!Array.isArray(p.season.got)) p.season.got = [];
+    /* 脏档守卫：后台改档写入字符串/NaN 会让积分显示异常并污染阶梯判定 */
+    const sc = Number(p.season.score);
+    p.season.score = (isFinite(sc) && sc > 0) ? sc : 0;
+    const S = (window.EX && EX.SEASON) || null;
+    const cap = Number(S && S.SCORE_CAP) || 999999;
+    if (p.season.score > cap) p.season.score = cap;
+    return p.season;
+  },
+  /* 加赛季积分：kind 对应 SEASON.SCORE 的键，未配置则静默忽略（返回 0） */
+  addSeasonScore(p, kind) {
+    const S = (window.EX && EX.SEASON) || null;
+    if (!S || !p || typeof p !== 'object') return 0;
+    const n = this.safeAmt((S.SCORE || {})[kind]);
+    if (!(n > 0)) return 0;
+    const s = this.seasonOf(p);
+    const cap = Number(S.SCORE_CAP) || 999999;
+    const before = s.score;
+    s.score = Math.min(cap, before + n);
+    return s.score - before;
+  },
+  /* 已达成的可领档位 */
+  seasonClaimable(p) {
+    const S = (window.EX && EX.SEASON) || null;
+    if (!S || !p) return [];
+    const s = this.seasonOf(p);
+    return (S.STEP || []).map((x, i) => Object.assign({ i: i }, x))
+      .filter((x) => s.score >= Number(x.need) && s.got.indexOf(x.i) < 0);
+  },
+  seasonClaim(p, i) {
+    const S = (window.EX && EX.SEASON) || null;
+    const st = (S && S.STEP) ? S.STEP[Number(i)] : null;
+    if (!st) return { ok: false, msg: '档位不存在' };
+    const s = this.seasonOf(p);
+    if (s.score < Number(st.need)) return { ok: false, msg: '赛季积分不足 ' + st.need + '（当前 ' + s.score + '）' };
+    if (s.got.indexOf(Number(i)) >= 0) return { ok: false, msg: '本赛季已领取' };
+    /* 与活动/商店同口径：扣发之前先验奖励可发放，避免"提示成功但没到账" */
+    if (!this.validGive(st.rw)) return { ok: false, msg: '奖励配置异常，暂不可领取' };
+    const got = this.grant(p, st.rw);
+    if (!got) return { ok: false, msg: '奖励发放失败' };
+    s.got.push(Number(i));
+    try { this.logAct(p, 'season', '赛季第' + (Number(i) + 1) + '档'); } catch (e) {}
+    return { ok: true, msg: '🏅 赛季奖励领取成功', rw: st.rw, got: got };
   },
   /* 今日是否已签到（与 sign() 同一基准：UTC+8 日历日整数）
    * 给 UI 做「按钮置灰 / 红点数」用，避免各处分头算导致口径不一致。 */
@@ -4718,6 +4796,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const dp = p.tasks.dailyProg, wp = p.tasks.weeklyProg;
     /* v1.0 每日任务「参与无尽 1 次」：一场无尽记 1 次，不看时长 */
     if (endlessSec) dp.endless = (dp.endless || 0) + 1;
+    /* 赛季积分：无尽模式结算 */
+    if (endlessSec) this.addSeasonScore(p, 'endless');
     /* clear 是「次數」不是布尔：手动通关传 1，扫荡传次数 t。
      * 此前写成 +1，导致一次扫荡 5 次只记 1 次通关。 */
     const cn = Number(clear) || 0;
