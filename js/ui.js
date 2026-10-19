@@ -647,6 +647,8 @@ const UI = {
     /* V1.1.0 末日废土：军衔系统（策划 P-10 / 程序 D-10）
      * 通关后的长线成长线，50 阶（5 阶 × 10 层），与 atk/hp/crit 真实挂钩。 */
     realm: ['军衔', ['军衔'], 'top'],
+    /* V1.1.0 冲刺3 · 赛季远征 */
+    season: ['赛季', ['赛季'], 'top'],
   },
   tabPos(key) { const d = this.PANELS[key]; return (d && d[2]) || 'top'; },
 
@@ -967,6 +969,69 @@ b_realm(p, tab) {
     } catch (e) { if (window.SND) SND.play('error'); }
   };
 },
+r_season(p, tab) {
+  try {
+    const S = EX.SEASON || null;
+    if (!S) return '<div class="empty">赛季未开启</div>';
+    const s = E.seasonOf(p);
+    const left = E.seasonLeftDays();
+    const steps = S.STEP || [];
+    const maxNeed = steps.length ? Number(steps[steps.length - 1].need) : 1;
+    const pct = Math.max(0, Math.min(100, Math.round((s.score / maxNeed) * 100)));
+    const rows = steps.map((x, i) => {
+      const got = s.got.indexOf(i) >= 0;
+      const can = !got && s.score >= Number(x.need);
+      const rwTxt = Object.keys(x.rw || {}).map((k) => E.itemName(k) + '×' + x.rw[k]).join('、');
+      return `<div class="sn-row">
+        <div class="sn-info">
+          <b>第 ${i + 1} 档 · ${Number(x.need)} 积分</b>
+          <div class="sub">${this.esc(rwTxt)}</div>
+        </div>
+        ${got ? '<span class="sub">已领取</span>'
+             : (can ? `<button class="btn pri sn-claim" data-i="${i}">领取</button>`
+                    : '<span class="sub">未达成</span>')}
+      </div>`;
+    }).join('');
+    const src = S.SCORE || {};
+    const srcTxt = { level: '通关关卡', endless: '无尽模式', legionBoss: '军团 BOSS', exped: '远征完成' };
+    const srcHTML = Object.keys(src).map((k) => `<span>${this.esc(srcTxt[k] || k)} +${src[k]}</span>`).join('');
+    return `<div class="card">
+      <div class="card-t">第 ${E.seasonNo()} 赛季<span class="sub">剩余 ${left} 天</span></div>
+      <div class="sub">赛季积分 <b>${E.fmt(s.score)}</b></div>
+      <div class="sn-bar"><i style="width:${pct}%"></i></div>
+      <div class="sub">赛季结束后积分与领取记录重置，新赛季重新累计。</div>
+    </div>
+    <div class="card">
+      <div class="card-t">赛季奖励阶梯</div>
+      ${rows || '<div class="sub">暂无档位</div>'}
+    </div>
+    <div class="card">
+      <div class="card-t">积分来源</div>
+      <div class="sn-src">${srcHTML}</div>
+    </div>`;
+  } catch (e) {
+    return '<div class="empty">赛季数据异常</div>';
+  }
+},
+b_season(p, tab) {
+  const btns = document.querySelectorAll('#pnBody .sn-claim');
+  btns.forEach((b) => {
+    b.onclick = () => {
+      try {
+        const r = E.seasonClaim(p, b.dataset.i);
+        if (!r.ok) {
+          if (window.SND) SND.play('error');
+          this.toast(r.msg || '领取失败', 'bad');
+          return;
+        }
+        if (window.SND) SND.play('upgrade');
+        this.toast(r.msg, 'ok');
+        E.save(p);
+        this.open('season'); this.home();
+      } catch (e) { if (window.SND) SND.play('error'); }
+    };
+  });
+},
 r_tavern(p, tab) {
     const hired = p.mercs || [];
     return `<div class="card"><div class="card-t">🍺 酒馆 · 雇佣兵
@@ -1217,6 +1282,8 @@ r_tavern(p, tab) {
       p.lb.hp = Math.max(0, p.lb.hp - dmg);
       /* V1.0.4 贡献榜：累计本人本周输出（lb.wk 切换时随血量一起归零） */
       p.lb.dmg = Math.max(0, Number(p.lb.dmg || 0)) + dmg;
+      /* 赛季积分：军团 BOSS 挑战 */
+      E.addSeasonScore(p, 'legionBoss');
       const contrib = b.contribPerHit || 0;
       p.gold = (p.gold || 0) + (b.goldPerHit || 0);
       p.legionExp = (p.legionExp || 0) + contrib;
@@ -1414,6 +1481,8 @@ r_tavern(p, tab) {
           txt.push((gd ? gd.n : '宝石') + '+' + (e.gem.n || 1));
         }
       }
+      /* 赛季积分：远征完成 */
+      E.addSeasonScore(p, 'exped');
       E.save(p); this.toast('远征完成：' + txt.join('、'), 'ok');
       if (window.SND) SND.play('upgrade'); this.open('exped'); this.home();
     }; });
