@@ -1674,7 +1674,33 @@ r_tavern(p, tab) {
   r_gun(p, tab) {
     if (tab === '武器库') {
       const _sg = E.gun2(p);
-      return `<div class="card"><div class="card-t">武器库 <span class="sub">主武器 6 + 副武器 4</span></div>
+      /* V1.1.0 P-12 武器流派：按已装备的主/副武器 type 归属激活档位。
+       * 用 try/catch 兜底——任何异常都不允许拖垮武器面板（历史上多次白屏）。 */
+      let _schCard = '';
+      try {
+        const _sb = E.schoolBonus(p);
+        const _fmt = (t) => {
+          const o = [];
+          if (t.atkPct) o.push('攻击+' + Math.round(t.atkPct * 100) + '%');
+          if (t.crit) o.push('暴击+' + Math.round(t.crit * 100) + '%');
+          if (t.critDmg) o.push('暴伤+' + Math.round(t.critDmg * 100) + '%');
+          if (t.erPct) o.push('爆炸范围+' + Math.round(t.erPct * 100) + '%');
+          if (t.slow) o.push('减速+' + Math.round(t.slow * 100) + '%');
+          if (t.dot) o.push('持续伤害+' + Math.round(t.dot * 100) + '%');
+          return o.join(' · ') || '—';
+        };
+        _schCard = `<div class="card"><div class="card-t">武器流派 <span class="sub">由已装备的主/副武器类型决定</span></div>
+        ${(EX.GUN_SCHOOLS || []).map((sc) => {
+          const _t = _sb.tiers[sc.id];
+          const _lv = _t ? _t.tier : 0;
+          return `<div class="item"${_lv ? ' style="border:1px solid var(--gold);border-radius:8px"' : ''}>
+            <div class="ic">${sc.icon || '⚔️'}</div>
+            <div class="info"><div class="nm wrap">${sc.n} ${_lv ? '<span class="tag g">' + _lv + '档（' + _t.n + '/' + _t.need + '件）</span>' : '<span class="tag">未激活</span>'}</div>
+            <div class="sub wrap">${sc.desc || ''}</div>
+            <div class="sub wrap" style="color:${_lv ? 'var(--gold)' : 'var(--txt3)'}">${(sc.tiers || []).map((t, i) => (i + 1) + '档·' + _fmt(t)).join(' ／ ')}</div></div></div>`;
+        }).join('')}</div>`;
+      } catch (e) { _schCard = ''; }
+      return _schCard + `<div class="card"><div class="card-t">武器库 <span class="sub">主武器 6 + 副武器 4</span></div>
       <div class="item" style="border:1px solid var(--gold);border-radius:8px;margin-bottom:6px">
         <div class="ic" style="border:1.5px solid ${_sg ? '#ffd166' : '#666'}">${_sg ? (_sg.icon || '🩹') : '➕'}</div>
         <div class="info"><div class="nm wrap">支援槽 ${_sg ? '<span class="tag g">' + _sg.n + '</span>' : '<span class="tag">空</span>'}</div>
