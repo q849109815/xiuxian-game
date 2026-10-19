@@ -2459,3 +2459,13 @@ b { font-weight: var(--fw-semibold) !important; }
 .rl-tb{display:flex;flex-direction:column;min-width:0;gap:var(--sp-half)}
 .rl-tb b{font-size:var(--fs-md);font-weight:var(--fw-semibold);color:var(--text-2)}
 .rl-tb span{font-size:var(--fs-sm);color:var(--text-2)}
+
+/* V1.1.0 冲刺3 · 赛季远征面板（策划 P-13）
+   行结构与进度条全部走令牌，禁止硬编码色值（架构守卫 G1/G4）。 */
+.sn-row{display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.sn-row:last-child{border-bottom:0}
+.sn-info{flex:1;min-width:120px}
+.sn-bar{height:8px;border-radius:4px;background:var(--surface-3);overflow:hidden;margin-top:var(--sp-1)}
+.sn-bar i{display:block;height:100%;background:var(--gd1)}
+.sn-src{display:flex;flex-wrap:wrap;gap:var(--sp-1)}
+.sn-src span{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--sp-1);padding:var(--sp-1) var(--sp-2);font-size:var(--fs-xs);color:var(--txt2)}
