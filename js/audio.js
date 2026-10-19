@@ -199,6 +199,14 @@ const SND = {
       case 'error':
         this.tone(200, 0.18, { type: 'square', to: 120, vol: 0.16 });
         break;
+      /* V1.1.0 军衔晋升（音频部 AU-10）
+       * 国风音色：磬（高频金属余韵，triangle+长衰减）+ 下行五度钟声，
+       * 与 'upgrade' 的西式上行双音区分开，让"晋升"有独立听感标识。
+       * 音量压到 0.15：晋升可连点，太响会盖过枪声与 BGM。 */
+      case 'realm':
+        this.tone(1174, 0.55, { type: 'triangle', vol: 0.15 });
+        setTimeout(() => this.tone(784, 0.75, { type: 'sine', vol: 0.13 }), 130);
+        break;
       case 'upgrade':                     // 强化成功
         [659, 880].forEach((f, i) =>
           setTimeout(() => this.tone(f, 0.3, { type: 'triangle', vol: 0.18 }), i * 110));
