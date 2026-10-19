@@ -83,6 +83,23 @@ const EX = {
     { id: 'C12', n: '商人-金', icon: '💰', img: 'assets/char/c12_jin.jpg', hp: 1000, spd: 6.0, armor: 5, crit: 0.06,
       talent: { n: '资源专精', gold: 0.08, desc: '金币收益 +8%' },
       unlockLv: '10-5', unlockTxt: '通关 10-5 解锁', desc: '资源增益，养成速度更快' },
+    /* ---- V1.0.4 内容续作：角色 12 → 16 ----
+     * 策划部 P-02 第三阶段 / 美术部 A-01 第三批。
+     * 沿用铁律：天赋键（rate / explode / heal / gold）在 battle.js
+     * applyCharTalent 与回血逻辑中均有真实消费点，不允许"写了不生效"。
+     * C13 是首个双天赋角色（rate + explode），两个键由两条独立分支各自累加。 */
+    { id: 'C13', n: '电工-弧', icon: '⚡', img: 'assets/char/c13_hu.jpg', hp: 940, spd: 6.4, armor: 4, crit: 0.09,
+      talent: { n: '过载电弧', rate: 0.05, explode: 0.08, desc: '攻速 +5%，爆炸伤害 +8%' },
+      unlockLv: '10-7', unlockTxt: '通关 10-7 解锁', desc: '电弧与爆破双修，清场极快' },
+    { id: 'C14', n: '盾卫-铁壁', icon: '🛡️', img: 'assets/char/c14_tiebi.jpg', hp: 1300, spd: 4.8, armor: 20, crit: 0.02,
+      talent: { n: '铁壁愈合', heal: 0.018, cd: 10, desc: '每 10 秒回复防线最大血量 1.8%' },
+      unlockLv: '10-8', unlockTxt: '通关 10-8 解锁', desc: '最硬的前排，护甲与续航拉满' },
+    { id: 'C15', n: '拾荒者-鼠', icon: '🎒', img: 'assets/char/c15_shu.jpg', hp: 900, spd: 6.8, armor: 2, crit: 0.07,
+      talent: { n: '拾荒本能', gold: 0.12, rate: 0.03, desc: '金币收益 +12%，攻速 +3%' },
+      unlockLv: '10-9', unlockTxt: '通关 10-9 解锁', desc: '资源收益最高，养成最快' },
+    { id: 'C16', n: '死神-镰', icon: '⚔️', img: 'assets/char/c16_lian.jpg', hp: 820, spd: 6.2, armor: 0, crit: 0.14,
+      talent: { n: '收割', explode: 0.20, desc: '爆炸伤害 +20%' },
+      unlockLv: '10-10', unlockTxt: '通关 10-10 解锁', desc: '极致爆发，脆皮但输出天花板' },
   ],
   /* 【皮肤表】每个角色 2 款，第二款用钻石解锁 */
   skins: [
@@ -560,14 +577,14 @@ const EX = {
   chapters: [
     { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️', img: 'assets/scene/city.jpg?v=20270105a' },
     { id: 2, n: '第二章 · 地下设施', icon: '🚇', img: 'assets/scene/tunnel.jpg?v=20270105a' },
-    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270412a' },
+    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270413a' },
     { id: 4, n: '第四章 · 废弃工厂', icon: '🏭', img: 'assets/scene/factory.jpg?v=20270105a' },
     { id: 5, n: '第五章 · 荒野麦田', icon: '🌾', img: 'assets/scene/field.jpg?v=20270105a' },
     { id: 6, n: '第六章 · 辐射废墟', icon: '☢️', img: 'assets/scene/wasteland.jpg?v=20270105a' },
     { id: 7, n: '第七章 · 雪山哨站', icon: '🏔️', img: 'assets/scene/snow.jpg?v=20270105a' },
-    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270412a' },
-    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270412a' },
-    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270412a' },
+    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270413a' },
+    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270413a' },
+    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270413a' },
   ],
 
   /* 无尽模式解锁门槛：填关卡 id（如 '3-5'）则要求先通关该关；null/空 = 默认解锁。
@@ -752,7 +769,7 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270412a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270413a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/tokens.css', ver:'20270330a', size: 0 },
@@ -1496,6 +1513,14 @@ const EX = {
   DROP_RATE_MUL: 0.72,
   DROP_QTY_MUL: 0.80,
 
+  /* ===== 【V1.0.4 运营】全局掉落活动倍率 =====
+   * 运营做「双倍掉落」活动时的唯一开关：后台改这一个数即可全站生效，
+   * 不需要改几十张掉落表。默认 1 = 完全不生效，与 V1.0.3 行为逐字节一致。
+   * 上限钳到 5（运营填 50 → 按 5 算），防止手滑把经济一次性打穿。
+   * 概率侧仍钳 [0,1]、数量侧仍保底 1，倍率再高也不会出现「必掉」或「到账 0」。 */
+  DROP_EVENT_MUL: 1,
+  DROP_EVENT_TXT: '',   /* 活动名，非空时界面显示「掉落 ×N」角标 */
+
   /* 【僵尸 Q 版头像】截图：好友/邮件/军团均为绿皮黄眼僵尸 */
   zAvatars: [
     'assets/char/z_suit.jpg',
@@ -1866,6 +1891,15 @@ const EX = {
   dropBySrc(src) {
     return (this.dropTable || []).filter((d) => d.src === src);
   },
+  /* 【V1.0.4 运营】掉落活动倍率（唯一读取口）
+   * 所有掉落相关口径（rollDrop / dropAvg / dropRate / dropDisp）都必须乘它，
+   * 否则会出现「活动界面写着双倍、实际掉落没翻倍」的运营事故。
+   * 钳到 (0, 5]，非法值一律回退 1（不生效），保证运营填错不会炸经济。 */
+  dropEventMul() {
+    const m = Number(this.DROP_EVENT_MUL);
+    if (!isFinite(m) || m <= 0) return 1;
+    return Math.min(5, Math.max(0.01, m));
+  },
   /* 执行一次掉落判定
    * DROP_RATE_MUL / DROP_QTY_MUL：全局稀缺度（本次新增）。
    * 此前掉率与数量写死在 globalDrops 每张表上，想整体收紧要改几十行；
@@ -1875,14 +1909,18 @@ const EX = {
    * 数量至少保底 1 个，否则折扣后 min 变 0 会出现「提示掉落但到账 0」。 */
   rollDrop(list, forceItems) {
     const got = [];
-    const _rm = (Number(this.DROP_RATE_MUL) > 0) ? Number(this.DROP_RATE_MUL) : 1;
-    const _qm = (Number(this.DROP_QTY_MUL) > 0) ? Number(this.DROP_QTY_MUL) : 1;
+    const _em = this.dropEventMul();
+    const _rm = ((Number(this.DROP_RATE_MUL) > 0) ? Number(this.DROP_RATE_MUL) : 1) * _em;
+    const _qm = ((Number(this.DROP_QTY_MUL) > 0) ? Number(this.DROP_QTY_MUL) : 1) * _em;
     /* forceItems：必掉条目（BOSS 首杀），跳过概率判定但仍过稀缺度的数量口径。
      * 加这个参数是为了让 battle.js 的击杀掉落也能走同一个入口 ——
      * 此前 kill() 自己裸算 d.rate / d.min / d.max，全局稀缺度对它完全无效。 */
     const _f = Array.isArray(forceItems) ? forceItems : [];
     (list || []).forEach((d) => {
-      const _r = Math.min(1, Math.max(0, Number(d.rate) || 0)) * _rm;
+      /* 钳到 [0,1] 放在【乘完倍率之后】：活动期间 0.576×2 = 1.152，
+       * 先钳后乘会得到 1.152，界面 pct 显示 115%（概率不可能 >100%）。
+       * 对当前配置（raw ≤ 1、基础倍率 0.72）钳前钳后完全一致，零影响。 */
+      const _r = Math.min(1, Math.max(0, Number(d.rate) || 0) * _rm);
       if (_f.indexOf(d.item) >= 0 || Math.random() < _r) {
         const _min = Math.max(1, Math.round((Number(d.min) || 0) * _qm));
         const _max = Math.max(_min, Math.round((Number(d.max) || 0) * _qm));
@@ -1906,15 +1944,15 @@ const EX = {
    *   与「扫荡 = 省时间、收益不该更高」的定位完全相反。
    *   两条路径共用这一个函数后不会再漂移。 */
   dropAvg(d) {
-    const _qm = (Number(this.DROP_QTY_MUL) > 0) ? Number(this.DROP_QTY_MUL) : 1;
+    const _qm = ((Number(this.DROP_QTY_MUL) > 0) ? Number(this.DROP_QTY_MUL) : 1) * this.dropEventMul();
     const _min = Math.max(1, Math.round((Number(d && d.min) || 0) * _qm));
     const _max = Math.max(_min, Math.round((Number(d && d.max) || 0) * _qm));
     return (_min + _max) / 2;
   },
   /* 与 rollDrop 同口径的【生效概率】（钳 [0,1] 后乘稀缺度） */
   dropRate(d) {
-    const _rm = (Number(this.DROP_RATE_MUL) > 0) ? Number(this.DROP_RATE_MUL) : 1;
-    return Math.min(1, Math.max(0, Number(d && d.rate) || 0)) * _rm;
+    const _rm = ((Number(this.DROP_RATE_MUL) > 0) ? Number(this.DROP_RATE_MUL) : 1) * this.dropEventMul();
+    return Math.min(1, Math.max(0, Number(d && d.rate) || 0) * _rm);
   },
   /* 【界面展示用】稀缺度之后的真实数量区间 + 真实概率
    * ------------------------------------------------------------
@@ -1927,7 +1965,7 @@ const EX = {
    * 以后改配置文案自动跟随，不会再出现「说 3-5 实发 2-4」。 */
   dropDisp(d) {
     if (!d) return { min: 0, max: 0, rate: 0, pct: 0 };
-    const _qm = (Number(this.DROP_QTY_MUL) > 0) ? Number(this.DROP_QTY_MUL) : 1;
+    const _qm = ((Number(this.DROP_QTY_MUL) > 0) ? Number(this.DROP_QTY_MUL) : 1) * this.dropEventMul();
     const _min = Math.max(1, Math.round((Number(d.min) || 0) * _qm));
     const _max = Math.max(_min, Math.round((Number(d.max) || 0) * _qm));
     const _r = this.dropRate(d);
@@ -2216,7 +2254,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270412a',
+  sceneV: '20270413a',
 
   /* 云端 API 代理（V1.0.2 D-01）：留空 = 直连 GitHub（令牌在客户端，仅开发/内测可接受）。
      部署 worker/ 后填入 Worker 域名（如 https://zb-api.xxx.workers.dev），
