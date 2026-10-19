@@ -3301,9 +3301,17 @@ r_tavern(p, tab) {
             + (st ? `<button class="btn sm o" data-sw="${l.id}" style="margin-top:4px">扫荡</button>` : '')}</div></div>`;
       }).join('')}</div>
       <div class="card"><div class="card-t">无尽模式</div>
-      ${`<div class="kv"><span>最佳层数</span><b>${p.endlessBest || 0}</b></div>
-         <div class="sub">默认解锁 · 掉落/收益随进度章节提升</div>
-         <button class="btn c blk" data-lv="endless" data-df="normal">进入无尽（体力 2）</button>`}</div>`;
+      ${(() => {
+        /* 解锁口径统一走 E.endlessUnlocked（读 EX.ENDLESS_UNLOCK）。
+         * 此前 UI 写死「默认解锁」，配置项在后台改了界面也不认，属配置陷阱。 */
+        const _eOpen = E.endlessUnlocked ? E.endlessUnlocked(p) : true;
+        const _eNeed = (EX && EX.ENDLESS_UNLOCK) ? String(EX.ENDLESS_UNLOCK) : '';
+        return `<div class="kv"><span>最佳层数</span><b>${p.endlessBest || 0}</b></div>
+         <div class="sub">${_eOpen ? '已解锁 · 掉落/收益随进度章节提升' : '需先通关 ' + _eNeed}</div>
+         ${_eOpen
+           ? '<button class="btn c blk" data-lv="endless" data-df="normal">进入无尽（体力 2）</button>'
+           : '<span class="tag r">未解锁</span>'}`;
+      })()}</div>`;
   },
   b_level(p) {
     $$('#pnBody [data-ch]').forEach((b) => { b.onclick = () => { this.curChapter = +b.dataset.ch; this.open('level'); }; });
