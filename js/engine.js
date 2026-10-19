@@ -1923,6 +1923,22 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   resetTasks(p) {
     const dk = this.dailyKey(), wk = this.weekKey();
     if (p.tasks.dailyDate !== dk) { p.tasks.dailyDate = dk; p.tasks.dailyClaimed = []; p.tasks.dailyProg = {}; }
+    /* 【运营部 BUG 修复 · dau_retention 零调用】
+     * dau_retention 在 TRACK_EVENTS 里被标为 P0、「次日/7日留存」的唯一数据源，
+     * 但全项目零调用 —— 后台「数据埋点 → 转化漏斗」的留存数据永远取不到，
+     * 运营无法证明「留得住人」这个 V1.0.1 核心目标是否达成。
+     * 埋点位置：业务日切换处（每天首次进入触发一次，同日重复进入不会刷）。
+     * 上报字段：d=注册第几天(D1/D3/D7 留存分档)、cont=连续登录天数、lv=当前等级。 */
+    {
+      const dd = new Date(this.now() + 8 * 36e5);
+      const todayNum = dd.getUTCFullYear() * 10000 + (dd.getUTCMonth() + 1) * 100 + dd.getUTCDate();
+      if (p._dauDay !== todayNum) {
+        const cont = (p._dauDay && this.dayDiff(p._dauDay, todayNum) === 1) ? (p._dauCont || 0) + 1 : 1;
+        p._dauDay = todayNum; p._dauCont = cont;
+        const regD = p.regDay ? this.dayDiff(p.regDay, todayNum) + 1 : 0;
+        try { if (window.OPS) OPS.track('dau_retention', { d: regD, cont: cont, lv: p.lv || 1 }); } catch (e) {}
+      }
+    }
     if (p.tasks.weeklyKey !== wk) { p.tasks.weeklyKey = wk; p.tasks.weeklyClaimed = []; p.tasks.weeklyProg = {}; }
     /* 【快速巡逻次数】每日重置
      * BUG：p.patrolFast 全项目【只有读取、没有任何赋值】——
