@@ -43,8 +43,8 @@
 <title>向僵尸开炮</title>
 <link rel="icon" href="data:,">
 <!-- 设计令牌：单一真源（必须在 style.css 之前，改配色/字号/间距只改本文件） -->
-<link rel="stylesheet" href="css/tokens.css?v=20270409a">
-<link rel="stylesheet" href="css/style.css?v=20270409a">
+<link rel="stylesheet" href="css/tokens.css?v=20270410a">
+<link rel="stylesheet" href="css/style.css?v=20270410a">
 </head>
 <body>
 
@@ -53,7 +53,7 @@
 
 <!-- ========== 加载 ========== -->
 <div class="screen on" id="loading">
-  <div class="ld-logo"><img src="assets/icon/logo_boom.jpg?v=20270409a" alt=""></div>
+  <div class="ld-logo"><img src="assets/icon/logo_boom.jpg?v=20270410a" alt=""></div>
   <div class="ld-title">向 僵 尸 开 炮</div>
   <div class="ld-sub">ZOMBIES BOOM · 末日尸潮</div>
   <div class="ld-bar"><i id="ldBar"></i></div>
@@ -63,7 +63,7 @@
 <!-- ========== 登录（账号密码） ========== -->
 <div class="screen" id="login">
   <div class="lg-box">
-    <div class="lg-logo"><img class="ei" src="assets/icon/logo_boom.jpg?v=20270409a" alt=""></div>
+    <div class="lg-logo"><img class="ei" src="assets/icon/logo_boom.jpg?v=20270410a" alt=""></div>
     <div class="lg-t">向 僵 尸 开 炮</div>
     <div class="lg-s">末 日 尸 潮 · 守 住 最 后 防 线</div>
 
@@ -94,8 +94,8 @@
       <input id="rgNick" maxlength="8" placeholder="游戏昵称（2-8 字，可留空）" autocomplete="nickname"
              enterkeyhint="done" autocorrect="off" spellcheck="false">
       <div class="lg-gender" id="rgGender">
-        <button class="gd on" data-g="m"><img src="assets/char/hero_m.jpg?v=20270409a" alt="">男</button>
-        <button class="gd" data-g="f"><img src="assets/char/hero_f.jpg?v=20270409a" alt="">女</button>
+        <button class="gd on" data-g="m"><img src="assets/char/hero_m.jpg?v=20270410a" alt="">男</button>
+        <button class="gd" data-g="f"><img src="assets/char/hero_f.jpg?v=20270410a" alt="">女</button>
       </div>
       <button class="lg-btn" id="rgBtn">注 册 并 进 入</button>
       <div class="lg-tip" id="rgTip"></div>
@@ -111,7 +111,7 @@
   <!-- 氛围背景层（此前 .hm-bg 有样式但页面里没有这个元素，主界面一直缺这层光晕与扫描线） -->
   <div class="hm-bg"></div>
   <div class="hm-top">
-    <div class="hm-av" id="hmAv"><i id="hmAvIco"><img class="ei" src="assets/icon/av_a01.png?v=20270409a" alt=""></i></div>
+    <div class="hm-av" id="hmAv"><i id="hmAvIco"><img class="ei" src="assets/icon/av_a01.png?v=20270410a" alt=""></i></div>
     <div class="hm-info">
       <div class="hm-name"><b id="hmName">—</b><span class="hm-lv" id="hmLv">Lv.1</span><span id="hmTitle" style="font-size:11px;font-weight:700;margin-left:4px;display:none"></span></div>
       <div class="hm-pw">战力 <b id="hmPower">0</b></div>
@@ -124,12 +124,12 @@
     </div>
     <!-- 设置：全局入口，一贯位于右上角。原混在「其他」分组最后一格，
          玩家要滑到菜单最底部才找得到，不符合任何平台惯例。 -->
-    <button class="hm-set" id="hmSet" aria-label="设置"><img src="assets/icon/nav_set.png?v=20270409a" alt="设置"></button>
+    <button class="hm-set" id="hmSet" aria-label="设置"><img src="assets/icon/nav_set.png?v=20270410a" alt="设置"></button>
   </div>
 
   <div class="hm-acts">
-    <button class="ha go" id="hmGo"><i><img src="assets/icon/nav_go.png?v=20270409a"></i><b>出击</b><span id="hmLevelName">第 1 关</span><span class="ha-sub" id="hmGoSub"></span></button>
-    <button class="ha" id="hmEndless"><i><img src="assets/icon/nav_endless.png?v=20270409a"></i><b>无尽模式</b><span id="hmEndBest">最佳 0 层</span><span class="ha-sub" id="hmEndSub"></span></button>
+    <button class="ha go" id="hmGo"><i><img src="assets/icon/nav_go.png?v=20270410a"></i><b>出击</b><span id="hmLevelName">第 1 关</span><span class="ha-sub" id="hmGoSub"></span></button>
+    <button class="ha" id="hmEndless"><i><img src="assets/icon/nav_endless.png?v=20270410a"></i><b>无尽模式</b><span id="hmEndBest">最佳 0 层</span><span class="ha-sub" id="hmEndSub"></span></button>
   </div>
 
   <!-- 主界面「下一步」目标指引：新号/回归玩家不知道先做什么。
@@ -144,41 +144,41 @@
     <div class="hmg">
       <div class="hmg-t">养成</div>
       <div class="hmg-b">
-        <button class="hmb" data-p="role"><i><img src="assets/icon/nav_role.png?v=20270409a"></i><span>角色</span></button>
-        <button class="hmb" data-p="gun"><i><img src="assets/icon/nav_gun.png?v=20270409a"></i><span>武器</span></button>
-        <button class="hmb" data-p="chip"><i><img src="assets/icon/nav_chip.png?v=20270409a"></i><span>芯片</span></button>
-        <button class="hmb" data-p="talent"><i><img src="assets/icon/nav_talent.png?v=20270409a"></i><span>天赋</span></button>
-        <button class="hmb" data-p="core"><i><img src="assets/icon/nav_core.png?v=20270409a"></i><span>核心</span></button>
-        <button class="hmb" data-p="gem"><i><img src="assets/icon/nav_gem.png?v=20270409a"></i><span>宝石</span></button>
-        <button class="hmb" data-p="base"><i><img src="assets/icon/nav_base.png?v=20270409a"></i><span>基地</span></button>
+        <button class="hmb" data-p="role"><i><img src="assets/icon/nav_role.png?v=20270410a"></i><span>角色</span></button>
+        <button class="hmb" data-p="gun"><i><img src="assets/icon/nav_gun.png?v=20270410a"></i><span>武器</span></button>
+        <button class="hmb" data-p="chip"><i><img src="assets/icon/nav_chip.png?v=20270410a"></i><span>芯片</span></button>
+        <button class="hmb" data-p="talent"><i><img src="assets/icon/nav_talent.png?v=20270410a"></i><span>天赋</span></button>
+        <button class="hmb" data-p="core"><i><img src="assets/icon/nav_core.png?v=20270410a"></i><span>核心</span></button>
+        <button class="hmb" data-p="gem"><i><img src="assets/icon/nav_gem.png?v=20270410a"></i><span>宝石</span></button>
+        <button class="hmb" data-p="base"><i><img src="assets/icon/nav_base.png?v=20270410a"></i><span>基地</span></button>
       </div>
     </div>
     <div class="hmg">
       <div class="hmg-t">资源</div>
       <div class="hmg-b">
-        <button class="hmb" data-p="shop"><i><img src="assets/icon/nav_shop.png?v=20270409a"></i><span>商城</span></button>
-        <button class="hmb" data-p="bag"><i><img src="assets/icon/nav_bag.png?v=20270409a"></i><span>背包</span></button>
-        <button class="hmb" data-p="ashop"><i><img src="assets/icon/nav_ashop.png?v=20270409a"></i><span>兑换</span></button>
-        <button class="hmb" data-p="act"><i><img src="assets/icon/nav_act.png?v=20270409a"></i><span>活动</span></button>
+        <button class="hmb" data-p="shop"><i><img src="assets/icon/nav_shop.png?v=20270410a"></i><span>商城</span></button>
+        <button class="hmb" data-p="bag"><i><img src="assets/icon/nav_bag.png?v=20270410a"></i><span>背包</span></button>
+        <button class="hmb" data-p="ashop"><i><img src="assets/icon/nav_ashop.png?v=20270410a"></i><span>兑换</span></button>
+        <button class="hmb" data-p="act"><i><img src="assets/icon/nav_act.png?v=20270410a"></i><span>活动</span></button>
       </div>
     </div>
     <div class="hmg">
       <div class="hmg-t">社交</div>
       <div class="hmg-b">
-        <button class="hmb" data-p="legion"><i><img src="assets/icon/nav_legion.png?v=20270409a"></i><span>军团</span></button>
-        <button class="hmb" data-p="friends"><i><img src="assets/icon/nav_friends.png?v=20270409a"></i><span>好友</span></button>
-        <button class="hmb" data-p="mail"><i><img src="assets/icon/nav_mail.png?v=20270409a"></i><span>邮件</span></button>
-        <button class="hmb" data-p="notice"><i><img src="assets/icon/nav_notice.png?v=20270409a"></i><span>公告</span></button>
+        <button class="hmb" data-p="legion"><i><img src="assets/icon/nav_legion.png?v=20270410a"></i><span>军团</span></button>
+        <button class="hmb" data-p="friends"><i><img src="assets/icon/nav_friends.png?v=20270410a"></i><span>好友</span></button>
+        <button class="hmb" data-p="mail"><i><img src="assets/icon/nav_mail.png?v=20270410a"></i><span>邮件</span></button>
+        <button class="hmb" data-p="notice"><i><img src="assets/icon/nav_notice.png?v=20270410a"></i><span>公告</span></button>
       </div>
     </div>
     <div class="hmg">
       <div class="hmg-t">玩法</div>
       <div class="hmg-b">
-        <button class="hmb" data-p="task"><i><img src="assets/icon/nav_task.png?v=20270409a"></i><span>任务</span></button>
-        <button class="hmb" data-p="exped"><i><img src="assets/icon/nav_exped.png?v=20270409a"></i><span>远征</span></button>
-        <button class="hmb" data-p="tavern"><i><img src="assets/icon/nav_tavern.png?v=20270409a"></i><span>酒馆</span></button>
-        <button class="hmb" data-p="codex"><i><img src="assets/icon/nav_codex.png?v=20270409a"></i><span>图鉴</span></button>
-        <button class="hmb" data-p="rank"><i><img src="assets/icon/nav_rank.png?v=20270409a"></i><span>排行</span></button>
+        <button class="hmb" data-p="task"><i><img src="assets/icon/nav_task.png?v=20270410a"></i><span>任务</span></button>
+        <button class="hmb" data-p="exped"><i><img src="assets/icon/nav_exped.png?v=20270410a"></i><span>远征</span></button>
+        <button class="hmb" data-p="tavern"><i><img src="assets/icon/nav_tavern.png?v=20270410a"></i><span>酒馆</span></button>
+        <button class="hmb" data-p="codex"><i><img src="assets/icon/nav_codex.png?v=20270410a"></i><span>图鉴</span></button>
+        <button class="hmb" data-p="rank"><i><img src="assets/icon/nav_rank.png?v=20270410a"></i><span>排行</span></button>
       </div>
     </div>
   </div>
@@ -197,7 +197,7 @@
 
   <!-- 顶栏：暂停 | 关卡 + 波次进度（玩家最关心的「还要打多久」前置） | 倍速 -->
   <div class="bt-topbar">
-    <button class="btb-icon" id="btPause"><img class="ei" src="assets/icon/hud_pause.png?v=20270409a" alt="暂停"></button>
+    <button class="btb-icon" id="btPause"><img class="ei" src="assets/icon/hud_pause.png?v=20270410a" alt="暂停"></button>
     <div class="btb-mid">
       <div class="btb-lv" id="btLevel">1.城市大街</div>
       <div class="btb-sub">
@@ -217,22 +217,22 @@
        现合并为顶栏下一条状态带：左侧生命（最关键），右侧金币/钻石/击杀。 -->
   <div class="bt-status">
     <div class="bs-hp">
-      <img class="ei" src="assets/icon/hud_hp.png?v=20270409a" alt="">
+      <img class="ei" src="assets/icon/hud_hp.png?v=20270410a" alt="">
       <div class="bs-bar"><i id="btWallBar"></i></div>
       <b id="btWallTxt">0</b>
     </div>
     <div class="bs-sh" id="btShWrap" style="display:none"><i id="btShBar"></i></div>
     <div class="bs-res">
-      <span title="本局战斗内获得的金币，结算时并入总金币"><i class="bs-lb">本局</i><img class="ei" src="assets/icon/hud_gold.png?v=20270409a"><b id="btGold">0</b></span>
-      <span><img class="ei" src="assets/icon/hud_diamond.png?v=20270409a"><b id="btDia2">0</b></span>
-      <span><img class="ei" src="assets/icon/hud_kill.png?v=20270409a"><b id="btKill">0</b></span>
+      <span title="本局战斗内获得的金币，结算时并入总金币"><i class="bs-lb">本局</i><img class="ei" src="assets/icon/hud_gold.png?v=20270410a"><b id="btGold">0</b></span>
+      <span><img class="ei" src="assets/icon/hud_diamond.png?v=20270410a"><b id="btDia2">0</b></span>
+      <span><img class="ei" src="assets/icon/hud_kill.png?v=20270410a"><b id="btKill">0</b></span>
     </div>
   </div>
 
   <!-- 右侧功能：自动 / 切换（竖排小按钮，不遮挡战斗区） -->
   <div class="bt-side">
-    <button class="bts" id="btAuto" title="自动"><img class="ei" src="assets/icon/hud_auto.png?v=20270409a"></button>
-    <button class="bts" id="btSwitch" title="切换"><img class="ei" src="assets/icon/hud_switch.png?v=20270409a"></button>
+    <button class="bts" id="btAuto" title="自动"><img class="ei" src="assets/icon/hud_auto.png?v=20270410a"></button>
+    <button class="bts" id="btSwitch" title="切换"><img class="ei" src="assets/icon/hud_switch.png?v=20270410a"></button>
   </div>
 
   <!-- 中央对话气泡 -->
@@ -278,12 +278,12 @@
   <div class="ch-box">
     <div class="ch-head">
       <b id="chTitle">选择技能</b>
-      <span class="ch-timer"><img class="ei" src="assets/icon/ic_timer.png?v=20270409a" alt="倒计时"> <i id="chTimer">15</i> 秒</span>
+      <span class="ch-timer"><img class="ei" src="assets/icon/ic_timer.png?v=20270410a" alt="倒计时"> <i id="chTimer">15</i> 秒</span>
     </div>
     <div class="ch-sub">局内技能选择 · 可叠加至 10 级</div>
     <div id="chCards"></div>
     <div class="ch-rfnum" id="chRfNum">当局剩余观看次数 1/1</div>
-    <button class="ch-rf" id="chRefresh"><img class="ei" src="assets/icon/hud_switch.png?v=20270409a" alt=""> 刷新</button>
+    <button class="ch-rf" id="chRefresh"><img class="ei" src="assets/icon/hud_switch.png?v=20270410a" alt=""> 刷新</button>
   </div>
 </div>
 
@@ -308,7 +308,7 @@
 <!-- ========== 新手引导遮罩（表21） ========== -->
 <div class="guide" id="guide">
   <div class="gd-mask"></div>
-  <div class="gd-finger" id="gdFinger"><img class="ei" src="assets/icon/hud_finger.png?v=20270409a"></div>
+  <div class="gd-finger" id="gdFinger"><img class="ei" src="assets/icon/hud_finger.png?v=20270410a"></div>
   <div class="gd-box">
     <div class="gd-t" id="gdTitle">引导</div>
     <div class="gd-c" id="gdText"></div>
@@ -355,9 +355,9 @@
   <div class="pn-mask" id="pnMask"></div>
   <div class="pn-box">
     <div class="pn-hd">
-      <span class="pn-back" id="pnBack"><img class="ei" src="assets/icon/ic_back.png?v=20270409a" alt="返回"></span>
+      <span class="pn-back" id="pnBack"><img class="ei" src="assets/icon/ic_back.png?v=20270410a" alt="返回"></span>
       <b id="pnTitle">标题</b>
-      <button id="pnX"><img class="ei" src="assets/icon/hud_close.png?v=20270409a"></button>
+      <button id="pnX"><img class="ei" src="assets/icon/hud_close.png?v=20270410a"></button>
     </div>
     <div class="pn-main" id="pnMain">
       <div class="pn-tabs" id="pnTabs"></div>
@@ -404,18 +404,18 @@
   kbFit();
 })();
 </script>
-<script src="js/net.js?v=20270409a"></script>
-<script src="js/config.js?v=20270409a"></script>
-<script src="js/ops.js?v=20270409a"></script>
-<script src="js/engine.js?v=20270409a"></script>
-<script src="js/chibi.js?v=20270409a"></script>
-<script src="js/juice.js?v=20270409a"></script>
-<script src="js/battle.js?v=20270409a"></script>
-<script src="js/ui.js?v=20270409a"></script>
+<script src="js/net.js?v=20270410a"></script>
+<script src="js/config.js?v=20270410a"></script>
+<script src="js/ops.js?v=20270410a"></script>
+<script src="js/engine.js?v=20270410a"></script>
+<script src="js/chibi.js?v=20270410a"></script>
+<script src="js/juice.js?v=20270410a"></script>
+<script src="js/battle.js?v=20270410a"></script>
+<script src="js/ui.js?v=20270410a"></script>
 <!-- qr.js 已移除：登录改为账号密码，扫码功能不再使用（原引用 404） -->
-<script src="js/user.js?v=20270409a"></script>
-<script src="js/audio.js?v=20270409a"></script>
-<script src="js/main.js?v=20270409a"></script>
+<script src="js/user.js?v=20270410a"></script>
+<script src="js/audio.js?v=20270410a"></script>
+<script src="js/main.js?v=20270410a"></script>
 </div>
 </div>
 </body>
