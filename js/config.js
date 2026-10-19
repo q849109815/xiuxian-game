@@ -701,14 +701,14 @@ const EX = {
   chapters: [
     { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️', img: 'assets/scene/city.jpg?v=20270105a' },
     { id: 2, n: '第二章 · 地下设施', icon: '🚇', img: 'assets/scene/tunnel.jpg?v=20270105a' },
-    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270416a' },
+    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270417a' },
     { id: 4, n: '第四章 · 废弃工厂', icon: '🏭', img: 'assets/scene/factory.jpg?v=20270105a' },
     { id: 5, n: '第五章 · 荒野麦田', icon: '🌾', img: 'assets/scene/field.jpg?v=20270105a' },
     { id: 6, n: '第六章 · 辐射废墟', icon: '☢️', img: 'assets/scene/wasteland.jpg?v=20270105a' },
     { id: 7, n: '第七章 · 雪山哨站', icon: '🏔️', img: 'assets/scene/snow.jpg?v=20270105a' },
-    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270416a' },
-    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270416a' },
-    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270416a' },
+    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270417a' },
+    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270417a' },
+    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270417a' },
     { id: 11, n: '第十一章 · 前哨反攻', icon: '🛡️', img: 'assets/scene/outpost.jpg?v=20270415a' },
     { id: 12, n: '第十二章 · 断桥水坝', icon: '🌊', img: 'assets/scene/dam.jpg?v=20270415a' },
     { id: 13, n: '第十三章 · 矿坑深处', icon: '⛏️', img: 'assets/scene/mine.jpg?v=20270415a' },
@@ -935,7 +935,7 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270416a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270417a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/tokens.css', ver:'20270330a', size: 0 },
@@ -2460,7 +2460,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270416a',
+  sceneV: '20270417a',
 
   /* 云端 API 代理（V1.0.2 D-01）：留空 = 直连 GitHub（令牌在客户端，仅开发/内测可接受）。
      部署 worker/ 后填入 Worker 域名（如 https://zb-api.xxx.workers.dev），
@@ -2583,6 +2583,31 @@ const EX = {
     DROP_STEP: 3,
     /* 军功上限：防刷（后台改档写入超大值也不会污染经济） */
     SPIRIT_CAP: 9999999,
+  },
+  /* V1.1.0 冲刺3 · 赛季远征（策划 P-13 / 运营 O-10）
+   * 定位：给通关后的长线玩家一个 4 周为周期的奋斗目标。
+   * 赛季积分来自 4 个真实结算点（通关 / 无尽 / 军团BOSS / 远征），
+   * 必须真接线——历史上 eventDropRoll、endlessWaveRw 都是配了零调用，
+   * 玩家永远拿不到。本轮 tools/season.cjs 逐点断言调用链。 */
+  SEASON: {
+    WEEKS: 4,                 /* 赛季周期（周） */
+    EPOCH: '2027-01-04',      /* 赛季纪元（周一，UTC+8），用于推算赛季序号 */
+    /* 积分来源：每次行为的赛季积分 */
+    SCORE: {
+      level: 10,              /* 通关关卡 */
+      endless: 15,            /* 无尽模式结算 */
+      legionBoss: 8,          /* 军团 BOSS 挑战 */
+      exped: 5,               /* 远征完成 */
+    },
+    /* 阶梯奖励：need 为赛季内累计积分门槛（键必须与 grant 发放白名单一致） */
+    STEP: [
+      { need: 100,  rw: { gold: 20000 } },
+      { need: 300,  rw: { diamond: 100 } },
+      { need: 600,  rw: { chipE: 2 } },
+      { need: 1000, rw: { M03: 30 } },
+      { need: 1500, rw: { chipRed: 1 } },
+    ],
+    SCORE_CAP: 999999,        /* 积分上限：防后台改档污染 */
   },
 };
 
