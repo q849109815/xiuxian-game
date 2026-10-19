@@ -49,6 +49,23 @@ const EX = {
       unlockLv: '2-3', unlockTxt: '通关 2-3 解锁', desc: '厚血高护甲，正面硬扛' },
     { id: 'C04', n: '狙击手-妮可', icon: '🕵️‍♀️', img: 'assets/char/c04_nike.jpg', hp: 850, spd: 6.0, armor: 3, crit: 0.08,
       unlockLv: '3-3', unlockTxt: '通关 3-3 解锁', desc: '高暴击脆皮，爆发输出' },
+    /* ---- V1.0.2 内容扩充：角色 4 → 8 ----
+     * 补齐策划部 P-02 / 美术部 A-01。四名新角色各有明确定位与一条
+     * 专属流派，覆盖此前的空白：炮台流、爆炸流、攻速流、资源流。
+     * 天赋字段（tower/explode/rate/gold）与 C02 的 heal 一样，
+     * 全部在 battle.js 有真实消费点，杜绝"写了不实装"。 */
+    { id: 'C05', n: '工程兵-老陈', icon: '👷', img: 'assets/char/c05_chen.jpg', hp: 1050, spd: 5.8, armor: 8, crit: 0.04,
+      talent: { n: '炮台专精', tower: 0.12, desc: '炮台伤害 +12%' },
+      unlockLv: '4-3', unlockTxt: '通关 4-3 解锁', desc: '炮台流核心，阵地战最强' },
+    { id: 'C06', n: '爆破手-凯恩', icon: '🧨', img: 'assets/char/c06_kane.jpg', hp: 950, spd: 5.6, armor: 4, crit: 0.06,
+      talent: { n: '爆破专精', explode: 0.15, desc: '爆炸伤害 +15%' },
+      unlockLv: '5-3', unlockTxt: '通关 5-3 解锁', desc: '爆炸流核心，清场能力顶尖' },
+    { id: 'C07', n: '猎手-影', icon: '🥷', img: 'assets/char/c07_ying.jpg', hp: 880, spd: 6.8, armor: 2, crit: 0.12,
+      talent: { n: '疾速连击', rate: 0.08, desc: '攻速 +8%' },
+      unlockLv: '6-3', unlockTxt: '通关 6-3 解锁', desc: '高攻速高暴击，持续输出' },
+    { id: 'C08', n: '指挥官-凛', icon: '🎖️', img: 'assets/char/c08_lin.jpg', hp: 1100, spd: 5.9, armor: 10, crit: 0.05,
+      talent: { n: '战地指挥', gold: 0.10, desc: '金币收益 +10%' },
+      unlockLv: '7-3', unlockTxt: '通关 7-3 解锁', desc: '增益与资源型，养成加速' },
   ],
   /* 【皮肤表】每个角色 2 款，第二款用钻石解锁 */
   skins: [
@@ -69,6 +86,21 @@ const EX = {
       bonus: { armor: 0.12 }, desc: '生化防护服，护甲 +12%' },
     { id: 'sk_c03c', char: 'C03', n: '重装装甲', icon: '🦾', img: 'assets/skin/sk_armor.jpg', price: 980,
       bonus: { hp: 0.14 }, desc: '动力装甲，生命 +14%' },
+    /* ---- V1.0.2：4 名新角色各配 2 款皮肤（默认 + 钻石款） ----
+     * 默认款沿用角色立绘；钻石款暂用同风格通用作战服（美术部 A-01
+     * 第二批资源到位后替换专用图）。 */
+    { id: 'sk_c05a', char: 'C05', n: '默认', icon: '👷', img: 'assets/char/c05_chen.jpg', price: 0, bonus: null, desc: '初始外观' },
+    { id: 'sk_c05b', char: 'C05', n: '工程大师', icon: '🛠️', img: 'assets/skin/sk_desert.jpg', price: 680,
+      bonus: { hp: 0.10 }, desc: '重型工装修具，生命 +10%' },
+    { id: 'sk_c06a', char: 'C06', n: '默认', icon: '🧨', img: 'assets/char/c06_kane.jpg', price: 0, bonus: null, desc: '初始外观' },
+    { id: 'sk_c06b', char: 'C06', n: '拆弹专家', icon: '🔥', img: 'assets/skin/sk_chem.jpg', price: 680,
+      bonus: { armor: 0.12 }, desc: '防爆作战服，护甲 +12%' },
+    { id: 'sk_c07a', char: 'C07', n: '默认', icon: '🥷', img: 'assets/char/c07_ying.jpg', price: 0, bonus: null, desc: '初始外观' },
+    { id: 'sk_c07b', char: 'C07', n: '暗影行者', icon: '🌑', img: 'assets/skin/sk_armor.jpg', price: 680,
+      bonus: { crit: 0.10 }, desc: '隐匿作战服，暴击 +10%' },
+    { id: 'sk_c08a', char: 'C08', n: '默认', icon: '🎖️', img: 'assets/char/c08_lin.jpg', price: 0, bonus: null, desc: '初始外观' },
+    { id: 'sk_c08b', char: 'C08', n: '阅兵礼装', icon: '⭐', img: 'assets/skin/sk_desert.jpg', price: 880,
+      bonus: { atk: 0.08 }, desc: '将官礼服，攻击 +8%' },
   ],
 
   /* =====================================================
@@ -703,7 +735,7 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270407a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270409a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/tokens.css', ver:'20270330a', size: 0 },
@@ -1097,7 +1129,7 @@ const EX = {
   ],
 
   /* =====================================================
-   * 【活动表】资料：6 个
+   * 【活动表】资料：10 个
    * =================================================== */
   activities: [
     /* rw 必须是【奖励对象】；描述文字放 rwDesc。
@@ -1129,6 +1161,26 @@ const EX = {
       desc: '首次充值钻石翻倍', rwDesc: '钻石', rule: '仅 1 次', rw: {} },
     { id: 'EV05', n: '限时皮肤', type: '皮肤活动', time: '节日期间', icon: '👗', img: 'assets/skin/sk_c01b.jpg?v=20270105a',
       desc: '限定皮肤上架', rwDesc: '皮肤', rule: '限时购买', rw: {} },
+    /* ---- V1.0.2 运营部 P-03：活动 6 → 10 ----
+     * 四条新活动全部复用 actCondOk 已支持的条件类型（lvMin / clearedMin /
+     * endlessMin），保证「配了就能领」，杜绝此前"有奖励却无领取入口"
+     * 与"条件永远判不过"两类老 BUG。奖励键均为 validGive 白名单内。 */
+    { id: 'EV07', n: '武器大师', type: '养成活动', time: '常驻 · 每周可领 1 次', icon: '🔧', img: 'assets/icon/w_rifle.jpg?v=20270105a',
+      desc: '强化武器达标即可领奖', rwDesc: '强化材料 + 金币', rule: 'Lv.15 以上每周领 1 次',
+      per: 'week', cond: { lvMin: 15 },
+      rw: { M01: 30, gold: 5000 } },
+    { id: 'EV08', n: '芯片狂潮', type: '养成活动', time: '常驻 · 每周可领 1 次', icon: '🧩', img: 'assets/icon/gp03.jpg?v=20270105a',
+      desc: '推进关卡解锁芯片补给', rwDesc: '普通芯片 + 稀有金属', rule: '通关 20 关以上每周领 1 次',
+      per: 'week', cond: { clearedMin: 20 },
+      rw: { chipN: 2, M03: 5 } },
+    { id: 'EV09', n: '无尽远征', type: '限时挑战', time: '常驻 · 每周可领 1 次', icon: '🌊', img: 'assets/icon/z_putong.jpg?v=20270105a',
+      desc: '无尽模式冲击更高波次', rwDesc: '活动代币 + 精英芯片', rule: '无尽达 10 波每周领 1 次',
+      per: 'week', cond: { endlessMin: 10 },
+      rw: { evToken: 100, chipE: 1 } },
+    { id: 'EV10', n: '通关达人', type: '成就活动', time: '常驻 · 每月可领 1 次', icon: '🎯', img: 'assets/icon/star.jpg?v=20270105a',
+      desc: '主线推进里程碑奖励', rwDesc: '钻石 + 传说芯片', rule: '通关 40 关以上每月领 1 次',
+      per: 'month', cond: { clearedMin: 40 },
+      rw: { diamond: 50, chipL: 1 } },
     { id: 'EV06', n: '无尽冲榜', type: '排行榜', time: '常驻 · 每月可领 1 次', icon: '🏆', img: 'assets/icon/star.jpg?v=20270105a',
       desc: '无尽模式存活时长排名', rwDesc: '传说芯片 + 限定称号', rule: '按排名发奖',
       per: 'month', cond: { endlessMin: 10 },
@@ -2129,7 +2181,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270407a',
+  sceneV: '20270409a',
 
   /* 品质与元素 */
   qualities: ['白', '绿', '蓝', '紫', '橙', '红'],
