@@ -183,18 +183,23 @@
           this.slow(CFG.SLOW_BOSS.d, CFG.SLOW_BOSS.s);
           this.shake(CFG.SHAKE_BOSS, 0.55);
           this.flash('255,255,255', 0.72, 0.34);
-          this._snd('levelup');
+          /* 【AU-02】BOSS 死亡专用音效，此前误用 levelup（升级音） */
+          this._snd('boss');
           this._say('击杀 BOSS！');
         } else {
           this.stop(CFG.STOP_KILL.d, CFG.STOP_KILL.s, CFG.STOP_KILL.gap);
           this.shake(CFG.SHAKE_KILL, 0.12);
+          /* 【AU-02】普通击杀补 kill 音效，按顿帧节流窗口去重，成片清怪不糊
+           * 注意：CFG.STOP_*.gap 单位是「秒」，此处需 ×1000 转毫秒 */
+          this._sndGap('kill', Math.max(80, (CFG.STOP_KILL.gap || 0.11) * 1000));
         }
 
         if (up && ti > 0) {
           var tg = TIERS[ti].tag;
           this.shake(CFG.SHAKE_MILE, 0.26);
           this.flash('255,190,90', 0.30, 0.26);
-          this._snd('levelup');
+          /* 【AU-02】连杀里程碑用 upgrade（突破感），里程碑本身稀疏不节流 */
+          this._snd('upgrade');
           this._say(this.combo + ' 连杀 · ' + tg);
         }
 
@@ -210,6 +215,8 @@
         if (!crit) return;
         this.stop(CFG.STOP_CRIT.d, CFG.STOP_CRIT.s, CFG.STOP_CRIT.gap);
         this.shake(CFG.SHAKE_CRIT, 0.11);
+        /* 【AU-02】暴击用专用 crit 音效（金属高音），非普通 hit（gap 秒→毫秒） */
+        this._sndGap('crit', Math.max(80, (CFG.STOP_CRIT.gap || 0.16) * 1000));
       } catch (e) {}
     },
 
@@ -220,6 +227,8 @@
         this.stop(CFG.STOP_HURT.d, CFG.STOP_HURT.s, CFG.STOP_HURT.gap);
         this.shake(CFG.SHAKE_HURT, 0.30);
         this.flash('255,70,60', 0.30, 0.24);
+        /* 【AU-02】受伤是最强的警示音，不节流（错过一次就可能漏掉掉血） */
+        this._snd('hurt');
       } catch (e) {}
     },
 
@@ -232,6 +241,8 @@
         this.shake(m, 0.30);
         this.flash('255,180,90', 0.26, 0.20);
         this.stop(0.030, 0.10, 0.14);
+        /* 【AU-02】爆炸补 explode 音效，连锁爆炸时段节流去重 */
+        this._sndGap('explode', 140);
       } catch (e) {}
     },
 
@@ -241,6 +252,8 @@
         if (!this.enabled) return;
         this.shake(6, 0.34);
         this.flash('255,150,60', 0.22, 0.26);
+        /* 【AU-02】波次推进补 wave 音效（每波一次，无需节流） */
+        this._snd('wave');
         this._say('第 ' + n + ' 波');
       } catch (e) {}
     },
@@ -259,6 +272,23 @@
 
     /* ================= 私有 ================= */
     _snd(n) { try { if (global.SND && SND.play) SND.play(n); } catch (e) {} },
+
+    /**
+     * 【音频部 AU-02 · 带节流音效】
+     * 成片清怪时每只都响会糊成噪音，故按 name 各自节流：
+     * 同一音效在 gapMs 内只触发一次（首次必响，保证首杀/首暴击听得到）。
+     */
+    _sndGap(n, gapMs) {
+      try {
+        if (!global.SND || !SND.play) return;
+        var now = (global.performance && performance.now) ? performance.now() : Date.now();
+        if (!this._sndAt) this._sndAt = {};
+        var last = this._sndAt[n] || 0;
+        if (now - last < (gapMs || 0)) return;
+        this._sndAt[n] = now;
+        SND.play(n);
+      } catch (e) {}
+    },
     _say(t) {
       try {
         if (global.UI && UI.toast) UI.toast(t, 'ok');
