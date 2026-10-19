@@ -701,14 +701,14 @@ const EX = {
   chapters: [
     { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️', img: 'assets/scene/city.jpg?v=20270105a' },
     { id: 2, n: '第二章 · 地下设施', icon: '🚇', img: 'assets/scene/tunnel.jpg?v=20270105a' },
-    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270414a' },
+    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270416a' },
     { id: 4, n: '第四章 · 废弃工厂', icon: '🏭', img: 'assets/scene/factory.jpg?v=20270105a' },
     { id: 5, n: '第五章 · 荒野麦田', icon: '🌾', img: 'assets/scene/field.jpg?v=20270105a' },
     { id: 6, n: '第六章 · 辐射废墟', icon: '☢️', img: 'assets/scene/wasteland.jpg?v=20270105a' },
     { id: 7, n: '第七章 · 雪山哨站', icon: '🏔️', img: 'assets/scene/snow.jpg?v=20270105a' },
-    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270414a' },
-    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270414a' },
-    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270414a' },
+    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270416a' },
+    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270416a' },
+    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270416a' },
     { id: 11, n: '第十一章 · 前哨反攻', icon: '🛡️', img: 'assets/scene/outpost.jpg?v=20270415a' },
     { id: 12, n: '第十二章 · 断桥水坝', icon: '🌊', img: 'assets/scene/dam.jpg?v=20270415a' },
     { id: 13, n: '第十三章 · 矿坑深处', icon: '⛏️', img: 'assets/scene/mine.jpg?v=20270415a' },
@@ -737,7 +737,7 @@ const EX = {
       desc: '高射速稳定输出，靠攻击与暴击率堆持续 DPS',
       tiers: [
         { need: 1, atkPct: 0.06, crit: 0.03 },
-        { need: 99, atkPct: 0.15, crit: 0.08 },
+        { need: 2, atkPct: 0.15, crit: 0.08 },
       ] },
     { id: 'burst', n: '爆发', icon: '💥', types: ['爆炸', '投掷', '狙击', '近战'],
       desc: '单次高伤与大范围爆炸，靠暴伤与爆炸范围清群',
@@ -935,7 +935,7 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270414a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270416a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/tokens.css', ver:'20270330a', size: 0 },
@@ -1381,7 +1381,7 @@ const EX = {
       desc: '无尽模式冲击更高波次', rwDesc: '活动代币 + 精英芯片', rule: '无尽达 10 波每周领 1 次',
       per: 'week', cond: { endlessMin: 10 },
       rw: { evToken: 100, chipE: 1 } },
-    { id: 'EV10, n: '通关达人', type: '成就活动', time: '常驻 · 每月可领 1 次', icon: '🎯', img: 'assets/icon/star.jpg?v=20270105a',
+    { id: 'EV10', n: '通关达人', type: '成就活动', time: '常驻 · 每月可领 1 次', icon: '🎯', img: 'assets/icon/star.jpg?v=20270105a',
       desc: '主线推进里程碑奖励', rwDesc: '钻石 + 传说芯片', rule: '通关 40 关以上每月领 1 次',
       per: 'month', cond: { clearedMin: 40 },
       rw: { diamond: 50, chipL: 1 } },
@@ -2460,7 +2460,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270414a',
+  sceneV: '20270416a',
 
   /* 云端 API 代理（V1.0.2 D-01）：留空 = 直连 GitHub（令牌在客户端，仅开发/内测可接受）。
      部署 worker/ 后填入 Worker 域名（如 https://zb-api.xxx.workers.dev），
