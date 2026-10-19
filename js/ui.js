@@ -644,6 +644,9 @@ const UI = {
     /* 公告：后台「公告管理」此前标记"前端未接入"，玩家永远看不到运营发的公告。
      * 现在作为一个正式面板接入（列表 + 未读标记 + 登录弹窗）。 */
     notice: ['公告', ['公告'], 'top'],
+    /* V1.1.0 末日废土：军衔系统（策划 P-10 / 程序 D-10）
+     * 通关后的长线成长线，50 阶（5 阶 × 10 层），与 atk/hp/crit 真实挂钩。 */
+    realm: ['军衔', ['军衔'], 'top'],
   },
   tabPos(key) { const d = this.PANELS[key]; return (d && d[2]) || 'top'; },
 
@@ -885,6 +888,85 @@ const UI = {
     const s = (window.E && E.cleanName) ? E.cleanName(v, max || 16) : String(v == null ? '' : v);
     return this.esc(s);
   },
+/* ---------- V1.1.0 军衔 ----------
+ * 策划口径：5 阶 × 10 层 = 50 阶，每层 +1.5% 攻击 / +1.2% 生命，
+ * 每 5 层额外 +0.5% 暴击。军功来自关卡结算（按章节递增）。
+ * 界面必须能自证：属性加成用真实 realmBonus() 的输出显示，
+ * 不能写死文案（历史教训：写了但没接线 = 玩家白花钱）。 */
+r_realm(p, tab) {
+  try {
+    const R = EX.REALM || {};
+    if (R.ON === false) return '<div class="empty">军衔系统未开启</div>';
+    const maxL = R.MAX_LAYER || 50;
+    const layer = Math.max(0, Math.min(maxL, Math.floor(Number(p.realm) || 0)));
+    const spirit = Math.max(0, Math.floor(Number(p.spirit) || 0));
+    const rb = E.realmBonus(p);
+    const cur = E.realmTier(layer);
+    const t = cur.t;
+    const tierName = t ? t.n : '未入门';
+    const tierColor = t ? t.color : (getComputedStyle(document.documentElement).getPropertyValue('--txt2') || '#a08e6e');
+    const inner = t ? cur.inner : 0;
+    const pct = t ? Math.round((inner / 10) * 100) : 0;
+    const nextCost = layer >= maxL ? 0 : E.realmCost(layer + 1);
+    const canUp = layer < maxL && spirit >= nextCost;
+    const need = Math.max(0, nextCost - spirit);
+    const tiersHTML = (R.TIERS || []).map((x) => {
+      const done = layer >= x.to;
+      const active = layer >= x.from && layer <= x.to;
+      const sub = done ? '圆满' : (layer >= x.from ? (layer - x.from + 1) + '/10' : '未达');
+      return `<div class="rl-t ${done ? 'done' : (active ? 'on' : '')}">
+        <div class="rl-ti" style="${done || active ? 'background:' + x.color : ''}">${this.esc(x.n.slice(0, 1))}</div>
+        <div class="rl-tb"><b style="color:${done || active ? x.color : ''}">${this.esc(x.n)}</b><span>${sub}</span></div>
+      </div>`;
+    }).join('');
+    return `<div class="card rl-hero" style="border-color:${tierColor}">
+      <div class="rl-badge" style="background:${tierColor}">${this.esc(tierName)}</div>
+      <div class="rl-info">
+        <div class="rl-lv">第 <b>${layer}</b> / ${maxL} 层</div>
+        <div class="rl-bar"><i style="width:${pct}%;background:${tierColor}"></i></div>
+        <div class="sub">${t ? (this.esc(t.n) + ' ' + inner + '/10 层') : '晋升一次即授新兵衔'}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">当前加成<span class="sub">来自军衔，已计入战斗</span></div>
+      <div class="rl-st">
+        <div><span>攻击</span><b>+${(rb.atkPct * 100).toFixed(1)}%</b></div>
+        <div><span>生命</span><b>+${(rb.hpPct * 100).toFixed(1)}%</b></div>
+        <div><span>暴击</span><b>+${(rb.crit * 100).toFixed(1)}%</b></div>
+        <div><span>军功</span><b>${E.fmt(spirit)}</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">晋升</div>
+      ${layer >= maxL
+        ? '<div class="sub" style="padding:8px 2px">已达传奇巅峰，军衔无上。</div>'
+        : `<div class="sub" style="padding:4px 2px">下一层消耗军功 <b>${E.fmt(nextCost)}</b>${canUp ? '' : '（还差 ' + E.fmt(need) + '）'}</div>
+           <button class="btn ${canUp ? 'pri' : 'd'} rl-up" ${canUp ? '' : 'disabled'}>${canUp ? '晋 升' : '军功不足'}</button>`}
+      <div class="sub" style="padding:6px 2px">军功来源：通关关卡（章节越高越多）、活动与运营发放。</div>
+    </div>
+    <div class="card"><div class="card-t">五阶军衔总览</div><div class="rl-tiers">${tiersHTML}</div></div>`;
+  } catch (e) {
+    return '<div class="empty">军衔数据异常</div>';
+  }
+},
+b_realm(p, tab) {
+  const btn = document.querySelector('#pnBody .rl-up');
+  if (!btn) return;
+  btn.onclick = () => {
+    try {
+      const r = E.realmUp(p);
+      if (!r.ok) {
+        if (window.SND) SND.play('error');
+        this.toast(r.reason === 'max' ? '已至最高军衔' : ('军功不足，还差 ' + E.fmt(r.need || 0)), 'bad');
+        return;
+      }
+      if (window.SND) SND.play('realm');
+      this.toast('晋升成功 · 第 ' + r.layer + ' 层', 'ok');
+      E.save(p);
+      this.open('realm'); this.home();
+    } catch (e) { if (window.SND) SND.play('error'); }
+  };
+},
 r_tavern(p, tab) {
     const hired = p.mercs || [];
     return `<div class="card"><div class="card-t">🍺 酒馆 · 雇佣兵
@@ -2455,7 +2537,7 @@ r_tavern(p, tab) {
           p.diamond = (p.diamond || 0) + amt;
         }
         /* 走 E.addStamina（带 STAMINA_MAX 钳制）而不是直接相加。
-         * BUG：直接 `p.stamina + 60` 会突破上限（实测体力 50 买体力包 → 110/100），
+         * BUG：直接 `p.stamina + 60` 会晋升上限（实测体力 50 买体力包 → 110/100），
          *      而其它所有体力来源都被钳在 100，界面上会出现「110/100」这种越界显示。 */
         /* 兜底分支此前与主分支同病：`(p.stamina||0) + g.give[k]` 在 g.give[k]
          * 是字符串时做的是拼接（50 + '60' → '5060' → 被钳成 100 满体力）。
