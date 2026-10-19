@@ -1860,15 +1860,22 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const fullMs = nextMs + Math.max(0, need - 1) * per;
     return { full: false, nextMs: nextMs, fullMs: fullMs };
   },
-  /* 无尽解锁：默认解锁（此前要求通关 10-10，新手前期没有稳定刷材料的出口） */
-  endlessUnlocked(p) { return true; },
+  /* 无尽解锁：读 EX.ENDLESS_UNLOCK（关卡 id）。
+   * 此前该配置项全项目零引用——策划/运营在后台填了也不会生效，是个「配置陷阱」。
+   * 现按同一口径接线：null/空 = 默认解锁（保持 v1.0 行为不变），
+   * 填 '3-5' 则要求通关 3-5 才开放无尽。 */
+  endlessUnlocked(p) {
+    const need = (typeof EX !== 'undefined' && EX) ? EX.ENDLESS_UNLOCK : null;
+    if (!need) return true;                       // 未配置 = 默认解锁
+    return !!(p && p.cleared && p.cleared[need]);
+  },
   /* 各系统解锁（资料 05 表） */
   sysUnlocked(p, k) {
     switch (k) {
       case 'gun': return !!p.cleared['1-2'];      // 武器养成 通关1-2
       case 'chip': return !!p.cleared['1-4'];     // 芯片装配 通关1-4
       case 'talent': return !!p.cleared['1-3'];   // 永久天赋 通关1-3
-      case 'endless': return true;                // 无尽 默认解锁
+      case 'endless': return this.endlessUnlocked(p); // 无尽：与 endlessUnlocked 同口径
       default: return true;
     }
   },
