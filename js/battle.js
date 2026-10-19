@@ -513,6 +513,8 @@ const BT = {
       recoil: Number(a.recoil) > 0 ? Number(a.recoil) : 1,
       shakeT: 0, shakeX: 0, shakeY: 0,
       dmgMin: a.dmgMin, dmgMax: a.dmgMax, ls: a.ls, erMul: a.erMul, reloadCut: a.reloadCut,
+      /* V1.1.0 P-12 控制流派：减速/持续伤害由 attrs 透传，命中段消费 */
+      schoolSlow: a.schoolSlow || 0, schoolDot: a.schoolDot || 0, school: a.school || null,
       mag: a.mag, magMax: a.mag, reloadT: 0, reloading: false,
       shootT: 0,
       wave: 0, waveTotal: def.waves, spawnLeft: 0, spawnT: 0, waveGap: 0,
@@ -1588,6 +1590,13 @@ const BT = {
             z.burn = Math.max(z.burn || 0, b.burn);
             z.burnT = Math.max(z.burnT || 0, b.burnT || 3);
           }
+          /* V1.1.0 P-12 控制流派持续伤害：dot 是「每秒伤害 / 攻击力」的比例，
+           * 复用已有的 burn 结算链路（hurt(z, z.burn * r.atk * dt)），
+           * 与燃烧瓶取较大值——不会让冰冻枪这类控制武器反而变成灼烧流。 */
+          if (b.dot > 0) {
+            z.burn = Math.max(z.burn || 0, b.dot);
+            z.burnT = Math.max(z.burnT || 0, 2.0);
+          }
           if (b.chain > 0 && Math.random() < b.chain) this.chain(z, b.chainN || 2, b.dmg * 0.55);
           /* 眩晕（闪光弹 S05 stun:1.2）：僵尸完全定身，与减速独立 */
           if (b.stun > 0) {
@@ -2198,8 +2207,12 @@ const BT = {
          * 烟雾弹 521 次采样同样 0 次 —— 冰冻枪就是一把换了蓝色子弹
          * 皮肤的普通枪，"冰霜弹/行动迟缓"的描述完全是装饰。
          * 现在 slow 取 g.slow || g.chill，并给冰元素一个兜底时长。 */
-        slow: Number(g.slow || g.chill || 0) || 0,
-        slowT: Number(g.slowT || (g.chill ? 2.0 : 0)) || 0,
+        /* V1.1.0 P-12 控制流派：命中减速（attrs 透传 schoolSlow）
+         * 与武器自带的 chill 取较大值——冰冻枪 0.55 不会被流派 0.15 覆盖掉。 */
+        slow: Math.max(Number(g.slow || g.chill || 0) || 0, Number(r.schoolSlow || 0) || 0),
+        slowT: Math.max(Number(g.slowT || (g.chill ? 2.0 : 0)) || 0, (Number(r.schoolSlow || 0) > 0 ? 1.5 : 0)),
+        /* V1.1.0 P-12 控制流派：持续伤害（dot 按子弹伤害比例折算） */
+        dot: Number(r.schoolDot || 0) || 0,
         chain: g.chain || 0, chainN: g.chainN || 0,
       });
     }
@@ -2260,6 +2273,7 @@ const BT = {
     r.critDmg = a.critDmg; r.moveSpd = a.moveSpd;
     r.dmgMin = a.dmgMin; r.dmgMax = a.dmgMax; r.ls = a.ls;
     r.erMul = a.erMul; r.reloadCut = a.reloadCut;
+    r.schoolSlow = a.schoolSlow || 0; r.schoolDot = a.schoolDot || 0; r.school = a.school || null;
     r.mag = a.mag; r.magMax = a.mag;
     r.reloading = false; r.reloadT = 0; r.shootT = 0;
   },
