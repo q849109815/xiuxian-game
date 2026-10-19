@@ -1516,7 +1516,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * + 装备强化 + 好友 + 军团 + 升星）。
      * 必须在 return 之前算出来，因为下面 dmgMin/dmgMax 要按它等比缩放
      * —— 对象字面量里无法引用同级的 atk。 */
-    const atkTotal = ((atk + (p.lvBonusAtk || 0)) * (1 + atkUp) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct + this.equipBonus(p).atkPct + this.friendBonus(p) + lb.atkPct)) * (1 + EX.starBonus(p.charStar));
+    const atkTotal = ((atk + (p.lvBonusAtk || 0)) * (1 + atkUp) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct + this.equipBonus(p).atkPct + this.friendBonus(p) + this.assistBonus(p) + lb.atkPct)) * (1 + EX.starBonus(p.charStar));
     return {
       /* 表25 #1：角色等级成长（每级 +攻击6 / +生命80） */
       /* 好友加成：面板写「每个 +0.5% 攻击」，但 attrs 从不读 p.friends
@@ -1614,6 +1614,13 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
   friendBonus(p) {
     const n = Math.min(20, (p.friends || []).length);
     return n * 0.005;
+  },
+  /* 【V1.0.3 社交】好友助战加成
+   * 在好友面板把某个好友「设为助战」后，进入战斗额外获得 +3% 攻击。
+   * 与好友数量加成（每人 +0.5%）叠加，但助战同时只能有 1 个，
+   * 避免多人叠加把社交数值拉爆。 */
+  assistBonus(p) {
+    return (p && p.assist) ? 0.03 : 0;
   },
   /* 好友数上限
    * BUG：好友列表此前【只增不减、且没有任何上限】。
