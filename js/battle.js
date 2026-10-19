@@ -598,6 +598,8 @@ const BT = {
     /* 进关号角音（audio.js 的 'start'）：
      * 台词 VO_001 已接线，但配套音效 'start' 零调用 —— 进关只有字幕没有号角声。 */
     try { if (window.SND) SND.play('start'); } catch (e) {}
+    /* 开局注入角色天赋（炮台/爆炸/攻速/金币），保证首波就生效 */
+    this.applyCharTalent(this.run);
     this.startWave(1);
     this.startLoop();
     if (opt.cb) this.cb = opt.cb;
@@ -609,7 +611,26 @@ const BT = {
       novaR: 0, novaSlow: 0, novaCd: 0, explode: 0, er: 0, shield: 0, moveMul: 0,
       /* 分裂子弹（被动 fenliezidan）：此前该键既不在 emptyMods 里、
        * mods.split 也全项目零引用 → 技能说明"命中后分裂成多枚"从未发生 */
-      split: 0 };
+      split: 0,
+      /* V1.0.2 角色天赋：由 EX.chars[].talent 注入（applyCharTalent）。
+       * towerDmg 炮台伤害 / explodeDmg 爆炸伤害 / charGold 金币收益。
+       * 说明：rate 走已有的 rateMul，不新增键。 */
+      towerDmg: 0, explodeDmg: 0, charGold: 0 };
+  },
+
+  /* 角色天赋落地：把 EX.chars[].talent 的数值写进 r.mods。
+   * 与 C02「战地急救」同样坚持配置驱动 —— 只要配置里有，就一定被消费，
+   * 不允许出现"角色介绍写了天赋、战斗里零生效"。
+   * 每次 applyMods()（技能升级重算加成）都会重跑，避免被重置掉。 */
+  applyCharTalent(r) {
+    if (!r) return;
+    const ct = (EX.chars || []).find((c) => c.id === r.charId);
+    const tal = ct && ct.talent;
+    if (!tal) return;
+    if (Number(tal.tower) > 0) r.mods.towerDmg = (Number(r.mods.towerDmg) || 0) + Number(tal.tower);
+    if (Number(tal.explode) > 0) r.mods.explodeDmg = (Number(r.mods.explodeDmg) || 0) + Number(tal.explode);
+    if (Number(tal.rate) > 0) r.mods.rateMul = (Number(r.mods.rateMul) || 0) + Number(tal.rate);
+    if (Number(tal.gold) > 0) r.mods.charGold = (Number(r.mods.charGold) || 0) + Number(tal.gold);
   },
 
   startWave(w) {
@@ -1068,7 +1089,7 @@ const BT = {
        * → 杀一只要 180 发 / 约 200 秒，后期炮台等于纯装饰，
        *   玩家花 120~180 金币建造 + 升级的钱全部白花。
        * 现在按关卡倍率 rwMul 缩放，与武器/怪物成长同步。 */
-      const dmgT = t.def.dmg * (1 + t.lv * 0.35) * (1 + r.mods.dmgMul) * (r.def.rwMul || 1);
+      const dmgT = t.def.dmg * (1 + t.lv * 0.35) * (1 + r.mods.dmgMul) * (r.def.rwMul || 1) * (1 + (Number(r.mods.towerDmg) || 0));
       /* 把炮台的元素效果带进子弹（此前只传 el，效果字段全部丢失） */
       this.spawnBullet(t.x, t.y, tz, dmgT, {
         pierce: 0, from: 'turret', el: t.def.el,
@@ -1593,7 +1614,7 @@ const BT = {
           const ex = exB + exM;
           if (ex > 0) {
             const rad = (Number(b.er) || Number(r.mods.er) || 46) * (Number(r.erMul) || 1);
-            this.explode(b.x, b.y, rad, b.dmg * ex);
+            this.explode(b.x, b.y, rad, b.dmg * ex * (1 + (Number(r.mods.explodeDmg) || 0)));
           }
         }
         if (r.mods.chain > 0 && Math.random() < r.mods.chain) this.chain(z, r.mods.chainN, b.dmg * 0.55);
@@ -2507,7 +2528,7 @@ const BT = {
     let _cm = 1;
     try { if (window.JUICE) _cm = JUICE.onKill(z, r); } catch (e) { _cm = 1; }
     if (!(_cm > 0)) _cm = 1;
-    const gAdd = Math.round(z.gold * (1 + E.talentVal(this.P, 'gold')) * _cm);
+    const gAdd = Math.round(z.gold * (1 + E.talentVal(this.P, 'gold')) * _cm * (1 + (Number(r.mods.charGold) || 0)));
     r.gold += gAdd;
     /* 局内金币（coin）：只用于建造/升级炮台，【不随章节倍率 rwMul 放大】。
      * 严重失衡：coin 此前与 r.gold 共用同一个 gAdd，而 z.gold 内含 rwMul，
@@ -2852,6 +2873,8 @@ const BT = {
     r.shield = Math.max(Number(r.shield) || 0, Number(r.mods.shield) || 0);
     r.maxShield = Math.max(Number(r.maxShield) || 0, Number(r.mods.shield) || 0);
     this.capShield(r);
+    /* 技能重算会清空 r.mods，角色天赋必须跟着重注入 */
+    this.applyCharTalent(r);
   },
 
   /* 飘字：
