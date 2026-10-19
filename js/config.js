@@ -66,6 +66,23 @@ const EX = {
     { id: 'C08', n: '指挥官-凛', icon: '🎖️', img: 'assets/char/c08_lin.jpg', hp: 1100, spd: 5.9, armor: 10, crit: 0.05,
       talent: { n: '战地指挥', gold: 0.10, desc: '金币收益 +10%' },
       unlockLv: '7-3', unlockTxt: '通关 7-3 解锁', desc: '增益与资源型，养成加速' },
+    /* ---- V1.0.3 内容扩充：角色 8 → 12 ----
+     * 补齐策划部 P-02 第二阶段 / 美术部 A-01。四名新角色延续
+     * 「天赋字段必须有真实消费点」的铁律：rate / heal / tower / gold
+     * 四个键在 battle.js applyCharTalent 与回血逻辑中均已实装，
+     * 不允许出现介绍写了天赋、战斗里零生效。 */
+    { id: 'C09', n: '特工-零', icon: '🕶️', img: 'assets/char/c09_zero.jpg', hp: 920, spd: 6.6, armor: 3, crit: 0.10,
+      talent: { n: '暗杀专精', rate: 0.06, desc: '攻速 +6%' },
+      unlockLv: '8-3', unlockTxt: '通关 8-3 解锁', desc: '隐秘行动专家，出手极快' },
+    { id: 'C10', n: '医师-白', icon: '💉', img: 'assets/char/c10_bai.jpg', hp: 880, spd: 6.2, armor: 6, crit: 0.04,
+      talent: { n: '急救专精', heal: 0.010, cd: 7, desc: '每 7 秒回复防线最大血量 1.0%' },
+      unlockLv: '9-3', unlockTxt: '通关 9-3 解锁', desc: '持续治疗，续航能力顶尖' },
+    { id: 'C11', n: '炮手-钢', icon: '🔧', img: 'assets/char/c11_gang.jpg', hp: 1150, spd: 5.4, armor: 12, crit: 0.03,
+      talent: { n: '重炮专精', tower: 0.10, desc: '炮台伤害 +10%' },
+      unlockLv: '10-3', unlockTxt: '通关 10-3 解锁', desc: '重装炮台流，火力覆盖' },
+    { id: 'C12', n: '商人-金', icon: '💰', img: 'assets/char/c12_jin.jpg', hp: 1000, spd: 6.0, armor: 5, crit: 0.06,
+      talent: { n: '资源专精', gold: 0.08, desc: '金币收益 +8%' },
+      unlockLv: '10-5', unlockTxt: '通关 10-5 解锁', desc: '资源增益，养成速度更快' },
   ],
   /* 【皮肤表】每个角色 2 款，第二款用钻石解锁 */
   skins: [
@@ -543,14 +560,14 @@ const EX = {
   chapters: [
     { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️', img: 'assets/scene/city.jpg?v=20270105a' },
     { id: 2, n: '第二章 · 地下设施', icon: '🚇', img: 'assets/scene/tunnel.jpg?v=20270105a' },
-    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270411a' },
+    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270412a' },
     { id: 4, n: '第四章 · 废弃工厂', icon: '🏭', img: 'assets/scene/factory.jpg?v=20270105a' },
     { id: 5, n: '第五章 · 荒野麦田', icon: '🌾', img: 'assets/scene/field.jpg?v=20270105a' },
     { id: 6, n: '第六章 · 辐射废墟', icon: '☢️', img: 'assets/scene/wasteland.jpg?v=20270105a' },
     { id: 7, n: '第七章 · 雪山哨站', icon: '🏔️', img: 'assets/scene/snow.jpg?v=20270105a' },
-    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270411a' },
-    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270411a' },
-    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270411a' },
+    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270412a' },
+    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270412a' },
+    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270412a' },
   ],
 
   /* 无尽模式解锁门槛：填关卡 id（如 '3-5'）则要求先通关该关；null/空 = 默认解锁。
@@ -735,7 +752,7 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270411a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270412a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/tokens.css', ver:'20270330a', size: 0 },
@@ -1724,6 +1741,17 @@ const EX = {
     { id: 'LA03', n: '母巢攻坚', icon: '🕸️', img: 'assets/icon/z_jinying.jpg?v=20270105a', cost: 25, need: 40000,
       contrib: 260, gold: 8000, mats: [{ k: 'M03', n: 4 }, { k: 'M05', n: 3 }] },
   ],
+  /* 【V1.0.3 社交】军团 BOSS：全军团共斗的周常玩法
+   * 单机实现：BOSS 血量存在 p.lb（每周一重置，resetW=1），
+   * 每次挑战消耗体力并造成伤害，按比例结算贡献与奖励；
+   * 血量归零判定击杀，发击杀大奖。后续接云端可改为共享血量。 */
+  legionBoss: {
+    id: 'LB01', n: '母巢之主', icon: '👑', img: 'assets/char/boss_chaoxue.jpg',
+    cost: 20, maxHp: 500000, resetW: 1,
+    contribPerHit: 60, goldPerHit: 3000, matsPerHit: [{ k: 'M03', n: 3 }],
+    killRw: { gold: 20000, gem: 'G_R', contrib: 800 },
+    desc: '每周刷新，全军团共同讨伐，按伤害发放贡献与奖励',
+  },
   /* 【军团】社交：加入/自建/捐献 */
   legions: [
     { id: 'L01', n: '钢铁防线', icon: '🛡️', img: 'assets/icon/i_shield.jpg?v=20270105a', mem: 42, need: 0, desc: '老牌军团，气氛活跃' },
@@ -2188,7 +2216,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270411a',
+  sceneV: '20270412a',
 
   /* 云端 API 代理（V1.0.2 D-01）：留空 = 直连 GitHub（令牌在客户端，仅开发/内测可接受）。
      部署 worker/ 后填入 Worker 域名（如 https://zb-api.xxx.workers.dev），
