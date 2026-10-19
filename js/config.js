@@ -381,13 +381,13 @@ const EX = {
     { id: '3-1', ch: 3, n: '城市广场', waves: 20, pool: ['putong', 'jipao', 'zibao', 'zhongjia', 'du'], per: [12, 20], mul: 2.96,
       cond: 'clear', rw: { gold: 3920, M04: 10 }, unlock: '2-10', scene: 'city' },
     { id: '3-2', ch: 3, n: '商业街', waves: 20, pool: ['putong', 'jipao', 'zibao', 'zhongjia', 'du'], per: [12, 20], mul: 2.96,
-      cond: 'clear', rw: { gold: 4270, M04: 10 }, unlock: '3-1', scene: 'city' },
+      cond: 'clear', rw: { gold: 4270, M04: 10 }, unlock: '3-1', scene: 'bridge' },
     { id: '3-3', ch: 3, n: '地铁口', waves: 20, pool: ['putong', 'jipao', 'zibao', 'zhongjia', 'du'], per: [12, 20], mul: 2.96,
-      cond: 'clear', rw: { gold: 4630, M04: 10 }, unlock: '3-2', scene: 'city' },
+      cond: 'clear', rw: { gold: 4630, M04: 10 }, unlock: '3-2', scene: 'bridge' },
     { id: '3-4', ch: 3, n: '钟楼', waves: 20, pool: ['putong', 'jipao', 'zibao', 'zhongjia', 'du'], per: [12, 20], mul: 2.96,
-      cond: 'clear', rw: { gold: 4980, M04: 10 }, unlock: '3-3', scene: 'city' },
+      cond: 'clear', rw: { gold: 4980, M04: 10 }, unlock: '3-3', scene: 'bridge' },
     { id: '3-5', ch: 3, n: '桥梁防线', waves: 20, pool: ['putong', 'jipao', 'zibao', 'zhongjia', 'du'], per: [12, 20], mul: 2.96,
-      cond: 'clear', rw: { gold: 5330, M04: 10 }, unlock: '3-4', scene: 'city' },
+      cond: 'clear', rw: { gold: 5330, M04: 10 }, unlock: '3-4', scene: 'bridge' },
     { id: '3-6', ch: 3, n: '市政厅', waves: 20, pool: ['putong', 'jipao', 'zibao', 'zhongjia', 'du'], per: [12, 20], mul: 2.96,
       cond: 'clear', rw: { gold: 5680, M04: 10 }, unlock: '3-5', scene: 'tunnel' },
     { id: '3-7', ch: 3, n: '广播塔', waves: 20, pool: ['putong', 'jipao', 'zibao', 'zhongjia', 'du'], per: [12, 20], mul: 2.96,
@@ -395,7 +395,7 @@ const EX = {
     { id: '3-8', ch: 3, n: '中央车站', waves: 20, pool: ['putong', 'jipao', 'zibao', 'zhongjia', 'du'], per: [12, 20], mul: 2.96,
       cond: 'clear', rw: { gold: 6390, M04: 10 }, unlock: '3-7', scene: 'snow' },
     { id: '3-9', ch: 3, n: '立交桥', waves: 20, pool: ['putong', 'jipao', 'zibao', 'zhongjia', 'du'], per: [12, 20], mul: 2.96,
-      cond: 'clear', rw: { gold: 6740, M04: 10 }, unlock: '3-8', scene: 'city' },
+      cond: 'clear', rw: { gold: 6740, M04: 10 }, unlock: '3-8', scene: 'bridge' },
     { id: '3-10', ch: 3, n: 'BOSS·开垦者&感染母体', waves: 20, pool: ['putong', 'jipao', 'zibao', 'zhongjia', 'du'], per: [12, 20], mul: 2.96,
       cond: 'bossAll', boss: ['kaiken', 'mama'], rw: { gold: 7100, M04: 10 }, unlock: '3-9', scene: 'wasteland' },
     { id: '4-1', ch: 4, n: '厂房大门', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan'], per: [13, 21], mul: 5.09,
@@ -481,17 +481,17 @@ const EX = {
     { id: '8-1', ch: 8, n: '裂谷入口', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'huoyan', 'bingbao'], per: [15, 25], mul: 44.53,
       cond: 'clear', rw: { gold: 674650, M04: 22 }, unlock: '7-10', scene: 'tunnel' },
     { id: '8-2', ch: 8, n: '深渊阶梯', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'huoyan', 'bingbao'], per: [15, 25], mul: 44.53,
-      cond: 'clear', rw: { gold: 735360, M04: 22 }, unlock: '8-1', scene: 'tunnel' },
+      cond: 'clear', rw: { gold: 735360, M04: 22 }, unlock: '8-1', scene: 'rift' },
     { id: '8-3', ch: 8, n: '溶洞', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'huoyan', 'bingbao'], per: [15, 25], mul: 44.53,
-      cond: 'clear', rw: { gold: 796080, M04: 22 }, unlock: '8-2', scene: 'tunnel' },
+      cond: 'clear', rw: { gold: 796080, M04: 22 }, unlock: '8-2', scene: 'rift' },
     { id: '8-4', ch: 8, n: '地下暗河', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'huoyan', 'bingbao'], per: [15, 25], mul: 44.53,
-      cond: 'clear', rw: { gold: 856800, M04: 22 }, unlock: '8-3', scene: 'tunnel' },
+      cond: 'clear', rw: { gold: 856800, M04: 22 }, unlock: '8-3', scene: 'rift' },
     { id: '8-5', ch: 8, n: '骨窟', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'huoyan', 'bingbao'], per: [15, 25], mul: 44.53,
-      cond: 'clear', rw: { gold: 917520, M04: 22 }, unlock: '8-4', scene: 'tunnel' },
+      cond: 'clear', rw: { gold: 917520, M04: 22 }, unlock: '8-4', scene: 'rift' },
     { id: '8-6', ch: 8, n: '毒沼', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'huoyan', 'bingbao'], per: [15, 25], mul: 44.53,
       cond: 'clear', rw: { gold: 978240, M04: 22 }, unlock: '8-5', scene: 'factory' },
     { id: '8-7', ch: 8, n: '虫巢', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'huoyan', 'bingbao'], per: [15, 25], mul: 44.53,
-      cond: 'clear', rw: { gold: 1038960, M04: 22 }, unlock: '8-6', scene: 'tunnel' },
+      cond: 'clear', rw: { gold: 1038960, M04: 22 }, unlock: '8-6', scene: 'rift' },
     { id: '8-8', ch: 8, n: '熔岩缝', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'huoyan', 'bingbao'], per: [15, 25], mul: 44.53,
       cond: 'clear', rw: { gold: 1099670, M04: 22 }, unlock: '8-7', scene: 'field' },
     { id: '8-9', ch: 8, n: '深渊祭坛', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'huoyan', 'bingbao'], per: [15, 25], mul: 44.53,
@@ -501,13 +501,13 @@ const EX = {
     { id: '9-1', ch: 9, n: '母巢外壁', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'dianci', 'fengren'], per: [16, 26], mul: 76.6,
       cond: 'clear', rw: { gold: 1889010, M05: 25 }, unlock: '8-10', scene: 'factory' },
     { id: '9-2', ch: 9, n: '孵化室', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'dianci', 'fengren'], per: [16, 26], mul: 76.6,
-      cond: 'clear', rw: { gold: 2059020, M05: 25 }, unlock: '9-1', scene: 'factory' },
+      cond: 'clear', rw: { gold: 2059020, M05: 25 }, unlock: '9-1', scene: 'nest' },
     { id: '9-3', ch: 9, n: '黏液通道', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'dianci', 'fengren'], per: [16, 26], mul: 76.6,
-      cond: 'clear', rw: { gold: 2229030, M05: 25 }, unlock: '9-2', scene: 'factory' },
+      cond: 'clear', rw: { gold: 2229030, M05: 25 }, unlock: '9-2', scene: 'nest' },
     { id: '9-4', ch: 9, n: '蛛网回廊', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'dianci', 'fengren'], per: [16, 26], mul: 76.6,
-      cond: 'clear', rw: { gold: 2399040, M05: 25 }, unlock: '9-3', scene: 'factory' },
+      cond: 'clear', rw: { gold: 2399040, M05: 25 }, unlock: '9-3', scene: 'nest' },
     { id: '9-5', ch: 9, n: '卵室', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'dianci', 'fengren'], per: [16, 26], mul: 76.6,
-      cond: 'clear', rw: { gold: 2569050, M05: 25 }, unlock: '9-4', scene: 'factory' },
+      cond: 'clear', rw: { gold: 2569050, M05: 25 }, unlock: '9-4', scene: 'nest' },
     { id: '9-6', ch: 9, n: '守卫巢', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'dianci', 'fengren'], per: [16, 26], mul: 76.6,
       cond: 'clear', rw: { gold: 2739060, M05: 25 }, unlock: '9-5', scene: 'tunnel' },
     { id: '9-7', ch: 9, n: '菌毯', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'dianci', 'fengren'], per: [16, 26], mul: 76.6,
@@ -521,13 +521,13 @@ const EX = {
     { id: '10-1', ch: 10, n: '最后阵地', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue'], per: [16, 26], mul: 131.75,
       cond: 'clear', rw: { gold: 5289230, M01: 28 }, unlock: '9-10', scene: 'wasteland' },
     { id: '10-2', ch: 10, n: '断墙', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue'], per: [16, 26], mul: 131.75,
-      cond: 'clear', rw: { gold: 5765260, M01: 28 }, unlock: '10-1', scene: 'wasteland' },
+      cond: 'clear', rw: { gold: 5765260, M01: 28 }, unlock: '10-1', scene: 'final' },
     { id: '10-3', ch: 10, n: '弹药库', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue'], per: [16, 26], mul: 131.75,
-      cond: 'clear', rw: { gold: 6241290, M01: 28 }, unlock: '10-2', scene: 'wasteland' },
+      cond: 'clear', rw: { gold: 6241290, M01: 28 }, unlock: '10-2', scene: 'final' },
     { id: '10-4', ch: 10, n: '指挥所', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue'], per: [16, 26], mul: 131.75,
-      cond: 'clear', rw: { gold: 6717320, M01: 28 }, unlock: '10-3', scene: 'wasteland' },
+      cond: 'clear', rw: { gold: 6717320, M01: 28 }, unlock: '10-3', scene: 'final' },
     { id: '10-5', ch: 10, n: '血色战壕', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue'], per: [16, 26], mul: 131.75,
-      cond: 'clear', rw: { gold: 7193350, M01: 28 }, unlock: '10-4', scene: 'wasteland' },
+      cond: 'clear', rw: { gold: 7193350, M01: 28 }, unlock: '10-4', scene: 'final' },
     { id: '10-6', ch: 10, n: '残破街垒', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue'], per: [16, 26], mul: 131.75,
       cond: 'clear', rw: { gold: 7669380, M01: 28 }, unlock: '10-5', scene: 'field' },
     { id: '10-7', ch: 10, n: '终末广场', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue'], per: [16, 26], mul: 131.75,
@@ -535,7 +535,7 @@ const EX = {
     { id: '10-8', ch: 10, n: '人类旗帜', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue'], per: [16, 26], mul: 131.75,
       cond: 'clear', rw: { gold: 8621440, M01: 28 }, unlock: '10-7', scene: 'city' },
     { id: '10-9', ch: 10, n: '黎明前夜', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue'], per: [16, 26], mul: 131.75,
-      cond: 'clear', rw: { gold: 9097470, M01: 28 }, unlock: '10-8', scene: 'wasteland' },
+      cond: 'clear', rw: { gold: 9097470, M01: 28 }, unlock: '10-8', scene: 'final' },
     { id: '10-10', ch: 10, n: 'BOSS·尸王', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue'], per: [16, 26], mul: 131.75,
       cond: 'boss', boss: 'shiwang', rw: { gold: 9573500, M01: 28 }, unlock: '10-9', scene: 'factory' },
   ],
@@ -543,14 +543,14 @@ const EX = {
   chapters: [
     { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️', img: 'assets/scene/city.jpg?v=20270105a' },
     { id: 2, n: '第二章 · 地下设施', icon: '🚇', img: 'assets/scene/tunnel.jpg?v=20270105a' },
-    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/city.jpg?v=20270105a' },
+    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270411a' },
     { id: 4, n: '第四章 · 废弃工厂', icon: '🏭', img: 'assets/scene/factory.jpg?v=20270105a' },
     { id: 5, n: '第五章 · 荒野麦田', icon: '🌾', img: 'assets/scene/field.jpg?v=20270105a' },
     { id: 6, n: '第六章 · 辐射废墟', icon: '☢️', img: 'assets/scene/wasteland.jpg?v=20270105a' },
     { id: 7, n: '第七章 · 雪山哨站', icon: '🏔️', img: 'assets/scene/snow.jpg?v=20270105a' },
-    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/tunnel.jpg?v=20270105a' },
-    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/factory.jpg?v=20270105a' },
-    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/city.jpg?v=20270105a' },
+    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270411a' },
+    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270411a' },
+    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270411a' },
   ],
 
   /* 无尽模式解锁门槛：填关卡 id（如 '3-5'）则要求先通关该关；null/空 = 默认解锁。
@@ -735,7 +735,7 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270410a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270411a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/tokens.css', ver:'20270330a', size: 0 },
@@ -773,6 +773,10 @@ const EX = {
     { id: 'endless_time', n: '无尽时长', use: '无尽参与', trig: '无尽结束', pr: 'P1' },
     { id: 'dau_retention', n: '留存', use: '次日/7日留存', trig: '每日', pr: 'P0' },
     { id: 'funnel_convert', n: '新手漏斗', use: '引导转化', trig: '引导完成', pr: 'P0' },
+    /* V1.0.2 O-03：反作弊哨兵上报（只记录不阻断，运营在后台处置）。
+       此前 dau_retention 在表里被写了【两遍】，后台取其中一条、另一条成为死配置，
+       统计口径可能不一致 —— 已去重。 */
+    { id: 'save_tamper', n: '存档异常', use: '反作弊审计', trig: '每日校验', pr: 'P1' },
     /* 以下两条此前在代码里已埋点(engine.js level_up / ui.js cg_show)，
      * 但表里没定义 —— 后果：后台按 def 取中文名取不到，报表显示成英文 id，
      * 且优先级被兜底判成 P2（P0/P1 筛选里看不到这两条真实数据）。补登记。 */
@@ -2178,10 +2182,19 @@ const EX = {
     city: 'assets/scene/city.jpg', wasteland: 'assets/scene/wasteland.jpg',
     factory: 'assets/scene/factory.jpg', tunnel: 'assets/scene/tunnel.jpg',
     field: 'assets/scene/field.jpg', snow: 'assets/scene/snow.jpg',
+    /* V1.0.2 A-02：新增 4 张章节场景，消除第 3/8/9/10 章复用旧图 */
+    bridge: 'assets/scene/bridge.jpg', rift: 'assets/scene/rift.jpg',
+    nest: 'assets/scene/nest.jpg', final: 'assets/scene/final.jpg',
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270409a',
+  sceneV: '20270411a',
+
+  /* 云端 API 代理（V1.0.2 D-01）：留空 = 直连 GitHub（令牌在客户端，仅开发/内测可接受）。
+     部署 worker/ 后填入 Worker 域名（如 https://zb-api.xxx.workers.dev），
+     客户端即自动改为「走代理 + 不携带令牌」，随后可吊销 GitHub 令牌。
+     填了此项后改存档/读配置等业务代码零改动。 */
+  API_PROXY: '',
 
   /* 品质与元素 */
   qualities: ['白', '绿', '蓝', '紫', '橙', '红'],
