@@ -577,14 +577,14 @@ const EX = {
   chapters: [
     { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️', img: 'assets/scene/city.jpg?v=20270105a' },
     { id: 2, n: '第二章 · 地下设施', icon: '🚇', img: 'assets/scene/tunnel.jpg?v=20270105a' },
-    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270413a' },
+    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270414a' },
     { id: 4, n: '第四章 · 废弃工厂', icon: '🏭', img: 'assets/scene/factory.jpg?v=20270105a' },
     { id: 5, n: '第五章 · 荒野麦田', icon: '🌾', img: 'assets/scene/field.jpg?v=20270105a' },
     { id: 6, n: '第六章 · 辐射废墟', icon: '☢️', img: 'assets/scene/wasteland.jpg?v=20270105a' },
     { id: 7, n: '第七章 · 雪山哨站', icon: '🏔️', img: 'assets/scene/snow.jpg?v=20270105a' },
-    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270413a' },
-    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270413a' },
-    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270413a' },
+    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270414a' },
+    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270414a' },
+    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270414a' },
   ],
 
   /* 无尽模式解锁门槛：填关卡 id（如 '3-5'）则要求先通关该关；null/空 = 默认解锁。
@@ -769,7 +769,7 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270413a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270414a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/tokens.css', ver:'20270330a', size: 0 },
@@ -1058,7 +1058,7 @@ const EX = {
      *   合计【理论上限 825 点】，实测全成就+全图鉴满号 p.ach 恰为 825。
      * 而 AS11 定价 900 > 825 —— 即使玩家一分钱不花、把所有成就和图鉴全部打满，
      *   也永远差 75 点，这块传说芯片是商店里唯一一件【绝对不可达】的商品。
-     *   （更现实的处境：买过 AS12 称号(500) 之后只剩 325，连半数都不到。）
+     *   （更现实的处阶：买过 AS12 称号(500) 之后只剩 325，连半数都不到。）
      * 修法：① 定价降到 780（低于 825 上限，留出余量，满收集玩家买得起）；
      *       ② 每日/每周任务补发少量成就点（见下方 tasks），让商店有长期来源，
      *          否则 825 花完商店就彻底变死面板。 */
@@ -2254,7 +2254,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270413a',
+  sceneV: '20270414a',
 
   /* 云端 API 代理（V1.0.2 D-01）：留空 = 直连 GitHub（令牌在客户端，仅开发/内测可接受）。
      部署 worker/ 后填入 Worker 域名（如 https://zb-api.xxx.workers.dev），
@@ -2336,6 +2336,47 @@ const EX = {
       if (!this._nonEmpty(this[k]) && s[k]) { this[k] = JSON.parse(JSON.stringify(s[k])); n++; }
     });
     return n;
+  },
+
+  /* ================================================================
+   * V1.1.0 末日废土 · 军衔系统（策划部 P-10 / 程序部 D-10）
+   *
+   * 设计定位：不是换皮，而是给"通关之后"补一条长线成长线。
+   * 主线 10 章 100 关打通后玩家失去目标（实测 V1.0.x 后期留存断崖），
+   * 军衔线提供 50 阶可追求的成长，且与战斗数值真实挂钩。
+   *
+   * 属性投放口径（策划）：每层 +1.5% 攻击 / +1.2% 生命，
+   * 每 5 层额外 +0.5% 暴击（取整到 0.005 步长，避免浮点噪点）。
+   * 满阶（50 层）累计 +75% 攻击 / +60% 生命 / +5% 暴击 ——
+   * 强但不破坏数值平衡：与满配战力量级相比属于 1.5 倍以内的加成。
+   *
+   * 军功（spirit）唯一产出：关卡结算 + 每日活跃 + 运营活动。
+   * 不做付费直购（商业化安全：令牌仍在客户端，见制作人看板）。
+   * ================================================================ */
+  REALM: {
+    ON: true,                       /* 一键关掉整条军衔线（回退用，与难度曲线同套开关约定） */
+    MAX_LAYER: 50,                  /* 5 阶 × 10 层 */
+    /* 五阶军衔：与末日废土命名对齐，颜色用于军衔徽章与进度条 */
+    TIERS: [
+      { id: 'lq', n: '新兵', from: 1,  to: 10, color: '#7fd6a8', icon: 'assets/icon/realm_lq.png' },
+      { id: 'zj', n: '老兵', from: 11, to: 20, color: '#6fc7f0', icon: 'assets/icon/realm_zj.png' },
+      { id: 'jd', n: '精英', from: 21, to: 30, color: '#f2c14e', icon: 'assets/icon/realm_jd.png' },
+      { id: 'yy', n: '王牌', from: 31, to: 40, color: '#c98bf5', icon: 'assets/icon/realm_yy.png' },
+      { id: 'hs', n: '传奇', from: 41, to: 50, color: '#ff8a6b', icon: 'assets/icon/realm_hs.png' },
+    ],
+    /* 每阶属性（乘算基础值，最终 bonus = layer × 该值） */
+    ATK_PER: 0.015,
+    HP_PER: 0.012,
+    CRIT_EVERY: 5,                  /* 每 5 层 */
+    CRIT_PER: 0.005,
+    /* 晋升消耗军功：cost(n) = round(COST0 × GROW^(n-1))，n 为晋升到第 n 层 */
+    COST0: 120,
+    COST_GROW: 1.085,
+    /* 关卡结算军功产出：按章节递增（第 1 章 3~5，第 10 章 30~50） */
+    DROP_BASE: 3,
+    DROP_STEP: 3,
+    /* 军功上限：防刷（后台改档写入超大值也不会污染经济） */
+    SPIRIT_CAP: 9999999,
   },
 };
 
