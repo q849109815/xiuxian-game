@@ -270,13 +270,21 @@ const BT = {
     city: 'assets/scene/city.jpg', factory: 'assets/scene/factory.jpg',
     wasteland: 'assets/scene/wasteland.jpg', tunnel: 'assets/scene/tunnel.jpg',
     field: 'assets/scene/field.jpg', snow: 'assets/scene/snow.jpg',
+    /* V1.0.2 A-02 新增（与 EX.sceneImg 同步）：bridge=断桥城市核心 rift=深渊裂谷
+       nest=母巢外围 final=最终防线 */
+    bridge: 'assets/scene/bridge.jpg', rift: 'assets/scene/rift.jpg',
+    nest: 'assets/scene/nest.jpg', final: 'assets/scene/final.jpg',
   },
 
   /* ---------------- 场景 ---------------- */
+  /* V1.0.2 A-02：原先固定 6 张图按 ch%6 循环，第 3/8/9/10 章必然复用前面章节的图。
+     现改为逐章唯一主场景（与关卡表 scene 字段、EX.sceneImg 三处对齐）。 */
+  CH_SCENE: ['city', 'tunnel', 'bridge', 'factory', 'field', 'wasteland',
+             'snow', 'rift', 'nest', 'final'],
   sceneFor(ch) {
     /* 保护：ch<=0（无尽/异常）时原先会取到下标 -1 → undefined → 场景图永远空白 */
-    const i = Math.max(0, (Number(ch) || 1) - 1) % 6;
-    return ['city', 'factory', 'wasteland', 'tunnel', 'field', 'snow'][i];
+    const i = Math.max(0, (Number(ch) || 1) - 1);
+    return this.CH_SCENE[i % this.CH_SCENE.length];
   },
   /* 场景图 url 解析：优先读 EX.sceneImg（后台运营配置，可热更），
    * BT.SCENES 仅作兜底。
