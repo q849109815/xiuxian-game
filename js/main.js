@@ -1606,10 +1606,21 @@ function onBattleEnd(res, d) {
   if (battleRaid && res === 'win') {
     try {
       const _evr = E.eventDropRoll(P) || [];
+      let _evn = 0;
       _evr.forEach((g) => {
         const n = E.safeAmt(g && g.n);
-        if (n > 0 && g && g.item) rw.mat[g.item] = (rw.mat[g.item] || 0) + n;
+        if (n > 0 && g && g.item) { rw.mat[g.item] = (rw.mat[g.item] || 0) + n; _evn += n; }
       });
+      /* V1.1.0 六部门联合改善 · 策划/运营部：
+       * DROP_EVENT_TXT 此前定义了却全项目零调用（死配置）——
+       * 注释写明「非空时界面显示掉落 ×N 角标」，但没有任何一处读它。
+       * 后果：运营在后台填了活动名，界面角标永不显示，
+       *       运营以为自己改生效了、玩家完全感知不到活动。
+       * 现在真接线：活动掉落出货时弹出角标提示（未填活动名则静默）。 */
+      if (_evn > 0) {
+        const _evt = (typeof EX !== 'undefined' && EX.DROP_EVENT_TXT) || '';
+        if (_evt) { try { UI.toast(_evt + ' 掉落 ×' + _evn, 'ok'); } catch (e) {} }
+      }
     } catch (e) {}
   }
   if (res !== 'win') {
