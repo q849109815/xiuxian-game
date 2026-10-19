@@ -1053,6 +1053,17 @@ r_tavern(p, tab) {
           <div class="kv"><span>${b.n}</span><b>HP ${E.fmt(hp)} / ${E.fmt(b.maxHp)}</b></div>
           <div class="sub" style="padding:4px 2px">${b.desc}</div>
           <button class="btn" id="lgBoss" style="width:100%;margin-top:6px" ${okSt ? '' : 'disabled'}>${okSt ? '挑战（体力 ' + b.cost + '）' : '体力不足'}</button>
+          ${/* V1.0.4 社交深化：本周贡献榜 */ (function () {
+            const rk = (window.E && E.lgBossRank) ? E.lgBossRank(p) : [];
+            if (!rk.length) return '';
+            const myIdx = rk.findIndex((x) => x.me);
+            const top = rk.slice(0, 5);
+            return `<div style="margin-top:8px;border-top:1px solid var(--border,rgba(255,255,255,.08));padding-top:6px">
+              <div class="kv"><span>本周我的输出</span><b>${E.fmt(p.lb && p.lb.dmg || 0)}${myIdx >= 0 ? ' · 第 ' + (myIdx + 1) + ' 名' : ''}</b></div>
+              ${top.map((x, i) => `<div class="kv"${x.me ? ' style="color:var(--gold,#e8c07a)"' : ''}><span>${i + 1}. ${UI.esc(x.n)}${x.me ? '（我）' : ''}</span><b>${E.fmt(x.dmg)}</b></div>`).join('')}
+              <div class="sub" style="padding:4px 2px">每周一重置，排名越高越能带动全团讨伐进度。</div>
+            </div>`;
+          })()}
         </div>`;
       })()}
       <div class="card" style="margin-top:8px"><div class="card-t"><img class="ei" src="assets/icon/contrib.jpg" style="width:17px;height:17px;border-radius:4px;object-fit:contain;vertical-align:-3px;margin-right:4px">军团贡献
@@ -1122,6 +1133,8 @@ r_tavern(p, tab) {
       if (p.lb.hp == null) p.lb.hp = b.maxHp;
       const dmg = Math.max(1, Math.floor((E.power(p) || 0) * 1.2));
       p.lb.hp = Math.max(0, p.lb.hp - dmg);
+      /* V1.0.4 贡献榜：累计本人本周输出（lb.wk 切换时随血量一起归零） */
+      p.lb.dmg = Math.max(0, Number(p.lb.dmg || 0)) + dmg;
       const contrib = b.contribPerHit || 0;
       p.gold = (p.gold || 0) + (b.goldPerHit || 0);
       p.legionExp = (p.legionExp || 0) + contrib;
