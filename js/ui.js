@@ -944,7 +944,7 @@ r_realm(p, tab) {
         ? '<div class="sub" style="padding:8px 2px">已达传奇巅峰，军衔无上。</div>'
         : `<div class="sub" style="padding:4px 2px">下一层消耗军功 <b>${E.fmt(nextCost)}</b>${canUp ? '' : '（还差 ' + E.fmt(need) + '）'}</div>
            <button class="btn ${canUp ? 'pri' : 'd'} rl-up" ${canUp ? '' : 'disabled'}>${canUp ? '晋 升' : '军功不足'}</button>`}
-      <div class="sub" style="padding:6px 2px">军功来源：通关关卡（章节越高越多）、活动与运营发放。</div>
+      <div class="sub" style="padding:6px 2px">军功来源：通关关卡（章节越高越多）、每日活跃宝箱（${[30, 60, 100].map((v) => ((EX.REALM && EX.REALM.ACT_SPIRIT) ? (EX.REALM.ACT_SPIRIT[String(v)] || 0) : 0) + '/' + v + '档').join('、')}）、活动与运营发放。</div>
     </div>
     <div class="card"><div class="card-t">五阶军衔总览</div><div class="rl-tiers">${tiersHTML}</div></div>`;
   } catch (e) {
@@ -1006,6 +1006,20 @@ r_season(p, tab) {
       ${rows || '<div class="sub">暂无档位</div>'}
     </div>
     <div class="card">
+      <div class="card-t">赛季循环奖励<span class="sub">阶梯领满后每 ${(() => { const L = (EX.SEASON && EX.SEASON.LOOP) || null; return L ? Number(L.every) || 0 : 0; })()} 分可再领</span></div>
+      ${(() => {
+        const L = (EX.SEASON && EX.SEASON.LOOP) || null;
+        if (!L || !L.rw) return '<div class="sub" style="padding:6px 2px">未开启循环奖励</div>';
+        const need = E.seasonLoopNeed(p);
+        if (need == null) return '<div class="sub" style="padding:6px 2px">本赛季循环奖励已领满（' + E.seasonLoopTaken(p) + ' 次）</div>';
+        const can = s.score >= need;
+        const rwTxt = Object.keys(L.rw || {}).map((k) => E.itemName(k) + '×' + L.rw[k]).join('、');
+        return '<div class="sn-row"><div class="sn-info"><b>已领 ' + E.seasonLoopTaken(p) + ' 次 · 下一档 ' + need + ' 积分</b>'
+          + '<div class="sub">' + this.esc(rwTxt) + '</div></div>'
+          + (can ? '<button class="btn pri sn-loop">领取</button>' : '<span class="sub">未达成</span>') + '</div>';
+      })()}
+    </div>
+    <div class="card">
       <div class="card-t">积分来源</div>
       <div class="sn-src">${srcHTML}</div>
     </div>`;
@@ -1014,6 +1028,19 @@ r_season(p, tab) {
   }
 },
 b_season(p, tab) {
+  const lp = document.querySelector('#pnBody .sn-loop');
+  if (lp) {
+    lp.onclick = () => {
+      try {
+        const r = E.seasonLoopClaim(p);
+        if (!r.ok) { if (window.SND) SND.play('error'); this.toast(r.msg || '领取失败', 'bad'); return; }
+        if (window.SND) SND.play('season');
+        this.toast(r.msg, 'ok');
+        E.save(p);
+        this.open('season'); this.home();
+      } catch (e) { if (window.SND) SND.play('error'); }
+    };
+  }
   const btns = document.querySelectorAll('#pnBody .sn-claim');
   btns.forEach((b) => {
     b.onclick = () => {
@@ -1024,7 +1051,7 @@ b_season(p, tab) {
           this.toast(r.msg || '领取失败', 'bad');
           return;
         }
-        if (window.SND) SND.play('upgrade');
+        if (window.SND) SND.play('season');
         this.toast(r.msg, 'ok');
         E.save(p);
         this.open('season'); this.home();
