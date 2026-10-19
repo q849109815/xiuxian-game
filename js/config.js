@@ -701,14 +701,14 @@ const EX = {
   chapters: [
     { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️', img: 'assets/scene/city.jpg?v=20270105a' },
     { id: 2, n: '第二章 · 地下设施', icon: '🚇', img: 'assets/scene/tunnel.jpg?v=20270105a' },
-    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270419a' },
+    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270420a' },
     { id: 4, n: '第四章 · 废弃工厂', icon: '🏭', img: 'assets/scene/factory.jpg?v=20270105a' },
     { id: 5, n: '第五章 · 荒野麦田', icon: '🌾', img: 'assets/scene/field.jpg?v=20270105a' },
     { id: 6, n: '第六章 · 辐射废墟', icon: '☢️', img: 'assets/scene/wasteland.jpg?v=20270105a' },
     { id: 7, n: '第七章 · 雪山哨站', icon: '🏔️', img: 'assets/scene/snow.jpg?v=20270105a' },
-    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270419a' },
-    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270419a' },
-    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270419a' },
+    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270420a' },
+    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270420a' },
+    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270420a' },
     { id: 11, n: '第十一章 · 前哨反攻', icon: '🛡️', img: 'assets/scene/outpost.jpg?v=20270415a' },
     { id: 12, n: '第十二章 · 断桥水坝', icon: '🌊', img: 'assets/scene/dam.jpg?v=20270415a' },
     { id: 13, n: '第十三章 · 矿坑深处', icon: '⛏️', img: 'assets/scene/mine.jpg?v=20270415a' },
@@ -935,7 +935,7 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270419a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270420a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/tokens.css', ver:'20270330a', size: 0 },
@@ -990,26 +990,35 @@ const EX = {
    *       LANGS 只留 zh，界面不再提供语言切换入口，
    *       txt() 恒返回简体中文，避免任何残留语种串味。
    * ===================================================
-   * 【V1.1.0 六部门联合改善 · 制作人批注】
-   * 本表当前为「预留层」，界面文案仍走硬编码，txt() 全项目零调用。
-   * 单语言版本下全量接线无收益，故不强制替换；但必须留档说明，
-   * 防止后续误以为「改这里就能改界面文案」——改了不会生效。
-   * 若将来恢复多语言，接线点统一走 EX.txt(id)，届时本批注删除。
+   * 【V1.1.0 六部门联合改善 · 已收口】
+   * 本表由「空头预留层」升级为【运营文案热改层】：
+   *   TXT_001~006 已真接线（出击 / 设置 / 结算标题 / 复活 / 武器强化 / 技能选择），
+   *   运营配 TEXT_OVERRIDE 即可热改，不发版生效；默认值对齐现有界面，视觉零变化。
+   *   TXT_007（波次来袭横幅）、TXT_008（无尽生存时间）暂无对应界面，
+   *   已登记为策划部 P-14 待办，界面落地后统一走 EX.txt(id)。
    * =================================================== */
   LANGS: [
     { k: 'zh', n: '简体中文' },
   ],
   I18N: {
-    TXT_001: { zh: '开始游戏' },
+    /* 【V1.1.0 联合改善】zh 默认值一律对齐「当前界面真实文案」，接线后视觉零变化。 */
+    TXT_001: { zh: '出击' },
     TXT_002: { zh: '设置' },
-    TXT_003: { zh: '通关' },
-    TXT_004: { zh: '看广告复活' },
-    TXT_005: { zh: '武器升级' },
-    TXT_006: { zh: '技能选择' },
+    TXT_003: { zh: '恭 喜 获 得' },
+    TXT_004: { zh: '看广告原地复活' },
+    TXT_005: { zh: '强化' },
+    TXT_006: { zh: '选择技能' },
     TXT_007: { zh: '大量僵尸来袭' },
     TXT_008: { zh: '生存时间' },
   },
+  /* 【V1.1.0 联合改善】运营文案覆盖层
+   * 运营在云端/后台配 TEXT_OVERRIDE = { TXT_001:'立即出击', ... } 即可热改关键界面文案，
+   * 不需要发版。未配置（默认 {}）时恒取上表 zh，行为与接线前完全一致。
+   * 安全约束：只接受非空字符串，其它类型一律忽略回退默认值，防止后台填错把界面刷成 undefined。 */
+  TEXT_OVERRIDE: {},
   txt(id, lang) {
+    const ov = this.TEXT_OVERRIDE && this.TEXT_OVERRIDE[id];
+    if (typeof ov === 'string' && ov.trim()) return ov;
     const e = this.I18N[id]; if (!e) return id;
     /* 单语言版本：忽略传入的 lang，恒取简体中文 */
     return e.zh || id;
@@ -2466,7 +2475,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270419a',
+  sceneV: '20270420a',
 
   /* 云端 API 代理（V1.0.2 D-01）：留空 = 直连 GitHub（令牌在客户端，仅开发/内测可接受）。
      部署 worker/ 后填入 Worker 域名（如 https://zb-api.xxx.workers.dev），
