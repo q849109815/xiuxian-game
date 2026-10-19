@@ -9,7 +9,7 @@ const E = {
   /* 武器：线性成长，每级 +20%；每 5 级进阶一次 */
   GUN_GROW: 0.20,
   /* =========================================================
-   * 数值平衡常数（卡关 → 攒金币 → 升级武器 → 突破 循环）
+   * 数值平衡常数（卡关 → 攒金币 → 升级武器 → 晋升 循环）
    * ========================================================= */
   GUN_GROW_RATE: 1.078,      /* 武器攻击复利率：每级 ×1.078 */
   /* 武器升级费复利率。
@@ -157,6 +157,9 @@ const E = {
       avatar: '🧑‍🚀', avatarImg: gender === 'f' ? 'assets/char/hero_f.jpg' : 'assets/char/hero_m.jpg',
       lv: 1, xp: 0, tp: 3,
       gold: 2000, diamond: 100, ach: 0,
+      /* V1.1.0 军衔：spirit=军功，realm=层数(0=未入门)。
+       * 老存档缺失时由 sanitize 的 NUMS 兜底补 0，行为与"未开始修炼"一致。 */
+      spirit: 0, realm: 0,
       /* 材料（资料物品表） */
       mat: { M01: 0, M02: 0, M03: 0, M04: 0, M05: 0, P01: 0, P02: 0 },
       /* 消耗品 */
@@ -378,7 +381,11 @@ const E = {
          /* v1.0 注册日(YYYYMMDD)：新手7日唯一判据。
           * 被写成字符串/NaN 时 newbieDay 会算出 NaN → 面板显示「注册第 NaN 天」，
           * 且 cur >= it.d 恒 false → 7 天奖励永远领不到。 */
-         'regDay'],
+         'regDay',
+         /* V1.1.0 军衔：spirit=军功余额，realm=当前层数(0~50)。
+          * 被后台改档写成 'abc' / NaN / -1 时必须钳制 ——
+          * 否则 realmBonus 算出 NaN 会让 attrs/战力全链污染。 */
+         'spirit','realm'],
   /* mailGot / cdkGot 是【数组】（存已领邮件ID、已兑换码），
    * 此前误列进 OBJS → sanitize 把数组改写成对象 {}，
    * 实测：登录后 mailGot=['m1','m2'] → {}，接着执行
@@ -450,6 +457,13 @@ const E = {
       p[k] = Math.max(0, _n);
     });
     p.stamina = Math.min(EX.STAMINA_MAX || 100, p.stamina);
+    /* V1.1.0 军衔：层数钳到 0~MAX_LAYER，军功钳到 0~SPIRIT_CAP。
+     * 不钳制的后果与 gunLv 溢出同类：realm=999 → bonus 爆炸 → 战力溢出，
+     * realm='abc' → NaN 污染整条属性链。与既有钳制口径一致（先 max(0) 再封顶）。 */
+    const _RC = (EX.REALM || {});
+    const _rMax = _RC.MAX_LAYER || 50;
+    p.realm = Math.max(0, Math.min(_rMax, Math.floor(N(p.realm, 0))));
+    p.spirit = Math.max(0, Math.min(_RC.SPIRIT_CAP || 9999999, Math.floor(N(p.spirit, 0))));
     /* 后台 GM 可把 gunLv 设成任意值，不钳制会让 1.078^lv 溢出成 Infinity，
      * 进而让战斗内的 coin 与结算金币一起溢出。上限取 GUN_MAX_LV。 */
     p.gunLv = Math.max(1, Math.min(this.GUN_MAX_LV, p.gunLv || 1));
@@ -1427,6 +1441,65 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 属性汇总（资料伤害公式）
    * 基础伤害 = 武器伤害 × (1 + 攻击强化%)
    * ================================================ */
+  /* ================================================================
+   * V1.1.0 末日废土 · 军衔系统（策划 P-10 / 程序 D-10）
+   *
+   * 定位：通关之后的长线成长线。主线 10 章 100 关打完后玩家没有目标，
+   * 军衔线给出 50 阶可追求的成长，且与 atk/hp/crit 真实挂钩。
+   *
+   * 数值口径（与参考游戏"属性加成必须能被面板验证"的做法一致）：
+   *   每层 +1.5% 攻击 / +1.2% 生命；每 5 层额外 +0.5% 暴击。
+   *   满阶 50 层 = +75% 攻击 / +60% 生命 / +5% 暴击。
+   * ================================================================ */
+  realmBonus(p) {
+    const R = (typeof EX !== 'undefined' && EX.REALM) || {};
+    if (R.ON === false) return { atkPct: 0, hpPct: 0, crit: 0 };
+    /* 钳制必须在入口做：后台热改档可绕过 sanitize 直接写 p.realm，
+     * 'abc' / {} / NaN 会让整条属性链变 NaN（与 starBonus 同一教训）。 */
+    const n = Math.max(0, Math.min(R.MAX_LAYER || 50, Math.floor(Number(p && p.realm) || 0)));
+    return {
+      atkPct: n * (R.ATK_PER || 0.015),
+      hpPct: n * (R.HP_PER || 0.012),
+      crit: Math.floor(n / (R.CRIT_EVERY || 5)) * (R.CRIT_PER || 0.005),
+    };
+  },
+  /* 层数 → 军衔（返回 TIERS 中的一项 + 阶内层号） */
+  realmTier(n) {
+    const R = (typeof EX !== 'undefined' && EX.REALM) || {};
+    const list = R.TIERS || [];
+    n = Math.max(0, Math.min(R.MAX_LAYER || 50, Math.floor(Number(n) || 0)));
+    for (const t of list) if (n >= t.from && n <= t.to) return { t, inner: n - t.from + 1, layer: n };
+    return { t: null, inner: 0, layer: n };
+  },
+  /* 晋升到第 n 层所需军功（n 从 1 起） */
+  realmCost(n) {
+    const R = (typeof EX !== 'undefined' && EX.REALM) || {};
+    n = Math.max(1, Math.floor(Number(n) || 1));
+    return Math.round((R.COST0 || 120) * Math.pow(R.COST_GROW || 1.085, n - 1));
+  },
+  /* 晋升：扣军功 +1 层，返回 {ok, reason, layer} */
+  realmUp(p) {
+    if (!p) return { ok: false, reason: 'nodata' };
+    const R = (typeof EX !== 'undefined' && EX.REALM) || {};
+    const max = R.MAX_LAYER || 50;
+    const cur = Math.max(0, Math.min(max, Math.floor(Number(p.realm) || 0)));
+    if (cur >= max) return { ok: false, reason: 'max', layer: cur };
+    const cost = this.realmCost(cur + 1);
+    const sp = Math.max(0, Math.floor(Number(p.spirit) || 0));
+    if (sp < cost) return { ok: false, reason: 'poor', layer: cur, cost, need: cost - sp };
+    p.spirit = sp - cost;
+    p.realm = cur + 1;
+    return { ok: true, layer: p.realm, cost };
+  },
+  /* 关卡结算军功产出：按章节递增（第 1 章 3，第 10 章 30，±20% 抖动） */
+  realmSpiritDrop(chapter) {
+    const R = (typeof EX !== 'undefined' && EX.REALM) || {};
+    if (R.ON === false) return 0;
+    const ch = Math.max(1, Math.floor(Number(chapter) || 1));
+    const base = (R.DROP_BASE || 3) + (R.DROP_STEP || 3) * (ch - 1);
+    return Math.max(1, Math.round(base * (0.8 + Math.random() * 0.4)));
+  },
+
   attrs(p) {
     const c = this.char(p), g = this.gun(p);
     const sk = this.skin(p);
@@ -1435,7 +1508,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      *   攻击 Lv1=26 → Lv80=441（仅 17 倍）
      *   费用 Lv1=300 → Lv80=1170亿（39 亿倍）
      * 收益线性 vs 成本指数 → Lv84 永久卡死，且后期越打越轻松。
-     * 改复利后收益与成本同为指数，卡关→攒金币→升级→突破 的循环才成立。 */
+     * 改复利后收益与成本同为指数，卡关→攒金币→升级→晋升 的循环才成立。 */
     /* 等级再钳一次：sanitize 只在登录时跑，后台 GM 热改档后可能绕过 */
     /* Number() 必须在 || 之前：'abc' / {} 是 truthy，
      * 旧写法 `p.gunLv || 1` 会把它们原样放进来 → Math.min(999,'abc') = NaN
@@ -1461,7 +1534,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      *   全局层 = 天赋「全局伤害」/ 芯片「攻击」/ 皮肤「攻击 +X%」
      *           （作用于含等级固定攻击在内的全部攻击）
      * ========================================================= */
-    const atkUp = this.talentVal(p, 'atk') + this.buildVal(p, 'atk') + this.chipVal(p, 'atk')
+    /* V1.1.0 军衔加成（每层 +1.5% 攻击）：并入全局层，与文案口径一致 */
+    const rb = this.realmBonus(p);
+    const atkUp = this.talentVal(p, 'atk') + this.buildVal(p, 'atk') + this.chipVal(p, 'atk') + rb.atkPct
       /* 皮肤攻击加成（表：sk_c01c 沙漠突击 880 钻「攻击 +8%」）
        * BUG：sk.bonus 里 hp / armor / crit 三处都有接入，唯独 atk 漏了 ——
        *      花 880 钻买的「攻击 +8%」实际属性纹丝不动，战力也不涨。
@@ -1470,7 +1545,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* 基础层不再单独乘百分比：所有攻击%统一在下面作用于【全部攻击】 */
     const atk = gunBase;
     /* 生命：角色基础 + 天赋 + 医疗站 + 芯片 + 皮肤（同样统一到总值层） */
-    const hpUp = this.talentVal(p, 'hp') + this.buildVal(p, 'hp') + this.chipVal(p, 'hp')
+    const hpUp = this.talentVal(p, 'hp') + this.buildVal(p, 'hp') + this.chipVal(p, 'hp') + rb.hpPct
       + ((sk && sk.bonus && sk.bonus.hp) || 0);
     const hp = c.hp;
     /* 护甲：角色基础 × (1+天赋) + 芯片；皮肤加成 */
@@ -1499,7 +1574,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const af = this.affixBonus(p);
     /* 武器自带暴击/暴伤（表44） */
     const gCrit = (g && g.crit) || 0, gCritDmg = (g && g.critDmg) || 1.5;
-    const crit = Math.min(0.85, c.crit + gCrit + af.crit + this.talentVal(p, 'crit') + this.chipVal(p, 'crit')
+    const crit = Math.min(0.85, c.crit + gCrit + af.crit + this.talentVal(p, 'crit') + this.chipVal(p, 'crit') + rb.crit
       + ((sk && sk.bonus && sk.bonus.crit) || 0));   /* 进阶 crit 已并入 af.crit */
     const critDmg = gCritDmg + af.critDmg + this.chipVal(p, 'critDmg');
     /* 移速 */
@@ -1795,6 +1870,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       + a.ls * 500
       /* 护甲此前既不计入战力、也不参与减伤，属于纯装饰属性 */
       + a.armor * 10
+      /* V1.1.0 军衔：攻/生命加成已经折进 a.atk / a.hp，这里只补暴击部分
+       * （与暴击项同权重 800/点），避免与 atk 项重复计算。 */
+      + this.realmBonus(p).crit * 800
       + eqP) * (1 + EX.starBonus(p.charStar));
   },
 
@@ -1842,8 +1920,18 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
         try { this.grantTitle(p, 'hell_clear'); } catch (e) {}
       }
     }
+    /* V1.1.0 军衔：通关产出军功（军衔晋升的唯一常规来源）。
+     * 只在实际通关时给，重复刷同一关也能拿（长线养成需要可重复产出），
+     * 但按章节封顶在 1~30 的量级，不会冲击金币/钻石经济。 */
+    let spGain = 0;
+    try {
+      const _ch = Number((this.levelDef ? this.levelDef(id) : {}).ch) || 1;
+      spGain = this.realmSpiritDrop(_ch);
+      const cap = (EX.REALM && EX.REALM.SPIRIT_CAP) || 9999999;
+      p.spirit = Math.min(cap, Math.max(0, Math.floor(Number(p.spirit) || 0)) + spGain);
+    } catch (e) { spGain = 0; }
     /* 返回对象：调用方要拿 first 判断「首次通关该难度」以发放额外奖励 */
-    return { stars: st, first: firstOfDiff, diff: did };
+    return { stars: st, first: firstOfDiff, diff: did, spirit: spGain };
   },
   /* 称号/头像框发放（去重，返回是否新获得） */
   grantTitle(p, id) {
