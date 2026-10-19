@@ -1491,6 +1491,20 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     p.realm = cur + 1;
     return { ok: true, layer: p.realm, cost };
   },
+  /* 加军功（唯一入口，统一钳制）。
+   * P-14：此前军功只有"通关"一处写入，活跃宝箱与运营发放两条通路零实现，
+   *       各调用点若各自裸写 p.spirit，钳制口径会再次分叉（与金币污染同类教训）。 */
+  addSpirit(p, n) {
+    if (!p || typeof p !== 'object') return 0;
+    const add = this.safeAmt(n);
+    if (!(add > 0)) return 0;
+    const R = (typeof EX !== 'undefined' && EX.REALM) || {};
+    if (R.ON === false) return 0;
+    const cap = Number(R.SPIRIT_CAP) || 9999999;
+    const before = Math.max(0, Math.floor(Number(p.spirit) || 0));
+    p.spirit = Math.min(cap, before + add);
+    return p.spirit - before;
+  },
   /* 关卡结算军功产出：按章节递增（第 1 章 3，第 10 章 30，±20% 抖动） */
   realmSpiritDrop(chapter) {
     const R = (typeof EX !== 'undefined' && EX.REALM) || {};
@@ -3178,6 +3192,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       p.season = { k: k, score: 0, got: [] };
     }
     if (!Array.isArray(p.season.got)) p.season.got = [];
+    /* 循环奖次数（P-15）：老存档没有该字段 → 按 0 处理，不会凭空多领 */
+    if (!isFinite(Number(p.season.loop)) || Number(p.season.loop) < 0) p.season.loop = 0;
     /* 脏档守卫：后台改档写入字符串/NaN 会让积分显示异常并污染阶梯判定 */
     const sc = Number(p.season.score);
     p.season.score = (isFinite(sc) && sc > 0) ? sc : 0;
@@ -3220,6 +3236,46 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     s.got.push(Number(i));
     try { this.logAct(p, 'season', '赛季第' + (Number(i) + 1) + '档'); } catch (e) {}
     return { ok: true, msg: '🏅 赛季奖励领取成功', rw: st.rw, got: got };
+  },
+  /* =========================================================
+   * V1.1.0 部门意见统一改善 · 策划 P-15 / 运营 O-11：赛季后期循环奖励
+   * 问题：5 档阶梯最高 1,500 分，常规节奏约 12~19 天领满，赛季周期却有 28 天
+   *       —— 赛季末 9~16 天玩家没有任何新目标，是长线流失的高发区。
+   * 方案：领满 5 档后，每再累计 SEASON.LOOP.every 分可领一次循环奖，赛季内可重复。
+   * 防重：以 p.season.loop（已领次数）推进门槛，不是"够分就永远可领"。
+   * ========================================================= */
+  /* 循环奖已领次数（脏档守卫：非数字按 0） */
+  seasonLoopTaken(p) {
+    const s = this.seasonOf(p);
+    const n = Math.floor(Number(s.loop) || 0);
+    return (isFinite(n) && n > 0) ? n : 0;
+  },
+  /* 下一档循环奖的门槛积分（null = 未配置循环奖 / 已达上限） */
+  seasonLoopNeed(p) {
+    const S = (window.EX && EX.SEASON) || null;
+    if (!S || !S.LOOP || !S.LOOP.rw) return null;
+    const every = Number(S.LOOP.every) || 0;
+    if (!(every > 0)) return null;
+    const steps = S.STEP || [];
+    const base = steps.length ? Number(steps[steps.length - 1].need) : 0;
+    const taken = this.seasonLoopTaken(p);
+    const maxN = Number(S.LOOP.max) || 99;
+    if (taken >= maxN) return null;
+    return base + (taken + 1) * every;
+  },
+  seasonLoopClaim(p) {
+    const S = (window.EX && EX.SEASON) || null;
+    if (!S || !S.LOOP || !S.LOOP.rw) return { ok: false, msg: '未配置循环奖励' };
+    const need = this.seasonLoopNeed(p);
+    if (need == null) return { ok: false, msg: '循环奖励已达上限' };
+    const s = this.seasonOf(p);
+    if (s.score < need) return { ok: false, msg: '赛季积分不足 ' + need + '（当前 ' + s.score + '）' };
+    if (!this.validGive(S.LOOP.rw)) return { ok: false, msg: '奖励配置异常，暂不可领取' };
+    const got = this.grant(p, S.LOOP.rw);
+    if (!got) return { ok: false, msg: '奖励发放失败' };
+    s.loop = this.seasonLoopTaken(p) + 1;
+    try { this.logAct(p, 'season', '赛季循环奖第' + s.loop + '次'); } catch (e) {}
+    return { ok: true, msg: '🏅 赛季循环奖励领取成功', rw: S.LOOP.rw, got: got, loop: s.loop };
   },
   /* 今日是否已签到（与 sign() 同一基准：UTC+8 日历日整数）
    * 给 UI 做「按钮置灰 / 红点数」用，避免各处分头算导致口径不一致。 */
@@ -3289,8 +3345,16 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     if (!p.actBox || p.actBox.k !== k) p.actBox = { k: k, got: [] };
     p.actBox.got.push(Number(b.v));
     this.grant(p, b.rw);
+    /* V1.1.0 P-14：活跃宝箱产出军功（此前只在 config 注释里"存在"，代码零实现，
+     * 而军衔面板文案却写着"活动与运营发放"——玩家看到承诺但永远拿不到）。 */
+    let sp = 0;
+    try {
+      const M = (EX.REALM && EX.REALM.ACT_SPIRIT) || null;
+      sp = M ? this.safeAmt(M[String(Number(b.v))]) : 0;
+      if (sp > 0) this.addSpirit(p, sp);
+    } catch (e) { sp = 0; }
     this.logAct(p, 'actbox', '活跃宝箱 ' + b.v);
-    return { ok: true, msg: '📦 ' + b.n + ' 开启成功', rw: b.rw };
+    return { ok: true, msg: '📦 ' + b.n + ' 开启成功', rw: b.rw, spirit: sp };
   },
 
   /* 回归：离线天数（按上次登录） */
@@ -3571,7 +3635,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * 玩家一分没拿到，界面还提示"兑换成功"。这是最伤玩家的一类账实不符。
      * 这里按 grant 的分发口径逐键判定，全部不可发放时在【扣费之前】拒绝。 */
     const STR = { title: 1, skin: 1, frame: 1, gem: 1 };
-    const RES = { gold: 1, diamond: 1, stamina: 1, ach: 1, evToken: 1, ev: 1 };
+    /* spirit（军功）：V1.1.0 P-14 起运营活动/补发可发军功，必须进白名单，
+     * 否则后台配了 spirit 奖励会被判"配置异常"而整档拒绝（含同档的金币也拿不到）。 */
+    const RES = { gold: 1, diamond: 1, stamina: 1, ach: 1, evToken: 1, ev: 1, spirit: 1 };
     const CHIP = /^(chipN|chipE|chipL|chipRed|C0[123]|U0[12])$/;
     for (let i = 0; i < K.length; i++) {
       const k = K[i];
@@ -3825,6 +3891,10 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
        *      ach 掉进 else 写进 p.mat['ach'] —— 而成就商店读的是 p.ach。
        * 结果：界面写着「解锁奖励 +5 成就点」，实际成就点一分没加。 */
       else if (k === 'ach') { const n = this.safeAmt(give[k]); if (n > 0) { p.ach = (p.ach || 0) + n; _got += n; } }
+      /* 军功（V1.1.0 P-14）：运营活动/补发/任务奖励可发军功。
+       * 此前 grant 无此分支 → spirit 掉进 else 写进 p.mat['spirit']，
+       * 而军衔读的是 p.spirit，玩家一分拿不到、界面却提示"领取成功"。 */
+      else if (k === 'spirit') { const n = this.addSpirit(p, give[k]); _got += n; }
       /* 活动代币（表43 活动商店的唯一货币）
        * BUG：evToken 全项目只有扣减（活动商店消费 engine.js:1180），
        *      从来没有任何一个地方发放 → 玩家代币恒为 0，
