@@ -1041,6 +1041,20 @@ r_tavern(p, tab) {
         <button class="btn sm o" style="flex:1" id="lgShop">军团商店</button>
         <button class="btn sm" style="flex:1" id="lgDonate">捐献</button>
       </div>
+      ${/* V1.0.3 军团 BOSS：周常共斗 */ (function () {
+        const b = EX.legionBoss;
+        if (!b) return '';
+        const lb = p.lb || {};
+        const hp = (lb.hp != null && lb.wk === E.weekKey()) ? lb.hp : b.maxHp;
+        const pct = Math.max(0, Math.min(100, Math.round(hp / b.maxHp * 100)));
+        const okSt = (p.stamina || 0) >= b.cost;
+        return `<div class="card" style="margin-top:8px"><div class="card-t">👑 军团 BOSS
+          <span class="sub">剩余 ${pct}%</span></div>
+          <div class="kv"><span>${b.n}</span><b>HP ${E.fmt(hp)} / ${E.fmt(b.maxHp)}</b></div>
+          <div class="sub" style="padding:4px 2px">${b.desc}</div>
+          <button class="btn" id="lgBoss" style="width:100%;margin-top:6px" ${okSt ? '' : 'disabled'}>${okSt ? '挑战（体力 ' + b.cost + '）' : '体力不足'}</button>
+        </div>`;
+      })()}
       <div class="card" style="margin-top:8px"><div class="card-t"><img class="ei" src="assets/icon/contrib.jpg" style="width:17px;height:17px;border-radius:4px;object-fit:contain;vertical-align:-3px;margin-right:4px">军团贡献
         <span class="sub">捐献获得，可在军团商店消费</span></div>
         <div class="kv"><span>当前贡献</span><b>${E.fmt(p.legionExp || 0)}</b></div>
@@ -1093,6 +1107,39 @@ r_tavern(p, tab) {
       /* 累计贡献同步增加：属性加成按累计算，否则花掉贡献就会掉属性 */
       p.legionContrib = (p.legionContrib || 0) + ctb;
       E.save(p); this.toast('捐献成功 +' + ctb + ' 贡献', 'ok'); this.open('legion'); this.home();
+    };
+    /* V1.0.3 军团 BOSS：周常共斗。挑战扣体力、按战力造成伤害，
+     * 每次结算贡献与奖励；血量归零判击杀并发大奖；每周一自动重置。 */
+    const bb = $('#lgBoss');
+    if (bb) bb.onclick = () => {
+      const b = EX.legionBoss; if (!b) return;
+      if (!p.legion) return this.toast('请先加入军团', 'err');
+      if ((p.stamina || 0) < b.cost) return this.toast('体力不足', 'err');
+      p.stamina -= b.cost;
+      const wk = E.weekKey();
+      p.lb = p.lb || {};
+      if (p.lb.wk !== wk) p.lb = { wk: wk, hp: b.maxHp };
+      if (p.lb.hp == null) p.lb.hp = b.maxHp;
+      const dmg = Math.max(1, Math.floor((E.power(p) || 0) * 1.2));
+      p.lb.hp = Math.max(0, p.lb.hp - dmg);
+      const contrib = b.contribPerHit || 0;
+      p.gold = (p.gold || 0) + (b.goldPerHit || 0);
+      p.legionExp = (p.legionExp || 0) + contrib;
+      p.legionContrib = (p.legionContrib || 0) + contrib;
+      (b.matsPerHit || []).forEach((m) => { p.mat = p.mat || {}; p.mat[m.k] = (p.mat[m.k] || 0) + m.n; });
+      let killed = false;
+      if (p.lb.hp <= 0) {
+        killed = true;
+        const kr = b.killRw || {};
+        p.gold = (p.gold || 0) + (kr.gold || 0);
+        p.legionExp = (p.legionExp || 0) + (kr.contrib || 0);
+        p.legionContrib = (p.legionContrib || 0) + (kr.contrib || 0);
+        if (kr.gem) { p.gems = p.gems || {}; p.gems[kr.gem] = (p.gems[kr.gem] || 0) + 1; }
+      }
+      E.save(p);
+      this.toast(killed ? '击杀军团 BOSS！大奖已发放' : '造成伤害 ' + E.fmt(dmg) + '，贡献 +' + contrib, 'ok');
+      if (window.SND) SND.play(killed ? 'boss' : 'upgrade');
+      this.open('legion'); this.home();
     };
     /* 军团活动：此前写死「开发中」，点了没反应。
      * 现在按 legionActs 挑战，消耗体力 → 产出贡献+金币+材料。 */
@@ -2658,7 +2705,7 @@ r_tavern(p, tab) {
     const fs = p.friends || [];
     return `<div class="card"><div class="card-t">好友列表
       <span class="sub">${fs.length} 人 · 每个 +0.5% 攻击</span></div>
-      ${fs.length ? fs.map((f) => `<div class="zrow">
+      ${fs.length ? fs.map((f) => { const fid = (f && f.id) || ''; return `<div class="zrow">
         ${this.zAvatarHTML(f.id || f)}
         <div class="zi"><b>${this.nm((f && f.n) || f.id || '未知')}</b><span>战力 ${E.fmt((f && f.pw) || 0)} · 可发送体力</span></div>
         ${(function () {
@@ -2668,8 +2715,10 @@ r_tavern(p, tab) {
           const done = fid ? sent.indexOf(fid) >= 0 : false;
           return `<button class="btn sm ${done ? 'd' : 'g'}" data-sendst="${UI.esc(fid)}" ${done ? 'disabled' : ''}>${done ? '已送' : '送体力'}</button>`;
         })()}
+        ${/* V1.0.3 好友助战：设为助战后进战斗 +3% 攻击 */ ''}
+        <button class="btn sm ${p.assist === fid ? 'd' : 'g'}" data-assist="${UI.esc(fid)}">${p.assist === fid ? '助战中' : '设为助战'}</button>
         <span class="st ${f.online ? 'on' : 'off'}">${f.online ? '在线' : '离线'}</span>
-      </div>`).join('') : '<div class="lbl">还没有好友，点击下方添加</div>'}
+      </div>`; }).join('') : '<div class="lbl">还没有好友，点击下方添加</div>'}
       <button class="btn" id="addFriend" style="width:100%;margin-top:8px">添加好友</button>
     </div>`;
   },
@@ -2705,6 +2754,13 @@ r_tavern(p, tab) {
       this.toast('已赠送，好友回赠 ' + back + ' 金币', 'ok');
       if (window.SND) SND.play('get');
       this.open('friends'); this.home();
+    }; });
+    /* V1.0.3 好友助战：设置 / 取消助战好友，进战斗 +3% 攻击 */
+    $$('#pnBody [data-assist]').forEach((b) => { b.onclick = () => {
+      const fid = b.dataset.assist;
+      if (p.assist === fid) { delete p.assist; this.toast('已取消助战', 'ok'); }
+      else { p.assist = fid; this.toast('已设为助战，战斗攻击 +3%', 'ok'); }
+      E.save(p); if (window.SND) SND.play('get'); this.open('friends'); this.home();
     }; });
     $$('#pnBody [data-accept]').forEach((b) => { b.onclick = () => {
       const id = b.dataset.accept;
