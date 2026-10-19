@@ -299,6 +299,17 @@ const EX = {
     { src: 'BOSS尸王', item: 'C03', rate: 0.65, min: 2, max: 3, ch: 5.0, q: '红', first: 1 },
     { src: 'BOSS尸王', item: 'P02', rate: 0.60, min: 6, max: 10, ch: 5.0, q: '紫' },
     { src: 'BOSS尸王', item: 'M05', rate: 0.80, min: 4, max: 8, ch: 5.0, q: '红' },
+    /* ===== 第 11-15 章新 BOSS 掉落（V1.1.0 冲刺2）=====
+     * 接线：kill() 用 'BOSS'+bossDef.n 精确匹配，不配就是零掉落。
+     * 档位对标尸王（ch 5.0 / M03 24-34）继续递增。 */
+    { src: 'BOSS钢铁洪流', item: 'M03', rate: 1.00, min: 30, max: 44, ch: 6.0, q: '紫', first: 1 },
+    { src: 'BOSS钢铁洪流', item: 'C03', rate: 0.70, min: 2, max: 4, ch: 6.0, q: '红', first: 1 },
+    { src: 'BOSS钢铁洪流', item: 'P02', rate: 0.62, min: 7, max: 12, ch: 6.0, q: '紫' },
+    { src: 'BOSS钢铁洪流', item: 'M05', rate: 0.85, min: 6, max: 11, ch: 6.0, q: '红' },
+    { src: 'BOSS母核', item: 'M03', rate: 1.00, min: 42, max: 60, ch: 7.0, q: '紫', first: 1 },
+    { src: 'BOSS母核', item: 'C03', rate: 0.80, min: 3, max: 5, ch: 7.0, q: '红', first: 1 },
+    { src: 'BOSS母核', item: 'P02', rate: 0.70, min: 10, max: 16, ch: 7.0, q: '紫' },
+    { src: 'BOSS母核', item: 'M05', rate: 0.90, min: 9, max: 15, ch: 7.0, q: '红' },
     /* 补齐缺失来源（原表未覆盖精英/小僵尸，打精英不掉东西） */
     /* ===== 精英僵尸：掉落随章节阶梯递增 =====
      * 同一 item 分多档，ch = 解锁章节，dropFor() 取已解锁的最高档。
@@ -320,6 +331,14 @@ const EX = {
     { src: '小僵尸', item: 'M04', rate: 0.05, min: 1, max: 1, ch: 3.0, q: '白' },
     { src: '小僵尸', item: 'M02', rate: 0.03, min: 1, max: 1, ch: 6.0, q: '蓝' },
 
+    /* ===== 第 11-15 章新僵尸掉落（V1.1.0 冲刺2）===== */
+    { src: '暴君僵尸', item: 'M03', rate: 0.55, min: 3, max: 6, ch: 11.0, q: '紫' },
+    { src: '暴君僵尸', item: 'M05', rate: 0.30, min: 1, max: 3, ch: 11.0, q: '红' },
+    { src: '暴君僵尸', item: 'P01', rate: 0.18, min: 1, max: 2, ch: 11.0, q: '紫' },
+    { src: '生化僵尸', item: 'M04', rate: 0.50, min: 2, max: 5, ch: 12.0, q: '蓝' },
+    { src: '生化僵尸', item: 'M03', rate: 0.28, min: 1, max: 3, ch: 12.0, q: '紫' },
+    { src: '机械僵尸', item: 'M02', rate: 0.60, min: 3, max: 6, ch: 13.0, q: '蓝' },
+    { src: '机械僵尸', item: 'M05', rate: 0.22, min: 1, max: 2, ch: 13.0, q: '红' },
     /* ===== Q 版扩充的 10 种僵尸：此前【完全没有掉落配置】=====
      * 严重 BUG：美术扩充时僵尸表由 12 种加到 22 种，并全部写进第 5~10 章的
      *   levels[].pool（第 5 章 xiaofang、第 6 章 xiaochou、第 7 章 chushi/mumu、
@@ -572,6 +591,111 @@ const EX = {
       cond: 'clear', rw: { gold: 9097470, M01: 28 }, unlock: '10-8', scene: 'final' },
     { id: '10-10', ch: 10, n: 'BOSS·尸王', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue'], per: [16, 26], mul: 131.75,
       cond: 'boss', boss: 'shiwang', rw: { gold: 9573500, M01: 28 }, unlock: '10-9', scene: 'factory' },
+    /* ===== 第 11-15 章（V1.1.0 冲刺2 · 反攻篇：反攻 → 母巢）=====
+     * 数值：mul 沿用 ×1.72/章 的既有曲线（第10章 131.75 → 第15章 1983.2）；
+     * 数量 per 固定 [16,26]（第4章起已收敛，避免单关时长被波次超时锁死）；
+     * 新僵尸 baojun 自第11章引入、shenghua 第12章、jixie 第13章。
+     */
+    { id: '11-1', ch: 11, n: '收复哨卡', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun'], per: [16, 26], mul: 226.6,
+      cond: 'clear', rw: { gold: 14813800, M02: 30 }, unlock: '10-10', scene: 'outpost' },
+    { id: '11-2', ch: 11, n: '补给线', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun'], per: [16, 26], mul: 226.6,
+      cond: 'clear', rw: { gold: 15877400, M02: 30 }, unlock: '11-1', scene: 'outpost' },
+    { id: '11-3', ch: 11, n: '哨塔', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun'], per: [16, 26], mul: 226.6,
+      cond: 'clear', rw: { gold: 17017400, M02: 30 }, unlock: '11-2', scene: 'outpost' },
+    { id: '11-4', ch: 11, n: '铁丝网', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun'], per: [16, 26], mul: 226.6,
+      cond: 'clear', rw: { gold: 18239300, M02: 30 }, unlock: '11-3', scene: 'outpost' },
+    { id: '11-5', ch: 11, n: '探照灯区', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun'], per: [16, 26], mul: 226.6,
+      cond: 'clear', rw: { gold: 19548900, M02: 30 }, unlock: '11-4', scene: 'outpost' },
+    { id: '11-6', ch: 11, n: '弹药转运', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun'], per: [16, 26], mul: 226.6,
+      cond: 'clear', rw: { gold: 20952500, M02: 30 }, unlock: '11-5', scene: 'outpost' },
+    { id: '11-7', ch: 11, n: '伤员后送', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun'], per: [16, 26], mul: 226.6,
+      cond: 'clear', rw: { gold: 22456900, M02: 30 }, unlock: '11-6', scene: 'outpost' },
+    { id: '11-8', ch: 11, n: '前哨广场', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun'], per: [16, 26], mul: 226.6,
+      cond: 'clear', rw: { gold: 24069300, M02: 30 }, unlock: '11-7', scene: 'outpost' },
+    { id: '11-9', ch: 11, n: '铁血防线', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun'], per: [16, 26], mul: 226.6,
+      cond: 'clear', rw: { gold: 25797400, M02: 30 }, unlock: '11-8', scene: 'outpost' },
+    { id: '11-10', ch: 11, n: 'BOSS·钢铁洪流', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun'], per: [16, 26], mul: 226.6,
+      cond: 'boss', boss: 'gangtie', rw: { gold: 27649700, M02: 30 }, unlock: '11-9', scene: 'outpost' },
+    { id: '12-1', ch: 12, n: '泄洪道', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua'], per: [16, 26], mul: 389.75,
+      cond: 'clear', rw: { gold: 41478600, M03: 33 }, unlock: '11-10', scene: 'dam' },
+    { id: '12-2', ch: 12, n: '坝顶公路', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua'], per: [16, 26], mul: 389.75,
+      cond: 'clear', rw: { gold: 44456800, M03: 33 }, unlock: '12-1', scene: 'dam' },
+    { id: '12-3', ch: 12, n: '发电厂房', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua'], per: [16, 26], mul: 389.75,
+      cond: 'clear', rw: { gold: 47648800, M03: 33 }, unlock: '12-2', scene: 'dam' },
+    { id: '12-4', ch: 12, n: '闸门控制', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua'], per: [16, 26], mul: 389.75,
+      cond: 'clear', rw: { gold: 51069900, M03: 33 }, unlock: '12-3', scene: 'dam' },
+    { id: '12-5', ch: 12, n: '水位线', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua'], per: [16, 26], mul: 389.75,
+      cond: 'clear', rw: { gold: 54736800, M03: 33 }, unlock: '12-4', scene: 'dam' },
+    { id: '12-6', ch: 12, n: '导流渠', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua'], per: [16, 26], mul: 389.75,
+      cond: 'clear', rw: { gold: 58666900, M03: 33 }, unlock: '12-5', scene: 'dam' },
+    { id: '12-7', ch: 12, n: '坝基隧道', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua'], per: [16, 26], mul: 389.75,
+      cond: 'clear', rw: { gold: 62879100, M03: 33 }, unlock: '12-6', scene: 'dam' },
+    { id: '12-8', ch: 12, n: '备用电源', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua'], per: [16, 26], mul: 389.75,
+      cond: 'clear', rw: { gold: 67393900, M03: 33 }, unlock: '12-7', scene: 'dam' },
+    { id: '12-9', ch: 12, n: '决口', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua'], per: [16, 26], mul: 389.75,
+      cond: 'clear', rw: { gold: 72232700, M03: 33 }, unlock: '12-8', scene: 'dam' },
+    { id: '12-10', ch: 12, n: 'BOSS·深渊领主&暴食者', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua'], per: [16, 26], mul: 389.75,
+      cond: 'bossAll', boss: ['shenyuan','baoshi'], rw: { gold: 77419100, M03: 33 }, unlock: '12-9', scene: 'dam' },
+    { id: '13-1', ch: 13, n: '矿车轨道', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 670.37,
+      cond: 'clear', rw: { gold: 116140200, M04: 36 }, unlock: '12-10', scene: 'mine' },
+    { id: '13-2', ch: 13, n: '竖井', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 670.37,
+      cond: 'clear', rw: { gold: 124479100, M04: 36 }, unlock: '13-1', scene: 'mine' },
+    { id: '13-3', ch: 13, n: '爆破面', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 670.37,
+      cond: 'clear', rw: { gold: 133416700, M04: 36 }, unlock: '13-2', scene: 'mine' },
+    { id: '13-4', ch: 13, n: '支撑木架', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 670.37,
+      cond: 'clear', rw: { gold: 142996000, M04: 36 }, unlock: '13-3', scene: 'mine' },
+    { id: '13-5', ch: 13, n: '选矿厂', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 670.37,
+      cond: 'clear', rw: { gold: 153263100, M04: 36 }, unlock: '13-4', scene: 'mine' },
+    { id: '13-6', ch: 13, n: '通风井', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 670.37,
+      cond: 'clear', rw: { gold: 164267400, M04: 36 }, unlock: '13-5', scene: 'mine' },
+    { id: '13-7', ch: 13, n: '塌方区', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 670.37,
+      cond: 'clear', rw: { gold: 176061800, M04: 36 }, unlock: '13-6', scene: 'mine' },
+    { id: '13-8', ch: 13, n: '矿脉尽头', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 670.37,
+      cond: 'clear', rw: { gold: 188703000, M04: 36 }, unlock: '13-7', scene: 'mine' },
+    { id: '13-9', ch: 13, n: '地下暗河', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 670.37,
+      cond: 'clear', rw: { gold: 202251900, M04: 36 }, unlock: '13-8', scene: 'mine' },
+    { id: '13-10', ch: 13, n: 'BOSS·钢铁洪流', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 670.37,
+      cond: 'boss', boss: 'gangtie', rw: { gold: 216773600, M04: 36 }, unlock: '13-9', scene: 'mine' },
+    { id: '14-1', ch: 14, n: '检疫通道', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1153.04,
+      cond: 'clear', rw: { gold: 325192500, M05: 40 }, unlock: '13-10', scene: 'lab' },
+    { id: '14-2', ch: 14, n: '样本库', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1153.04,
+      cond: 'clear', rw: { gold: 348541300, M05: 40 }, unlock: '14-1', scene: 'lab' },
+    { id: '14-3', ch: 14, n: '培养区', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1153.04,
+      cond: 'clear', rw: { gold: 373566600, M05: 40 }, unlock: '14-2', scene: 'lab' },
+    { id: '14-4', ch: 14, n: '焚化炉', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1153.04,
+      cond: 'clear', rw: { gold: 400388700, M05: 40 }, unlock: '14-3', scene: 'lab' },
+    { id: '14-5', ch: 14, n: '观察廊', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1153.04,
+      cond: 'clear', rw: { gold: 429136600, M05: 40 }, unlock: '14-4', scene: 'lab' },
+    { id: '14-6', ch: 14, n: '病毒库', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1153.04,
+      cond: 'clear', rw: { gold: 459948600, M05: 40 }, unlock: '14-5', scene: 'lab' },
+    { id: '14-7', ch: 14, n: '实验记录室', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1153.04,
+      cond: 'clear', rw: { gold: 492972900, M05: 40 }, unlock: '14-6', scene: 'lab' },
+    { id: '14-8', ch: 14, n: '活体舱', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1153.04,
+      cond: 'clear', rw: { gold: 528368300, M05: 40 }, unlock: '14-7', scene: 'lab' },
+    { id: '14-9', ch: 14, n: '泄漏区', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1153.04,
+      cond: 'clear', rw: { gold: 566305200, M05: 40 }, unlock: '14-8', scene: 'lab' },
+    { id: '14-10', ch: 14, n: 'BOSS·修道士&尸王', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1153.04,
+      cond: 'bossAll', boss: ['xiudao','shiwang'], rw: { gold: 606965900, M05: 40 }, unlock: '14-9', scene: 'lab' },
+    { id: '15-1', ch: 15, n: '巢壁', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1983.2,
+      cond: 'clear', rw: { gold: 910539100, M01: 45 }, unlock: '14-10', scene: 'core' },
+    { id: '15-2', ch: 15, n: '孵化室', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1983.2,
+      cond: 'clear', rw: { gold: 975915800, M01: 45 }, unlock: '15-1', scene: 'core' },
+    { id: '15-3', ch: 15, n: '菌毯通道', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1983.2,
+      cond: 'clear', rw: { gold: 1045986600, M01: 45 }, unlock: '15-2', scene: 'core' },
+    { id: '15-4', ch: 15, n: '育婴腔', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1983.2,
+      cond: 'clear', rw: { gold: 1121088400, M01: 45 }, unlock: '15-3', scene: 'core' },
+    { id: '15-5', ch: 15, n: '脉络中枢', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1983.2,
+      cond: 'clear', rw: { gold: 1201582500, M01: 45 }, unlock: '15-4', scene: 'core' },
+    { id: '15-6', ch: 15, n: '血池', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1983.2,
+      cond: 'clear', rw: { gold: 1287856200, M01: 45 }, unlock: '15-5', scene: 'core' },
+    { id: '15-7', ch: 15, n: '守卫巢', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1983.2,
+      cond: 'clear', rw: { gold: 1380324200, M01: 45 }, unlock: '15-6', scene: 'core' },
+    { id: '15-8', ch: 15, n: '王座厅', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1983.2,
+      cond: 'clear', rw: { gold: 1479431500, M01: 45 }, unlock: '15-7', scene: 'core' },
+    { id: '15-9', ch: 15, n: '核心外壁', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1983.2,
+      cond: 'clear', rw: { gold: 1585654700, M01: 45 }, unlock: '15-8', scene: 'core' },
+    { id: '15-10', ch: 15, n: 'BOSS·母核', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'feixing', 'jinying', 'hushi', 'kexue', 'baojun', 'shenghua', 'jixie'], per: [16, 26], mul: 1983.2,
+      cond: 'boss', boss: 'muhe', rw: { gold: 1699504700, M01: 45 }, unlock: '15-9', scene: 'core' },
   ],
 
   chapters: [
@@ -585,6 +709,48 @@ const EX = {
     { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270414a' },
     { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270414a' },
     { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270414a' },
+    { id: 11, n: '第十一章 · 前哨反攻', icon: '🛡️', img: 'assets/scene/outpost.jpg?v=20270415a' },
+    { id: 12, n: '第十二章 · 断桥水坝', icon: '🌊', img: 'assets/scene/dam.jpg?v=20270415a' },
+    { id: 13, n: '第十三章 · 矿坑深处', icon: '⛏️', img: 'assets/scene/mine.jpg?v=20270415a' },
+    { id: 14, n: '第十四章 · 生化实验室', icon: '🧪', img: 'assets/scene/lab.jpg?v=20270415a' },
+    { id: 15, n: '第十五章 · 母巢核心', icon: '👁️', img: 'assets/scene/core.jpg?v=20270415a' },
+  ],
+
+  /* =====================================================
+   * 【武器流派表】V1.1.0 冲刺2 · P-12 武器流派深化
+   * -----------------------------------------------------
+   * 设计原则：流派由【已装备的主武器 + 副武器】的 type 归属决定，
+   *   玩家可选择「主副同流派」走纯构筑拿二档，或「主副跨流派」拿两个一档混搭。
+   *   这是构筑深度的来源：不是堆数值，而是选路线。
+   * types   该流派覆盖的武器 type（三套流派覆盖全部 24 把枪，无遗漏）
+   * tiers   档位：need = 需要几件已装备武器属于该流派
+   *   atkPct   攻击%（并入 attrs().atkUp 全局层）
+   *   crit     暴击率（并入 attrs().crit，与宝石共享 0.85 封顶）
+   *   critDmg  暴击伤害倍率加成（并入 attrs().critDmg）
+   *   erPct    爆炸范围%（并入 attrs().erMul）
+   *   slow     命中减速（battle.js 命中时应用）
+   *   dot      持续伤害%（battle.js 命中时应用）
+   * 接线处：E.schoolBonus() / E.attrs() / battle.js 命中段 / ui.js 武器面板
+   * ================================================== */
+  GUN_SCHOOLS: [
+    { id: 'sustain', n: '持续输出', icon: '⚡', types: ['自动', '重机枪', '能量', '散弹'],
+      desc: '高射速稳定输出，靠攻击与暴击率堆持续 DPS',
+      tiers: [
+        { need: 1, atkPct: 0.06, crit: 0.03 },
+        { need: 99, atkPct: 0.15, crit: 0.08 },
+      ] },
+    { id: 'burst', n: '爆发', icon: '💥', types: ['爆炸', '投掷', '狙击', '近战'],
+      desc: '单次高伤与大范围爆炸，靠暴伤与爆炸范围清群',
+      tiers: [
+        { need: 1, critDmg: 0.30, erPct: 0.10 },
+        { need: 2, critDmg: 0.70, erPct: 0.25 },
+      ] },
+    { id: 'control', n: '控制', icon: '❄️', types: ['喷射', '布置', '支援'],
+      desc: '减速与持续伤害拖住尸潮，为防线争取时间',
+      tiers: [
+        { need: 1, slow: 0.15, dot: 0.15 },
+        { need: 2, slow: 0.28, dot: 0.35 },
+      ] },
   ],
 
   /* 无尽模式解锁门槛：填关卡 id（如 '3-5'）则要求先通关该关；null/空 = 默认解锁。
@@ -1215,7 +1381,7 @@ const EX = {
       desc: '无尽模式冲击更高波次', rwDesc: '活动代币 + 精英芯片', rule: '无尽达 10 波每周领 1 次',
       per: 'week', cond: { endlessMin: 10 },
       rw: { evToken: 100, chipE: 1 } },
-    { id: 'EV10', n: '通关达人', type: '成就活动', time: '常驻 · 每月可领 1 次', icon: '🎯', img: 'assets/icon/star.jpg?v=20270105a',
+    { id: 'EV10, n: '通关达人', type: '成就活动', time: '常驻 · 每月可领 1 次', icon: '🎯', img: 'assets/icon/star.jpg?v=20270105a',
       desc: '主线推进里程碑奖励', rwDesc: '钻石 + 传说芯片', rule: '通关 40 关以上每月领 1 次',
       per: 'month', cond: { clearedMin: 40 },
       rw: { diamond: 50, chipL: 1 } },
@@ -1274,6 +1440,15 @@ const EX = {
       skill: '毒素注射', sk: '注射毒素，持续掉血', poison: 8, xp: 21, gold: 17, elite: true },
     { id: 'kexue', n: '科学家僵尸', icon: '🔬', chibi: 'z_scientist', img: 'assets/icon/z_tuye.jpg', hp: 138, spd: 55, dmg: 19, atkR: 150, ai: 'ranged', armor: 6,
       skill: '腐蚀试剂', sk: '远程投掷试剂，落地区域持续伤害', pool: 6, xp: 22, gold: 18, elite: true },
+    /* ===== 第 11-15 章新僵尸（V1.1.0 冲刺2）=====
+     * baojun 第11章引入 / shenghua 第12章 / jixie 第13章，见 levels[].pool。
+     * 掉落已同步补进 globalDrops（src 用中文名精确匹配）。 */
+    { id: 'baojun', n: '暴君僵尸', icon: '🦾', chibi: 'z_tyrant', img: 'assets/icon/z_baojun.jpg', hp: 420, spd: 32, dmg: 30, atkR: 34, ai: 'chase', armor: 25,
+      skill: '碾压', sk: '超高减伤的重装推进，需穿透或爆炸破甲', def: 0.62, xp: 30, gold: 26, elite: true },
+    { id: 'shenghua', n: '生化僵尸', icon: '🧫', chibi: 'z_bio', img: 'assets/icon/z_shenghua.jpg', hp: 260, spd: 60, dmg: 24, atkR: 165, ai: 'ranged', armor: 8,
+      skill: '酸液喷射', sk: '远程喷射强酸，落地区域持续高额伤害', pool: 9, xp: 28, gold: 24, elite: true },
+    { id: 'jixie', n: '机械僵尸', icon: '🤖', chibi: 'z_mech', img: 'assets/icon/z_jixie.jpg', hp: 320, spd: 88, dmg: 32, atkR: 28, ai: 'boomer', armor: 18,
+      skill: '自毁核心', sk: '高速逼近后自毁，大范围爆炸并瘫痪附近炮台', explode: 0.9, er: 96, xp: 29, gold: 25, elite: true },
   ],
   /* BOSS */
   bosses: [
@@ -1334,6 +1509,21 @@ const EX = {
         { n: '巨剑斩击', sk: '超大范围斩击', trig: 'contact' },
         { n: '瘟疫领域', sk: '全场持续毒伤', trig: 0.75 },
         { n: '尸王狂暴', sk: '全属性大幅提升，召唤尸潮', trig: 0.35 },
+      ] },
+    /* ===== 第 11-15 章新 BOSS（V1.1.0 冲刺2）===== */
+    { id: 'gangtie', n: '钢铁洪流', icon: '🚜', chibi: 'z_boss_gangtie', img: 'assets/char/boss_gangtie.jpg', hp: 6200000, spd: 20, dmg: 165, atkR: 240, def: 0.44,
+      phases: 3, xp: 3200, gold: 3800,
+      skills: [
+        { n: '履带碾压', sk: '直线推进碾压，摧毁沿途掩体', trig: 'contact' },
+        { n: '炮火覆盖', sk: '远程炮击，落点预警后范围爆炸', trig: 0.75 },
+        { n: '装甲展开', sk: '展开装甲，减伤大幅提升并召唤机械僵尸', trig: 0.35 },
+      ] },
+    { id: 'muhe', n: '母核', icon: '🧬', chibi: 'z_boss_muhe', img: 'assets/char/boss_muhe.jpg', hp: 11800000, spd: 18, dmg: 195, atkR: 260, def: 0.48,
+      phases: 3, xp: 4200, gold: 5000,
+      skills: [
+        { n: '菌毯脉冲', sk: '全屏脉冲，持续伤害并减速玩家', trig: 'contact' },
+        { n: '孵化潮', sk: '批量孵化分裂僵尸', trig: 0.8 },
+        { n: '核心共鸣', sk: '召唤暴君僵尸护核，自身减伤提升', trig: 0.45 },
       ] },
   ],
   bossCommon: [
@@ -2223,11 +2413,18 @@ const EX = {
     'cg08_rift': 'assets/cg/cg08_rift.jpg',
     'cg09_nest': 'assets/cg/cg09_nest.jpg',
     'cg10_final': 'assets/cg/cg10_final.jpg',
+    /* 第 11-15 章（V1.1.0 冲刺2 · 反攻篇） */
+    'cg11_outpost': 'assets/cg/cg11_outpost.jpg',
+    'cg12_dam': 'assets/cg/cg12_dam.jpg',
+    'cg13_mine': 'assets/cg/cg13_mine.jpg',
+    'cg14_lab': 'assets/cg/cg14_lab.jpg',
+    'cg15_core': 'assets/cg/cg15_core.jpg',
   },
   /* 章节 CG 对应 */
   chapterCg: {
     1: 'cg01_horde', 2: 'cg04_tunnel', 3: 'cg05_bridge', 4: 'cg02_defense', 5: 'cg06_field',
     6: 'cg07_fallout', 7: 'cg03_rebuild', 8: 'cg08_rift', 9: 'cg09_nest', 10: 'cg10_final',
+    11: 'cg11_outpost', 12: 'cg12_dam', 13: 'cg13_mine', 14: 'cg14_lab', 15: 'cg15_core',
   },
   /* 章节过场文案（配合 CG 展示） */
   chapterDesc: {
@@ -2241,6 +2438,11 @@ const EX = {
     8:  '地裂深处传来低吼。它在下面，一直在等我们下去。',
     9:  '蛛网般的巢道通向地心。每走一步，都有东西在暗处看着你。',
     10: '最终决战。推开母巢大门，直面尸王——这一次，没有退路。',
+    11: '尸王倒下，通讯恢复。残存的人类据点重新连成一条线——反攻，从这一刻开始。',
+    12: '水坝是最后的电力来源，也是尸潮南下的唯一通路。守住这里，就守住了整条战线。',
+    13: '母巢的能量来自地底。矿工留下的竖井，是唯一能直插它腹地的路。',
+    14: '一切的起点。记录显示，第一批感染者就诞生在这间观察廊。',
+    15: '巢壁之后，母核在跳动。摧毁它，这场战争才真正结束。',
   },
 
   /* 场景图映射 */
@@ -2251,6 +2453,10 @@ const EX = {
     /* V1.0.2 A-02：新增 4 张章节场景，消除第 3/8/9/10 章复用旧图 */
     bridge: 'assets/scene/bridge.jpg', rift: 'assets/scene/rift.jpg',
     nest: 'assets/scene/nest.jpg', final: 'assets/scene/final.jpg',
+    /* V1.1.0 冲刺2 A-11：第 11-15 章新场景 */
+    outpost: 'assets/scene/outpost.jpg', dam: 'assets/scene/dam.jpg',
+    mine: 'assets/scene/mine.jpg', lab: 'assets/scene/lab.jpg',
+    core: 'assets/scene/core.jpg',
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
