@@ -1724,6 +1724,34 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     return { atkPct: v, hpPct: v };
   },
 
+  /* 【V1.0.4 社交深化】军团 BOSS 贡献榜
+   * V1.0.3 的军团 BOSS 只有一条个人血条，打完看不到"我在团里排第几"，
+   * 共斗玩法没有横向对比就失去了社交驱动力。
+   * 这里按【本周】生成一份名单：其他成员的伤害由战力 × 确定性系数推算
+   * （同周内固定，刷新不会跳变），本人伤害读 p.lb.dmg 实时累加。
+   * 每周一随 p.lb 一起重置（rk 与 weekKey 比对）。 */
+  lgBossRank(p) {
+    const b = (window.EX && EX.legionBoss) || null;
+    if (!b || !p) return [];
+    const wk = this.weekKey();
+    p.lb = p.lb || {};
+    if (!Array.isArray(p.lb.rank) || p.lb.rk !== wk) {
+      const mem = (p.legion && Array.isArray(p.legion.members)) ? p.legion.members : [];
+      const rank = mem.map((m, i) => ({
+        n: String((m && m.n) || ('成员' + i)),
+        me: i === 0,
+        /* 其他成员：战力 ×（1.2~2.6）×（2~8）次出手，确定性伪随机 */
+        dmg: i === 0 ? 0 : Math.max(1, Math.floor(Number(m && m.pw || 3000) * (1.2 + (i % 5) * 0.35) * (2 + (i % 7)))),
+      }));
+      p.lb.rk = wk;
+      p.lb.rank = rank;
+    }
+    const r = (p.lb.rank || []).filter((x) => x && typeof x === 'object');
+    const me = r.find((x) => x.me);
+    if (me) me.dmg = Math.max(0, Number(p.lb.dmg || 0));
+    return r.slice().sort((a, b2) => Number(b2.dmg || 0) - Number(a.dmg || 0));
+  },
+
   /* 武器输出当量：把「弹丸数 / 穿透 / 爆炸AOE / 弹匣与换弹」折算成每秒投射强度。
    * BUG（战力与真实强度倒置，实测）：power() 只取 a.atk，
    *   而 a.atk 里【不含】pellets / pierce / explode(AOE) / mag / reload ——
