@@ -1500,6 +1500,54 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     return Math.max(1, Math.round(base * (0.8 + Math.random() * 0.4)));
   },
 
+  /* =========================================================
+   * V1.1.0 冲刺2 · P-12 武器流派加成
+   * 口径：按【已装备的主武器 p.gun + 副武器 p.gun2】的 type 归属计数。
+   *   主副同流派 → 走纯构筑拿二档；主副跨流派 → 同时拿两个一档混搭。
+   *   这是构筑深度的来源：不是堆数值，而是选路线。
+   * 消费点：atkPct→attrs().atkUp（全局层）、crit→attrs().crit（共享 0.85 封顶）、
+   *   critDmg→attrs().critDmg、erPct→attrs().erMul、
+   *   slow/dot→battle.js 命中段（attrs 只透传 schoolSlow/schoolDot）。
+   * 安全：EX.GUN_SCHOOLS 缺失或 p 脏值 → 全 0，不产生 NaN。
+   * ========================================================= */
+  schoolBonus(p) {
+    const out = { atkPct: 0, crit: 0, critDmg: 0, erPct: 0, slow: 0, dot: 0, active: null, tiers: {} };
+    const S = (typeof EX !== 'undefined' && EX.GUN_SCHOOLS) || [];
+    if (!S.length || !p) return out;
+    const guns = (typeof EX !== 'undefined' && EX.guns) || [];
+    const eq = [p.gun, p.gun2].filter((x) => typeof x === 'string' && x);
+    const cnt = {};
+    let mainSc = null;
+    eq.forEach((id, i) => {
+      const g = guns.find((x) => x && x.id === id);
+      if (!g) return;
+      const sc = S.find((s) => (s.types || []).indexOf(g.type) >= 0);
+      if (!sc) return;
+      cnt[sc.id] = (cnt[sc.id] || 0) + 1;
+      if (i === 0) mainSc = sc.id;
+    });
+    S.forEach((sc) => {
+      const n = cnt[sc.id] || 0;
+      if (n <= 0) return;
+      /* 取已满足的最高档（tiers 按 need 升序，配置已保证） */
+      let tier = null;
+      (sc.tiers || []).forEach((t) => { if (n >= (t.need || 1)) tier = t; });
+      if (!tier) return;
+      out.tiers[sc.id] = { n: n, need: tier.need, tier: (sc.tiers || []).indexOf(tier) + 1 };
+      out.atkPct += Number(tier.atkPct) || 0;
+      out.crit += Number(tier.crit) || 0;
+      out.critDmg += Number(tier.critDmg) || 0;
+      out.erPct += Number(tier.erPct) || 0;
+      out.slow = Math.max(out.slow, Number(tier.slow) || 0);
+      out.dot += Number(tier.dot) || 0;
+    });
+    /* active 用于 UI 展示：主武器所属流派 + 该流派当前档位 */
+    if (mainSc && out.tiers[mainSc]) {
+      const sc = S.find((x) => x.id === mainSc);
+      out.active = { id: mainSc, n: sc ? sc.n : mainSc, icon: sc ? sc.icon : '', tier: out.tiers[mainSc].tier, cnt: out.tiers[mainSc].n };
+    }
+    return out;
+  },
   attrs(p) {
     const c = this.char(p), g = this.gun(p);
     const sk = this.skin(p);
@@ -1536,7 +1584,9 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
      * ========================================================= */
     /* V1.1.0 军衔加成（每层 +1.5% 攻击）：并入全局层，与文案口径一致 */
     const rb = this.realmBonus(p);
-    const atkUp = this.talentVal(p, 'atk') + this.buildVal(p, 'atk') + this.chipVal(p, 'atk') + rb.atkPct
+    /* V1.1.0 P-12 武器流派：攻击% 并入全局层（与天赋/芯片/皮肤同口径） */
+    const _sb = this.schoolBonus(p);
+    const atkUp = this.talentVal(p, 'atk') + this.buildVal(p, 'atk') + this.chipVal(p, 'atk') + rb.atkPct + (_sb.atkPct || 0)
       /* 皮肤攻击加成（表：sk_c01c 沙漠突击 880 钻「攻击 +8%」）
        * BUG：sk.bonus 里 hp / armor / crit 三处都有接入，唯独 atk 漏了 ——
        *      花 880 钻买的「攻击 +8%」实际属性纹丝不动，战力也不涨。
@@ -1575,8 +1625,8 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     /* 武器自带暴击/暴伤（表44） */
     const gCrit = (g && g.crit) || 0, gCritDmg = (g && g.critDmg) || 1.5;
     const crit = Math.min(0.85, c.crit + gCrit + af.crit + this.talentVal(p, 'crit') + this.chipVal(p, 'crit') + rb.crit
-      + ((sk && sk.bonus && sk.bonus.crit) || 0));   /* 进阶 crit 已并入 af.crit */
-    const critDmg = gCritDmg + af.critDmg + this.chipVal(p, 'critDmg');
+      + ((sk && sk.bonus && sk.bonus.crit) || 0) + (_sb.crit || 0));   /* 进阶 crit 已并入 af.crit */
+    const critDmg = gCritDmg + af.critDmg + this.chipVal(p, 'critDmg') + (_sb.critDmg || 0);
     /* 移速 */
     const spdUp = this.chipVal(p, 'spd') + ((sk && sk.bonus && sk.bonus.spd) || 0);
     const moveSpd = c.spd * this.SPD_MUL * (1 + spdUp);
@@ -1631,7 +1681,10 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
       rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gemBonus(p).ratePct),
       moveSpd: Math.round(moveSpd),
       /* 词条额外项：吸血 / 换弹 / 爆炸范围 / 双倍概率 */
-      reloadCut: af.reload, erMul: 1 + af.er, doubleChance: af.double,
+      reloadCut: af.reload, erMul: 1 + af.er + (_sb.erPct || 0), doubleChance: af.double,
+      /* V1.1.0 P-12 流派：减速/持续伤害由 battle.js 命中段消费（attrs 只透传） */
+      schoolSlow: _sb.slow || 0, schoolDot: _sb.dot || 0,
+      school: _sb.active || null,
       /* 表44 伤害浮动区间：必须随武器等级等比缩放
        * 严重BUG：此前直接返回表里写死的 g.dmgMin/g.dmgMax（突击步枪 22-28），
        * 会完全覆盖按武器等级算出的伤害 —— 结果武器从 Lv1 升到 Lv80，
