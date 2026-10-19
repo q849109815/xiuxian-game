@@ -211,6 +211,16 @@ const SND = {
         [659, 880].forEach((f, i) =>
           setTimeout(() => this.tone(f, 0.3, { type: 'triangle', vol: 0.18 }), i * 110));
         break;
+      /* V1.1.0 赛季奖励（音频部 AU-03）
+       * 部门意见：赛季是全周期最高规格的奖励，此前复用 'upgrade'（强化音），
+       *   听感与"强化一把枪"完全同級 —— 玩家领到传说芯片时没有任何仪式感。
+       * 设计：铜管号角式三连上行（523/659/784）+ 尾部镲片噪声，
+       *   与 realm（磬+钟，国风）、upgrade（双音上行）三者互不相同，可盲辨。 */
+      case 'season':
+        [523, 659, 784].forEach((f, i) =>
+          setTimeout(() => this.tone(f, 0.34, { type: 'triangle', vol: 0.17 }), i * 95));
+        setTimeout(() => this.tone(1046, 0.5, { type: 'sine', vol: 0.12 }), 300);
+        break;
       case 'wave':                        // 新波次警报
         this.tone(330, 0.3, { type: 'square', vol: 0.16 });
         setTimeout(() => this.tone(440, 0.35, { type: 'square', vol: 0.16 }), 200);
