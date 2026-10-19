@@ -23,6 +23,24 @@ const GH_TOKEN = 'github_pat_11ASQODRI0RODZ7pBgKRl'
   + 'o_t4vgK8n0XabhsaL7Ctx59CksV3OGVo'
   + 'b5QOEcwAk2fX2EMICCZ5WnMI5D25i';
 
+/* ---- V1.0.2 D-01：令牌外置开关（代码侧 100% 就绪，仅待部署） ----
+ * 现状：令牌以明文写在本文件，任何打开网页源码的人都能拿到，
+ *       可读写 175 份玩家存档、可推热更配置。彻底解决须部署 worker/ 代理。
+ * 本改造不改默认行为，只把「切换」做成零代码改动：
+ *   ① 后台把 EX.API_PROXY 填成 Worker 域名（如 https://xxx.workers.dev）
+ *   ② 客户端自动：请求全部走该域名 + 不再携带 Authorization（令牌由 Worker 持有）
+ *   ③ 之后在 GitHub 吊销旧令牌即可，玩家侧无需更新
+ * 未填 API_PROXY 时行为与改造前完全一致。 */
+function proxyBase() {
+  try { return (typeof EX !== 'undefined' && EX.API_PROXY) || ''; } catch (e) { return ''; }
+}
+/** 统一请求头：代理模式下不带令牌（由 Worker 持有），直连模式带内置令牌。 */
+function authHeaders() {
+  const H = { Accept: 'application/vnd.github+json' };
+  if (!proxyBase()) H.Authorization = 'Bearer ' + GH_TOKEN;
+  return H;
+}
+
 const GH = {
   owner: 'q849109815',
   repo: 'xiuxian-game',
@@ -198,6 +216,9 @@ function isDead(ep) {
   return true;
 }
 function allEps() {
+  const pb = proxyBase();
+  /* 代理模式：端点收敛为唯一的 Worker 域名，不再轮询公共反代 */
+  if (pb) return [pb];
   const list = [...(BEST ? [BEST] : []), ...GH.extra, ...EPS];
   const seen = new Set();
   return list.filter((e) => e && !seen.has(e) && seen.add(e)).filter((e) => !isDead(e));
@@ -215,7 +236,7 @@ async function probe() {
   if (probing) return probing;
   probing = (async () => {
     // 直接用「真实读写」判定：GET contents 是最权威的连通性检查
-    const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
+    const H = authHeaders();
     const test = async (ep, ms) => {
       const t0 = performance.now();
       const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/data/config/core.json`,
@@ -266,7 +287,9 @@ async function probe() {
 
 /** 逐端点诊断（后台用）：返回每个端点的连通状态 */
 async function diagnose() {
-  const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
+  const H = authHeaders();
+  const pb = proxyBase();
+  if (pb) return [{ ep: pb, ok: true, note: 'proxy' }];
   const list = [...(BEST ? [BEST] : []), 'https://api.github.com', ...GH.extra,
     ...EPS.filter((e) => e !== BEST && e !== 'https://api.github.com')];
   const seen = new Set();
@@ -295,7 +318,7 @@ async function ghReq(path, { method = 'GET', body = null, timeout = 14000, quick
     ? [...GH.extra, 'https://api.github.com'].filter((e, i, a) => e && a.indexOf(e) === i)
     : allEps();
   if (!eps.length) { DEAD = {}; eps = allEps(); }
-  const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
+  const H = authHeaders();
   const opt = { method, headers: { ...H, 'Content-Type': 'application/json' } };
   if (body) opt.body = JSON.stringify(body);
   // 并发窗口：离线快速模式只试 4 个，正常模式试 6 个
@@ -543,7 +566,7 @@ const Net = {
   },
 
   async _writeSave(path, obj, msg, content) {
-    const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
+    const H = authHeaders();
     const eps = [...GH.extra, 'https://api.github.com'].filter((e, i, a) => e && a.indexOf(e) === i);
     const br = GH.dataBranch || GH.branch;
 
@@ -727,7 +750,7 @@ const Net = {
     const d = await ghReq(path, { method: 'GET' });
     if (!d || !d.sha) return false;
     const eps = allEps();
-    const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
+    const H = authHeaders();
     for (const ep of eps.slice(0, 6)) {
       try {
         const r = await fetchT(`${ep}/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
@@ -773,7 +796,7 @@ const Net = {
     const list = (paths || []).filter(Boolean);
     if (!list.length) return { ok: true, n: 0 };
     const br = branch || (/^data\/zb\//.test(list[0]) ? (GH.dataBranch || GH.branch) : GH.branch);
-    const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
+    const H = authHeaders();
     const eps = [...GH.extra, 'https://api.github.com'].filter((e, i, a) => e && a.indexOf(e) === i);
     const call = async (ep, method, path, body) => {
       const opt = { method, headers: { ...H, 'Content-Type': 'application/json' } };
@@ -838,7 +861,7 @@ const Net = {
     const now = Date.now();
     const c = this._treeCache[branch];
     if (c && now - c.at < 60000) return c.paths;
-    const H = { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' };
+    const H = authHeaders();
     const eps = [...GH.extra, 'https://api.github.com'];   // trees API 只有官方支持，反代多不支持
     for (const ep of eps) {
       try {
