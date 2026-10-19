@@ -1058,9 +1058,9 @@ r_tavern(p, tab) {
             if (!rk.length) return '';
             const myIdx = rk.findIndex((x) => x.me);
             const top = rk.slice(0, 5);
-            return `<div style="margin-top:8px;border-top:1px solid var(--border,rgba(255,255,255,.08));padding-top:6px">
+            return `<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:6px">
               <div class="kv"><span>本周我的输出</span><b>${E.fmt(p.lb && p.lb.dmg || 0)}${myIdx >= 0 ? ' · 第 ' + (myIdx + 1) + ' 名' : ''}</b></div>
-              ${top.map((x, i) => `<div class="kv"${x.me ? ' style="color:var(--gold,#e8c07a)"' : ''}><span>${i + 1}. ${UI.esc(x.n)}${x.me ? '（我）' : ''}</span><b>${E.fmt(x.dmg)}</b></div>`).join('')}
+              ${top.map((x, i) => `<div class="kv"${x.me ? ' style="color:var(--gold)"' : ''}><span>${i + 1}. ${UI.esc(x.n)}${x.me ? '（我）' : ''}</span><b>${E.fmt(x.dmg)}</b></div>`).join('')}
               <div class="sub" style="padding:4px 2px">每周一重置，排名越高越能带动全团讨伐进度。</div>
             </div>`;
           })()}
