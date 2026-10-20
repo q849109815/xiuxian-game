@@ -471,25 +471,25 @@ const EX = {
       cond: 'clear', rw: { gold: 18880, M05: 12 }, unlock: '4-8', scene: 'wasteland' },
     { id: '4-10', ch: 4, n: 'BOSS·开垦者', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan'], per: [13, 21], mul: 5.09,
       cond: 'boss', boss: 'kaiken', rw: { gold: 19870, M05: 12 }, unlock: '4-9', scene: 'factory' },
-    { id: '5-1', ch: 5, n: '田间小路', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [14, 22], mul: 8.75,
+    { id: '5-1', ch: 5, n: '田间小路', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [13, 20], mul: 8.75,
       cond: 'clear', rw: { gold: 30730, M01: 15 }, unlock: '4-10', scene: 'field' },
-    { id: '5-2', ch: 5, n: '麦浪深处', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [14, 22], mul: 8.75,
+    { id: '5-2', ch: 5, n: '麦浪深处', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [13, 20], mul: 8.75,
       cond: 'clear', rw: { gold: 33500, M01: 15 }, unlock: '5-1', scene: 'field' },
-    { id: '5-3', ch: 5, n: '风车谷仓', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [14, 22], mul: 8.75,
+    { id: '5-3', ch: 5, n: '风车谷仓', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [13, 20], mul: 8.75,
       cond: 'clear', rw: { gold: 36260, M01: 15 }, unlock: '5-2', scene: 'field' },
-    { id: '5-4', ch: 5, n: '灌溉渠', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [14, 22], mul: 8.75,
+    { id: '5-4', ch: 5, n: '灌溉渠', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [13, 20], mul: 8.75,
       cond: 'clear', rw: { gold: 39030, M01: 15 }, unlock: '5-3', scene: 'field' },
-    { id: '5-5', ch: 5, n: '农舍', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [14, 22], mul: 8.75,
+    { id: '5-5', ch: 5, n: '农舍', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [13, 20], mul: 8.75,
       cond: 'clear', rw: { gold: 41800, M01: 15 }, unlock: '5-4', scene: 'field' },
-    { id: '5-6', ch: 5, n: '玉米地', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [14, 22], mul: 8.75,
+    { id: '5-6', ch: 5, n: '玉米地', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [13, 20], mul: 8.75,
       cond: 'clear', rw: { gold: 44560, M01: 15 }, unlock: '5-5', scene: 'snow' },
-    { id: '5-7', ch: 5, n: '晒谷场', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [14, 22], mul: 8.75,
+    { id: '5-7', ch: 5, n: '晒谷场', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [13, 20], mul: 8.75,
       cond: 'clear', rw: { gold: 47330, M01: 15 }, unlock: '5-6', scene: 'city' },
-    { id: '5-8', ch: 5, n: '拖拉机场', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [14, 22], mul: 8.75,
+    { id: '5-8', ch: 5, n: '拖拉机场', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [13, 20], mul: 8.75,
       cond: 'clear', rw: { gold: 50090, M01: 15 }, unlock: '5-7', scene: 'wasteland' },
-    { id: '5-9', ch: 5, n: '围栏缺口', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [14, 22], mul: 8.75,
+    { id: '5-9', ch: 5, n: '围栏缺口', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [13, 20], mul: 8.75,
       cond: 'clear', rw: { gold: 52860, M01: 15 }, unlock: '5-8', scene: 'factory' },
-    { id: '5-10', ch: 5, n: 'BOSS·巢穴之母', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [14, 22], mul: 8.75,
+    { id: '5-10', ch: 5, n: 'BOSS·巢穴之母', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'xiaofang'], per: [13, 20], mul: 8.75,
       cond: 'boss', boss: 'chaoxue', rw: { gold: 55630, M01: 15 }, unlock: '5-9', scene: 'tunnel' },
     { id: '6-1', ch: 6, n: '辐射边界', waves: 20, pool: ['putong', 'jipao', 'zhongjia', 'du', 'tuye', 'zhadan', 'dun', 'fenlie', 'xiaochou'], per: [14, 23], mul: 15.05,
       cond: 'clear', rw: { gold: 86050, M02: 18 }, unlock: '5-10', scene: 'wasteland' },
@@ -701,14 +701,14 @@ const EX = {
   chapters: [
     { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️', img: 'assets/scene/city.jpg?v=20270105a' },
     { id: 2, n: '第二章 · 地下设施', icon: '🚇', img: 'assets/scene/tunnel.jpg?v=20270105a' },
-    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270421a' },
+    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270422a' },
     { id: 4, n: '第四章 · 废弃工厂', icon: '🏭', img: 'assets/scene/factory.jpg?v=20270105a' },
     { id: 5, n: '第五章 · 荒野麦田', icon: '🌾', img: 'assets/scene/field.jpg?v=20270105a' },
     { id: 6, n: '第六章 · 辐射废墟', icon: '☢️', img: 'assets/scene/wasteland.jpg?v=20270105a' },
     { id: 7, n: '第七章 · 雪山哨站', icon: '🏔️', img: 'assets/scene/snow.jpg?v=20270105a' },
-    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270421a' },
-    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270421a' },
-    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270421a' },
+    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270422a' },
+    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270422a' },
+    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270422a' },
     { id: 11, n: '第十一章 · 前哨反攻', icon: '🛡️', img: 'assets/scene/outpost.jpg?v=20270415a' },
     { id: 12, n: '第十二章 · 断桥水坝', icon: '🌊', img: 'assets/scene/dam.jpg?v=20270415a' },
     { id: 13, n: '第十三章 · 矿坑深处', icon: '⛏️', img: 'assets/scene/mine.jpg?v=20270415a' },
@@ -935,7 +935,7 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270421a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270422a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/tokens.css', ver:'20270330a', size: 0 },
@@ -2475,7 +2475,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270421a',
+  sceneV: '20270422a',
 
   /* 云端 API 代理（V1.0.2 D-01）：留空 = 直连 GitHub（令牌在客户端，仅开发/内测可接受）。
      部署 worker/ 后填入 Worker 域名（如 https://zb-api.xxx.workers.dev），
