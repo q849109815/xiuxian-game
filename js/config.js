@@ -701,14 +701,14 @@ const EX = {
   chapters: [
     { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️', img: 'assets/scene/city.jpg?v=20270105a' },
     { id: 2, n: '第二章 · 地下设施', icon: '🚇', img: 'assets/scene/tunnel.jpg?v=20270105a' },
-    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270423a' },
+    { id: 3, n: '第三章 · 城市核心', icon: '🌉', img: 'assets/scene/bridge.jpg?v=20270424a' },
     { id: 4, n: '第四章 · 废弃工厂', icon: '🏭', img: 'assets/scene/factory.jpg?v=20270105a' },
     { id: 5, n: '第五章 · 荒野麦田', icon: '🌾', img: 'assets/scene/field.jpg?v=20270105a' },
     { id: 6, n: '第六章 · 辐射废墟', icon: '☢️', img: 'assets/scene/wasteland.jpg?v=20270105a' },
     { id: 7, n: '第七章 · 雪山哨站', icon: '🏔️', img: 'assets/scene/snow.jpg?v=20270105a' },
-    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270423a' },
-    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270423a' },
-    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270423a' },
+    { id: 8, n: '第八章 · 深渊裂谷', icon: '🕳️', img: 'assets/scene/rift.jpg?v=20270424a' },
+    { id: 9, n: '第九章 · 母巢外围', icon: '🕸️', img: 'assets/scene/nest.jpg?v=20270424a' },
+    { id: 10, n: '第十章 · 最终防线', icon: '⚔️', img: 'assets/scene/final.jpg?v=20270424a' },
     { id: 11, n: '第十一章 · 前哨反攻', icon: '🛡️', img: 'assets/scene/outpost.jpg?v=20270415a' },
     { id: 12, n: '第十二章 · 断桥水坝', icon: '🌊', img: 'assets/scene/dam.jpg?v=20270415a' },
     { id: 13, n: '第十三章 · 矿坑深处', icon: '⛏️', img: 'assets/scene/mine.jpg?v=20270415a' },
@@ -935,7 +935,7 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '20270423a',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '20270424a',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
       { p: 'css/tokens.css', ver:'20270330a', size: 0 },
@@ -2441,6 +2441,26 @@ const EX = {
     6: 'cg07_fallout', 7: 'cg03_rebuild', 8: 'cg08_rift', 9: 'cg09_nest', 10: 'cg10_final',
     11: 'cg11_outpost', 12: 'cg12_dam', 13: 'cg13_mine', 14: 'cg14_lab', 15: 'cg15_core',
   },
+  /* =====================================================
+   * 【章节集星奖励】V1.2.0 冲刺 · P-17 推图中途目标
+   * -----------------------------------------------------
+   * 为什么需要：150 关打通前，玩家在推图途中【没有任何中途目标】——
+   *   只有"下一关"这一个驱动力，一旦卡住就流失。
+   *   集星给每章一个"收尾目标"：把 10 关都打到 3 星，是通关之外的第二层追求。
+   * 数值口径（不是拍脑袋）：
+   *   三档合计 ≈ 该章 10 关首通奖励总和的 30%，定位为"额外收集激励"，
+   *   不会让玩家光靠集星就堆爆经济。随章节自动按 chapterStarScale 递增。
+   * star  需要该章累计星数（每关最多 3 星，一章满星 30）
+   * rw    奖励对象，键必须落在 grant() 白名单内（gold/diamond/stamina/chipN/chipE/chipL…）
+   *        【严禁】写中文键——历史 BUG：邮件金币 '100' 字符串拼接污染全局、
+   *        活动 rw 写成中文导致塞进 p.mat['钻石'] 这种垃圾键。
+   * ===================================================== */
+  chapterStarRw: [
+    { star: 10, rw: { gold: 2000, stamina: 20 } },
+    { star: 20, rw: { gold: 4000, chipN: 2 } },
+    { star: 30, rw: { chipE: 1, diamond: 100 } },
+  ],
+
   /* 章节过场文案（配合 CG 展示） */
   chapterDesc: {
     1:  '尸潮初现，城市在一夜之间沦陷。你握紧最后一把枪，守住街区出口。',
@@ -2475,7 +2495,7 @@ const EX = {
   },
   /* 场景图缓存戳：文件名固定为 city.jpg 等，不带版本号的话浏览器会一直读旧缓存，
      换了美术玩家刷新也看不到。改美术时同步改这里即可（可后台热更）。 */
-  sceneV: '20270423a',
+  sceneV: '20270424a',
 
   /* 云端 API 代理（V1.0.2 D-01）：留空 = 直连 GitHub（令牌在客户端，仅开发/内测可接受）。
      部署 worker/ 后填入 Worker 域名（如 https://zb-api.xxx.workers.dev），
