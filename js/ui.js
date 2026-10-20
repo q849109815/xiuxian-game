@@ -3546,7 +3546,27 @@ r_tavern(p, tab) {
     const stat = E.chapterStat ? E.chapterStat(p, ch, diff) : null;
     const chHead = stat ? `<div class="card-t">${cd.img ? `<img src="${cd.img}" style="width:20px;height:20px;object-fit:cover;border-radius:5px;vertical-align:-4px">` : cd.icon} ${cd.n}
       <span class="sub" style="float:right;font-size:var(--fs-xs)">通关 ${stat.cleared}/${stat.total} · ★${stat.stars}/${stat.maxStars}</span></div>` : '';
-    return chBar + diffBar + `<div class="card">${chHead || `<div class="card-t">${cd.n}</div>`}
+    /* 【章节集星奖励】V1.2.0 · P-17
+     * 推图途中唯一的中途目标：把本章 10 关都打到 3 星。
+     * 进度条 + 三档领奖，星数不足时按钮置灰（不给可点的假希望）。 */
+    const csCard = (() => {
+      if (!E.chapterStarState) return '';
+      const cs = E.chapterStarState(p, ch, diff);
+      const pct = Math.max(0, Math.min(100, Math.round(cs.stars / Math.max(1, cs.maxStars) * 100)));
+      return `<div class="card"><div class="card-t">本章集星
+        <span class="sub" style="float:right;font-size:var(--fs-xs)">★ ${cs.stars}/${cs.maxStars}</span></div>
+        <div style="height:8px;background:var(--surface-3);border-radius:4px;overflow:hidden;margin:6px 0">
+          <div style="height:100%;width:${pct}%;background:var(--gold)"></div></div>
+        <div class="lvgrid" style="grid-template-columns:repeat(3,1fr)">
+        ${cs.tiers.map((t) => `<div class="lvc" style="text-align:center;${t.got ? 'opacity:.55' : ''}">
+          <b style="font-size:var(--fs-xs)">★ ${t.star}</b>
+          <div class="sub" style="font-size:var(--fs-xs)">${this.rwTxt(t.rw)}</div>
+          ${t.got ? '<span class="tag">已领取</span>'
+            : (cs.stars < t.star ? '<span class="tag r" style="opacity:.7">星数不足</span>'
+              : `<button class="btn c sm" data-csr="${t.i}">领取</button>`)}
+        </div>`).join('')}</div></div>`;
+    })();
+    return chBar + diffBar + csCard + `<div class="card">${chHead || `<div class="card-t">${cd.n}</div>`}
       ${list.map((l) => {
         const lock = !E.levelUnlocked(p, l.id);
         const st = E.diffStars(p, l.id, diff);
@@ -3591,6 +3611,17 @@ r_tavern(p, tab) {
       })()}</div>`;
   },
   b_level(p) {
+    /* 章节集星领奖：发奖成功才刷新，失败给提示且【不记账】 */
+    $$('#pnBody [data-csr]').forEach((b) => {
+      b.onclick = () => {
+        const ch = this.curChapter || E.chapterOf(E.curLevel(p));
+        const r = E.claimChapterStar(p, ch, this.curDiff || 'normal', +b.dataset.csr);
+        if (!r.ok) { this.toast(r.msg || '无法领取'); return; }
+        if (window.SND) SND.play('upgrade');
+        this.toast(r.msg + '：' + this.rwTxt(r.rw));
+        this.open('level');
+      };
+    });
     $$('#pnBody [data-ch]').forEach((b) => { b.onclick = () => { this.curChapter = +b.dataset.ch; this.open('level'); }; });
     /* 难度切换：只切档位并刷新列表，不进战斗 */
     $$('#pnBody [data-df]').forEach((b) => {
