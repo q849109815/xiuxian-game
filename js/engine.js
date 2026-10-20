@@ -1915,6 +1915,19 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     return (Number(a.pellets) || 1) * pierceMul * aoe * (mag / cyc);
   },
   power(p) {
+    /* 【战力链缺字段兜底】
+     * 实测：E.power() 全项目 17 处调用（ui.js 14 / main.js 2 / battle.js 1），
+     * 而 ensureDicts 只在 ui.js 里出现 4 次 —— 也就是说 main.js 与 battle.js
+     * 这两条战力链从没走过缺字段兜底。后台 GM 热改档在 session 内删掉
+     * p.talents 时，attrs() 里的 p.talents.t_armor 直接抛 TypeError：
+     *   结算面板 / 战斗内战力显示 → 白屏或卡死。
+     * 这里就地补齐一次（幂等、O(字段数)），一处修住全部 17 个调用点，
+     * 不改动任何调用方。ensureDicts 不回调 power，无递归风险。 */
+    this.ensureDicts(p);
+    /* p 本身不是对象（null / undefined / 字符串）时 ensureDicts 原样返回，
+     * 后续 this.gun(p) 会读 p.gun 抛 TypeError。战力只是展示值，
+     * 返回 0 远比让结算面板白屏好 —— 与 UI 侧 `|| 0` 兜底同口径。 */
+    if (!p || typeof p !== 'object') return 0;
     const a = this.attrs(p);
     const gb = this.gemBonus(p);
     const g = this.gun(p);
