@@ -2049,6 +2049,65 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     });
     return { total: list.length, cleared: cleared, stars: stars, maxStars: list.length * 3, unlocked: unlocked };
   },
+  /* 【章节集星奖励】V1.2.0 · P-17
+   * 章节奖励缩放：以第 1 章为基准，取该章关卡金币均值之比。
+   * 这样集星奖励自动跟着现有关卡曲线走，不必手写 15 章数值。 */
+  chapterStarScale(ch) {
+    const all = this.levels ? this.levels() : [];
+    if (!all.length) return 1;
+    const avg = (c) => {
+      const l = all.filter((x) => Number(x.ch) === Number(c));
+      if (!l.length) return 0;
+      return l.reduce((s, x) => s + (Number((x.rw || {}).gold) || 0), 0) / l.length;
+    };
+    const base = avg(1);
+    const cur = avg(ch);
+    if (!base || !cur) return 1;
+    return Math.max(1, Math.round(cur / base));
+  },
+  /* 集星状态：星数 + 三档各自的门槛、奖励（已乘章节与难度倍率）、是否已领、是否可领。
+   * 【按难度独立】每关三档难度各自记录星级，集星也必须分开，
+   * 否则玩家拿普通难度的星去领恶魔档奖励不合理。 */
+  chapterStarState(p, ch, diff) {
+    /* 缺字段就地兜底：脏档 / 后台热改档 cleared 为 null 时 chapterStat 会直接抛错，
+     * 关卡选择页整页白屏。守卫 G1 实测抓出，这里堵住。 */
+    if (this.ensureDicts) this.ensureDicts(p);
+    const st = this.chapterStat(p, ch, diff) || { stars: 0, maxStars: 30 };
+    const tiers = (EX.chapterStarRw || []);
+    const d = this.diffMul(diff);
+    const rwMul = Number(d.rw) || 1;
+    const sc = this.chapterStarScale(ch);
+    const key = String(diff || 'normal') + ':' + Number(ch);
+    p.chStarRw = p.chStarRw || {};
+    const got = Array.isArray(p.chStarRw[key]) ? p.chStarRw[key] : [];
+    return {
+      stars: st.stars, maxStars: st.maxStars,
+      tiers: tiers.map((t, i) => {
+        const rw = {};
+        for (const k in (t.rw || {})) rw[k] = Math.round((Number(t.rw[k]) || 0) * rwMul * sc);
+        return { i: i, star: Number(t.star) || 0, rw: rw, got: !!got[i], can: st.stars >= (Number(t.star) || 0) && !got[i] };
+      }),
+    };
+  },
+  /* 领取某章某难度的第 idx 档集星奖励。
+   * 三重拦截：档位存在 → 未领过 → 星数达标 → 实际发放成功才记已领。
+   * 【为什么先发放再记账】历史 BUG：活动/任务多处"先标记已领、再发放"，
+   *   发放失败时本期永久作废。这里 grant 返回 0（一项都没发出去）就不记账。 */
+  claimChapterStar(p, ch, diff, idx) {
+    if (this.ensureDicts) this.ensureDicts(p);
+    const s = this.chapterStarState(p, ch, diff);
+    const t = s.tiers[Number(idx)];
+    if (!t) return { ok: false, msg: '档位不存在' };
+    if (t.got) return { ok: false, msg: '已领取' };
+    if (s.stars < t.star) return { ok: false, msg: '星数不足' };
+    const got = this.grant(p, t.rw);
+    if (!got) return { ok: false, msg: '奖励无效' };
+    const key = String(diff || 'normal') + ':' + Number(ch);
+    p.chStarRw = p.chStarRw || {};
+    if (!Array.isArray(p.chStarRw[key])) p.chStarRw[key] = [];
+    p.chStarRw[key][Number(idx)] = 1;
+    return { ok: true, rw: t.rw, msg: '★' + t.star + ' 集星奖励已领取' };
+  },
   /* 体力恢复倒计时：距离回满 / 距离下一点还差多久（毫秒）。
    * 满体力返回 0（界面据此隐藏倒计时）。 */
   staminaEta(p) {
