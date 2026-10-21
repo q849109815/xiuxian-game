@@ -1,717 +1,5155 @@
+/* localStorage 安全读写：隐私模式/禁用站点数据/配额耗尽时 localStorage 会【抛异常】
+ * 而不是返回 null，裸调会让本模块初始化中断（实测禁用存储后整页白屏）。
+ * 这里统一走包装，读取失败回落默认值，写入失败静默忽略。 */
+function lsGet(k, dflt) { try { const v = localStorage.getItem(k); return v === null || v === undefined ? dflt : v; } catch (e) { return dflt; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
 /* =========================================================
- * ui.js —— 界面渲染层
+ * ui.js —— 界面层
+ * 依据资料 07 模块关系表（16 界面）/ 08 跳转流程
  * ========================================================= */
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 
-const UI = {
-  P: null,            // 玩家存档
-  curPanel: null,     // 当前面板 key
-  curTab: {},         // 每个面板的当前 tab
-  selEquip: null,     // 选中的装备部位
-  selItem: -1,        // 选中的背包物品
+/* 【贴图缓存戳】换美术时必须改这里，否则老玩家浏览器一直读旧缓存，看不到新图。
+ *
+ * BUG（只给战斗贴图加了戳，界面贴图没有）：
+ *   chibi.js 里的 IMG_V 只作用于 assets/chibi/*.png（战斗用）。
+ *   而皮肤 assets/skin/*.jpg、头像 assets/char/*.jpg、图标 assets/icon/*.jpg
+ *   在 ui.js / engine.js 里都是直接写进 <img src="..."> 的，不带任何版本号；
+ *   文件名没变 → 浏览器/ CDN 缓存不失效 → 玩家刷新后看到的仍是几个月前的旧图，
+ *   运营换了美术却像没换一样，还以为上传失败。
+ * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
+ *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
+ * 改美术时只需改这一个常量。 */
+const IMG_V = '1.2.1';
 
-  /* ---------------- 屏幕切换 ---------------- */
+/* 全局 emoji → 图片替换
+ * ---------------------------------------------------------------------
+ * 界面里散落着上百处 emoji（🪙💎☠🤖🔥…），与整套新美术不是一个画风。
+ * 与其逐个面板改模板字符串（几十处、且新加面板容易漏），这里改在渲染之后：
+ * 遍历 DOM 文本节点，凡命中映射表的 emoji 就地换成 <img class="ei">。
+ * 未收录的 emoji 原样保留（不会变空白、不会报错），所以是渐进式的。
+ * stampImgs 每次面板渲染后都会跑，故覆盖全部面板与页签。 */
+const EMOJI_ICON = {
+  '💎': 'i_diamond.jpg', '🪙': 'i_gold.jpg', '⚡': 'i_stamina.jpg',
+  '☠': 'hud_kill.png', '❤': 'hud_hp.png', '🤖': 'hud_auto.png',
+  '🔄': 'hud_switch.png', '🔁': 'hud_switch.png', '✕': 'hud_close.png', '👆': 'hud_finger.png',
+  '💥': 'logo_boom.jpg',
+  '🌱': 'diff_normal.jpg', '🔥': 'diff_hard.jpg', '💀': 'diff_hell.jpg',
+  '🧟': 'cdx_zombie.jpg', '🔫': 'cdx_gun.jpg', '👕': 'cdx_skin.jpg', '🎽': 'cdx_skin.jpg',
+  '🎁': 'sh01_gift.jpg',
+  '🪖': 'eq_helmet.jpg', '🥋': 'eq_armor.jpg', '⚔️': 'eq_weapon.jpg', '💍': 'eq_ring.jpg',
+  '👢': 'eq_boots.jpg', '🔮': 'eq_orb.jpg', '📿': 'eq_necklace.jpg', '🧤': 'eq_gloves.jpg',
+  '🎯': 'ms_target.jpg', '🏁': 'ms_flag.jpg', '🚩': 'ms_flag.jpg', '📅': 'ms_login.jpg',
+  '👹': 'ms_boss.jpg', '✨': 'ms_sparkle.jpg', '♾️': 'ms_infinity.jpg', '📋': 'ms_clipboard.jpg',
+  '⚠️': 'ic_warn.jpg', '🎉': 'ic_party.jpg', '💠': 'ic_chip.jpg', '🏅': 'ic_medal.jpg',
+  '🔑': 'ic_key.jpg', '🗑': 'ic_trash.jpg',
+  '🏆': 'nav_rank.png', '❄️': 'el_ice.jpg', '⭐': 'star.jpg',
+  '🧩': 'i_frag.jpg', '📦': 'd3_box.jpg', '🩹': 'i_medkit.jpg', '🛡️': 'i_shield.jpg',
+  '💚': 'i_potion.jpg', '🎖️': 'sh06_pass.jpg', '🍺': 'nav_tavern.png', '🏰': 'nav_legion.png',
+  '⚙': 'nav_set.png', '📢': 'nav_notice.png', '🏥': 'bd_hospital.jpg',
+  '🏗️': 'nav_base.png', '🔧': 'nav_base.png',
+  '🛸': 'sk_wurenji.jpg', '🚙': 'sk_zhuangjiache.jpg',
+  /* —— 全量补齐：把界面/配置里剩余的 emoji 全部接图（本轮新增 10 张：
+   *    ic_add 加号 / ic_slot 空槽 / ic_music 音乐 / ic_sound 音效 / ic_lang 语言 /
+   *    ic_stats 统计 / ic_avatar 头像上传 / ic_up 升级箭头 / ic_hammer 强化锤 / ic_cloud 云存档）
+   * 未收录的 emoji 会原样显示，所以这里按「全量扫描结果」逐条映射，做到界面零 emoji。 */
+  '🌪️': 'sk_xuanfengjianong.jpg',
+  '🌾': 'bd_warehouse.jpg',
+  '💪': 'talent_t_atk.jpg',
+  '📜': 'ms_clipboard.jpg',
+  '🏙️': 'nav_battle.png',
+  '🕯️': 'ms_sparkle.jpg',
+  '♾': 'ms_infinity.jpg',
+  '🖼️': 'ic_avatar.jpg',
+  '🕵️‍♀️': 'av_a04.png',
+  '🌉': 'nav_battle.png',
+  '💫': 'ms_sparkle.jpg',
+  '🏜️': 'nav_exped.png',
+  '🏔️': 'nav_exped.png',
+  '✈️': 'z_feixing.jpg',
+  '⛏️': 'ic_hammer.jpg',
+  '⇄': 'hud_switch.png',
+  '↔': 'hud_switch.png',
+  '🔨': 'ic_hammer.jpg',
+  '☁️': 'ic_cloud.jpg',
+  '✗': 'hud_close.png',
+  '✘': 'hud_close.png',
+  '👩‍⚕️': 'av_a02.png',
+  '🛢️': 'i_powder.jpg',
+  '🎇': 'w_grenade.jpg',
+  '🚀': 'w_grenade.jpg',
+  '☠️': 'hud_kill.png',
+  '🎙️': 'ic_sound.jpg',
+  '🦾': 'eq_gloves.jpg',
+  '🪚': 'eq_weapon.jpg',
+  '⚔': 'eq_weapon.jpg',
+  '🏭': 'bd_armory.jpg',
+  '🧰': 'bd_armory.jpg',
+  '🦅': 'z_feixing.jpg',
+  '🕷️': 'z_fenlie.jpg',
+  '🗓️': 'ms_login.jpg',
+  '📘': 'nav_codex.png',
+  '🎵': 'ic_music.jpg',
+  '🔊': 'ic_sound.jpg',
+  '📊': 'ic_stats.jpg',
+  '🧑‍🚀': 'av_a01.png',
+  '👨‍🚀': 'av_a01.png',
+  '🧑‍🏭': 'av_a03.png',
+  '🧑‍🚒': 'av_a08.png',
+  '🧑‍🍳': 'av_a09.png',
+  '⚙️': 'nav_set.png',
+  '🖥️': 'nav_set.png',
+  '🕸️': 'ms_boss.jpg',
+  '🕳️': 'ms_boss.jpg',
+  '🥼': 'cdx_skin.jpg',
+  '👗': 'cdx_skin.jpg',
+  '🥻': 'cdx_skin.jpg',
+  '🧨': 'i_powder.jpg',
+  '💉': 'i_medkit.jpg',
+  '👑': 'ic_medal.jpg',
+  '🔰': 'ic_medal.jpg',
+  '🔱': 'ic_medal.jpg',
+  '🩸': 'i_potion.jpg',
+  '🍖': 'i_potion.jpg',
+  '🦺': 'eq_armor.jpg',
+  '🌫️': 'el_wind.jpg',
+  '☢️': 'el_elec.jpg',
+  '🪱': 'z_putong.jpg',
+  '🐛': 'z_putong.jpg',
+  '🤡': 'z_putong.jpg',
+  '🕐': 'ms_login.jpg',
+  '📮': 'nav_mail.png',
+  '🔲': 'ic_slot.jpg',
+  '🌐': 'ic_lang.jpg',
+  '🔩': 'i_metal.jpg',
+  '⬜': 'ic_slot.jpg',
+  '🦖': 'ms_boss.jpg',
+  '❔': 'ic_warn.jpg',
+  '❓': 'ic_warn.jpg',
+  '⚠': 'ic_warn.jpg',
+  '🚫': 'ic_warn.jpg',
+  '🔺': 'ic_warn.jpg',
+  '💰': 'd1_gold.jpg',
+  '🎪': 'nav_act.png',
+  '📺': 'nav_act.png',
+  '❤️': 'hud_hp.png',
+  '🔌': 'el_elec.jpg',
+  '🌨️': 'el_ice.jpg',
+  '➕': 'ic_add.jpg',
+  '🔳': 'i_chip.jpg',
+  '🧑': 'av_a05.png',
+  '🥷': 'av_a06.png',
+  '👤': 'av_a07.png',
+  '💣': 'w_mine.jpg',
+  '🔬': 'bd_lab.jpg',
+  '🧪': 'bd_lab.jpg',
+  '📡': 'bd_lab.jpg',
+  '🚇': 'nav_go.png',
+  '➤': 'nav_go.png',
+  '🏃': 'nav_go.png',
+  '🏺': 'i_rare.jpg',
+  '⬆': 'ic_up.jpg',
+  '✔': 'check.jpg',
+  '✓': 'check.jpg',
+  '🔴': 'gem_r.jpg',
+  '🔵': 'gem_b.jpg',
+  '🟣': 'gem_p.jpg',
+  '🟢': 'gem_g.jpg',
+  '🔦': 'w_smg.jpg',
+  '☣️': 'z_du.jpg',
+  '✅': 'check.jpg',
+  '★': 'star.jpg',
+  '🏹': 'm_sj.jpg',
+  '🔒': 'lock.jpg',
+  '🤮': 'z_du.jpg',
+  /* 最后 4 个漏网 emoji：它们出现在「静态 HTML」或「不走 emojify 的动态片段」里，
+   * 靠映射表兜不住，所以 index.html 里那三处也同步改成了 <img>（双保险）：
+   *   ⏸ 战斗顶栏暂停按钮（index.html，战斗界面不跑 emojify）
+   *   ⏱ 三选一倒计时（index.html）
+   *   ◀ 面板返回箭头（index.html）
+   *   ⏳ 限时道具角标（ui.js tempTag，面板渲染后走 emojify，故映射即可） */
+  '⏸': 'hud_pause.png',
+  '⏸️': 'hud_pause.png',
+  '⏱': 'ic_timer.png',
+  '⏱️': 'ic_timer.png',
+  '◀': 'ic_back.png',
+  '◀️': 'ic_back.png',
+  '⏳': 'ic_hourglass.png',
+  '⏳️': 'ic_hourglass.png',
+};
+
+/* 长串优先，避免 ⚔ + ️ 被拆开匹配 */
+const EMOJI_RE = new RegExp(
+  Object.keys(EMOJI_ICON).sort((a, b) => b.length - a.length).join('|'), 'g');
+
+function emojify(root) {
+  try {
+    const box = root || document;
+    if (!box.querySelectorAll) return;
+    const txt = box.textContent || '';
+    EMOJI_RE.lastIndex = 0;
+    if (!EMOJI_RE.test(txt)) return;
+    const w = document.createTreeWalker(box, NodeFilter.SHOW_TEXT, null);
+    const list = []; let n;
+    while ((n = w.nextNode())) {
+      const s = n.nodeValue;
+      if (!s) continue;
+      const p = n.parentNode;
+      if (!p || /^(STYLE|SCRIPT|TEXTAREA|INPUT|OPTION|IMG)$/.test(p.nodeName)) continue;
+      EMOJI_RE.lastIndex = 0;
+      if (EMOJI_RE.test(s)) list.push(n);
+    }
+    for (const nd of list) {
+      const s = nd.nodeValue;
+      const frag = document.createDocumentFragment();
+      let last = 0, m;
+      EMOJI_RE.lastIndex = 0;
+      while ((m = EMOJI_RE.exec(s))) {
+        if (m.index > last) frag.appendChild(document.createTextNode(s.slice(last, m.index)));
+        const im = document.createElement('img');
+        im.className = 'ei';
+        im.setAttribute('src', 'assets/icon/' + EMOJI_ICON[m[0]] + '?v=' + IMG_V);
+        im.setAttribute('alt', m[0]);
+        frag.appendChild(im);
+        last = m.index + m[0].length;
+      }
+      if (last < s.length) frag.appendChild(document.createTextNode(s.slice(last)));
+      if (nd.parentNode) nd.parentNode.replaceChild(frag, nd);
+    }
+  } catch (e) { /* 兜底：替换失败保留原 emoji，不影响渲染 */ }
+}
+
+function stampImgs(root) {
+  try {
+    const box = root || document;
+    if (!box.querySelectorAll) return;
+    box.querySelectorAll('img[src^="assets/"]').forEach((im) => {
+      const s = im.getAttribute('src') || '';
+      if (s.indexOf('?') < 0) im.setAttribute('src', s + '?v=' + IMG_V);
+    });
+    emojify(box);
+  } catch (e) { /* 兜底：加戳失败也不能影响渲染 */ }
+}
+
+/* 「进入管理后台」入口是否显示
+ * ---------------------------------------------------------------------
+ * 【安全修复】此前设置页底部对所有玩家常驻一个「进入管理后台」按钮，
+ *   等于把 admin/ 后台地址主动摆在每一位玩家面前（此前后台口令又是明文写在
+ *   admin/js/core.js 里的，仓库公开 → 任何人可读，组合起来等于后台对外开放）。
+ * 入口改为默认隐藏，运营自己在地址后加 ?admin=1 打开游戏即可看到该按钮；
+ * 或在本机控制台执行 lsSet('zb_admin_entry','1') 后刷新。
+ * 这只是收窄暴露面（安全纵深的一层），真正的防护是后台口令与令牌。 */
+function adminEntryVisible() {
+  try {
+    if (location.search && /(\?|&)admin=1\b/.test(location.search)) return true;
+    return lsGet('zb_admin_entry', '') === '1';
+  } catch (e) { return false; }
+}
+
+const UI = {
+  P: null, curPanel: null, curTab: {}, selChipSlot: 'c1', curChapter: 1, curDiff: 'normal',
+
   show(id) {
     $$('.screen').forEach((s) => s.classList.remove('on'));
-    const el = document.getElementById(id);
-    if (el) el.classList.add('on');
+    const el = document.getElementById(id); if (el) el.classList.add('on');
   },
-
   toast(msg, cls) {
     const box = $('#toasts'); if (!box) return;
+    /* 失败提示配反馈音（audio.js 的 'error'）：
+     * 这条音效此前整项目零调用 —— 玩家点下"金币不足/条件不满足"这类操作时
+     * 只有一行文字飘过，屏幕角落一闪就没了，很容易以为自己没点到。
+     * 'error' 已在 SND.MIN_GAP 登记 300ms 节流，连点不会变成连续蜂鸣。 */
+    if (cls === 'err') { try { if (window.SND) SND.play('error'); } catch (e) {} }
     const d = document.createElement('div');
-    d.className = 'toast ' + (cls || '');
-    d.innerHTML = msg;
-    box.appendChild(d);
-    setTimeout(() => d.remove(), cls === 'boss' ? 2800 : 2100);
+    d.className = 'toast ' + (cls || ''); d.innerHTML = msg;
+    emojify(d);
+    box.appendChild(d); setTimeout(() => { if (d.remove) d.remove(); }, cls === 'boss' ? 2600 : 2000);
     while (box.children.length > 4 && box.firstElementChild) box.firstElementChild.remove();
   },
 
-  /* ================= 主界面 ================= */
+  /* ================= 基地主界面 ================= */
   home() {
     const p = this.P; if (!p) return;
-    const avEl = $('#hmAvIco');
-    if (p.avatarImg) {
-      avEl.style.backgroundImage = 'url(' + p.avatarImg + ')';
-      avEl.style.backgroundSize = 'cover';
-      avEl.style.backgroundPosition = 'center top';
-      avEl.style.width = '100%'; avEl.style.height = '100%';
-      avEl.style.borderRadius = '50%';
-      avEl.textContent = '';
-    } else {
-      avEl.textContent = p.avatar || '👨‍🚀';
+    /* 同 open()：热改档绕过 sanitize 时补字段，避免主界面整体抛错白屏 */
+    if (window.E && E.ensureDicts) E.ensureDicts(p);
+    E.resetTasks(p); E.tickStamina(p);
+    $('#hmName').textContent = p.name;
+    /* 已装备称号显示在代号旁（此前称号发放后玩家完全看不到） */
+    const hmT = $('#hmTitle');
+    if (hmT) {
+      const td = p.title ? E.titleDef(p.title) : null;
+      hmT.textContent = td ? ('『' + td.n + '』') : '';
+      hmT.style.color = td ? td.color : '';
+      hmT.style.display = td ? '' : 'none';
     }
     $('#hmLv').textContent = 'Lv.' + (p.lv || 1);
-    $('#hmName').textContent = p.name;
     $('#hmPower').textContent = E.fmt(E.power(p));
     $('#cuGold').textContent = E.fmt(p.gold);
+    const ci = EX.curIcon || {};
+    const cgEl = $('#cuGoldIco'); if (cgEl && ci.gold) cgEl.src = ci.gold + '?v=' + IMG_V;
+    const cdEl = $('#cuDiaIco'); if (cdEl && ci.diamond) cdEl.src = ci.diamond + '?v=' + IMG_V;
+    const csEl = $('#cuStaIco'); if (csEl && ci.stamina) csEl.src = ci.stamina + '?v=' + IMG_V;
     $('#cuDia').textContent = E.fmt(p.diamond);
-    const lv = p.level || 1;
-    $('#hmLevel').textContent = '第 ' + lv + ' 关';
-    $('#hmLevelName').textContent = E.levelName(lv).split('· ')[1] || '';
-    // 基地
-    $('#hmBase').innerHTML = EX.base.map((b) => {
-      let dot = '';
-      if (b.id === 'lab' && Object.keys(p.techs || {}).length) dot = '<div class="dot"></div>';
-      if (b.id === 'wall' && p.wallLv > 1) dot = '';
-      return `<button class="bs" data-base="${b.id}">${dot}<i>${b.icon}</i><b>${b.n}</b><span>${b.desc}</span></button>`;
+    const cur = E.curLevel(p);
+    $('#hmLevel').textContent = E.char(p).n + ' · ' + E.levelName(cur);
+    $('#hmLevelName').textContent = E.levelName(cur) + (E.staminaCost(cur) > 1 ? '（体力' + E.staminaCost(cur) + '）' : '');
+    const eb = $('#hmEndBest');
+    if (eb) eb.textContent = '最佳 ' + (p.endlessBest || 0) + ' 层';
+    const st = $('#hmStamina');
+    if (st) st.textContent = Math.floor(p.stamina || 0) + '/' + EX.STAMINA_MAX;
+    /* 体力恢复倒计时：满体力不显示，否则玩家不知道还要等多久才能继续推图 */
+    if (st) {
+      const eta = E.staminaEta ? E.staminaEta(p) : null;
+      st.textContent += (eta && !eta.full) ? '（' + this.msTxt(eta.nextMs) + '后 +1）' : '';
+    }
+    /* 【V1.1.0】主行动按钮文案走运营热改层（TXT_001），默认「出击」不变 */
+    const _gb = document.querySelector('#hmGo b');
+    if (_gb) _gb.textContent = EX.txt('TXT_001');
+    /* 出击卡副行：章节进度 + 本章星数，把 10 章 100 关的体量呈现出来 */
+    const _gs = $('#hmGoSub');
+    if (_gs) {
+      const _ch = E.chapterOf ? E.chapterOf(cur) : 1;
+      const _cs = E.chapterStat ? E.chapterStat(p, _ch, 'normal') : null;
+      _gs.textContent = _cs ? ('第' + _ch + '章 ' + _cs.cleared + '/' + _cs.total + ' 关 · ★' + _cs.stars + '/' + _cs.maxStars) : '';
+    }
+    const _es = $('#hmEndSub');
+    if (_es) {
+      const _tb = E.totalStars ? E.totalStars(p) : 0;
+      _es.textContent = '总星 ' + _tb + '/300';
+    }
+    /* 今日进度条：填掉菜单底部到屏幕的空白，同时给出今日该做的事 */
+    this.renderToday(p);
+    const avEl = $('#hmAvIco');
+    /* 头像：优先用玩家自己选的，没选过才回退到当前角色图标 */
+    if (avEl) {
+      const _av = p.avatar || '';
+      const _u = this.avSrc(_av);
+      if (_u) avEl.innerHTML = `<img src="${_u}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      else {
+        /* 旧存档里 p.avatar 仍是 emoji（尚无对应图片），此时回退到【角色立绘】而不是 emoji：
+         * 主界面左上角头像此前会显示 👨‍🚀 这类死 emoji，与新美术不是一个画风。 */
+        const _ci = (E.char(p) || {}).img;
+        if (_ci) avEl.innerHTML = `<img src="${_ci}?v=${IMG_V}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+        else avEl.textContent = _av || '';
+      }
+    }
+    /* 头像框
+     * BUG：equipFrame() 只写 p.frame，而全项目【没有任何一处读取它做渲染】——
+     *   玩家在设置页点「装备」拿到「已装备头像框：活动限定框」的成功提示，
+     *   回到主界面头像却毫无变化（实测装备前后 #hmAv 的 HTML 完全一致）。
+     *   头像框来自活动商店 800 代币 / 进阶战令 680 钻 / 排行榜奖励，
+     *   花了资源却看不到任何外观变化，等于白买。
+     *   这里按 frameDef 的 color 给头像加边框与光晕，让装备结果肉眼可见。 */
+    const avBox = $('#hmAv');
+    if (avBox) {
+      const fd = p.frame ? (E.frameDef ? E.frameDef(p.frame) : null) : null;
+      if (fd) {
+        const c0 = fd.color || '#ffd166';
+        /* 只有标准 6 位 hex 才拼 alpha，避免非法值拼出无效颜色导致样式整条失效 */
+        const c = /^#[0-9a-fA-F]{6}$/.test(c0) ? c0 : '#ffd166';
+        avBox.style.border = '2px solid ' + c;
+        avBox.style.boxShadow = '0 0 12px ' + c + '80, inset 0 0 7px ' + c + '40';
+        avBox.title = fd.n || '头像框';
+      } else {
+        avBox.style.border = '';
+        avBox.style.boxShadow = '';
+        avBox.removeAttribute('title');
+      }
+    }
+
+    $('#hmBase').innerHTML = EX.buildings.map((b) => {
+      const l = E.buildLv(p, b.id);
+      return `<button class="bs" data-build="${b.id}"><i>${b.img ? `<img src="${b.img}" alt="">` : b.icon}</i><b>${b.n} Lv.${l}</b><span>${b.desc}</span></button>`;
     }).join('');
-    $$('#hmBase .bs').forEach((el) => {
-      el.onclick = () => this.openBase(el.dataset.base);
+    $$('#hmBase .bs').forEach((el) => { el.onclick = () => this.open('base', el.dataset.build); });
+    this.navDots();
+    this.renderGuide();
+  },
+
+  /* ---------- 头像更换 ----------
+   * 主界面左上角头像此前是死 emoji：直接取 E.char(p).icon（当前角色图标），
+   * 且 #hmAv 完全没有点击绑定 —— 玩家点不动，也换不了。
+   * 这里给一组头像供选择，选完写进 p.avatar 并同步云端。 */
+  /* 头像此前是 16 个死 emoji（👨‍🚀👩‍🚀🧟🤖🐱🐼…），与主界面/战斗的新美术完全不是一个画风。
+   * 改为 16 张末日主题手绘头像（assets/icon/av_a01~a16.png）。
+   * 旧存档里 p.avatar 仍是 emoji 字符串，渲染时按前缀判断：
+   * 以 'av_' 开头走图片，否则回退 emoji，老玩家不会变空白。 */
+  AVATARS: ['av_a01','av_a02','av_a03','av_a04','av_a05','av_a06','av_a07','av_a08',
+            'av_a09','av_a10','av_a11','av_a12','av_a13','av_a14','av_a15','av_a16'],
+  avSrc(id){ return id && String(id).indexOf('av_') === 0 ? `assets/icon/${id}.png?v=${IMG_V}` : ''; },
+  avHTML(id, cls){ const u = this.avSrc(id);
+    return u ? `<img class="${cls || ''}" src="${u}" alt="">` : (id || ''); },
+  pickAvatar() {
+    const p = this.P; if (!p) return;
+    const old = document.getElementById('avPick'); if (old) old.remove();
+    const box = document.createElement('div');
+    box.id = 'avPick'; box.className = 'modal on';
+    box.innerHTML = `<div class="pn-mask"></div>
+      <div class="avp-box">
+        <div class="pn-hd"><span class="pn-back" id="avpX">✕</span><b>选择头像</b><span class="avp-sp"></span></div>
+        <div class="avp-grid">
+          ${this.AVATARS.map((a) => `<button class="avp-c${p.avatar === a ? ' on' : ''}" data-av="${a}">${this.avHTML(a, 'avp-img')}</button>`).join('')}
+        </div>
+        <div class="lbl" style="text-align:center;margin-top:8px">点选即换，自动保存</div>
+      </div>`;
+    document.body.appendChild(box);
+    const close = () => { const e = document.getElementById('avPick'); if (e) e.remove(); };
+    const mk = box.querySelector('.pn-mask'); if (mk) mk.onclick = close;
+    const xb = box.querySelector('#avpX'); if (xb) xb.onclick = close;
+    box.querySelectorAll('[data-av]').forEach((btn) => {
+      btn.onclick = () => {
+        p.avatar = btn.dataset.av;
+        try { E.save(p); } catch (e) {}
+        this.home(); close();
+        try { this.toast('头像已更换', 'ok'); } catch (e) {}
+      };
     });
   },
 
-  openBase(id) {
-    if (id === 'lab') return this.open('tech');
-    if (id === 'wall') return this.open('wall');
-    if (id === 'tavern') return this.open('merc');
-    if (id === 'canteen') return this.open('canteen');
-    if (id === 'rank') return this.open('rank');
-    if (id === 'fort') return this.open('fort');
+  /* 主界面导航红点：有可领奖励 / 未读邮件时，在对应入口上打点。
+   * 此前 22 个面板里「任务」根本没有导航入口，玩家只能领奖后被被动弹出；
+   * 且所有入口都没有状态提示，玩家不知道该去哪领东西。 */
+  navDots() {
+    const p = this.P; if (!p) return;
+    const set = (key, n) => {
+      /* 20270122a：导航已整合为 .hm-menu 分组网格，旧 .hn/.hn2 选择器失效。
+       * 两种都查，保证老缓存页面也不会丢红点。 */
+      const btn = document.querySelector(`.hm-menu .hmb[data-p="${key}"],.hm-nav .hn[data-p="${key}"],.hm-nav2 .hn2[data-p="${key}"]`);
+      if (!btn) return;
+      let d = btn.querySelector('.nv-dot');
+      if (n > 0) {
+        if (!d) { d = document.createElement('i'); d.className = 'nv-dot'; btn.appendChild(d); }
+        d.textContent = n > 99 ? '99+' : n;
+        d.style.display = '';
+      } else if (d) { d.style.display = 'none'; }
+    };
+    /* 任务：已完成但未领取的数量（主线/每日/每周/成就四档）
+     * 字段取自 claimTask：p.tasks.{main,daily,weekly,achieve}Claimed */
+    let tn = 0;
+    try {
+      const T = EX.tasks || {};
+      const tk = (p.tasks || {});
+      const pairs = [['main', T.main, tk.mainClaimed], ['daily', T.daily, tk.dailyClaimed],
+                     ['weekly', T.weekly, tk.weeklyClaimed], ['achieve', T.achieve, tk.achieveClaimed]];
+      pairs.forEach(([, arr, got]) => {
+        (arr || []).forEach((t) => {
+          if (!t) return;
+          if (Array.isArray(got) && got.indexOf(t.id) >= 0) return;
+          if (!E.taskDone(p, t)) return;
+          /* 与 claimTask 同口径：奖励配置不可用（rw 缺失/全为 0 或非法）时
+           * claimTask 会拒绝发放，这条任务实际【领不到】。
+           * BUG：此前红点只判 taskDone，不判奖励是否可发 ——
+           *   运营一旦把某条任务的 rw 配错（如 gold:0），玩家看到红点、
+           *   点进去却弹出「该任务奖励配置异常，暂不可领取」，
+           *   而红点因为从未写入 claimed 永远消不掉（实测领完仍是同一个数）。
+           * 这里补上同口径判断，领不到的任务不再计入红点。 */
+          if (E.rwUsable && !E.rwUsable(t.rw)) return;
+          tn++;
+        });
+      });
+    } catch (e) { tn = 0; }
+    set('task', tn);
+    /* 邮件：未领取的数量
+     * BUG：此前只过滤 !m.got，把「尚未生效（定时发）」和「已过期」的邮件
+     *   也算进红点 —— 实际点进邮件面板，这些是领不了的（b_mail 有 mailActive 校验）。
+     *   红点显示 3 进去只能领 1，玩家会以为邮件丢了。这里与领取口径统一。 */
+    let mn = 0;
+    try {
+      const ml = (p.mail || []);
+      mn = ml.filter((m) => m && !m.got && (this.mailActive ? this.mailActive(m) : true)).length;
+    } catch (e) { mn = 0; }
+    set('mail', mn);
+    /* 活动：可领奖励数（各活动「领奖」+ 每日签到）
+     * BUG：此前 navDots 只给 task / mail 两个入口打点，而活动面板实测
+     *   有 4 个「领奖」按钮 + 「每日签到」共 5 个可点、主界面却完全没有提示 ——
+     *   玩家不进活动页根本不知道有东西可领，活动奖励长期被漏领。
+     *   签到按钮同理：今天没签也没有任何标识。
+     * 这里用 E.actClaimable（与 r_act 渲染 / actRwTake 拦截同口径）统一计数。 */
+    let an = 0;
+    try { an = E.actClaimable ? E.actClaimable(p) : 0; } catch (e) { an = 0; }
+    set('act', an);
+    /* 基地：离线收益可领
+     * 同样是「有东西可领却没有入口提示」，与主界面「领取离线收益」按钮同口径。 */
+    let bn = 0;
+    try {
+      const _c = E.offlineCalc ? E.offlineCalc(p) : null;
+      bn = (_c && ((_c.gold || 0) > 0 || (_c.metal || 0) > 0 || (_c.xp || 0) > 0)) ? 1 : 0;
+    } catch (e) { bn = 0; }
+    set('base', bn);
+    /* 赛季：可领档位数（阶梯未领 + 循环奖励可领）
+     *
+     * BUG（赛季奖励长期被漏领）：navDots 只给 task / mail / act / base 四个入口
+     *   打红点，而「赛季」入口是 V1.1.0 冲刺3 后加的，忘了同步进来。
+     *   同时 E.seasonClaimable() 定义了却【零调用】（静态审计实测：全项目
+     *   只出现在 engine.js 定义处一次），成了死代码。
+     *   结果：玩家赛季积分攒够了，不主动点进赛季面板根本不知道有东西可领，
+     *   赛季是 4 周一期的长线玩法，奖励漏领后当赛季即作废。
+     *   —— 与上面「活动红点缺失」完全同源，那次修了 act，这次补 season。
+     * 口径与 r_season 渲染 / b_season 领取保持一致：
+     *   阶梯 can = 未领取 && score >= need；循环 can = score >= seasonLoopNeed。 */
+    let sn = 0;
+    try {
+      const _cl = (E.seasonClaimable ? E.seasonClaimable(p) : null) || [];
+      sn = _cl.length;
+      const _need = E.seasonLoopNeed ? E.seasonLoopNeed(p) : null;
+      if (_need != null) {
+        const _s = E.seasonOf ? E.seasonOf(p) : null;
+        if (_s && (_s.score || 0) >= Number(_need)) sn += 1;
+      }
+    } catch (e) { sn = 0; }
+    set('season', sn);
+  },
+
+  /* 任务面板「页签级」红点：主线/日常/周常/成就各档"已完成但未领取"的数量。
+   *
+   * 逻辑问题：此前红点只打在主菜单「任务」入口上（四档合计），
+   *   而任务面板默认打开的是「主线」页签 —— 若实际可领的是「日常」，
+   *   玩家看到主菜单红点=1、点进来在主线页却找不到任何领取按钮，
+   *   会以为奖励丢了 / 红点是坏的（与上一轮"活动领奖按钮点了全被拒"同源）。
+   * 这里把红点下沉到具体页签，与 navDots 的计数口径完全一致。 */
+  taskTabCount(tab) {
+    const MAP = { '主线': 'main', '日常': 'daily', '周常': 'weekly', '成就': 'achieve' };
+    const k = MAP[tab];
+    if (!k) return 0;
+    try {
+      const p = window.P || {};
+      const T = EX.tasks || {};
+      const tk = p.tasks || {};
+      const gotMap = { main: tk.mainClaimed, daily: tk.dailyClaimed, weekly: tk.weeklyClaimed, achieve: tk.achieveClaimed };
+      const arr = T[k] || [], got = gotMap[k];
+      let n = 0;
+      arr.forEach((t) => {
+        if (!t) return;
+        if (Array.isArray(got) && got.indexOf(t.id) >= 0) return;
+        if (!E.taskDone(p, t)) return;
+        /* 与 claimTask / navDots 同口径：奖励配置不可用的任务领不到，不计入红点 */
+        if (E.rwUsable && !E.rwUsable(t.rw)) return;
+        n++;
+      });
+      return n;
+    } catch (e) { return 0; }
+  },
+
+  /* 主界面「下一步」目标指引
+   *
+   * 逻辑问题：新号进来 Lv.1、2000 金币、100 体力，界面不告诉玩家先做什么 ——
+   *   21 个入口平铺，没有"当前最该做的一件事"，新手会卡在"我该点哪个"。
+   * 这里按优先级算出一个动作（可领奖励 > 推图 > 强化 > 基地），
+   *   显示成一条可点的指引条，点一下直接进对应面板，降低决策成本。 */
+  renderGuide() {
+    const el = $('#hmGuide');
+    if (!el) return;
+    try {
+      const p = window.P || {};
+      let txt = '', go = null;
+      /* 1) 最优先：有东西可领（任务/活动/邮件/离线），避免玩家白放着 */
+      const tn = this.taskTabCount('主线') + this.taskTabCount('日常') + this.taskTabCount('周常') + this.taskTabCount('成就');
+      const an = (E.actClaimable ? E.actClaimable(p) : 0);
+      const mailN = ((p.mail || []).filter((m) => m && !m.got && (this.mailActive ? this.mailActive(m) : true)).length);
+      const oc = E.offlineCalc ? E.offlineCalc(p) : null;
+      const offN = (oc && ((oc.gold || 0) > 0 || (oc.metal || 0) > 0 || (oc.xp || 0) > 0)) ? 1 : 0;
+      if (tn > 0) { txt = '有 <b>' + tn + '</b> 个任务奖励待领取'; go = () => this.open('task'); }
+      else if (an > 0) { txt = '活动有 <b>' + an + '</b> 项奖励可领'; go = () => this.open('act'); }
+      else if (mailN > 0) { txt = '有 <b>' + mailN + '</b> 封邮件未领取'; go = () => this.open('mail'); }
+      else if (offN > 0) { txt = '有离线收益可领取'; go = () => this.open('base'); }
+      else {
+        /* 2) 无可领：推进当前关卡 */
+        const cur = E.curLevel(p);
+        const cost = E.staminaCost(cur) || 1;
+        if ((p.stamina || 0) >= cost) {
+          txt = '下一步：出击 <b>' + E.levelName(cur) + '</b>（体力 ' + cost + '）';
+          go = () => this.open('level');
+        } else {
+          txt = '体力不足，去基地领取或看广告恢复体力';
+          go = () => this.open('base');
+        }
+      }
+      el.innerHTML = '<span>' + txt + '</span><span class="hg-go">前往 ›</span>';
+      el.style.display = '';
+      el.onclick = go;
+    } catch (e) {
+      /* 指引条属于增强，任何异常都不允许影响主界面渲染 */
+      try { el.style.display = 'none'; } catch (x) {}
+    }
+  },
+
+  /* 毫秒转「3分20秒 / 1小时5分」短文本 */
+  msTxt(ms) {
+    const s = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+    if (s < 60) return s + '秒';
+    const m = Math.floor(s / 60);
+    if (m < 60) return m + '分' + (s % 60 ? (s % 60) + '秒' : '');
+    const h = Math.floor(m / 60);
+    return h + '小时' + (m % 60 ? (m % 60) + '分' : '');
+  },
+
+  /* 主界面底部「今日进度」条
+   *
+   * 逻辑问题：菜单最后一行结束在 y=748，而视口高 852 —— 底部 104px 是空的，
+   *   整屏内容没填满，看起来发空发飘。同时玩家在主界面看不到：
+   *   体力什么时候回满、今天还有几件事没做、主线总进度到哪了。
+   * 这里补一条信息条：体力 ETA + 今日任务 x/y + 主线总进度。 */
+  renderToday(p) {
+    const el = $('#hmToday');
+    if (!el) return;
+    try {
+      p = p || window.P || {};
+      const cells = [];
+      /* 1) 体力：满则显示「已满」，否则显示回满倒计时 */
+      const eta = E.staminaEta ? E.staminaEta(p) : null;
+      const stc = Math.floor(p.stamina || 0);
+      cells.push({ k: '体力', v: eta && eta.full ? stc + '/' + EX.STAMINA_MAX + ' 已满'
+        : stc + '/' + EX.STAMINA_MAX + ' · ' + this.msTxt(eta ? eta.fullMs : 0) + '回满', go: () => this.open('base') });
+      /* 2) 今日任务：已完成 / 总数 */
+      let done = 0, totalN = 0;
+      try {
+        const tk = (E.tasks ? E.tasks() : []);
+        const tstate = (p.taskState || {});
+        tk.forEach((t) => {
+          if (t && t.period === '每日') {
+            totalN++;
+            if (tstate[t.id] && tstate[t.id].got) done++;
+          }
+        });
+      } catch (e) {}
+      cells.push({ k: '今日任务', v: totalN ? (done + '/' + totalN + (done >= totalN ? ' 已完成' : '')) : '—', go: () => this.open('task', '日常') });
+      /* 3) 主线总进度：10 章 100 关 */
+      let cleared = 0;
+      try { cleared = Object.keys(p.cleared || {}).filter((k) => (p.cleared[k] || 0) > 0 && /^\d+-\d+$/.test(k)).length; } catch (e) {}
+      const stars = E.totalStars ? E.totalStars(p) : 0;
+      cells.push({ k: '主线', v: cleared + '/100 关 · ★' + stars, go: () => this.open('level') });
+      el.innerHTML = cells.map((c, i) =>
+        `<div class="htd" data-i="${i}"><span>${c.k}</span><b>${c.v}</b></div>`).join('');
+      Array.from(el.querySelectorAll('.htd')).forEach((d, i) => { d.onclick = cells[i].go; });
+      el.style.display = '';
+    } catch (e) {
+      try { el.style.display = 'none'; } catch (x) {}
+    }
   },
 
   /* ================= 面板 ================= */
+  /* PANELS: [标题, 分类, tab位置]
+     位置: side=左侧竖排(截图35/38/39/41) bottom=底部横排(截图34背包) right=右侧竖标(截图40) */
   PANELS: {
-    role: ['角色', ['装备', '属性', '背包']],
-    gun: ['枪械', ['强化', '更换']],
-    bag: ['背包', ['全部', '装备', '宝石']],
-    merc: ['佣兵', ['招募', '出战']],
-    shop: ['商城', ['礼包', '兑换']],
-    set: ['设置', ['账号', '网络']],
-    tech: ['研究所', ['科技']],
-    wall: ['防线', ['强化']],
-    canteen: ['食堂', ['补给']],
-    rank: ['排行榜', ['全服']],
-    fort: ['远征堡垒', ['远征']],
-    gem: ['宝石镶嵌', ['镶嵌']],
+    role: ['角色', ['装备', '宝石', '皮肤'], 'side'],
+    gun: ['武器', [EX.txt('TXT_005'), '武器库'], 'side'],
+    /* BUG：tab 原先只有 ['芯片']，而 r_chip() 里「背包」页签（芯片背包，
+     *      含【合成 / 洗练 / 拆解】三个按钮）是一个独立分支 if (tab === '背包')。
+     *      由于 '背包' 不在 tab 列表里，该分支永远进不去 ——
+     *      芯片的合成（3 合 1 升品，红品芯片的主要来源）、洗练（钻石重 roll
+     *      副词条）、拆解（清理背包）【三个功能玩家完全没有入口】，
+     *      芯片只进不出，背包会一路膨胀（实测 1000 颗时存档 127KB）。 */
+    chip: ['芯片系统', ['芯片', '背包'], 'right'],
+    talent: ['天赋', ['天赋'], 'top'],
+    task: ['任务', ['主线', '日常', '周常', '成就'], 'side'],
+    bag: ['我的背包', ['宝石', '装备', '材料', '芯片', '消耗'], 'bottom'],
+    shop: ['商店', ['每日', '武器', '宝石', '材料', '礼包', '直购'], 'side'],
+    gem: ['宝石镶嵌', ['镶嵌'], 'top'],
+    friends: ['好友', ['好友列表', '申请', '聊天'], 'side'],
+    mail: ['邮件', ['邮件'], 'top'],
+    act: ['活动', ['活动'], 'top'],
+    rank: ['排行榜', ['全服'], 'top'],
+    /* 【V1.1.0】关键文案走运营热改层 EX.txt()，默认与原文一致 */
+    set: [EX.txt('TXT_002'), ['账号', '音频', '兑换码', '网络', '数值', '语言', '运营'], 'side'],
+    level: ['关卡选择', ['章节'], 'top'],
+    /* BUG：此前 tab 只有 ['建筑'] 一项，而 r_base 用 tab 去匹配建筑 id，
+     *      匹配不到就永远回退 EX.buildings[0]（医疗站）。
+     *      面板内也没有任何切换按钮 → 玩家进「基地建筑」只能看到医疗站，
+     *      军械库(武器伤害) / 研究所(经验) / 仓库(离线金币) 三个建筑
+     *      既看不到也无法升级，升级入口完全不可达。
+     * 现在四个建筑各占一个 tab。 */
+    base: ['基地建筑', ['医疗站', '军械库', '研究所', '仓库'], 'top'],
+    tavern: ['酒馆招募', ['佣兵'], 'top'],
+    core: ['核心技能', ['技能'], 'top'],
+    legion: ['军团', ['军团', '成员'], 'side'],
+    exped: ['远征堡垒', ['远征', '巡逻'], 'side'],
+    ashop: ['兑换商店', ['成就商店', '活动商店'], 'side'],
+    codex: ['图鉴收集', ['怪物', '武器', '皮肤'], 'side'],
+    /* 公告：后台「公告管理」此前标记"前端未接入"，玩家永远看不到运营发的公告。
+     * 现在作为一个正式面板接入（列表 + 未读标记 + 登录弹窗）。 */
+    notice: ['公告', ['公告'], 'top'],
+    /* V1.1.0 末日废土：军衔系统（策划 P-10 / 程序 D-10）
+     * 通关后的长线成长线，50 阶（5 阶 × 10 层），与 atk/hp/crit 真实挂钩。 */
+    realm: ['军衔', ['军衔'], 'top'],
+    /* V1.1.0 冲刺3 · 赛季远征 */
+    season: ['赛季', ['赛季'], 'top'],
   },
+  tabPos(key) { const d = this.PANELS[key]; return (d && d[2]) || 'top'; },
 
   open(key, tab) {
+    if (window.SND) SND.play('panel');
+    /* 字段缺失就地兜底：后台 GM 热改档会在 session 内直接改写 P 的子对象，
+     * 绕过登录时那一次 sanitize（实测删掉 talents/build/cleared/tasks 任一
+     * 会让 4~6 个面板整体抛错白屏）。这里在每次打开面板前补齐，成本 O(字段数)。 */
+    if (window.E && E.ensureDicts) E.ensureDicts(this.P);
+    /* 面板内跳转导航栈
+     * ── ID 问题：面板里到处都有"跳到另一个面板"的入口（角色→武器、背包→芯片…
+     *    实测全项目 20 个面板共 80+ 处跨面板跳转），但左上角「◀」只会 close()。
+     *    玩家从角色点进武器，想回角色，点 ◀ 却直接关掉整个面板回到主界面
+     *    —— 期待"返回上一级"，得到"回到主界面"，这是导航层级错位。
+     * 这里记录来源：从另一个面板内跳过来时压栈，◀ 优先出栈回到上一级。 */
+    const _prev = this.curPanel;
+    if (_prev && _prev !== key) {
+      this._pnStack = this._pnStack || [];
+      const top = this._pnStack[this._pnStack.length - 1];
+      if (!top || top.k !== _prev) this._pnStack.push({ k: _prev, t: this.curTab[_prev] });
+      if (this._pnStack.length > 8) this._pnStack.shift();
+    }
     this.curPanel = key;
-    const def = this.PANELS[key];
-    if (!def) return;
+    const def = this.PANELS[key]; if (!def) return;
     if (tab) this.curTab[key] = tab;
     if (!this.curTab[key]) this.curTab[key] = def[1][0];
     $('#pnTitle').textContent = def[0];
-    $('#pnTabs').innerHTML = def[1].map((t) =>
-      `<button class="pt ${t === this.curTab[key] ? 'on' : ''}" data-t="${t}">${t}</button>`).join('');
-    $$('#pnTabs .pt').forEach((b) => {
-      b.onclick = () => { this.curTab[key] = b.dataset.t; this.open(key); };
-    });
+    const pos = this.tabPos(key);
+    const box = $('#panel');
+    if (box) box.dataset.tp = pos;
+    const tabsHTML = def[1].map((t) => {
+      /* 任务面板：页签级红点，解决"主菜单有红点、进面板却找不到"的逻辑不一致 */
+      const _dn = (key === 'task') ? this.taskTabCount(t) : 0;
+      const _dot = _dn > 0 ? `<i class="pt-dot">${_dn > 99 ? '99+' : _dn}</i>` : '';
+      return `<button class="pt ${t === this.curTab[key] ? 'on' : ''}" data-t="${t}">${t}${_dot}</button>`;
+    }).join('');
+    /* 单分类时不显示 tab 区 */
+    $('#pnTabs').innerHTML = def[1].length > 1 ? tabsHTML : '';
+    $('#pnTabs').style.display = def[1].length > 1 ? '' : 'none';
+    $$('#pnTabs .pt').forEach((b) => { b.onclick = () => { this.curTab[key] = b.dataset.t; this.open(key); }; });
     $('#pnBody').innerHTML = this.render(key, this.curTab[key]);
+    stampImgs($('#pnBody'));
+    const _sig = key + '|' + this.curTab[key];
+    const _needTop = this._pnScrollSig !== _sig;
     $('#panel').classList.add('on');
     this.bind(key, this.curTab[key]);
+    /* BUG：切页签 / 换面板 / 关掉再打开时【不重置滚动位置】。
+     * 实测（393×852）：图鉴「怪物」页滚到底 scrollTop=208，切到「武器」页后仍停在 208；
+     * 武器库滚到底 393，切页签后依旧 393 —— 新页签的顶部内容被跳过，
+     * 玩家看到的是列表中间，还以为内容没加载出来。
+     *
+     * 两个坑（都实测过）：
+     *  ① 复位必须放在 classList.add('on')【之后】—— 面板 display:none 时
+     *     给 pnBody 赋 scrollTop 会被浏览器忽略，等面板重新可见时又弹回旧值；
+     *  ② 只在「面板或页签真的变了」时归零：同一面板购买后原地刷新（open(key)）
+     *     保持原滚动位置，避免刚买完东西就被弹回顶部。 */
+    if (_needTop) {
+      this._pnScrollSig = _sig;
+      const bd = $('#pnBody');
+      if (bd) {
+        bd.scrollTop = 0;
+        /* 首帧布局完成后再兜一次，防图片/懒加载撑高后把位置又顶回去 */
+        requestAnimationFrame(() => { if (this._pnScrollSig === _sig) bd.scrollTop = 0; });
+      }
+    }
   },
-  close() { $('#panel').classList.remove('on'); this.curPanel = null; },
-
+  /* 面板返回：有上级就回上级，没有才真正关闭 */
+  back() {
+    const st = this._pnStack;
+    if (st && st.length) {
+      const up = st.pop();
+      const k = up.k;
+      this.curPanel = null;          // 防止这次 open 又把自己压回栈里
+      this.open(k, up.t);
+      return true;
+    }
+    this.close();
+    return false;
+  },
+  close() { $('#panel').classList.remove('on'); this.curPanel = null; this._pnScrollSig = null;
+    this._pnStack = [];
+    /* 关面板时把滚动位置一并归零：下次再打开（哪怕同一个面板同一个页签）
+     * 都从顶部开始，不会残留上一次的滚动偏移。 */
+    const bd = $('#pnBody'); if (bd) bd.scrollTop = 0; },
+  /* 通用弹层（军团商店 / 军团副本用）
+   * 严重 BUG：b_legion 里两处调用 this.sheet(...)，但 UI 上【根本没有 sheet 方法】
+   *   （全项目 0 处定义）——点「军团商店」「军团活动」直接抛
+   *   "this.sheet is not a function"，两个面板永远打不开。
+   * 结果：军团捐献攒下的贡献【没有任何出口】——
+   *   LS01~LS06（金币/合金/稀有金属/碎片/芯片/红宝石）一件都买不了；
+   *   LA01~LA03 三个军团副本也进不去，贡献只能靠捐、花不掉。
+   *   （此前测试是直接调兑换逻辑验的，所以没暴露点击链路断了。）
+   * 这里补上：复用 #sweepBox 这个 modal 容器。
+   */
+  sheet(title, html) {
+    const box = document.getElementById('sweepBox');
+    if (!box) { try { this.toast(String(title || ''), 'err'); } catch (e) {} return; }
+    box.innerHTML = `<div class="pn-box"><div class="pn-hd"><b>${this.esc(title)}</b>
+      <button id="shX">✕</button></div><div class="pn-main"><div class="pn-body">${html || ''}</div></div></div>`;
+    box.classList.add('on');
+    stampImgs(box);
+    const x = document.getElementById('shX');
+    if (x) x.onclick = () => { box.classList.remove('on'); box.innerHTML = ''; };
+    box.onclick = (e) => { if (e.target === box) { box.classList.remove('on'); box.innerHTML = ''; } };
+    return box;
+  },
+  /* 关闭通用弹层（军团商店/副本兑换后调用）
+   * BUG：b_legion 两处调用 this.closeSheet()，但 UI 上【没有这个方法】
+   *   → 兑换成功后抛 "this.closeSheet is not a function"，
+   *     后面的 open('legion') / home() 全都不执行，界面不刷新。 */
+  closeSheet() {
+    const box = document.getElementById('sweepBox');
+    if (box) { box.classList.remove('on'); box.innerHTML = ''; }
+  },
+  /* 游戏内统一确认弹窗（替代浏览器原生 confirm / alert）
+   * ── ID 视角为什么必须换掉原生弹窗：
+   *   ① 风格割裂：账号注销、永久删除、清空进度这类操作弹的是操作系统灰框，
+   *      跟游戏卡通画风完全两套语言，玩家会被"弹出游戏"打断沉浸感；
+   *   ② 文案太轻：原生只有「确定 / 取消」，而"永久删除"需要的不是确定，
+   *      是"我明确知道这会删掉什么"——按钮必须能写「永久删除」；
+   *   ③ 无分级：危险操作和普通确认长得一模一样，玩家养成了无脑点确定的习惯；
+   *   ④ 无防误点：原生弹窗位置固定在屏幕中央偏上，手滑正好落在「确定」上。
+   *
+   * 用法：const ok = await UI.ask('标题','说明',{danger:true,yes:'永久删除'});
+   * danger=true 时：红色主按钮 + 「此操作不可撤销」警示条 + 0.9s 冷却防误点。 */
+  ask(title, msg, opts) {
+    opts = opts || {};
+    const box0 = document.getElementById('sweepBox');
+    /* 兜底：容器不存在时退回原生，绝不因为改样式而让操作点不动 */
+    if (!box0) { try { return Promise.resolve(!!window.confirm(String(msg || title || ''))); } catch (e) { return Promise.resolve(false); } }
+    return new Promise((resolve) => {
+      const danger = !!opts.danger;
+      const yes = opts.yes || '确定';
+      const no = opts.no || '取消';
+      box0.innerHTML =
+        `<div class="pn-box ask-box${danger ? ' danger' : ''}">` +
+          `<div class="pn-hd"><b>${this.esc(title || '确认')}</b><button id="shX">✕</button></div>` +
+          `<div class="pn-main"><div class="pn-body">` +
+            (danger ? '<div class="ask-warn">⚠ 此操作不可撤销</div>' : '') +
+            `<div class="ask-msg">${this.esc(String(msg || '')).replace(/\n/g, '<br>')}</div>` +
+            `<div class="ask-btns">` +
+              `<button class="btn wxa-no" id="askNo">${this.esc(no)}</button>` +
+              `<button class="btn ${danger ? 'wxa-danger' : 'wxa-yes'}" id="askYes">${this.esc(yes)}</button>` +
+            `</div>` +
+          `</div></div>` +
+        `</div>`;
+      box0.classList.add('on');
+      try { stampImgs(box0); } catch (e) {}
+      const done = (v) => { box0.classList.remove('on'); box0.innerHTML = ''; resolve(!!v); };
+      const bY = document.getElementById('askYes');
+      const bN = document.getElementById('askNo');
+      const bX = document.getElementById('shX');
+      if (bN) bN.onclick = () => done(false);
+      if (bX) bX.onclick = () => done(false);
+      box0.onclick = (e) => { if (e.target === box0) done(false); };
+      if (bY) {
+        /* 危险操作：按钮先禁用 0.9s 倒计时再可点。
+         * 玩家从上一屏点进来的惯性点击会落在"还不可用"的按钮上，
+         * 这 0.9 秒既是缓冲也是一次强制阅读——ID 上叫"减速带"。 */
+        if (danger) {
+          bY.disabled = true;
+          let left = 0.9;
+          const t0 = yes;
+          bY.textContent = t0 + '（' + left.toFixed(1) + 's）';
+          const tm = setInterval(() => {
+            left -= 0.1;
+            if (left <= 0.05) {
+              clearInterval(tm);
+              bY.disabled = false; bY.textContent = t0;
+            } else bY.textContent = t0 + '（' + left.toFixed(1) + 's）';
+          }, 100);
+          box0.__askTm = tm;
+        }
+        bY.onclick = () => {
+          if (box0.__askTm) { clearInterval(box0.__askTm); box0.__askTm = null; }
+          done(true);
+        };
+      }
+    });
+  },
+  /* 游戏内统一通知（替代 alert）——不会打断、到时自动消失 */
+  notify(msg) {
+    try { this.toast(String(msg || ''), 'ok'); } catch (e) {}
+  },
+  /* 连点操作汇总反馈
+   * ── ID 视角的真实伤害：
+   *   强化 / 升级 / 捐献这类按钮玩家会连续点十几下，每点一下弹一条 toast，
+   *   而新 toast 会立刻把旧的顶掉（#toasts 最多只留 4 条）。玩家点完只看到
+   *   最后一条"强化成功"，完全不知道自己一共点了几次、总共花了多少钱。
+   *   实测：武器强化连点 6 次扣 4495 金币、基地建筑连点 6 次扣 14745 金币，
+   *   全程没有任何"总共花了多少"的反馈 —— 这是"钱莫名其妙就没了"的头号来源。
+   *
+   * 方案：同一 key 的连续点击在 1.3s 静默期内累积，只弹一条汇总：
+   *   "强化 ×6 · 共消耗 4495 金币"。既保留连点的爽快感，又把账算清楚。 */
+  burst(key, info) {
+    info = info || {};
+    const now = Date.now();
+    const s = this._burst || (this._burst = {});
+    let b = s[key];
+    if (!b || now - b.t > 1300) {
+      if (b && b.tm) clearTimeout(b.tm);
+      b = s[key] = { t: now, n: 0, cost: 0, label: info.label, unit: info.unit || '', tm: null };
+    }
+    b.t = now;
+    b.n += (info.n || 1);
+    b.cost += (info.cost || 0);
+    if (info.label) b.label = info.label;
+    clearTimeout(b.tm);
+    b.tm = setTimeout(() => {
+      let msg = (b.label || '操作') + ' ×' + b.n;
+      if (b.cost > 0) msg += ' · 共消耗 ' + (window.E && E.fmt ? E.fmt(b.cost) : b.cost) + b.unit;
+      this.toast(msg, 'ok');
+      try { if (window.SND) SND.play('upgrade'); } catch (e) {}
+      b.n = 0; b.cost = 0;
+    }, 1300);
+  },
   render(key, tab) {
     const p = this.P; if (!p) return '<div class="empty">无数据</div>';
-    const f = this['r_' + key];
-    return f ? f.call(this, p, tab) : '<div class="empty">待开发</div>';
+    const f = this['r_' + key]; return f ? f.call(this, p, tab) : '<div class="empty">待开发</div>';
   },
-
   bind(key, tab) {
     const p = this.P; if (!p) return;
-    const f = this['b_' + key];
-    if (f) f.call(this, p, tab);
+    const f = this['b_' + key]; if (f) f.call(this, p, tab);
   },
-
-  /* ---------- 角色/装备 ---------- */
-  r_role(p, tab) {
-    if (tab === '装备') {
-      const g = EX.slots.map((s) => {
-        const it = p.equip[s.k];
-        const qc = it ? E.qColor(it.q) : '#555';
-        return `<div class="eq ${this.selEquip === s.k ? 'on' : ''}" data-eq="${s.k}"
-            style="border-color:${it ? qc : 'rgba(120,150,190,.22)'}">
-          ${it ? `<div class="q" style="background:${qc}33;color:${qc}">${it.q}</div>` : ''}
-          ${it && it.lv ? `<div class="f">+${it.lv}</div>` : ''}
-          ${p.gems[s.k] ? `<div class="gem">💎</div>` : ''}
-          <i>${s.icon}</i><b>${s.n}</b>
-        </div>`;
-      }).join('');
-      let detail = '<div class="lbl">选择装备部位查看详情与操作</div>';
-      if (this.selEquip && p.equip[this.selEquip]) {
-        const it = p.equip[this.selEquip];
-        const qc = E.qColor(it.q);
-        const gem = p.gems[this.selEquip];
-        const gdef = gem ? EX.gems.find((x) => x.id === gem) : null;
-        detail = `
-        <div class="card">
-          <div class="card-t"><span style="color:${qc}">${it.q}品 · ${EX.slots.find(s=>s.k===this.selEquip).n}</span><span class="sub">+${it.lv}</span></div>
-          <div class="kv"><span>攻击</span><b>+${it.atk}</b></div>
-          <div class="kv"><span>防御</span><b>+${it.def}</b></div>
-          <div class="kv"><span>生命</span><b>+${it.hp}</b></div>
-          ${(it.subs||[]).map((s)=>`<div class="kv"><span>词条·${s.n}</span><b style="color:var(--green)">+${(s.v*100).toFixed(1)}%</b></div>`).join('')}
-          <div class="kv"><span>宝石</span><b>${gdef?gdef.n:'未镶嵌'}</b></div>
-          <div class="row" style="margin-top:8px">
-            <button class="btn c sm" id="eqForge">锻造 ${E.fmt(E.forgeCost(it))}</button>
-            <button class="btn sm" id="eqUp">升品</button>
-            <button class="btn sm" id="eqRr">洗炼</button>
-          </div>
-          <div class="row" style="margin-top:6px">
-            <button class="btn sm" id="eqGem">镶宝石</button>
-            <button class="btn d sm" id="eqOff">卸下</button>
-          </div>
-        </div>`;
-      }
-      return `<div class="eqgrid">${g}</div>${detail}
-      <div class="card">
-        <div class="card-t">战力与属性</div>
-        <div class="kv"><span>战力</span><b style="color:var(--gold)">${E.fmt(E.power(p))}</b></div>
-        <div class="kv"><span>通关进度</span><b>第 ${p.level||1} 关</b></div>
-        <div class="kv"><span>无尽最佳</span><b>第 ${p.endlessBest||0} 层</b></div>
-        <div class="kv"><span>累计击杀</span><b>${E.fmt(p.stats?.kills||0)}</b></div>
-      </div>`;
-    }
-    if (tab === '属性') {
-      const a = E.attrs(p);
-      return `<div class="card">
-        <div class="card-t">战斗属性</div>
-        <div class="kv"><span>攻击力</span><b style="color:var(--gold)">${E.fmt(a.atk)}</b></div>
-        <div class="kv"><span>　基础(枪械)</span><b>${E.fmt(a.base)}</b></div>
-        <div class="kv"><span>　总倍率</span><b style="color:var(--green)">×${a.mult.toFixed(2)}</b></div>
-        <div class="kv"><span>射程</span><b>${Math.round(a.range)}</b></div>
-        <div class="kv"><span>射速</span><b>${a.rate.toFixed(2)} /秒</b></div>
-        <div class="kv"><span>穿透</span><b>${a.pierce}</b></div>
-        <div class="kv"><span>齐射</span><b>${a.spread}</b></div>
-        <div class="kv"><span>暴击率</span><b>${(a.crit*100).toFixed(1)}%</b></div>
-        <div class="kv"><span>暴击伤害</span><b>${(a.critDmg*100).toFixed(0)}%</b></div>
-        <div class="kv"><span>冷却缩减</span><b>${(a.cdr*100).toFixed(1)}%</b></div>
-        <div class="kv"><span>防线生命</span><b>${E.fmt(a.wallHp)}</b></div>
-        <div class="kv"><span>金币加成</span><b>${((a.goldMul-1)*100).toFixed(0)}%</b></div>
-      </div>
-      <div class="card">
-        <div class="card-t">养成来源</div>
-        <div class="lbl">攻击 = 枪械基础 × 总倍率 + 装备固定值<br>
-        倍率来源：装备品质/锻造、副词条、科技、佣兵出战<br>
-        枪械强化是攻击成长的主要来源，每关通关后优先强化。</div>
-      </div>`;
-    }
-    // 背包
-    return this.r_bag(p, '全部');
+  /* ---------- 酒馆：招募佣兵（真实玩法：基地酒馆） ---------- */
+    /* HTML 转义（防止昵称/账号名里的特殊字符破坏结构） */
+  esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   },
-  b_role(p, tab) {
-    $$('#pnBody .eq').forEach((el) => {
-      el.onclick = () => { this.selEquip = el.dataset.eq; this.open('role', tab); };
-    });
-    const of = $('#eqOff'); if (of) of.onclick = () => {
-      const k = this.selEquip; if (!k || !p.equip[k]) return;
-      p.bag.push(p.equip[k]); p.equip[k] = null; delete p.gems[k];
-      this.toast('已卸下', 'ok'); this.selEquip = null; this.open('role', tab); this.home();
-    };
-    const fo = $('#eqForge'); if (fo) fo.onclick = () => {
-      const r = E.forge(p, this.selEquip); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { this.open('role', tab); this.home(); }
-    };
-    const up = $('#eqUp'); if (up) up.onclick = () => {
-      const r = E.upQuality(p, this.selEquip); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { this.open('role', tab); this.home(); }
-    };
-    const rr = $('#eqRr'); if (rr) rr.onclick = () => {
-      const r = E.reroll(p, this.selEquip); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { this.open('role', tab); }
-    };
-    const gm = $('#eqGem'); if (gm) gm.onclick = () => { this.selEquip && this.open('gem'); };
+  /* 他人名字 / 聊天文本的安全显示。
+   * esc() 已经能挡住 XSS（实测 15 种 payload 全部未执行），
+   * 但【超长与控制字符】挡不住：好友昵称、聊天消息、军团名都来自别的玩家
+   * 或后台下发，不走本机 sanitize(p.name)，实测 500 字昵称会把
+   * 设置页「代号」一行撑到 3762px 溢出面板。所以这里再叠一层 cleanName。 */
+  nm(v, max) {
+    const s = (window.E && E.cleanName) ? E.cleanName(v, max || 16) : String(v == null ? '' : v);
+    return this.esc(s);
   },
-
-  /* ---------- 宝石 ---------- */
-  r_gem(p) {
-    const slot = this.selEquip || 'head';
-    const it = p.equip[slot];
-    return `<div class="card">
-      <div class="card-t">镶嵌部位</div>
-      <div class="kv"><span>当前</span><b>${EX.slots.find(s=>s.k===slot).n}</b></div>
-      <div class="kv"><span>品质要求</span><b>${it && E.qi(it.q)>=2 ? '✔ 可镶嵌' : '✘ 需蓝色以上'}</b></div>
-    </div>
-    <div class="card">
-      <div class="card-t">选择宝石</div>
-      ${EX.gems.map((g)=>`<div class="item">
-        <div class="ic" style="font-size:16px">💎</div>
-        <div class="info"><div class="nm">${g.n}</div><div class="sub">${g.desc}</div></div>
-        <div class="act"><button class="btn c sm" data-gem="${g.id}">镶嵌</button></div>
-      </div>`).join('')}
-    </div>`;
-  },
-  b_gem(p) {
-    $$('#pnBody [data-gem]').forEach((b) => {
-      b.onclick = () => {
-        const r = E.socketGem(p, this.selEquip, b.dataset.gem);
-        this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.close(); this.open('role', '装备'); this.home(); }
-      };
-    });
-  },
-
-  /* ---------- 背包 ---------- */
-  r_bag(p, tab) {
-    let list = p.bag || [];
-    if (tab === '装备') list = list.filter((x) => x.slot);
-    if (tab === '宝石') list = [];
-    if (!list.length) return '<div class="empty"><span class="ic">🎒</span>背包空空如也<br><span style="font-size:10px">通关可掉落装备</span></div>';
-    return list.map((it, i) => {
-      const qc = E.qColor(it.q);
-      const sn = it.slot ? (EX.slots.find(s=>s.k===it.slot)||{}).n : '道具';
-      return `<div class="item">
-        <div class="ic" style="border:1.5px solid ${qc}">${it.slot?(EX.slots.find(s=>s.k===it.slot)||{}).icon:'📦'}</div>
-        <div class="info">
-          <div class="nm"><span style="color:${qc}">${it.q}</span> ${sn} ${it.lv?'+'+it.lv:''}</div>
-          <div class="sub">攻+${it.atk} 防+${it.def} 血+${it.hp}</div>
-        </div>
-        <div class="act">
-          ${it.slot?`<button class="btn c sm" data-wear="${i}">装备</button>`:''}
-          <button class="btn d sm" data-dec="${i}">分解</button>
-        </div>
+/* ---------- V1.1.0 军衔 ----------
+ * 策划口径：5 阶 × 10 层 = 50 阶，每层 +1.5% 攻击 / +1.2% 生命，
+ * 每 5 层额外 +0.5% 暴击。军功来自关卡结算（按章节递增）。
+ * 界面必须能自证：属性加成用真实 realmBonus() 的输出显示，
+ * 不能写死文案（历史教训：写了但没接线 = 玩家白花钱）。 */
+r_realm(p, tab) {
+  try {
+    const R = EX.REALM || {};
+    if (R.ON === false) return '<div class="empty">军衔系统未开启</div>';
+    const maxL = R.MAX_LAYER || 50;
+    const layer = Math.max(0, Math.min(maxL, Math.floor(Number(p.realm) || 0)));
+    const spirit = Math.max(0, Math.floor(Number(p.spirit) || 0));
+    const rb = E.realmBonus(p);
+    const cur = E.realmTier(layer);
+    const t = cur.t;
+    const tierName = t ? t.n : '未入门';
+    const tierColor = t ? t.color : (getComputedStyle(document.documentElement).getPropertyValue('--txt2') || '#a08e6e');
+    const inner = t ? cur.inner : 0;
+    const pct = t ? Math.round((inner / 10) * 100) : 0;
+    const nextCost = layer >= maxL ? 0 : E.realmCost(layer + 1);
+    const canUp = layer < maxL && spirit >= nextCost;
+    const need = Math.max(0, nextCost - spirit);
+    const tiersHTML = (R.TIERS || []).map((x) => {
+      const done = layer >= x.to;
+      const active = layer >= x.from && layer <= x.to;
+      const sub = done ? '圆满' : (layer >= x.from ? (layer - x.from + 1) + '/10' : '未达');
+      return `<div class="rl-t ${done ? 'done' : (active ? 'on' : '')}">
+        <div class="rl-ti" style="${done || active ? 'background:' + x.color : ''}">${this.esc(x.n.slice(0, 1))}</div>
+        <div class="rl-tb"><b style="color:${done || active ? x.color : ''}">${this.esc(x.n)}</b><span>${sub}</span></div>
       </div>`;
     }).join('');
+    return `<div class="card rl-hero" style="border-color:${tierColor}">
+      <div class="rl-badge" style="background:${tierColor}">${this.esc(tierName)}</div>
+      <div class="rl-info">
+        <div class="rl-lv">第 <b>${layer}</b> / ${maxL} 层</div>
+        <div class="rl-bar"><i style="width:${pct}%;background:${tierColor}"></i></div>
+        <div class="sub">${t ? (this.esc(t.n) + ' ' + inner + '/10 层') : '晋升一次即授新兵衔'}</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">当前加成<span class="sub">来自军衔，已计入战斗</span></div>
+      <div class="rl-st">
+        <div><span>攻击</span><b>+${(rb.atkPct * 100).toFixed(1)}%</b></div>
+        <div><span>生命</span><b>+${(rb.hpPct * 100).toFixed(1)}%</b></div>
+        <div><span>暴击</span><b>+${(rb.crit * 100).toFixed(1)}%</b></div>
+        <div><span>军功</span><b>${E.fmt(spirit)}</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-t">晋升</div>
+      ${layer >= maxL
+        ? '<div class="sub" style="padding:8px 2px">已达传奇巅峰，军衔无上。</div>'
+        : `<div class="sub" style="padding:4px 2px">下一层消耗军功 <b>${E.fmt(nextCost)}</b>${canUp ? '' : '（还差 ' + E.fmt(need) + '）'}</div>
+           <button class="btn ${canUp ? 'pri' : 'd'} rl-up" ${canUp ? '' : 'disabled'}>${canUp ? '晋 升' : '军功不足'}</button>`}
+      <div class="sub" style="padding:6px 2px">军功来源：通关关卡（章节越高越多）、每日活跃宝箱（${[30, 60, 100].map((v) => ((EX.REALM && EX.REALM.ACT_SPIRIT) ? (EX.REALM.ACT_SPIRIT[String(v)] || 0) : 0) + '/' + v + '档').join('、')}）、活动与运营发放。</div>
+    </div>
+    <div class="card"><div class="card-t">五阶军衔总览</div><div class="rl-tiers">${tiersHTML}</div></div>`;
+  } catch (e) {
+    return '<div class="empty">军衔数据异常</div>';
+  }
+},
+b_realm(p, tab) {
+  const btn = document.querySelector('#pnBody .rl-up');
+  if (!btn) return;
+  btn.onclick = () => {
+    try {
+      const r = E.realmUp(p);
+      if (!r.ok) {
+        if (window.SND) SND.play('error');
+        this.toast(r.reason === 'max' ? '已至最高军衔' : ('军功不足，还差 ' + E.fmt(r.need || 0)), 'bad');
+        return;
+      }
+      if (window.SND) SND.play('realm');
+      this.toast('晋升成功 · 第 ' + r.layer + ' 层', 'ok');
+      E.save(p);
+      this.open('realm'); this.home();
+    } catch (e) { if (window.SND) SND.play('error'); }
+  };
+},
+r_season(p, tab) {
+  try {
+    const S = EX.SEASON || null;
+    if (!S) return '<div class="empty">赛季未开启</div>';
+    const s = E.seasonOf(p);
+    const left = E.seasonLeftDays();
+    const steps = S.STEP || [];
+    const maxNeed = steps.length ? Number(steps[steps.length - 1].need) : 1;
+    const pct = Math.max(0, Math.min(100, Math.round((s.score / maxNeed) * 100)));
+    const rows = steps.map((x, i) => {
+      const got = s.got.indexOf(i) >= 0;
+      const can = !got && s.score >= Number(x.need);
+      const rwTxt = Object.keys(x.rw || {}).map((k) => E.itemName(k) + '×' + x.rw[k]).join('、');
+      return `<div class="sn-row">
+        <div class="sn-info">
+          <b>第 ${i + 1} 档 · ${Number(x.need)} 积分</b>
+          <div class="sub">${this.esc(rwTxt)}</div>
+        </div>
+        ${got ? '<span class="sub">已领取</span>'
+             : (can ? `<button class="btn pri sn-claim" data-i="${i}">领取</button>`
+                    : '<span class="sub">未达成</span>')}
+      </div>`;
+    }).join('');
+    const src = S.SCORE || {};
+    const srcTxt = { level: '通关关卡', endless: '无尽模式', legionBoss: '军团 BOSS', exped: '远征完成' };
+    const srcHTML = Object.keys(src).map((k) => `<span>${this.esc(srcTxt[k] || k)} +${src[k]}</span>`).join('');
+    return `<div class="card">
+      <div class="card-t">第 ${E.seasonNo()} 赛季<span class="sub">剩余 ${left} 天</span></div>
+      <div class="sub">赛季积分 <b>${E.fmt(s.score)}</b></div>
+      <div class="sn-bar"><i style="width:${pct}%"></i></div>
+      <div class="sub">赛季结束后积分与领取记录重置，新赛季重新累计。</div>
+    </div>
+    <div class="card">
+      <div class="card-t">赛季奖励阶梯</div>
+      ${rows || '<div class="sub">暂无档位</div>'}
+    </div>
+    <div class="card">
+      <div class="card-t">赛季循环奖励<span class="sub">阶梯领满后每 ${(() => { const L = (EX.SEASON && EX.SEASON.LOOP) || null; return L ? Number(L.every) || 0 : 0; })()} 分可再领</span></div>
+      ${(() => {
+        const L = (EX.SEASON && EX.SEASON.LOOP) || null;
+        if (!L || !L.rw) return '<div class="sub" style="padding:6px 2px">未开启循环奖励</div>';
+        const need = E.seasonLoopNeed(p);
+        if (need == null) return '<div class="sub" style="padding:6px 2px">本赛季循环奖励已领满（' + E.seasonLoopTaken(p) + ' 次）</div>';
+        const can = s.score >= need;
+        const rwTxt = Object.keys(L.rw || {}).map((k) => E.itemName(k) + '×' + L.rw[k]).join('、');
+        return '<div class="sn-row"><div class="sn-info"><b>已领 ' + E.seasonLoopTaken(p) + ' 次 · 下一档 ' + need + ' 积分</b>'
+          + '<div class="sub">' + this.esc(rwTxt) + '</div></div>'
+          + (can ? '<button class="btn pri sn-loop">领取</button>' : '<span class="sub">未达成</span>') + '</div>';
+      })()}
+    </div>
+    <div class="card">
+      <div class="card-t">积分来源</div>
+      <div class="sn-src">${srcHTML}</div>
+    </div>`;
+  } catch (e) {
+    return '<div class="empty">赛季数据异常</div>';
+  }
+},
+b_season(p, tab) {
+  const lp = document.querySelector('#pnBody .sn-loop');
+  if (lp) {
+    lp.onclick = () => {
+      try {
+        const r = E.seasonLoopClaim(p);
+        if (!r.ok) { if (window.SND) SND.play('error'); this.toast(r.msg || '领取失败', 'bad'); return; }
+        if (window.SND) SND.play('season');
+        this.toast(r.msg, 'ok');
+        E.save(p);
+        this.open('season'); this.home();
+      } catch (e) { if (window.SND) SND.play('error'); }
+    };
+  }
+  const btns = document.querySelectorAll('#pnBody .sn-claim');
+  btns.forEach((b) => {
+    b.onclick = () => {
+      try {
+        const r = E.seasonClaim(p, b.dataset.i);
+        if (!r.ok) {
+          if (window.SND) SND.play('error');
+          this.toast(r.msg || '领取失败', 'bad');
+          return;
+        }
+        if (window.SND) SND.play('season');
+        this.toast(r.msg, 'ok');
+        E.save(p);
+        this.open('season'); this.home();
+      } catch (e) { if (window.SND) SND.play('error'); }
+    };
+  });
+},
+r_tavern(p, tab) {
+    const hired = p.mercs || [];
+    return `<div class="card"><div class="card-t">🍺 酒馆 · 雇佣兵
+      <span class="sub">战斗中协同作战（已雇 ${hired.length}/${EX.mercs.length}）</span></div>
+      ${EX.mercs.map((m) => {
+        const own = hired.indexOf(m.id) >= 0;
+        /* 已雇佣的佣兵此前【没有 disabled】：按钮显示「已雇佣」却依然可点，
+         * 点下去走 b_tavern 的「已在阵容中」分支直接 return —— 不扣钱、
+         * 不提示、界面不动，玩家只会以为按钮坏了。
+         * 现在与「金币不足」同一口径：已完成态一并置灰。
+         * 注意：注释必须写在模板字符串【外面】，写在里面会被当成文本渲染到面板上，
+         *   玩家会在酒馆里看到这一整段开发备注（与「表31 DR11」同类）。 */
+        return `<div class="mc-card">
+          <div class="mi">${m.img
+            ? `<img src="${m.img}" style="width:40px;height:40px;border-radius:8px;object-fit:cover">`
+            : m.icon}</div>
+          <div class="mn"><b>${m.n}</b>
+            <span>${m.desc}</span>
+            <span>伤害 ${m.dmg} · 射速 ${m.rate}/s · 射程 ${m.rng}</span></div>
+          <button data-hire="${m.id}" class="${own ? 'hired' : ''}"
+            ${own ? 'disabled' : (p.gold < m.cost ? 'disabled' : '')}>
+            ${own ? '已雇佣' : '🪙' + m.cost}</button>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="card"><div class="card-t">战斗阵容</div>
+      <div class="sub" style="padding:4px 2px">雇佣的佣兵会在每局战斗开始时自动出战，站在防线后方协同射击。</div>
+    </div>`;
   },
-  b_bag(p) {
-    $$('#pnBody [data-wear]').forEach((b) => {
+  b_tavern(p, tab) {
+    $$('#pnBody [data-hire]').forEach((b) => {
       b.onclick = () => {
-        const i = +b.dataset.wear, it = p.bag[i]; if (!it || !it.slot) return;
-        const old = p.equip[it.slot];
-        p.equip[it.slot] = it; p.bag.splice(i, 1);
-        if (old) p.bag.push(old);
-        this.toast('装备成功', 'ok'); this.open('bag', this.curTab.bag); this.home();
-      };
-    });
-    $$('#pnBody [data-dec]').forEach((b) => {
-      b.onclick = () => {
-        const r = E.decompose(p, +b.dataset.dec); this.toast(r.msg, r.ok ? 'ok' : 'err');
-        if (r.ok) { this.open('bag', this.curTab.bag); this.home(); }
+        const id = b.dataset.hire;
+        const m = EX.mercs.find((x) => x.id === id); if (!m) return;
+        /* 防御：按钮已置灰，但旧档/热更后仍可能点到 —— 给一句明确提示，
+         * 不再静默 return（与 r_tavern 的 disabled 一起保证「点了必有反馈」） */
+        if ((p.mercs || []).indexOf(id) >= 0) return this.toast(m.n + ' 已在阵容中', 'err');
+        if (p.gold < m.cost) return this.toast('金币不足', 'err');
+        p.gold -= m.cost;
+        (p.mercs || (p.mercs = [])).push(id);
+        E.save(p); this.toast('已雇佣 ' + m.n, 'ok');
+        if (window.SND) SND.play('upgrade');
+        this.open('tavern'); this.home();
       };
     });
   },
 
-  /* ---------- 枪械 ---------- */
-  r_gun(p, tab) {
-    if (tab === '更换') {
-      return `<div class="card">
-        <div class="card-t">枪械库</div>
-        ${EX.guns.map((g)=>{
-          const has = p.gun === g.id;
-          const qc = E.qColor(g.q);
-          return `<div class="item">
-            <div class="ic" style="border:1.5px solid ${qc}">${g.icon}</div>
-            <div class="info">
-              <div class="nm"><span style="color:${qc}">${g.q}</span> ${g.n}</div>
-              <div class="sub">伤害${g.dmg} 射速${g.rate}/s 射程${g.range} 穿透${g.pierce}</div>
-            </div>
-            <div class="act">${has?'<span class="tag g">使用中</span>':`<button class="btn c sm" data-gun="${g.id}">切换</button>`}</div>
-          </div>`;}).join('')}
+  /* ---------- 核心：局内技能总览 ---------- */
+  r_core(p, tab) {
+    const byEl = {};
+    EX.skills.forEach((s) => { (byEl[s.el] || (byEl[s.el] = [])).push(s); });
+    /* 【BUG修复】元素标题此前直接用 emoji（🔥❄️⚡🌪️🔩），而这些 emoji 在
+     * EMOJI_ICON 映射表里早已被【其它语义抢占】：
+     *   🔥→diff_hard.jpg（困难难度）  ⚡→i_stamina.jpg（体力瓶）
+     *   🔩→i_metal.jpg（金属材料）    🌪️→sk_xuanfengjianong.jpg（旋风加农技能）
+     * 于是面板渲染后 emojify() 把「火系」标题换成了困难难度图标、「电系」换成了
+     * 体力瓶、「物理」换成了金属块、「风系」换成了旋风加农 —— 五个元素里四个图标
+     * 是错的。同时 el:'毒' 的技能不在这张表里，标题会退化成裸字「毒」。
+     * 现在改为直接引用 el_*.jpg 元素图标，彻底绕开 emoji 映射冲突。 */
+    const elIcon = {
+      '火': 'el_fire.jpg', '冰': 'el_ice.jpg', '电': 'el_elec.jpg',
+      '风': 'el_wind.jpg', '物': 'el_phys.jpg', '毒': 'el_poison.jpg',
+    };
+    const elName = { '火': '火系', '冰': '冰系', '电': '电系', '风': '风系', '物': '物理', '毒': '毒系' };
+    return Object.keys(byEl).map((el) => {
+      const c = (EX.elements.find((x) => x.k === el) || {}).c || '#ffd76a';
+      const ic = elIcon[el]
+        ? `<img class="ei" src="assets/icon/${elIcon[el]}" style="width:17px;height:17px;border-radius:4px;object-fit:contain;vertical-align:-3px;margin-right:4px">`
+        : '';
+      return `<div class="card"><div class="card-t" style="color:${c}">${ic}${elName[el] || el}</div>
+      ${byEl[el].map((s) => `<div class="item">
+        <div class="ic" style="border:1.5px solid ${c}66">${s.img
+          ? `<img src="${s.img}" style="width:30px;height:30px;border-radius:6px;object-fit:cover">`
+          : s.icon}</div>
+        <div class="info"><div class="nm">${s.n}
+          <span class="tag">${s.kind === 'active' ? '主动' : s.kind === 'summon' ? '召唤' : '被动'}</span></div>
+          <div class="sub">${s.desc}</div>
+          <div class="sub" style="color:var(--c-amber-100)">${s.up} · 上限 Lv${s.max}</div></div>
+      </div>`).join('')}</div>`;
+    }).join('');
+  },
+
+  /* ---------- 军团 ---------- */
+  /* 战团人数按实际成员数分配（此前写死 1/3/1 = 5 人，与「成员 N/50」矛盾） */
+  legionSquad(n) {
+    n = Math.max(0, Number(n) || 0);
+    const c0 = Math.min(n, Math.ceil(n * 0.4));
+    const c1 = Math.min(n - c0, Math.ceil(n * 0.35));
+    return [c0, c1, Math.max(0, n - c0 - c1)];
+  },
+  /* 生成军团名册。
+   * BUG：加入军团后 members 只有玩家自己 1 人，而军团列表卡片写着
+   *      「人数 42」、军团主页写「成员 1/50」——三处数字互相矛盾，
+   *      玩家点进去看到空军团，只会以为自己加错了或被坑了。
+   * 现在按配置人数生成一份名册（含团长/副队），并把玩家自己放进去。 */
+  mkLegionMembers(p, count, selfRole) {
+    const cap = Math.max(1, Math.min(50, Number(count) || 1));
+    const SUR = ['钢铁','末日','废土','雷霆','暗影','烈焰','寒霜','苍狼','孤雁','铁血','狂徒','夜枭','磐石','疾风','赤焰'];
+    const TIT = ['队长','副队','老兵','猎人','射手','医师','工匠','斥候','重装','突击','哨兵','炮手'];
+    const pick = (a) => a[Math.floor(Math.random() * a.length)];
+    const mem = [{ n: p.name || '我', role: selfRole || '成员', pw: (window.E && E.power) ? E.power(p) : 0 }];
+    for (let i = mem.length; i < cap; i++) {
+      mem.push({
+        n: pick(SUR) + pick(TIT) + (Math.floor(Math.random() * 900) + 100),
+        role: i === 1 ? '团长' : (i < 4 ? '副队' : '成员'),
+        pw: Math.floor(Math.random() * 90000 + 3000),
+      });
+    }
+    /* 名册按战力排序（团长置顶），看起来像个真实军团 */
+    const me = mem[0];
+    const rest = mem.slice(1).sort((a, b) => b.pw - a.pw);
+    return [me].concat(rest);
+  },
+  r_legion(p, tab) {
+    const lg = p.legion || null;
+    /* 名册兜底（存量存档）：members 只在【加入 / 创建军团】那一刻生成，
+     * 而「按配置人数生成名册」是后来才补的修复 —— 在那之前就已加入军团的
+     * 玩家，p.legion 里根本没有 members 字段，于是：
+     *   · 「成员」页签渲染成【0 人】的空军团（实测面板整块空白）
+     *   · 而军团主页写「成员 1/50」、军团列表卡片写「人数 42」，
+     *     三处数字互相矛盾，玩家只会以为自己加错了军团。
+     * 这里在读取时就地补全一次并写回存档，老玩家刷新一次即恢复正常。 */
+    if (lg && (!Array.isArray(lg.members) || !lg.members.length)) {
+      const cnt = 6;
+      try {
+        const cfg = (EX.legions || []).find((x) => x.id === lg.id);
+        lg.members = this.mkLegionMembers(p, (cfg && cfg.mem) || cnt, lg.job || '成员');
+        try { E.save(p); } catch (e) {}
+      } catch (e) { lg.members = []; }
+    }
+    if (tab === '成员') {
+      if (!lg) return '<div class="empty">尚未加入军团</div>';
+      const mem = lg.members || [];
+      return `<div class="card"><div class="card-t">成员 <span class="sub">${mem.length} 人</span></div>
+        ${mem.map((m) => `<div class="kv"><span>${this.nm(m.role || '成员', 8)} ${this.nm(m.n)}</span><b>战力 ${E.fmt(m.pw || 0)}</b></div>`).join('')}
       </div>`;
     }
-    const g = E.gun(p), a = E.attrs(p), cost = E.gunUpgradeCost(p);
-    return `<div class="card">
-      <div class="card-t">当前枪械 <span class="sub">Lv.${p.gunLv}</span></div>
-      <div class="item" style="border:none;background:none;padding:0;margin-bottom:8px">
-        <div class="ic" style="font-size:24px">${g.icon}</div>
-        <div class="info"><div class="nm">${g.n}</div><div class="sub">基础伤害 ${g.dmg} → 当前 ${E.fmt(a.base)}</div></div>
+    if (lg) {
+      /* 截图37：军团名/等级/成员/战力 + 战团列表 + 底部三按钮 */
+      const mem = lg.members || [];
+      const totalPw = mem.reduce((s, m) => s + (m.pw || 0), 0);
+      return `<div class="card" style="text-align:center">
+        ${this.zAvatarHTML(lg.id, '')}
+        <div style="font-size:var(--fs-lg);font-weight:var(--fw-bold);margin-top:6px;color:var(--yel)">${this.nm(lg.n, 16)}</div>
+        <div class="sub">${lg.lv || 1}级 · 成员 ${mem.length}/${lg.cap || 50} · 战力 ${E.fmt(Math.max(totalPw, E.power(p)))}</div>
       </div>
-      <div class="kv"><span>枪械伤害</span><b style="color:var(--gold)">${E.fmt(a.base)}</b></div>
-      <div class="kv"><span>射速</span><b>${a.rate.toFixed(2)}/秒</b></div>
-      <div class="kv"><span>射程</span><b>${Math.round(a.range)}</b></div>
-      <div class="kv"><span>穿透</span><b>${a.pierce}</b></div>
-      <div class="bar"><i style="width:${Math.min(100,(p.gunLv%10)*10)}%"></i></div>
-      <button class="btn c blk" id="gunUp" ${p.gold<cost?'disabled':''}>强化 · ${E.fmt(cost)} 金币</button>
-      <div class="lbl">枪械强化是攻击力成长的核心来源，每级约 +20%。</div>
+      <div class="card"><div class="card-t">战团</div>
+        ${['一团', '二团', '三团'].map((nm, i) => `<div class="zrow">
+          ${this.zAvatarHTML('t' + i)}<div class="zi"><b>${nm}</b><span>人数 ${this.legionSquad(mem.length)[i]} · 队伍 ${i + 1}</span></div>
+          ${this.zAvatarHTML('u' + i)}</div>`).join('')}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn sm o" style="flex:1" id="lgAct">军团活动</button>
+        <button class="btn sm o" style="flex:1" id="lgShop">军团商店</button>
+        <button class="btn sm" style="flex:1" id="lgDonate">捐献</button>
+      </div>
+      ${/* V1.0.3 军团 BOSS：周常共斗 */ (function () {
+        const b = EX.legionBoss;
+        if (!b) return '';
+        const lb = p.lb || {};
+        const hp = (lb.hp != null && lb.wk === E.weekKey()) ? lb.hp : b.maxHp;
+        const pct = Math.max(0, Math.min(100, Math.round(hp / b.maxHp * 100)));
+        const okSt = (p.stamina || 0) >= b.cost;
+        return `<div class="card" style="margin-top:8px"><div class="card-t">👑 军团 BOSS
+          <span class="sub">剩余 ${pct}%</span></div>
+          <div class="kv"><span>${b.n}</span><b>HP ${E.fmt(hp)} / ${E.fmt(b.maxHp)}</b></div>
+          <div class="sub" style="padding:4px 2px">${b.desc}</div>
+          <button class="btn" id="lgBoss" style="width:100%;margin-top:6px" ${okSt ? '' : 'disabled'}>${okSt ? '挑战（体力 ' + b.cost + '）' : '体力不足'}</button>
+          ${/* V1.0.4 社交深化：本周贡献榜 */ (function () {
+            const rk = (window.E && E.lgBossRank) ? E.lgBossRank(p) : [];
+            if (!rk.length) return '';
+            const myIdx = rk.findIndex((x) => x.me);
+            const top = rk.slice(0, 5);
+            return `<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:6px">
+              <div class="kv"><span>本周我的输出</span><b>${E.fmt(p.lb && p.lb.dmg || 0)}${myIdx >= 0 ? ' · 第 ' + (myIdx + 1) + ' 名' : ''}</b></div>
+              ${top.map((x, i) => `<div class="kv"${x.me ? ' style="color:var(--gold)"' : ''}><span>${i + 1}. ${UI.esc(x.n)}${x.me ? '（我）' : ''}</span><b>${E.fmt(x.dmg)}</b></div>`).join('')}
+              <div class="sub" style="padding:4px 2px">每周一重置，排名越高越能带动全团讨伐进度。</div>
+            </div>`;
+          })()}
+        </div>`;
+      })()}
+      <div class="card" style="margin-top:8px"><div class="card-t"><img class="ei" src="assets/icon/contrib.jpg" style="width:17px;height:17px;border-radius:4px;object-fit:contain;vertical-align:-3px;margin-right:4px">军团贡献
+        <span class="sub">捐献获得，可在军团商店消费</span></div>
+        <div class="kv"><span>当前贡献</span><b>${E.fmt(p.legionExp || 0)}</b></div>
+        <div class="kv"><span>累计贡献</span><b>${E.fmt(E.legionContribOf(p))}</b></div>
+        <div class="kv"><span>属性加成</span><b>攻/血 +${Math.round((E.legionBonus(p).atkPct || 0) * 100)}%</b></div>
+        <div class="sub" style="padding:4px 2px">每累计 1000 贡献 +1% 攻击与生命（上限 10%）。加成按【累计】计算，在军团商店消费不会降低。</div>
+      </div>`;
+    }
+    return `<div class="card"><div class="card-t">加入军团</div>
+      <div class="sub" style="padding:4px 2px">军团可提供属性加成、军团副本与军团商店。</div>
+      ${EX.legions.map((l) => `<div class="mc-card">
+        <div class="mi">${l.img ? `<img src="${l.img}" alt="">` : l.icon}</div>
+        <div class="mn"><b>${l.n}</b><span>${l.desc}</span>
+          <span>人数 ${l.mem} · 需要战力 ${E.fmt(l.need)}</span></div>
+        <button data-join="${l.id}" ${E.power(p) < l.need ? 'disabled' : ''}>${E.power(p) < l.need ? '战力不足' : '加入'}</button>
+      </div>`).join('')}
+      <div class="sub" style="padding:6px 2px">或花费 <b>20000 金币</b> 自建军团</div>
+      <button class="btn" id="lgCreate" style="width:100%;margin-top:4px">🏰 自建军团（20000 金币）</button>
+    </div>`;
+  },
+  b_legion(p, tab) {
+    const jb = $$('#pnBody [data-join]');
+    jb.forEach((b) => { b.onclick = () => {
+      const l = EX.legions.find((x) => x.id === b.dataset.join); if (!l) return;
+      /* 与按钮 disabled 同口径再挡一次：按钮的 disabled 只存在于渲染那一刻，
+       * 面板渲染后若战力发生变化而未重渲染，按钮状态不会更新，
+       * 只靠 disabled 就会出现「战力不够却能加入」。 */
+      if (E.power(p) < (l.need || 0)) return this.toast('战力不足', 'err');
+      p.legion = { id: l.id, n: l.n, lv: 1, cap: 50, members: this.mkLegionMembers(p, l.mem, '成员') };
+      E.save(p); this.toast('已加入 ' + l.n, 'ok');
+      if (window.SND) SND.play('upgrade'); this.open('legion'); this.home();
+    }; });
+    const cb = $('#lgCreate');
+    if (cb) cb.onclick = () => {
+      if (p.gold < 20000) return this.toast('金币不足', 'err');
+      p.gold -= 20000;
+      p.legion = { id: 'my', n: p.name + '的军团', lv: 1, cap: 50,
+        members: this.mkLegionMembers(p, 6, '团长') };
+      E.save(p); this.toast('军团创建成功', 'ok'); this.open('legion'); this.home();
+    };
+    const db = $('#lgDonate');
+    if (db) db.onclick = () => {
+      /* 捐献汇率改为读云端军团配置（后台「社交 → 军团管理」可改）
+       * 此前写死 5000 金 / 100 贡献 —— 后台配的汇率玩家端完全无感。 */
+      const LC = (window.EX && EX.legionCfg) || {};
+      const cost = Number(LC.donateCost) || 5000;
+      const ctb = Number(LC.donateContrib) || 100;
+      if (p.gold < cost) return this.toast('金币不足（需 ' + E.fmt(cost) + '）', 'err');
+      p.gold -= cost; p.legionExp = (p.legionExp || 0) + ctb;
+      /* 累计贡献同步增加：属性加成按累计算，否则花掉贡献就会掉属性 */
+      p.legionContrib = (p.legionContrib || 0) + ctb;
+      E.save(p); this.toast('捐献成功 +' + ctb + ' 贡献', 'ok'); this.open('legion'); this.home();
+    };
+    /* V1.0.3 军团 BOSS：周常共斗。挑战扣体力、按战力造成伤害，
+     * 每次结算贡献与奖励；血量归零判击杀并发大奖；每周一自动重置。 */
+    const bb = $('#lgBoss');
+    if (bb) bb.onclick = () => {
+      const b = EX.legionBoss; if (!b) return;
+      if (!p.legion) return this.toast('请先加入军团', 'err');
+      if ((p.stamina || 0) < b.cost) return this.toast('体力不足', 'err');
+      p.stamina -= b.cost;
+      const wk = E.weekKey();
+      p.lb = p.lb || {};
+      if (p.lb.wk !== wk) p.lb = { wk: wk, hp: b.maxHp };
+      if (p.lb.hp == null) p.lb.hp = b.maxHp;
+      const dmg = Math.max(1, Math.floor((E.power(p) || 0) * 1.2));
+      p.lb.hp = Math.max(0, p.lb.hp - dmg);
+      /* V1.0.4 贡献榜：累计本人本周输出（lb.wk 切换时随血量一起归零） */
+      p.lb.dmg = Math.max(0, Number(p.lb.dmg || 0)) + dmg;
+      /* 赛季积分：军团 BOSS 挑战 */
+      E.addSeasonScore(p, 'legionBoss');
+      const contrib = b.contribPerHit || 0;
+      p.gold = (p.gold || 0) + (b.goldPerHit || 0);
+      p.legionExp = (p.legionExp || 0) + contrib;
+      p.legionContrib = (p.legionContrib || 0) + contrib;
+      (b.matsPerHit || []).forEach((m) => { p.mat = p.mat || {}; p.mat[m.k] = (p.mat[m.k] || 0) + m.n; });
+      let killed = false;
+      if (p.lb.hp <= 0) {
+        killed = true;
+        const kr = b.killRw || {};
+        p.gold = (p.gold || 0) + (kr.gold || 0);
+        p.legionExp = (p.legionExp || 0) + (kr.contrib || 0);
+        p.legionContrib = (p.legionContrib || 0) + (kr.contrib || 0);
+        if (kr.gem) { p.gems = p.gems || {}; p.gems[kr.gem] = (p.gems[kr.gem] || 0) + 1; }
+      }
+      E.save(p);
+      this.toast(killed ? '击杀军团 BOSS！大奖已发放' : '造成伤害 ' + E.fmt(dmg) + '，贡献 +' + contrib, 'ok');
+      if (window.SND) SND.play(killed ? 'boss' : 'upgrade');
+      this.open('legion'); this.home();
+    };
+    /* 军团活动：此前写死「开发中」，点了没反应。
+     * 现在按 legionActs 挑战，消耗体力 → 产出贡献+金币+材料。 */
+    const la = $('#lgAct');
+    if (la) la.onclick = () => {
+      if (!p.legion) return this.toast('请先加入军团', 'err');
+      this.sheet('军团副本', `
+        <div class="sub" style="padding:4px 2px">消耗体力挑战，产出军团贡献与奖励。</div>
+        ${(EX.legionActs || []).map((a) => {
+          const okSt = (p.stamina || 0) >= a.cost;
+          const okPw = E.power(p) >= a.need;
+          return `<div class="mc-card">
+            <div class="mi">${a.img ? `<img src="${a.img}" alt="">` : a.icon}</div>
+            <div class="mn"><b>${a.n}</b><span>贡献 +${a.contrib} · 金币 +${E.fmt(a.gold)}</span>
+              <span>体力 ${a.cost} · 需要战力 ${E.fmt(a.need)}${okPw ? '' : '（战力不足）'}</span></div>
+            <button data-lact="${a.id}" ${(okSt && okPw) ? '' : 'disabled'}>${okSt ? (okPw ? '挑战' : '战力不足') : '体力不足'}</button>
+          </div>`;
+        }).join('')}`);
+      $$('[data-lact]').forEach((b) => { b.onclick = () => {
+        const a = (EX.legionActs || []).find((x) => x.id === b.dataset.lact); if (!a) return;
+        if ((p.stamina || 0) < a.cost) return this.toast('体力不足', 'err');
+        if (E.power(p) < a.need) return this.toast('战力不足', 'err');
+        p.stamina -= a.cost;
+        p.gold = (p.gold || 0) + a.gold;
+        p.legionExp = (p.legionExp || 0) + a.contrib;
+        p.legionContrib = (p.legionContrib || 0) + a.contrib;
+        (a.mats || []).forEach((m) => { p.mat = p.mat || {}; p.mat[m.k] = (p.mat[m.k] || 0) + m.n; });
+        E.save(p);
+        this.toast('挑战成功：贡献 +' + a.contrib, 'ok');
+        if (window.SND) SND.play('upgrade');
+        this.closeSheet(); this.open('legion'); this.home();
+      }; });
+    };
+
+    /* 军团商店：此前只弹 toast，贡献赚了没出口（白捐）。
+     * 现在按 legionShop 兑换，扣贡献发货，带限购。 */
+    const ls = $('#lgShop');
+    if (ls) ls.onclick = () => {
+      if (!p.legion) return this.toast('请先加入军团', 'err');
+      const today = E.dailyKey();   /* UTC+8 业务日，与签到/礼包限购同一基准（原为本地时区） */
+      if (p.lgShopDate !== today) { p.lgShopDate = today; p.lgShopBuy = {}; }
+      /* 就地防御：污染时对它的赋值失效 → 军团商店每日限购失效 */
+      p.lgShopBuy = E.recObj(p, 'lgShopBuy');
+      this.sheet('军团商店', `
+        <div class="kv"><span>我的贡献</span><b>${E.fmt(p.legionExp || 0)}</b></div>
+        ${(EX.legionShop || []).map((g) => {
+          const used = p.lgShopBuy[g.id] || 0;
+          const can = (p.legionExp || 0) >= g.cost && (!g.lim || used < g.lim);
+          return `<div class="mc-card">
+            <div class="mi">${g.img ? `<img src="${g.img}" alt="">` : g.icon}</div>
+            <div class="mn"><b>${g.n}</b><span>${g.item === 'gold' ? ('金币 ' + E.fmt(g.n2)) : (E.itemName(g.item) + ' ×' + g.n2)}</span>
+              <span>贡献 ${g.cost}${g.lim ? ' · 每日限 ' + g.lim + '（已兑 ' + used + '）' : ''}</span></div>
+            <button data-lbuy="${g.id}" ${can ? '' : 'disabled'}>${can ? '兑换' : (g.lim && used >= g.lim ? '已达上限' : '贡献不足')}</button>
+          </div>`;
+        }).join('')}`);
+      $$('[data-lbuy]').forEach((b) => { b.onclick = () => {
+        const g = (EX.legionShop || []).find((x) => x.id === b.dataset.lbuy); if (!g) return;
+        if ((p.legionExp || 0) < g.cost) return this.toast('贡献不足', 'err');
+        const used = E.recObj(p, 'lgShopBuy')[g.id] || 0;
+        if (g.lim && used >= g.lim) return this.toast('已达每日兑换上限', 'err');
+        p.legionExp -= g.cost;
+        p.lgShopBuy[g.id] = used + 1;
+        if (g.item === 'gold') p.gold = (p.gold || 0) + g.n2;
+        else if (String(g.item).indexOf('gem_') === 0) {
+          const gid = g.item.slice(4);
+          p.gems = p.gems || {}; p.gems[gid] = (p.gems[gid] || 0) + g.n2;
+        }
+        /* 芯片（LS05「普通芯片」200 贡献）
+         * BUG：军团商店这段是【内联发放】，只认 gold / gem_，
+         *      其余一律 p.mat[g.item] —— 于是 C01 被写进 p.mat['C01']。
+         *      而芯片真实存放在 p.bag，芯片面板只读 p.bag。
+         * 结果：花 200 贡献兑换「普通芯片」，提示兑换成功，
+         *       芯片页永远 0 颗，既不能装备也不能合成，贡献白捐。
+         * （成就商店 AS09~AS11、活动商店 ES06~ES08 走 E.grant()，
+         *   grant 里有 C0x 分支，所以那两处是对的；只有这条内联漏了。）
+         * 顺带兼容 chipN/chipE/chipL/chipRed 与 title/frame，
+         * 防止后台热更给军团商店加这些奖励时重演。 */
+        else if (/^C0[1-3]$/.test(g.item) || /^chip/.test(g.item)) {
+          const q = (g.item === 'C02' || g.item === 'chipE') ? '蓝'
+            : (g.item === 'C01' || g.item === 'chipN' || g.item === 'chip') ? '白' : '红';
+          const cnt = Math.max(1, Math.min(20, Math.floor(Number(g.n2) || 1)));
+          let ok = 0;
+          for (let i = 0; i < cnt; i++) {
+            try { const c = E.giveChipByQuality ? E.giveChipByQuality(p, q) : null; if (c) ok++; } catch (e) {}
+          }
+          if (!ok) { p.mat = p.mat || {}; p.mat.M03 = (p.mat.M03 || 0) + cnt * 2; }
+        }
+        else if (g.item === 'title') { p.titles = p.titles || []; if (p.titles.indexOf(g.n2) < 0) p.titles.push(g.n2); }
+        else if (g.item === 'frame') { p.frames = p.frames || []; if (p.frames.indexOf(g.n2) < 0) p.frames.push(g.n2); }
+        else { p.mat = p.mat || {}; p.mat[g.item] = (p.mat[g.item] || 0) + g.n2; }
+        E.save(p);
+        this.toast('兑换成功：' + g.n, 'ok');
+        if (window.SND) SND.play('get');
+        this.closeSheet(); this.open('legion'); this.home();
+      }; });
+    };
+  },
+
+  /* ---------- 远征堡垒 ---------- */
+  r_exped(p, tab) {
+    if (tab === '巡逻') {
+      /* 兜底：newPlayer 没有 patrolT 字段，旧写法 `p.patrolT || 0` 让
+       * last=1970 年 → hrs 被 8 小时上限钳住 → 新号一进面板就能白领
+       * 8 小时收益（实测 128 金币，第 5 章档位 1120）。
+       * 无 patrolT 时用【账号创建时间】兜底，老存档不受影响。 */
+      const last = p.patrolT || p.created || (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
+      /* 【改系统时间 BUG 修复】巡逻「累计可领」此前用设备时钟算时长，
+       * 玩家把时钟往前调 8 小时再打开面板，就能一次领满 8 小时金币，
+       * 调回当天再调前可无限重复。与离线收益、体力是同一类问题。 */
+      const now = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
+      /* 双重保险：时间回拨时 (now-last) 为负，会让「累计可领」显示负数金币 */
+      const hrs = Math.min(8, Math.max(0, (now - last) / 3600000));
+      /* 零头累积（与下面 b_exped 的领取同口径）
+       * BUG：p.patrolAcc 全项目【只有读取和清零，从未被累加】——
+       *   每次领取都把「不足 1 金币的零头」直接丢弃，patrolAcc 恒为 0。
+       *   实测（第 1 章 rate=16，每 10 分钟领一次）：
+       *     每次 floor(0.1667×16)=2 金币，一小时领 6 次共 12 金币，
+       *     而每小时产出就是 16 —— 频繁领取白白少拿 25%。
+       *   现在把零头存进 patrolAcc 累积到下次，显示与实际领取一致。 */
+      const _ptAcc = Number(p.patrolAcc) || 0;
+      /* 与领取同口径：必须走 E.patrolRateReal（含挂机折扣），
+       * 用 p.patrolRate 会让「累计可领」按 100% 显示、实发 60% */
+      const _rate = E.patrolRateReal(p);
+      const gain = Math.floor(_ptAcc + hrs * _rate);
+      return `<div class="card"><div class="card-t">🚩 巡逻收益
+        <span class="sub">章节越高，收益越大</span></div>
+        <div class="kv"><span>当前章节</span><b>第 ${p.ch || 1} 章</b></div>
+        <div class="kv"><span>每小时产出</span><b>${Math.round(_rate * 10) / 10} 金币</b></div>
+        <div class="kv"><span>累计可领</span><b>${E.fmt(gain)}</b></div>
+        <div class="sub" style="padding:6px 2px">最长累计 8 小时，离线也会累积。</div>
+        <button class="btn" id="ptClaim" style="width:100%;margin-top:6px">领取巡逻收益</button>
+        <button class="btn g" id="ptFast" style="width:100%;margin-top:6px">⚡ 快速巡逻（${p.patrolFast || 0}/3）</button>
+      </div>`;
+    }
+    return `<div class="card"><div class="card-t">远征副本</div>
+      <div class="sub" style="padding:4px 2px">消耗体力挑战，产出稀有材料与宝石。</div>
+      ${EX.expeds.map((e) => {
+        const ok = (p.stamina || 0) >= e.cost;
+        /* 门槛口径必须与行为一致：
+         *   军团副本写「推荐战力」却是【硬拦截】——战力不够直接点不了；
+         *   远征同样写「推荐战力」却【完全不校验】，任何战力都 100% 拿全额奖励。
+         *   同一个词两套行为，玩家无法从文案判断哪个能点、哪个不能。
+         * 远征是材料/宝石的主要来源，硬卡会让新手彻底拿不到，故保持不拦截，
+         *   但战力低于推荐值时明确标红提示，让玩家知道自己是「越级挑战」而非
+         *   界面忘了校验。军团副本那边则把文案改成「需要战力」，与硬拦截对齐。 */
+        const okPw = E.power(p) >= (e.need || 0);
+        return `<div class="mc-card">
+          <div class="mi">${e.img ? `<img src="${e.img}" alt="">` : e.icon}</div>
+          <div class="mn"><b>${e.n}</b><span>${e.desc}</span>
+            <span>消耗体力 ${e.cost} · 推荐战力 ${E.fmt(e.need)}${okPw ? '' : '<b style="color:var(--red)">（当前战力偏低，仍可挑战）</b>'}</span></div>
+          <button data-exped="${e.id}" ${!ok ? 'disabled' : ''}>${ok ? '挑战' : '体力不足'}</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  },
+  b_exped(p, tab) {
+    $$('#pnBody [data-exped]').forEach((b) => { b.onclick = () => {
+      const e = EX.expeds.find((x) => x.id === b.dataset.exped); if (!e) return;
+      if ((p.stamina || 0) < e.cost) return this.toast('体力不足', 'err');
+      p.stamina -= e.cost;
+      /* 按副本配置的 mats 精确产出（此前 M0x 全随机，与 desc 对不上） */
+      const txt = ['金币+' + e.gold];
+      p.gold += e.gold;
+      (e.mats || [{ k: 'M01', n: e.mat }]).forEach((m) => {
+        p.mat = p.mat || {};
+        p.mat[m.k] = (p.mat[m.k] || 0) + m.n;
+        txt.push(E.itemName(m.k) + '+' + m.n);
+      });
+      /* 宝石产出（此前从不发宝石，与面板描述不符） */
+      if (e.gem && Math.random() < e.gem.rate) {
+        const pool = (EX.gems || []).map((x) => x.id);
+        if (pool.length) {
+          const gid = pool[Math.floor(Math.random() * pool.length)];
+          p.gems = p.gems || {};
+          p.gems[gid] = (p.gems[gid] || 0) + (e.gem.n || 1);
+          const gd = EX.gems.find((x) => x.id === gid);
+          txt.push((gd ? gd.n : '宝石') + '+' + (e.gem.n || 1));
+        }
+      }
+      /* 赛季积分：远征完成 */
+      E.addSeasonScore(p, 'exped');
+      E.save(p); this.toast('远征完成：' + txt.join('、'), 'ok');
+      if (window.SND) SND.play('upgrade'); this.open('exped'); this.home();
+    }; });
+    const cb = $('#ptClaim');
+    if (cb) cb.onclick = () => {
+      const now = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
+      /* 双重保险：时间回拨时 hrs 为负，gain 变负数被拒且 patrolT 不重置 → 永久卡住 */
+      const hrs = Math.min(8, Math.max(0, (now - (p.patrolT || p.created || now)) / 3600000));
+      /* 与上方 r_exped 显示同口径：零头存回 patrolAcc 累积到下次，不再丢弃 */
+      const total = (Number(p.patrolAcc) || 0) + hrs * E.patrolRateReal(p);
+      const gain = Math.floor(total);
+      if (gain <= 0) return this.toast('暂无可领收益', 'err');
+      p.gold += gain; p.patrolAcc = total - gain; p.patrolT = now;
+      E.save(p); this.toast('领取 ' + E.fmt(gain) + ' 金币', 'ok'); this.open('exped', '巡逻'); this.home();
+    };
+    const fb = $('#ptFast');
+    if (fb) fb.onclick = () => {
+      if ((p.patrolFast || 0) <= 0) return this.toast('快速巡逻次数已用完', 'err');
+      p.patrolFast--; p.gold += Math.floor(E.patrolRateReal(p) * 2);
+      E.save(p); this.toast('快速巡逻完成', 'ok'); this.open('exped', '巡逻'); this.home();
+    };
+  },
+
+  /* 奖励文本 */
+  rwTxt(rw) {
+    if (!rw) return '';
+    const out = [];
+    for (const k in rw) {
+      if (!rw[k]) continue;
+      out.push(E.itemName(k) + '×' + rw[k]);
+    }
+    return out.join(' ');
+  },
+
+  /* ---------- 角色 ---------- */
+  /* ---------- 角色（截图41：Q版角色 + 装备/宝石/皮肤 + 橙色「装备设造」） ---------- */
+  r_role(p, tab) {
+    const c = E.char(p);
+    const a = E.attrs(p);
+    if (tab === '皮肤') {
+      /* BUG1：own 判定写的是 (p.skin||[]).indexOf(...) —— 但 p.skin 是【字符串】
+       *      （当前穿戴皮肤ID），已拥有列表才叫 p.skins（数组）。
+       *      结果：除当前这件外，玩家已拥有的皮肤全被标成「未拥有」。
+       * BUG2：格子没有任何 data-* 属性，b_role 也没有绑定
+       *      → 皮肤页签是个死图库，点了完全没反应，无法切换穿戴。
+       *      玩家买/领了多套皮肤后永远换不回去，皮肤加成
+       *      （攻击+5%、生命+8% 等）永远卡在最后一次自动穿戴的那套。 */
+      /* 统一口径：p.skins 历史脏档可能是 {id:1} 对象，
+       * 直接 .length / .indexOf 在非数组上会出错或算错，一律走 E.skinArr。 */
+      const owned = E.skinArr(p);
+      /* BUG：11 款皮肤里 7 款付费（680~980 钻），但除了
+       *      sk_c01b（直购 SH08）/ sk_c03c（活动商店 ES09）/ sk_c04b（排行榜 RK08），
+       *      其余 4 款全项目没有任何购买入口 —— 玩家在外观页看到它们标着
+       *      「未拥有」，点上去只会提示"尚未拥有"，却根本没地方买。
+       *      现在给未拥有的付费皮肤补上「💎购买」按钮（走 E.buySkin）。 */
+      return `<div class="card"><div class="card-t">外观
+        <span class="sub">已拥有 ${owned.length} / ${(EX.skins || []).length}</span></div>
+        <div class="lbl" style="text-align:left;margin-bottom:6px">点击已拥有的皮肤即可穿戴</div>
+        <div class="grid3">${(EX.skins || []).map((sk) => {
+          const own = sk.price === 0 || owned.indexOf(sk.id) >= 0;
+          const on = (p.skin || '') === sk.id;
+          const price = Number(sk.price) || 0;
+          const bo = sk.bonus || {};
+          const bt = Object.keys(bo).map((k) => ({
+            atk: '攻击', hp: '生命', crit: '暴击', spd: '移速', xp: '经验', armor: '护甲'
+          }[k] || k) + '+' + Math.round(bo[k] * 100) + '%').join(' ');
+          return `<div class="gcell ${on ? '' : 'sel'}" data-skb="${sk.id}"
+            style="${own ? '' : 'opacity:.7'}">${sk.img
+            ? `<img src="${sk.img}">` : `<div class="gi">${sk.icon}</div>`}
+            <div class="gn">${sk.n}${on ? '<span class="tag y" style="font-size:var(--fs-xs)">穿戴中</span>' : ''}</div>
+            <div class="lbl" style="font-size:var(--fs-xs);line-height:1.3">${bt || '无加成'}${own ? '' : ' · 未拥有'}</div>
+            ${(sk.char && sk.char !== p.char) ? `<div class="lbl" style="font-size:var(--fs-xs);color:var(--c-red-200)">${(((EX.chars)||[]).find((x)=>x.id===sk.char)||{}).n || sk.char} 专属</div>` : ''}
+            ${(!own && price > 0) ? `<button class="btn sm" data-skby="${sk.id}"
+              style="font-size:var(--fs-xs);padding:3px 6px;margin-top:3px">💎 ${price} 购买</button>` : ''}</div>`;
+        }).join('') || '<div class="lbl">暂无外观</div>'}</div>
+      </div>`;
+    }
+    if (tab === '宝石') {
+      /* 截图41：宝石属性 tab，三颗宝石 + 绿色「卸下」+ 橙色「装备设造」 */
+      const gb = E.gemBonus(p);
+      return `<div class="card"><div class="card-t">宝石属性
+        <span class="sub">Lv.${p.gemOn ? E.gemTier(p, p.gemOn) : 1}</span></div>
+        ${(EX.gems || []).map((g) => {
+          const on = p.gemOn === g.id;
+          return `<div class="zrow">
+            ${g.img ? `<div class="zav"><img src="${g.img}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>`
+                    : `<div class="zav">${g.icon}</div>`}
+            <div class="zi"><b>${g.n}</b><span>${g.desc}</span>
+              <span style="color:${on ? 'var(--yel)' : 'rgba(255,255,255,.55)'}">Lv.${E.gemTier(p, g.id)}：${E.gemBonusOf ? E.gemBonusOf(p, g.id) : '—'}${on ? '（已镶嵌）' : ''}</span></div>
+            ${on ? '<button class="btn g sm" data-gemoff="1">卸下</button>'
+                 : `<button class="btn sm" data-gemon="${g.id}">镶嵌</button>`}
+          </div>`;
+        }).join('') || '<div class="lbl">暂无宝石</div>'}
+        <button class="btn o" id="roleForge" style="width:100%;margin-top:8px">装备锻造</button>
+      </div>
+      <div class="card"><div class="card-t">装备槽 <span class="sub">强化 / 进阶</span></div>
+        <div class="grid4">${(EX.equipSlots || []).map((sl) => {
+          const e = (p.equip || {})[sl.k] || { lv: 0 };
+          return `<div class="gcell ${e.lv ? '' : 'sel'}" data-forge="${sl.k}">
+            <div class="gi">${sl.icon}</div>
+            <div class="gn">${sl.n}</div>
+            ${e.lv ? `<span class="gq">+${e.lv}</span>` : ''}</div>`;
+        }).join('')}</div>
+        <div class="sub" style="margin-top:6px">点击装备槽强化，每 5 级进阶一次</div>
+      </div>`;
+    }
+    /* 装备总览 */
+    /* 角色选择：
+     * 此前 EX.chars 共 4 个角色（各自 hp/spd/armor/crit 不同，C02~C04 分别
+     * 通关 1-3 / 2-3 / 3-3 解锁），但 E.switchChar() 全项目【零调用】，
+     * UI 里也只有设置页显示一行角色名 —— 玩家永远只能玩 C01，
+     * 另外 3 个角色及其专属皮肤（11 款中的 8 款）全部无法使用。 */
+    const un = (EX.chars || []).filter((x) => E.charUnlocked(p, x.id)).length;
+    /* 星级渲染前先收口：后台改档/旧存档可能把 charStar 写成 {} / 'abc' / null / NaN，
+     * 直接插值会显示「[object Object] / 5 星」「当前 +NaN%」。
+     * 这里按有限数字钳制到 0~STAR_MAX，保证界面永远是合法数字。
+     * 注意：必须写在模板字符串【之外】——曾误插进模板内，变成 HTML 文本
+     * 且 ${cs} 引用未定义变量，导致角色面板打开即抛 ReferenceError。 */
+    const cs = Math.min(EX.STAR_MAX || 5,
+      Math.max(0, (isFinite(Number(p.charStar)) ? Number(p.charStar) : 0)));
+    return `<div class="card"><div class="card-t">选择角色
+        <span class="sub">已解锁 ${un} / ${(EX.chars || []).length}</span></div>
+      <div class="lbl" style="text-align:left;margin-bottom:6px">点击已解锁角色切换（属性与外观同时生效）</div>
+      <div class="chr-grid">${(EX.chars || []).map((ch2) => {
+        const ok2 = E.charUnlocked(p, ch2.id);
+        const on2 = (p.char || 'C01') === ch2.id;
+        /* 属性拆成两行短句：合成一行时 18 个字在窄格子里会被逐字堆成方块
+         * （实测 393px 屏下 4 列每格仅 57px，堆成 45×78）。
+         * 拆行后每行 ≤ 7 个字，2 列布局下每格 95~120px，可正常单行显示。 */
+        const statLine = ok2
+          ? `<div class="lbl" style="font-size:var(--fs-xs)">生命 ${ch2.hp}</div>
+             <div class="lbl" style="font-size:var(--fs-xs)">护甲 ${ch2.armor} · 暴击 ${Math.round((ch2.crit || 0) * 100)}%</div>`
+          : `<div class="lbl" style="font-size:var(--fs-xs)">${ch2.unlockTxt || '未解锁'}</div>`;
+        return `<div class="gcell ${on2 ? '' : 'sel'}" data-chsel="${ch2.id}"
+          style="${ok2 ? '' : 'opacity:.72'}">${ch2.img
+            ? `<img src="${ch2.img}">` : `<div class="gi">${ch2.icon}</div>`}
+          <div class="gn">${ch2.n}${on2 ? '<span class="tag y" style="font-size:var(--fs-xs)">使用中</span>' : ''}</div>
+          ${statLine}
+          ${ch2.talent ? `<div class="lbl" style="font-size:var(--fs-xs);line-height:1.25;color:var(--c-green-300)">${ch2.talent.n}</div>` : ''}</div>`;
+      }).join('') || '<div class="lbl">暂无角色</div>'}</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="position:relative;display:inline-block">
+        ${c.img ? `<img src="${c.img}" style="width:120px;height:160px;object-fit:cover;border-radius:14px;
+          border:3px solid rgba(255,201,60,.5);box-shadow:0 6px 20px rgba(0,0,0,.5)">`
+          : `<div style="font-size:var(--fs-mega)">${c.icon}</div>`}
+      </div>
+      <div style="font-size:var(--fs-lg);font-weight:var(--fw-bold);margin-top:6px;color:var(--yel)">${c.n}</div>
+      <div class="sub">战力 ${E.fmt(E.power(p))}</div>
+    </div>
+    <div class="card"><div class="card-t">属性</div>
+      <div class="kv"><span>攻击</span><b>${E.fmt(a.atk)}</b></div>
+      <div class="kv"><span>生命</span><b>${E.fmt(a.hp)}</b></div>
+      <div class="kv"><span>护甲</span><b>${a.armor}</b></div>
+      <div class="kv"><span>暴击</span><b>${(a.crit * 100).toFixed(1)}%</b></div>
+      <div class="kv"><span>吸血</span><b>${(a.ls * 100).toFixed(1)}%</b></div>
+      ${c.talent ? `<div class="kv"><span>天赋</span><b style="font-size:var(--fs-xs)">${c.talent.n}：${c.talent.desc || ''}</b></div>` : ''}
+    </div>
+    <div class="card"><div class="card-t">角色升星
+      <span class="sub">${cs} / ${EX.STAR_MAX} 星</span></div>
+      <div class="stars">${[1, 2, 3, 4, 5].map((i) =>
+        `<span class="star ${cs >= i ? 'on' : ''}">★</span>`).join('')}</div>
+      <div class="sub">每星全属性 +8%，当前 +${Math.round(cs * 8)}%</div>
+      <div class="kv"><span>角色碎片</span><b>${(p.mat || {}).P02 || 0}</b></div>
+      <div class="kv"><span>下级所需</span><b>${EX.starCost[cs + 1] || '已满级'}</b></div>
+      <button class="btn" id="roleStar" style="width:100%;margin-top:8px">⭐ 升星</button>
+    </div>
+    <button class="btn o" id="roleForge" style="width:100%">装备锻造</button>`;
+  },
+  b_role(p, tab) {
+    /* 角色切换（此前 switchChar 零调用，4 个角色只有 C01 能用） */
+    $$('#pnBody [data-chsel]').forEach((el) => { el.onclick = () => {
+      const r = E.switchChar(p, el.dataset.chsel);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      /* 切换角色必须立即落盘（与相邻「皮肤穿戴 / 升星 / 宝石镶嵌」同一口径）。
+       * BUG：E.switchChar 会改写 p.char / p.skin / p.skinByChar，内部不 save，
+       *   这里此前也只 open + home —— 实测切换角色后强退 / 换设备登录会读回旧角色，
+       *   而皮肤（p.skinByChar 记忆）也一并丢失。补立即保存。 */
+      if (r.ok) { if (window.SND) SND.play('pickup'); E.save(p); this.open('role', '装备'); this.home(); }
+    }; });
+    $$('#pnBody [data-gemon]').forEach((b) => { b.onclick = () => {
+      const g = (EX.gems || []).find((x) => x.id === b.dataset.gemon);
+      /* 镶嵌 = 占用 1 颗（从背包扣除），卸下时返还。
+       * 此前角色页镶嵌不扣、宝石页镶嵌扣 1 颗，两处逻辑不一致；
+       * 且两处卸下都不返还 —— 反复镶嵌卸下会让宝石凭空蒸发。 */
+      const r = E.setGem(p, b.dataset.gemon);
+      if (!r.ok) return this.toast(r.msg, 'err');
+      /* 落盘由 E.setGem 内部统一负责（镶嵌/卸下两个分支都已自带 save），
+       * 这里不重复 save —— 每多调一次就是一次云端写入。 */
+      /* 音效与宝石面板入口统一：此前只有宝石面板「镶嵌」播 upgrade，
+       * 角色页镶嵌/卸下与宝石页卸下三个分支全都没声 —— 同一操作四个入口
+       * 有的响有的不响，玩家在角色页操作会以为没生效。 */
+      if (window.SND) SND.play('upgrade');
+      this.toast('已镶嵌 ' + g.n, 'ok'); this.open('role', '宝石'); this.home();
+    }; });
+    $$('#pnBody [data-gemoff]').forEach((b) => { b.onclick = () => {
+      const r = E.setGem(p, null);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok && window.SND) SND.play('upgrade');
+      this.open('role', '宝石'); this.home();
+    }; });
+    $$('#pnBody [data-forge]').forEach((b) => { b.onclick = () => {
+      const r = E.forgeEquip(p, b.dataset.forge);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('upgrade'); E.saveSoon(p); this.open('role', '宝石'); this.home(); }
+    }; });
+    /* 皮肤购买：4 款付费皮肤此前没有任何购买入口，这里补上 */
+    $$('#pnBody [data-skby]').forEach((el) => { el.onclick = (ev) => {
+      ev.stopPropagation();
+      const r = E.buySkin(p, el.dataset.skby);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.save(p); this.open('role', '皮肤'); this.home(); }
+    }; });
+    /* 皮肤穿戴：点击已拥有的皮肤切换（此前死图库，点了没反应） */
+    $$('#pnBody [data-skb]').forEach((el) => { el.onclick = () => {
+      const id = el.dataset.skb;
+      const sk0 = (EX.skins || []).find((x) => x.id === id);
+      if ((p.skins || []).indexOf(id) < 0) {
+        return this.toast('尚未拥有「' + (sk0 ? sk0.n : id) + '」', 'err');
+      }
+      /* 外观穿错角色 BUG：外观页列出的是【全部角色的皮肤】，
+       * 此前点谁都能穿 —— 玩家在 C01 身上能穿上 C03 的「装甲骑士」，
+       * 主界面立绘与角色对不上（而皮肤加成照常生效，属性加成与外观脱节）。
+       * 这里拒绝跨角色穿戴，并提示先切换到对应角色。 */
+      if (sk0 && sk0.char && p.char && sk0.char !== p.char) {
+        const c = (EX.chars || []).find((x) => x.id === sk0.char);
+        return this.toast('「' + sk0.n + '」是「' + (c ? c.n : sk0.char) + '」的外观，请先切换到该角色', 'err');
+      }
+      E.setSkin(p, id); E.save(p);
+      if (window.SND) SND.play('pickup');
+      this.toast('已穿戴 ' + (((EX.skins || []).find((x) => x.id === id)) || {}).n, 'ok');
+      this.open('role', '皮肤'); this.home();
+    }; });
+    /* 升星按钮：渲染了（r_role 里 id="roleStar"）但从未绑定 onclick
+     * → 玩家点「⭐ 升星」完全没反应，花碎片升星的入口等于不存在。 */
+    const sb = $('#roleStar');
+    if (sb) sb.onclick = () => {
+      const r = E.starUp(p);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      /* 升星消耗角色碎片且不可逆，此前不落盘（全量按钮审计 155 个里被抓出），
+       * 强退/换设备会读回旧档：碎片回来了、星级没升。补立即保存。 */
+      if (r.ok) { if (window.SND) SND.play('upgrade'); E.save(p); this.open('role', '角色'); this.home(); }
+    };
+    /* 「装备锻造」按钮：此前无论当前在哪个页签，点击都一律跳【宝石】页签。
+     * 两个后果：
+     *  1) 在宝石页签里点它 = 原地刷新，玩家感觉"点了没反应"（全量点击复测抓出）；
+     *  2) 在装备页签里点它 = 被带到宝石页，而按钮上写的是"装备锻造"，
+     *     文案与行为对不上，玩家会以为进错地方。
+     * 现在按当前页签做双向跳转，并把按钮文案改成与实际去处一致。 */
+    const fb = $('#roleForge');
+    if (fb) {
+      const _inGem = (tab === '宝石');
+      fb.textContent = _inGem ? '装备锻造' : '宝石镶嵌';
+      fb.onclick = () => this.open('role', _inGem ? '装备' : '宝石');
+    }
+  },
+
+  r_gun(p, tab) {
+    if (tab === '武器库') {
+      const _sg = E.gun2(p);
+      /* V1.1.0 P-12 武器流派：按已装备的主/副武器 type 归属激活档位。
+       * 用 try/catch 兜底——任何异常都不允许拖垮武器面板（历史上多次白屏）。 */
+      let _schCard = '';
+      try {
+        const _sb = E.schoolBonus(p);
+        const _fmt = (t) => {
+          const o = [];
+          if (t.atkPct) o.push('攻击+' + Math.round(t.atkPct * 100) + '%');
+          if (t.crit) o.push('暴击+' + Math.round(t.crit * 100) + '%');
+          if (t.critDmg) o.push('暴伤+' + Math.round(t.critDmg * 100) + '%');
+          if (t.erPct) o.push('爆炸范围+' + Math.round(t.erPct * 100) + '%');
+          if (t.slow) o.push('减速+' + Math.round(t.slow * 100) + '%');
+          if (t.dot) o.push('持续伤害+' + Math.round(t.dot * 100) + '%');
+          return o.join(' · ') || '—';
+        };
+        _schCard = `<div class="card"><div class="card-t">武器流派 <span class="sub">由已装备的主/副武器类型决定</span></div>
+        ${(EX.GUN_SCHOOLS || []).map((sc) => {
+          const _t = _sb.tiers[sc.id];
+          const _lv = _t ? _t.tier : 0;
+          return `<div class="item"${_lv ? ' style="border:1px solid var(--gold);border-radius:8px"' : ''}>
+            <div class="ic">${sc.icon || '⚔️'}</div>
+            <div class="info"><div class="nm wrap">${sc.n} ${_lv ? '<span class="tag g">' + _lv + '档（' + _t.n + '/' + _t.need + '件）</span>' : '<span class="tag">未激活</span>'}</div>
+            <div class="sub wrap">${sc.desc || ''}</div>
+            <div class="sub wrap" style="color:${_lv ? 'var(--gold)' : 'var(--txt3)'}">${(sc.tiers || []).map((t, i) => (i + 1) + '档·' + _fmt(t)).join(' ／ ')}</div></div></div>`;
+        }).join('')}</div>`;
+      } catch (e) { _schCard = ''; }
+      return _schCard + `<div class="card"><div class="card-t">武器库 <span class="sub">主武器 6 + 副武器 4</span></div>
+      <div class="item" style="border:1px solid var(--gold);border-radius:8px;margin-bottom:6px">
+        <div class="ic" style="border:1.5px solid ${_sg ? '#ffd166' : '#666'}">${_sg ? (_sg.icon || '🩹') : '➕'}</div>
+        <div class="info"><div class="nm wrap">支援槽 ${_sg ? '<span class="tag g">' + _sg.n + '</span>' : '<span class="tag">空</span>'}</div>
+        <div class="sub wrap">${_sg
+          ? (_sg.heal ? '战斗中每 ' + (1 / _sg.rate).toFixed(1) + 's 治疗防线 ' + _sg.heal + '，弹匣 ' + _sg.mag + ' 发后换弹 ' + _sg.reload + 's' : '战斗中每 ' + (1 / _sg.rate).toFixed(1) + 's 生成护盾 ' + _sg.shield + '，弹匣 ' + _sg.mag + ' 发后换弹 ' + _sg.reload + 's')
+          : '装备医疗包 / 护盾发生器，战斗中自动治疗或加盾，不占出战武器位'}</div></div>
+        <div class="act">${_sg ? `<button class="btn sm" data-gun2="${_sg.id}">卸下</button>` : '<span class="tag">—</span>'}</div></div>
+      ${['主', '副'].map((kind) => `<div class="lbl" style="color:var(--gold);margin-top:6px">${kind}武器</div>
+      ${EX.guns.filter((g) => g.kind === kind).map((g) => {
+        const ok = E.gunUnlocked(p, g.id);
+        const on = p.gun === g.id;
+        return `<div class="item"><div class="ic" style="border:1.5px solid ${EX.qColor[g.q]}">${g.img
+          ? `<img src="${g.img}" style="width:30px;height:30px;border-radius:6px;object-fit:cover">`
+          : g.icon}</div>
+          <div class="info"><div class="nm wrap"><span style="color:${EX.qColor[g.q]}">${g.q}</span> ${g.n} <span class="tag">${g.type}</span></div>
+          <div class="sub wrap">${g.heal ? '治疗 ' + g.heal : g.shield ? '护盾 ' + g.shield : '伤害 ' + g.dmg} · 射速${g.rate}/s · 弹夹${g.mag} · 换弹${g.reload}s${g.range ? ' · 射程 ' + E.gunRange(g) : ''}${g.pellets > 1 ? ' · 弹丸' + g.pellets : ''}${g.pierce ? ' · 穿透' + g.pierce : ''}</div>
+          <div class="sub wrap">${g.bullet}${ok ? '' : ' · 需通关 ' + g.unlockLv}</div></div>
+          <div class="act">${E.gunIsSupport(g)
+            ? (p.gun2 === g.id
+                ? `<button class="btn sm" data-gun2="${g.id}">✔支援中</button>`
+                : ok ? `<button class="btn c sm" data-gun2="${g.id}">装支援槽</button>` : '<span class="tag r">未解锁</span>')
+            : (on ? '<span class="tag g">使用中</span>' : ok ? `<button class="btn c sm" data-gun="${g.id}">装备</button>` : '<span class="tag r">未解锁</span>')}</div></div>`;
+      }).join('')}`).join('')}</div>`;
+    }
+    const g = E.gun(p), a = E.attrs(p), c = E.gunUpgradeCost(p);
+    /* 实战换弹时间（与 battle.reload() 完全同口径）
+     * BUG：此前面板直接显示配置裸值 g.reload，
+     *      不含军械库建筑加成（每级 -1%，上限 -40%）、也不含词条 AF08「换弹-0.2秒」。
+     *      玩家面板写着 1.8 秒，实战可能只要 1.5 秒 —— 显示与实际不符。
+     * 这里按同一公式算出实战值，与「面板伤害」一样展示为「基础 → 实战」。 */
+    const _rlBase = Number(g.reload) || 0;
+    /* 军械库换弹：每级 -1%，上限 -40%。原写法 `(p.build.armory || 0) * 0.01`
+     * 意味着【1 级就减 1%】，这里必须保持同一口径，只补类型转换防御，
+     * 不能改成 (lv-1)，否则 1 级建筑的效果会被抹掉。 */
+    const _armLv = Number((p.build && p.build.armory) || 0);
+    const _armCut = (isFinite(_armLv) && _armLv > 0 ? _armLv : 0) * 0.01;
+    const _rlReal = Math.max(0.3, _rlBase * (1 - Math.min(0.4, _armCut)) - (Number(a.reloadCut) || 0));
+    /* 等级显示兜底：gunLv 在 E.attrs / E.advOf 内部都按数字处理，
+     * 唯独这里直接拼进模板。后台 GM 改档若写入非数字（如对象/字符串），
+     * 实测会原样渲染成「Lv.[object Object]」「Lv.NaN」——玩家看着像存档坏了。
+     * 统一取成 1~GUN_MAX_LV 的整数再显示。 */
+    const _gLvNum = Math.max(1, Math.min(E.GUN_MAX_LV || 999, Math.floor(Number(p.gunLv)) || 1));
+    const adv = E.advInfo(p.gunLv);
+    /* 兜底：表被清空时索引为 -1 → undefined，读 .q 会让整个武器面板白屏 */
+    const _ga = (EX.gunAdvance && EX.gunAdvance.length) ? EX.gunAdvance : [{ lv: 1, q: '白', n: '普通' }];
+    const nextAdv = _ga[Math.min(_ga.length - 1, E.advOf(p.gunLv) + 1)] || { q: '白' };
+    return `<div class="card"><div class="card-t">当前武器</div>
+      <div style="text-align:center;padding:6px 0">
+        ${g.img ? `<img src="${g.img}" style="width:96px;height:96px;object-fit:contain;border-radius:10px"
+             onerror="this.style.display='none'">` : ''}
+        <div style="font-size:var(--fs-3xl)">${g.icon}</div>
+        <div style="color:${EX.qColor[adv.q]};font-weight:var(--fw-bold);margin-top:2px">${g.n}</div>
+        <div style="font-size:var(--fs-xs);color:var(--c-blue-650)">${g.kind}武器 · ${g.type} · ${adv.q}品</div>
+      </div></div>
+      <div class="card"><div class="card-t">武器属性</div>
+      <div class="kv"><span>品质</span><b style="color:${EX.qColor[adv.q]}">${adv.q}品</b></div>
+      <div class="kv"><span>等级</span><b>Lv.${_gLvNum}</b></div>
+      <div class="kv"><span>面板伤害</span><b>${g.dmg} → <span style="color:var(--gold)">${E.fmt(a.gunBase)}</span></b></div>
+      <div class="kv"><span>射速</span><b>${a.rate.toFixed(2)} /秒</b></div>
+      <div class="kv"><span>弹夹容量</span><b>${a.mag} 发</b></div>
+      <div class="kv"><span>换弹时间</span><b>${_rlBase} → <span style="color:var(--gold)">${_rlReal.toFixed(2)}</span> 秒</b></div>
+      <div class="kv"><span>弹丸 / 穿透</span><b>${a.pellets || 1} / ${a.pierce}</b></div>
+      <div class="kv"><span>射程</span><b>${a.range || 380} <span class="sub">（${(a.range || 380) >= 620 ? '覆盖全场' : '近身压制'}</span>）</b></div>
+      <div class="kv"><span>子弹类型</span><b>${g.bullet}</b></div>
+      <button class="btn c blk" id="gunUp" ${p.gold < c ? 'disabled' : ''}>强化 · ${E.fmt(c)} 金币</button>
+      <div class="lbl">每级 ×${E.GUN_GROW_RATE || 1.078}（+${(((E.GUN_GROW_RATE || 1.078) - 1) * 100).toFixed(1)}%）伤害，复利叠加；每 5 级进阶一次（${adv.q}→${nextAdv.q}），进阶解锁词条槽。</div></div>
+      <div class="card"><div class="card-t">进阶词条
+        <span class="sub">${Object.keys(p.gunStats || {}).length} / ${Number((E.advInfo(p.gunLv) || {}).slot) || 0} 槽</span></div>
+      ${Object.keys(p.gunStats || {}).length ? Object.values(p.gunStats || {}).map((st) => {
+        const d = EX.gunStats.find((x) => (st.id ? x.id === st.id : x.k === st.k));
+        const qc = st.q === '红' ? '#ff5c7a' : st.q === '紫' ? '#c98bff' : st.q === '蓝' ? '#5cb8ff' : '#9fb3d0';
+        return `<div class="kv"><span style="color:${qc}">${d ? d.n : st.k}${st.q ? ' <span class="tag" style="background:' + qc + '22 !important;color:' + qc + ' !important">' + st.q + '</span>' : ''}</span>
+          <b style="color:var(--green)">+${d && d.unit === '%' ? (st.v * 100).toFixed(1) + '%' : st.v.toFixed(2)}</b></div>`;
+      }).join('') : '<div class="lbl">尚未进阶，暂无词条</div>'}
+      <button class="btn o blk" id="gunReroll" ${Object.keys(p.gunStats || {}).filter((k) => p.gunStats[k]).length <= 0 ? 'disabled' : ''}>🔄 洗练词条（💎${EX.REROLL_GUN_COST}）</button>
+      <div class="lbl">洗练将重随机全部已解锁词条，按品质加权：蓝60% / 紫30% / 红10%。</div></div>
+
+      <div class="card"><div class="card-t">武器词条 <span class="sub">${g.slots || 2} 槽位</span></div>
+      ${E.gunAffixes(p).map((af, i) => {
+        const a = EX.affixOf(af.id); if (!a) return '';
+        const qc = EX.qColor[a.q] || '#ccc';
+        return `<div class="kv"><span><span class="tag" style="background:${qc}22 !important;color:${qc} !important">${a.q}</span> ${EX.affixTxt(af)}</span>
+          <b style="color:var(--green)">${a.eff}</b></div>`;
+      }).join('') || '<div class="lbl">暂无词条</div>'}
+      <div class="sub" style="margin-top:4px">词条加成已计入战斗属性（伤害/攻速/暴击/穿透/吸血/弹夹…）</div>
+      <button class="btn blk" id="gunAfReroll">🔄 普通洗练（🪙${E.fmt(EX.AFFIX_REROLL_GOLD)}）</button>
+      <button class="btn o blk" id="gunAfRerollL">🔴 传说洗练（💎${EX.AFFIX_REROLL_LEGEND_DIA}）必出红词条</button>
     </div>`;
   },
   b_gun(p, tab) {
+    const rr = $('#gunReroll');
+    if (rr) rr.onclick = () => {
+      const r = E.rerollGun(p, p.gun); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      /* BUG（花钻石不落盘）：本按钮按 REROLL_GUN_COST 扣钻石（实测扣 20），
+       *   而这里既没 save 也没 saveSoon —— 同面板的 rerollChip / buySkin /
+       *   rerollAffix 都有保存，唯独这一处漏了。
+       *   钻石是充值货币：洗完立刻强关 / 换设备登录会读回旧档，
+       *   钻石回来了、洗出的词条却没留下，玩家白花一次钱。
+       *   对照实测：rerollAffix 传说档扣 50 钻有保存，本处扣 20 钻无保存。 */
+      if (r.ok) { try { E.save(p); } catch (e) {} if (window.SND) SND.play('upgrade'); this.open('gun', tab); this.home(); }
+    };
     const u = $('#gunUp'); if (u) u.onclick = () => {
-      const r = E.upgradeGun(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
-      if (r.ok) { this.open('gun', tab); this.home(); }
+      const g0 = p.gold;
+      const r = E.upgradeGun(p);
+      try { OPS.track('weapon_upgrade', { lv: p.gunLv }); } catch (e) {}
+      if (r.ok) {
+        /* 连点改为汇总反馈：只弹一条"强化 ×N · 共消耗 X 金币"，
+         * 不再每点一次弹一条互相覆盖的 toast（玩家看不到总共花了多少）。 */
+        this.burst('gunUp', { cost: Math.max(0, g0 - p.gold), label: '强化', unit: ' 金币' });
+        E.saveSoon(p); this.open('gun', tab); this.home();
+      } else this.toast(r.msg, 'err');
+    };
+    /* 表30 武器词条洗练 */
+    const ar = $('#gunAfReroll');
+    if (ar) ar.onclick = () => {
+      const r = E.rerollAffix(p, false); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('upgrade'); E.saveSoon(p); this.open('gun', tab); this.home(); }
+    };
+    const arl = $('#gunAfRerollL');
+    if (arl) arl.onclick = () => {
+      const r = E.rerollAffix(p, true); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('upgrade'); E.saveSoon(p); this.open('gun', tab); this.home(); }
     };
     $$('#pnBody [data-gun]').forEach((b) => {
-      b.onclick = () => { p.gun = b.dataset.gun; this.toast('已切换枪械', 'ok'); this.open('gun', '更换'); this.home(); };
+      b.onclick = () => { const r = E.switchGun(p, b.dataset.gun); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { E.saveSoon(p); this.open('gun', '武器库'); this.home(); } };
     });
-  },
-
-  /* ---------- 佣兵 ---------- */
-  r_merc(p, tab) {
-    if (tab === '出战') {
-      const owned = p.mercs || [];
-      if (!owned.length) return '<div class="empty"><span class="ic">👥</span>尚未招募佣兵</div>';
-      return owned.map((m) => {
-        const d = EX.mercs.find((x) => x.id === m.id); if (!d) return '';
-        return `<div class="item">
-          <div class="ic" style="border:1.5px solid ${E.qColor(d.q)}">${d.icon}</div>
-          <div class="info">
-            <div class="nm"><span style="color:${E.qColor(d.q)}">${d.q}</span> ${d.n} <span class="tag y">Lv.${m.lv}</span></div>
-            <div class="sub">${d.desc} · 攻${Math.round(d.atk*(1+(m.lv-1)*0.16))}</div>
-          </div>
-          <div class="act">
-            <button class="btn ${m.out?'':'c'} sm" data-out="${m.id}">${m.out?'休整':'出战'}</button>
-            <button class="btn sm" data-upm="${m.id}">升级</button>
-          </div>
-        </div>`;
-      }).join('') + '<div class="lbl">同时最多 2 名佣兵出战（当前 ' + owned.filter(m=>m.out).length + ' 名），出战佣兵按百分比提升战力。</div>';
-    }
-    return `<div class="card">
-      <div class="card-t">酒馆 · 招募</div>
-      ${EX.mercs.map((m)=>{
-        const own = (p.mercs||[]).some(x=>x.id===m.id);
-        const c = E.recruitCost(m.id);
-        return `<div class="item">
-          <div class="ic" style="border:1.5px solid ${E.qColor(m.q)}">${m.icon}</div>
-          <div class="info">
-            <div class="nm"><span style="color:${E.qColor(m.q)}">${m.q}</span> ${m.n}</div>
-            <div class="sub">${m.desc}</div>
-          </div>
-          <div class="act">${own?'<span class="tag g">已拥有</span>':
-            `<button class="btn c sm" data-rec="${m.id}">${E.fmt(c.gold)}🪙${c.diamond?' +'+c.diamond+'💎':''}</button>`}</div>
-        </div>`;}).join('')}
-    </div>
-    <div class="lbl">佣兵不可操作，会自动攻击敌人。工程师可修复防线，超时空可秒杀精英。</div>`;
-  },
-  b_merc(p, tab) {
-    $$('#pnBody [data-rec]').forEach((b) => {
-      b.onclick = () => { const r = E.recruit(p, b.dataset.rec); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('merc', tab); this.home(); } };
-    });
-    $$('#pnBody [data-out]').forEach((b) => {
+    /* 支援武器槽：医疗包 / 护盾发生器。再点一次 = 卸下。 */
+    $$('#pnBody [data-gun2]').forEach((b) => {
       b.onclick = () => {
-        const m = p.mercs.find(x => x.id === b.dataset.out); if (!m) return;
-        if (!m.out && p.mercs.filter(x=>x.out).length >= 2) return this.toast('最多 2 名出战', 'err');
-        m.out = !m.out; this.open('merc', '出战'); this.home();
+        const id = b.dataset.gun2;
+        const r = E.switchGun2(p, (p.gun2 === id) ? null : id);
+        this.toast(r.msg, r.ok ? 'ok' : 'err');
+        if (r.ok) { if (window.SND) SND.play('upgrade'); E.saveSoon(p); this.open('gun', '武器库'); this.home(); }
       };
     });
-    $$('#pnBody [data-upm]').forEach((b) => {
-      b.onclick = () => { const r = E.upMerc(p, b.dataset.upm); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('merc', '出战'); this.home(); } };
+  },
+
+  /* ---------- 芯片 ---------- */
+  r_chip(p, tab) {
+    if (!E.chipUnlocked(p)) return '<div class="empty"><span class="ic">🔲</span>芯片系统未解锁<br><span style="font-size:var(--fs-xs)">通关 1-4 后开启</span></div>';
+    if (tab === '背包') {
+      const bag = p.bag || [];
+      if (!bag.length) return '<div class="empty"><span class="ic">🔲</span>暂无芯片<br><span style="font-size:var(--fs-xs)">BOSS 关掉落 / 活动获取</span></div>';
+      return `<div class="card"><div class="card-t">芯片背包 <span class="sub">${bag.length} 块</span></div>
+      ${bag.map((c) => `<div class="item">
+        <div class="ic" style="border:1.5px solid ${EX.qColor[c.q]}">
+          <img src="assets/icon/i_chip.jpg" style="width:30px;height:30px;border-radius:6px;object-fit:cover"
+               onerror="this.outerHTML='🔲'"></div>
+        <div class="info"><div class="nm" style="color:${EX.qColor[c.q]}">${E.chipName(c)}</div>
+        <div class="sub">${(E.chipDef(c.def) || {}).src || ''}</div></div>
+        <div class="act">
+          <button class="btn sm" data-fuse="${c.id}">合成</button>
+          <button class="btn sm" data-rr="${c.id}">洗练</button>
+          <button class="btn d sm" data-dec="${c.id}">拆解</button>
+        </div></div>`).join('')}</div>
+        <div class="lbl">合成：3 块同品质 → 升一级（白→蓝→红）。洗练：钻石重 roll 副词条。</div>`;
+    }
+    /* 截图特征：顶部「全线战力」 */
+    return `<div class="card"><div class="card-t">全线战力
+      <span class="sub" style="color:var(--yel);font-size:var(--fs-md);font-weight:var(--fw-bold)">${E.fmt(E.power(p))}</span></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="zav">🧟</div>
+        <div class="grid4" style="flex:1">${(p.bag || []).filter((c)=>c&&c.id).slice(0, 4).map((c) =>
+          `<div class="gcell"><div class="gi" style="color:${EX.qColor[this.chipQ(c)]}">🔲</div>
+           <div class="gn" style="color:${EX.qColor[this.chipQ(c)]}">${this.chipQ(c)}品</div></div>`).join('')
+          || '<div class="lbl">未装芯片</div>'}</div>
+        <div class="zav" style="background:linear-gradient(160deg,var(--c-blue-650),var(--c-blue-750))">🔫</div>
+      </div></div>
+      <div class="card"><div class="card-t">芯片槽 <span class="sub">${Object.keys(p.chips || {}).length}/6</span></div>
+      <div class="lvgrid">${EX.chipSlots.map((s) => {
+        const c = p.chips[s.k];
+        return `<button class="lvc ${this.selChipSlot === s.k ? 'cur' : ''}" data-slot="${s.k}">
+          <i style="font-size:var(--fs-xl);font-style:normal;display:block">${c ? '🔲' : '➕'}</i>
+          <b style="font-size:var(--fs-xs);color:${c ? EX.qColor[this.chipQ(c)] : '#6b7899'}">${c ? this.chipQ(c) + '品' : '空'}</b></button>`;
+      }).join('')}</div>
+      ${(() => { const c = (p.chips || {})[this.selChipSlot || EX.chipSlots[0].k];
+        return c ? `<button class="btn n sm" data-chipoff="1" style="width:100%;margin-top:8px">卸下当前槽位芯片</button>`
+                 : '<div class="lbl" style="margin-top:8px">选中槽位为空，无需卸下</div>'; })()}</div></div>
+      <div class="card"><div class="card-t">可装备芯片</div>
+      ${(p.bag || []).length ? (p.bag || []).filter((c) => c && c.id).map((c) => `<div class="item">
+        <div class="ic" style="border:1.5px solid ${EX.qColor[this.chipQ(c)] || '#b9c4d4'}">
+          <img src="assets/icon/i_chip.jpg" style="width:30px;height:30px;border-radius:6px;object-fit:cover"
+               onerror="this.outerHTML='🔲'"></div>
+        <div class="info"><div class="nm" style="color:${EX.qColor[this.chipQ(c)]}">${E.chipName(c)}</div></div>
+        <div class="act"><button class="btn c sm" data-wear="${c.id}">装上</button></div></div>`).join('')
+        : '<div class="lbl">背包内暂无芯片</div>'}</div>
+      <button class="btn o" id="chipEquip" style="width:100%;margin:8px 0">装 备 芯 片</button>
+      <div class="card"><div class="card-t">芯片图鉴 <span class="sub">资料 8 种</span></div>
+      ${EX.chips.map((d) => `<div class="kv"><span style="color:${EX.qColor[d.q]}">${d.n}</span>
+        <b style="font-size:var(--fs-xs)">主+${(d.main.v * 100).toFixed(0)}%${d.subPool.length ? ' · 词条' + d.subPool.length : ''} · ${d.src}</b></div>`).join('')}</div>`;
+  },
+  /* 芯片品质：实例上若没有 q（老存档 / 后台改档 / 热更写入的芯片对象
+   * 常常只有 def），界面会直接显示「undefined品」并且品质色失效
+   * （EX.qColor[undefined] → undefined）。这里回退到芯片定义表的品质。 */
+  chipQ(c) {
+    /* 芯片品质名：所有发放路径（rollChipById / fuse / 掉落）都取 EX.chips[].q，
+     * 合法值只有「白 / 蓝 / 红」三种中文名（EX.qColor 也只按这三色取色）。
+     * 但存档可被后台手改、也可能残留旧版本数据 —— 一旦 q 是未知值，
+     * 上面会直接拼出「xxx品」、而 EX.qColor[xxx] 为 undefined（配色丢失）。
+     * 这里统一收口：不在配色表里的品质一律回退「白」，显示与取色保持一致。 */
+    const ok = (q) => q && (window.EX && EX.qColor && Object.prototype.hasOwnProperty.call(EX.qColor, q));
+    if (!c) return '白';
+    if (ok(c.q)) return c.q;
+    const d = (window.E && E.chipDef) ? E.chipDef(c.def) : null;
+    return ok(d && d.q) ? d.q : '白';
+  },
+  b_chip(p, tab) {
+    const ce = $('#chipEquip');
+    if (ce) ce.onclick = () => { if (window.__MUT) return;
+      const bag = p.bag || [];
+      if (!bag.length) return this.toast('背包内暂无芯片', 'err');
+      const free = EX.chipSlots.find((s) => !p.chips[s.k]);
+      if (!free) return this.toast('芯片槽已满', 'err');
+      const c = bag[0];
+      p.chips[free.k] = c; p.bag = bag.filter((x) => x.id !== c.id);
+      E.save(p); this.toast('已装备 ' + E.chipName(c), 'ok');
+      if (window.SND) SND.play('upgrade'); this.open('chip'); this.home();
+    };
+    $$('#pnBody [data-slot]').forEach((b) => { b.onclick = () => { this.selChipSlot = b.dataset.slot; this.open('chip', tab); }; });
+    /* 卸下芯片
+     * BUG：E.unequipChip() 定义了却零调用，面板上也只有「装上」没有「卸下」。
+     * 玩家把 6 个槽位装满后，只能靠拿另一颗芯片顶替（equipChip 会把旧的退回背包），
+     * 但【无法主动清空某个槽位】——想卸下来拿去合成/拆解/洗练都做不到。
+     * 这里补上按钮并接上已有的引擎方法。 */
+    $$('#pnBody [data-chipoff]').forEach((b) => { b.onclick = () => {
+      const r = E.unequipChip(p, this.selChipSlot || EX.chipSlots[0].k);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { E.save(p); this.open('chip', tab); this.home(); }
+    }; });
+    $$('#pnBody [data-wear]').forEach((b) => {
+      b.onclick = () => {
+        /* BUG修复：selChipSlot 在玩家【没点过任何槽位】时是 undefined，
+         * 这里原样传给 E.equipChip → p.chips['undefined'] = 芯片。
+         * 实测后果（已解锁号、不点槽位直接点「装上」）：
+         *   ① 六个槽位格子全部显示「空」，玩家看不到刚装的芯片在哪；
+         *   ② 面板头部显示「芯片槽 1/6」，与六个空格子自相矛盾；
+         *   ③ 再装第二颗时 key 仍是 'undefined'，直接顶掉第一颗
+         *      （旧的退回背包），于是只能装 1 颗，其余 5 个槽位全浪费；
+         *   ④ 卸下按钮走 selChipSlot||c1，卸的是 c1（空）→ 提示「该槽位为空」，
+         *      玩家永远卸不掉这颗芯片。
+         * 现在与 r_chip 的展示口径一致：未点槽位时默认第一个槽位。 */
+        /* 未点槽位时按【第一个空槽】依次填充：c1 → c2 → c3 …
+         * 若恒回退 c1，连装第二颗会直接顶掉第一颗（旧的退回背包），
+         * 玩家看起来像"装不上"。全满时才回落到 c1（顶替最前一个）。 */
+        const slot = this.selChipSlot
+          || (EX.chipSlots.find((s) => !p.chips[s.k]) || EX.chipSlots[0]).k;
+        const r = E.equipChip(p, b.dataset.wear, slot);
+        this.toast(r.msg, r.ok ? 'ok' : 'err');
+        /* 装备芯片必须立即落盘（与相邻「卸下 / 分解 / 首个空槽自动装备」同一口径）。
+         * BUG：此前这里只 open + home，没有 E.save —— 实测装上芯片后强退 App /
+         * 换设备登录，芯片回到背包、槽位仍显示「空」，等于白装一次，
+         * 且属性加成（暴击/生命等）也没留下。 */
+        if (r.ok) { E.save(p); this.open('chip', tab); this.home(); }
+      };
+    });
+    $$('#pnBody [data-dec]').forEach((b) => {
+      /* 传的是【芯片 id】，必须走 dismantleChipById。
+       * 此前调 E.dismantleChip(p, id)，而该方法被下方「按品质分解」的同名
+       * 版本覆盖（重复键后定义生效）→ 恒返回「未知芯片品质」，点了分解不掉。 */
+      b.onclick = () => {
+        const r = E.dismantleChipById(p, b.dataset.dec);
+        this.toast(r.msg, r.ok ? 'ok' : 'err');
+        if (r.ok) { if (window.SND) SND.play('coin'); E.save(p); this.open('chip', tab); this.home(); }
+      };
+    });
+    $$('#pnBody [data-rr]').forEach((b) => {
+      b.onclick = () => {
+        const r = E.rerollChip(p, b.dataset.rr);
+        this.toast(r.msg, r.ok ? 'ok' : 'err');
+        if (r.ok) { E.save(p); this.open('chip', tab); this.home(); }
+      };
+    });
+    $$('#pnBody [data-fuse]').forEach((b) => {
+      b.onclick = () => {
+        const c = (p.bag || []).find((x) => x.id === b.dataset.fuse); if (!c) return;
+        const same = (p.bag || []).filter((x) => x.q === c.q).slice(0, 3).map((x) => x.id);
+        if (same.length < 3) return this.toast('需要 3 块同品质芯片', 'err');
+        const r = E.fuseChip(p, same); this.toast(r.msg, r.ok ? 'ok' : 'err');
+        if (r.ok) { if (window.SND) SND.play('upgrade'); E.save(p); this.open('chip', tab); this.home(); }
+      };
     });
   },
 
-  /* ---------- 研究所 ---------- */
-  r_tech(p) {
-    return `<div class="card">
-      <div class="card-t">科技研发 <span class="sub">永久提升属性</span></div>
-      ${EX.techs.map((t)=>{
-        const cur = p.techs[t.id]||0;
-        const c = E.techCost(t.id,cur);
-        const full = cur>=t.max;
-        return `<div class="item">
-          <div class="ic">${t.icon}</div>
-          <div class="info">
-            <div class="nm">${t.n} <span class="tag y">Lv.${cur}/${t.max}</span></div>
-            <div class="sub">${t.desc}</div>
-            <div class="bar"><i style="width:${cur/t.max*100}%"></i></div>
-          </div>
-          <div class="act">${full?'<span class="tag g">已满</span>':
-            `<button class="btn ${p.gold>=c?'c':''} sm" data-tech="${t.id}" ${p.gold<c?'disabled':''}>${E.fmt(c)}</button>`}</div>
-        </div>`;}).join('')}
-    </div>`;
+  /* ---------- 天赋 ---------- */
+  r_talent(p) {
+    if (!E.sysUnlocked(p, 'talent')) return '<div class="empty"><span class="ic">⭐</span>天赋系统未解锁<br><span style="font-size:var(--fs-xs)">通关 1-3 后开启</span></div>';
+    return `<div class="card"><div class="card-t">永久天赋 <span class="sub">全局生效，不随关卡重置</span></div>
+    ${EX.talents.map((t) => {
+      const cur = p.talents[t.id] || 0;
+      const cost = E.talentCost(p, t.id);
+      const lock = !E.talentUnlocked(p, t.id);
+      const full = cur >= t.max;
+      return `<div class="item"><div class="ic">${t.img ? `<img src="${t.img}" alt="">` : t.icon}</div>
+        <div class="info"><div class="nm">${t.n} <span class="tag y">Lv.${cur}/${t.max}</span></div>
+        <div class="sub">${t.desc}</div>
+        <div class="bar"><i style="width:${t.max > 0 ? clamp((+cur || 0) / t.max * 100, 0, 100) : 0}%"></i></div>
+        ${lock ? `<div class="sub" style="color:var(--c-red-300)">需通关 ${t.unlock} 解锁</div>` : ''}</div>
+        <div class="act">${full ? '<span class="tag g">已满</span>' : lock ? '<span class="tag r">未解锁</span>'
+          : `<button class="btn ${p.gold >= cost ? 'c' : ''} sm" data-tal="${t.id}" ${p.gold < cost ? 'disabled' : ''}>${E.fmt(cost)}</button>`}</div></div>`;
+    }).join('')}</div>`;
   },
-  b_tech(p) {
-    $$('#pnBody [data-tech]').forEach((b) => {
-      b.onclick = () => { const r = E.upTech(p, b.dataset.tech); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('tech'); this.home(); } };
+  b_talent(p) {
+    $$('#pnBody [data-tal]').forEach((b) => {
+      /* BUG（天赋升级不落盘）：实测花 500 金币升级，这里既没 save 也没
+       *   saveSoon。天赋是不可逆的养成投入，强关 App / 换设备登录会读回旧档，
+       *   金币回来了、天赋等级却没留下，玩家白花一次钱。 */
+      b.onclick = () => { const r = E.upTalent(p, b.dataset.tal); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { try { E.save(p); } catch (e) {} this.open('talent'); this.home(); } };
     });
   },
 
-  /* ---------- 防线 ---------- */
-  r_wall(p) {
-    const a = E.attrs(p), c = E.wallCost(p);
-    return `<div class="card">
-      <div class="card-t">城墙 <span class="sub">Lv.${p.wallLv}</span></div>
-      <div class="kv"><span>防线生命</span><b style="color:var(--green)">${E.fmt(a.wallHp)}</b></div>
-      <div class="kv"><span>强化消耗</span><b>${E.fmt(c)} 金币</b></div>
-      <button class="btn c blk" id="wallUp" ${p.gold<c?'disabled':''}>强化防线</button>
-      <div class="lbl">防线生命归零即战斗失败。升级城墙可大幅提升容错。</div>
-    </div>
-    <div class="card">
-      <div class="card-t">防线说明</div>
-      <div class="lbl">僵尸会持续冲击防线造成伤害。<br>
-      击杀敌人可回收少量生命（需「杀怪加血」词条/宝石）。<br>
-      局内升级选择「防线强化」也可临时提升。</div>
-    </div>`;
-  },
-  b_wall(p) {
-    const b = $('#wallUp'); if (b) b.onclick = () => {
-      const r = E.upWall(p); this.toast(r.msg, r.ok ? 'ok' : 'err'); if (r.ok) { this.open('wall'); this.home(); }
+  /* ---------- 任务 ---------- */
+  /* 任务图标（按条件类型） */
+  taskIcon(t) {
+    const m = {
+      clearLv: '🎯', kills: '🧟', dailyKill: '🔫', dailyClear: '🏁',
+      login: '📅', weekClear: '🏆', weekKill: '💀', bossKill: '👹',
+      noHitKill: '✨', endlessTime: '♾️',
     };
+    return m[(t.cond || {}).t] || '📋';
+  },
+  /* 某条任务是否已领取（主线/日常/周常/成就共用）。
+   * 后台 GM 改档、热更覆盖都可能把 tasks[key] 写成字符串/数字/对象，
+   * 直接 .indexOf 会抛 "indexOf is not a function"（实测点领取直接崩面板）。
+   * 这里只对真数组做查询，其它一律按【未领取】处理（宁可再给一次按钮，
+   * 也不能让面板崩掉）。 */
+  /* 奖励的带图标渲染（任务 / 通用列表共用）
+   * BUG：主线任务此前硬写 `💎${rw.diamond || 0} 🪙${rw.gold || 0}`，
+   *   —— 只认金币与钻石两项，其余奖励【一个都不显示】。
+   *   实测主线 M03「击杀100僵尸」配置 rw:{P01:3}（3 个合金），
+   *   界面却写「💎0 🪙0」，玩家以为这个任务没有任何奖励；
+   *   日常 D02「通关1次关卡」rw:{M01:5, ach:3}、
+   *   周常 W02「每周击杀1000僵尸」rw:{M03:2, ach:10} 所在的两个页签
+   *   连这一行都没有 —— 奖励完全不可见。
+   *   全项目 12 条任务里 7 条奖励不含金币/钻石，全部中招。
+   * 现在统一渲染所有奖励项：金币/钻石/体力走货币图标，材料与成就点走文字。 */
+  rwIcons(rw) {
+    const ci = EX.curIcon || {};
+    const ks = Object.keys(rw || {}).filter((k) => {
+      const v = rw[k];
+      if (typeof v === 'number') return isFinite(v) && v > 0;
+      return v != null && String(v).trim() !== '' && String(v) !== '0';
+    });
+    if (!ks.length) return '<span class="sub">无奖励</span>';
+    return ks.map((k) => {
+      const v = rw[k], n = Number(v);
+      const q = isFinite(n) ? Math.floor(n) : 1;
+      const src = ci[k];
+      if (src) return `<img class="ei" src="${src}?v=${IMG_V}" alt="">${E.fmt(q)}`;
+      return `<span class="rwT">${E.itemName(k)}×${q}</span>`;
+    }).join(' ');
   },
 
-  /* ---------- 食堂 ---------- */
-  r_canteen(p) {
-    const last = p.lastMeal || 0;
-    const can = Date.now() - last > 3600000;
-    return `<div class="card">
-      <div class="card-t">每日补给</div>
-      <div class="kv"><span>体力补给</span><b>${can?'可领取':'已领取'}</b></div>
-      <div class="kv"><span>奖励</span><b>🪙 2000 · 💎 20</b></div>
-      <button class="btn c blk" id="mealBtn" ${can?'':'disabled'}>${can?'领取补给':'冷却中（1小时）'}</button>
-    </div>
-    <div class="card">
-      <div class="card-t">签到</div>
-      <div class="lbl">每日首次登录自动发放签到奖励。</div>
-    </div>`;
-  },
-  b_canteen(p) {
-    const b = $('#mealBtn'); if (b) b.onclick = () => {
-      p.gold += 2000; p.diamond += 20; p.lastMeal = Date.now();
-      this.toast('领取成功：金币+2000 钻石+20', 'ok'); this.open('canteen'); this.home();
-    };
+  _claimed(p, type, id) {
+    const key = { main: 'mainClaimed', daily: 'dailyClaimed', weekly: 'weeklyClaimed', achieve: 'achieveClaimed' }[type];
+    if (!key || !p || !p.tasks) return false;
+    const a = p.tasks[key];
+    return Array.isArray(a) && a.indexOf(id) >= 0;
   },
 
-  /* ---------- 排行榜 ---------- */
-  r_rank(p) {
-    const lb = (window.LB || []);
-    if (!lb.length) return '<div class="empty"><span class="ic">🏆</span>暂无排行数据<br><span style="font-size:10px">通关后将自动上传</span></div>';
-    return lb.map((x, i) => `<div class="item">
-      <div class="ic" style="font-size:15px;background:${i<3?'linear-gradient(135deg,#ffe9a8,#f0a020)':'rgba(10,16,28,.7)'};color:${i<3?'#2a1a00':'#fff'}">${i+1}</div>
-      <div class="info"><div class="nm">${x.n}</div><div class="sub">第 ${x.lv} 关 · 战力 ${E.fmt(x.pw)}</div></div>
-      <div class="act"><span class="tag y">${E.fmt(x.pw)}</span></div>
-    </div>`).join('');
-  },
-
-  /* ---------- 远征 ---------- */
-  r_fort(p) {
-    return `<div class="card">
-      <div class="card-t">派遣远征</div>
-      <div class="lbl">派遣佣兵外出搜集资源，离线也可获得收益。</div>
-      <div class="kv"><span>可派遣佣兵</span><b>${(p.mercs||[]).length} 名</b></div>
-      <button class="btn c blk" id="fortGo">开始远征（2小时）</button>
-      <div class="kv" style="margin-top:8px"><span>远征收益</span><b>🪙 金币 · 装备</b></div>
-    </div>`;
-  },
-  b_fort(p) {
-    const b = $('#fortGo'); if (b) b.onclick = () => {
-      if (!(p.mercs || []).length) return this.toast('需先招募佣兵', 'err');
-      p.fortEnd = Date.now() + 7200000;
-      this.toast('远征开始，2小时后可收取', 'ok');
-    };
-  },
-
-  /* ---------- 商城 ---------- */
-  r_shop(p, tab) {
-    if (tab === '兑换') {
-      return `<div class="card">
-        <div class="card-t">兑换码</div>
-        <input id="codeInp" placeholder="输入兑换码" style="width:100%;padding:10px;border-radius:9px;
-          background:rgba(10,16,28,.85);border:1px solid var(--line);color:var(--txt);font-size:13px;outline:none">
-        <button class="btn c blk" id="codeBtn">兑 换</button>
-        <div class="lbl">可用兑换码：VIP666、VIP888、SVIP999、xjskp888、dz789</div>
+  /* ---------- 任务（截图：主线/日常/成就 + 黄色「前往任务」） ---------- */
+  r_task(p, tab) {
+    const DONE = '✔';
+    /* 任务表兜底：EX.tasks 被清空（后台误操作/空文件）时，
+     * EX.tasks.main / achieve 为 undefined，下面 .map/.filter 直接抛错，
+     * 任务面板整体白屏。这里统一取一份安全副本。 */
+    const T = EX.tasks || {};
+    const _T = { main: T.main || [], daily: T.daily || [], weekly: T.weekly || [], achieve: T.achieve || [] };
+    if (tab === '周常') {
+      return `<div class="card"><div class="card-t">周常任务 <span class="sub">每周刷新</span></div>
+        ${(_T.weekly || []).map((t) => {
+          const cur = E.taskProg(p, t), need = t.cond.v || t.need || 1, done = cur >= need;
+          /* 【按钮与实际状态不一致 BUG 修复】
+           * 此前只判 done，从不看 weeklyClaimed：领过之后按钮【永远显示"领取"】，
+           * 玩家再点只会弹出"已领取"，看着像按钮坏了。
+           * 现在与成就页一致：已领取 → 显示"已领取"，不再给可点的按钮。 */
+          const got = this._claimed(p, 'weekly', t.id);
+          return `<div class="zrow">
+            <div class="zav">🏆</div>
+            <div class="zi"><b>${t.n}</b><span>${cur}/${need} · ${t.desc || ''}</span>
+              <span class="rwRow">${this.rwIcons(t.rw)}</span></div>
+            ${got ? '<span class="st on">已领取</span>'
+              : (done ? `<button class="btn sm g" data-wq="${t.id}">领取</button>`
+                      : '<span class="st off">未完成</span>')}</div>`;
+        }).join('') || '<div class="lbl">暂无周常</div>'}
+        <div class="sub" style="padding:6px 2px">每周一 0 点刷新，奖励钻石与稀有材料。</div>
       </div>`;
     }
-    const packs = [
-      { n: '新手礼包', i: '🎁', d: '金币 ×5000 + 钻石 ×50', g: 5000, dm: 50, p: 0 },
-      { n: '成长基金', i: '💰', d: '金币 ×30000 + 钻石 ×200', g: 30000, dm: 200, p: 30 },
-      { n: '至尊礼包', i: '👑', d: '金币 ×150000 + 钻石 ×800', g: 150000, dm: 800, p: 128 },
-    ];
-    return `<div class="card">
-      <div class="card-t">礼包商城</div>
-      ${packs.map((k, i) => `<div class="item">
-        <div class="ic">${k.i}</div>
-        <div class="info"><div class="nm">${k.n}</div><div class="sub">${k.d}</div></div>
-        <div class="act"><button class="btn c sm" data-pack="${i}">${k.p ? '💎'+k.p : '免费'}</button></div>
-      </div>`).join('')}
-    </div>
-    <div class="card">
-      <div class="card-t">资源说明</div>
-      <div class="lbl">金币：强化枪械、锻造装备、升级科技、建造炮台<br>
-      钻石：招募高级佣兵、购买礼包</div>
+    if (tab === '日常') {
+      return `<div class="card"><div class="card-t">日常任务 <span class="sub">每日刷新</span></div>
+        ${_T.daily.map((t) => {
+          const need = t.need || (t.cond ? t.cond.v : 1);
+          const cur = E.taskProg(p, t), done = cur >= need;
+          const got = this._claimed(p, 'daily', t.id);
+          return `<div class="zrow">
+            <div class="zav">${this.taskIcon(t)}</div>
+            <div class="zi"><b>${t.n}</b><span>${cur}/${need}</span>
+              <span class="rwRow">${this.rwIcons(t.rw)}</span></div>
+            ${got ? '<span class="st on">已领取</span>'
+              : (done ? `<button class="btn sm g" data-dq="${t.id}">领取</button>`
+                      : '<span class="st off">未完成</span>')}</div>`;
+        }).join('')}
+      </div>
+      <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往任务</button>`;
+    }
+    if (tab === '成就') {
+      return `<div class="card"><div class="card-t">成就
+        <span class="sub">${_T.achieve.filter((a) => E.taskDone(p, a)).length}/${_T.achieve.length}</span></div>
+        <div class="kv"><span>成就点</span><b style="color:var(--yel)">${p.ach || 0}</b></div>
+        <button class="btn o blk" id="toAchShop">🔄 前往成就商店</button>
+      </div>
+      <div class="card"><div class="card-t">成就列表</div>
+        ${_T.achieve.map((a) => {
+          const done = E.taskDone(p, a);
+          const got = (p.achGot || {})[a.id] || done;
+          const claimed = this._claimed(p, 'achieve', a.id);
+          return `<div class="zrow">
+            <div class="zav">${this.taskIcon(a)}</div>
+            <div class="zi"><b>${a.n}</b><span>${a.desc}</span>
+              <span style="color:var(--yel)">成就点 +${a.rw.ach || 0}</span></div>
+            ${claimed ? '<span class="st on">已领取</span>'
+              : (done ? `<button class="btn sm g" data-aq="${a.id}">领取</button>`
+                      : '<span class="st off">未达成</span>')}</div>`;
+        }).join('')}</div>`;
+    }
+    /* 主线（截图：清除僵尸/通关关卡/收集材料/领取奖励 + 紫宝石金币奖励） */
+    return `<div class="card"><div class="card-t">主线任务
+      <span class="sub">第 ${p.ch || 1} 章</span></div>
+      ${_T.main.map((t) => {
+        const need = t.need || (t.cond && t.cond.t === 'clearLv' ? 1 : (t.cond ? t.cond.v : 1));
+        const cur = E.taskProg(p, t), done = cur >= need;
+        /* 主线此前同样不判 mainClaimed：任务完成后按钮【永久停在"领取"】，
+         * 点了永远回"已领取"。这里先判已领取，再判是否完成。 */
+        const got = this._claimed(p, 'main', t.id);
+        return `<div class="zrow">
+          <div class="zav">${this.taskIcon(t)}</div>
+          <div class="zi"><b>${t.n}</b><span>${Math.min(cur, need)}/${need}</span>
+            <span class="rwRow">${this.rwIcons(t.rw)}</span></div>
+          ${got ? '<span class="st on">已领取</span>'
+            : (done ? `<button class="btn sm g" data-mq="${t.id}">领取</button>`
+                    : '<span class="st off">进行中</span>')}</div>`;
+      }).join('')}
+      </div>
+      <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往任务</button>`;
+  },
+  b_task(p, tab) {
+    const gb = $('#goTask');
+    const asb = $('#toAchShop');
+    if (asb) asb.onclick = () => this.open('ashop', '成就商店');
+    $$('#pnBody [data-aq]').forEach((b) => { b.onclick = () => {
+      const r = E.claimTask(p, 'achieve', b.dataset.aq); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pickup'); E.saveSoon(p); this.open('task'); this.home(); }
+    }; });
+    if (gb) gb.onclick = () => { this.close(); this.open('level', '章节'); };
+    $$('#pnBody [data-mq]').forEach((b) => { b.onclick = () => {
+      const r = E.claimTask(p, 'main', b.dataset.mq); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      /* 音效此前只有 achieve / weekly 两个分支播，main / daily 漏接：
+       * 同一块面板里四个页签，领成就和周常有拾取音、领主线和日常却安静无声，
+       * 玩家只会以为「点了没反应」。四个入口统一。 */
+      if (r.ok) { if (window.SND) SND.play('pickup'); E.saveSoon(p); this.open('task'); this.home(); }
+    }; });
+    $$('#pnBody [data-wq]').forEach((b) => { b.onclick = () => {
+      const r = E.claimTask(p, 'weekly', b.dataset.wq); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pickup'); E.saveSoon(p); this.open('task'); this.home(); }
+    }; });
+    $$('#pnBody [data-dq]').forEach((b) => { b.onclick = () => {
+      const r = E.claimTask(p, 'daily', b.dataset.dq); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pickup'); E.saveSoon(p); this.open('task'); this.home(); }
+    }; });
+  },
+
+  /* 僵尸 Q 版头像（按 id 稳定取一个） */
+  zAvatar(seed) {
+    const arr = EX.zAvatars || [];
+    if (!arr.length) return '🧟';
+    let h = 0; const str = String(seed || 'z');
+    for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+    return arr[h % arr.length];
+  },
+  zAvatarHTML(seed, cls) {
+    const u = this.zAvatar(seed);
+    return u.indexOf('assets/') === 0
+      ? `<div class="zav ${cls || ''}"><img src="${u}" style="width:100%;height:100%;object-fit:cover;border-radius:10px"></div>`
+      : `<div class="zav ${cls || ''}">${u}</div>`;
+  },
+
+  r_bag(p, tab) {
+    /* 表16 消耗品（I01~I04）：此前有数据但无使用入口 */
+    if (tab === '消耗') {
+      const items = (EX.items || []).filter((x) => x.type === '消耗');
+      const pend = p.pendingItem || {};
+      return `<div class="card"><div class="card-t">消耗品 <span class="sub">战斗中生效</span></div>
+        ${items.length ? items.map((it) => {
+          const n = p.mat[it.id] || 0;
+          const def = E.ITEM_USE[it.id] || {};
+          return `<div class="zrow">
+            ${it.img ? `<img class="zav" src="${it.img}" style="object-fit:cover">`
+                     : `<div class="zav">${it.icon}</div>`}
+            <div class="zi"><b>${it.n} ×${n}</b><span>${def.desc || it.use || ''}</span>
+              ${pend[it.id] ? `<span style="color:var(--c-green-420);font-size:var(--fs-xs)">下一场生效 ×${pend[it.id]}</span>` : ''}</div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <button class="btn sm" data-use="${it.id}" ${n > 0 ? '' : 'disabled'}>使用</button>
+              ${it.id === 'I04' ? `<button class="btn sm" data-use10="${it.id}" ${n >= 10 ? '' : 'disabled'} style="font-size:var(--fs-xs)">开10个</button>` : ''}
+            </div></div>`;
+        }).join('') : '<div class="lbl">暂无消耗品</div>'}
+        <div class="lbl" style="text-align:left;margin-top:6px">战斗中点击立即生效；战斗外使用将在下一场自动生效</div>
+      </div>`;
+    }
+
+    const GEMC = { r: 'gem r', b: 'gem b', g: 'gem g', p: 'gem p' };
+    if (tab === '宝石') {
+      const gs = EX.gems || [];
+      return `<div class="card"><div class="card-t">宝石 <span class="sub">镶嵌到装备提升属性</span></div>
+        <div class="grid4">${gs.length ? gs.map((g) => {
+          const n = (p.gems || {})[g.id] || 0;
+          return `<div class="gcell ${n ? '' : 'sel'}" data-gem="${g.id}">
+            ${g.img ? `<img src="${g.img}" style="width:82%;height:auto;aspect-ratio:1/1;object-fit:contain;flex:none;margin-top:2px">`
+                    : `<div class="${GEMC[g.c] || 'gem'}">${g.icon || '💎'}</div>`}
+            <div class="gn">${g.n}</div>
+            ${n ? `<span class="gq">×${n}</span>` : ''}${n == 0 ? '' : '<i class="gdot"></i>'}</div>`;
+        }).join('') : '<div class="lbl">暂无宝石</div>'}</div>
+      </div>
+      <button class="btn" id="goGem" style="width:100%;margin-top:8px">💎 前往宝石镶嵌</button>`;
+    }
+    if (tab === '装备') {
+      const eq = p.equip || {};
+      return `<div class="card"><div class="card-t">装备</div>
+        <div class="grid4">${(EX.equipSlots || []).map((sl) => {
+          const it = eq[sl.k];
+          return `<div class="gcell"><div class="gi">${it ? (it.icon || '🎽') : (sl.icon || '⬜')}</div>
+            <div class="gn">${sl.n}</div>${it ? '<i class="gdot"></i>' : ''}</div>`;
+        }).join('') || '<div class="lbl">暂无装备槽</div>'}</div>
+      </div>`;
+    }
+    if (tab === '芯片') {
+      /* BUG：这里读的是 p.chips（6 个已装备槽位），空态却写「芯片背包为空」，
+       * 而真正的芯片背包是 p.bag —— 实测背包 500 颗、一件未装备时，
+       * 该页签仍显示「芯片背包为空」，与下方「分解」区（读 p.bag）自相矛盾。
+       * 现在分开表述：槽位只说已装备，背包单独给数量。 */
+      const cs = Object.keys(p.chips || {});
+      const bagN = (p.bag || []).length;
+      return `<div class="card"><div class="card-t">已装备芯片 <span class="sub">${cs.length}/6 槽位 · 背包 ${bagN} 颗</span></div>
+        ${cs.length ? `<div class="grid4">${cs.map((id) => {
+          const c = p.chips[id];
+          return `<div class="gcell"><div class="gi">${c.icon || '🔲'}</div>
+            <div class="gn">${c.n || '芯片'}</div><span class="gq">Lv${c.lv || 1}</span></div>`;
+        }).join('')}</div>` : `<div class="lbl" style="padding:10px 4px;line-height:1.5">尚未装备芯片${bagN ? '（背包还有 ' + bagN + ' 颗，去芯片系统装上）' : ''}</div>`}
+      </div>
+      <button class="btn o" id="goChip" style="width:100%;margin-top:8px">🔲 前往芯片系统</button>`;
+    }
+    /* 材料 */
+    return `<div class="card"><div class="card-t">材料</div>
+      <div class="grid4">${EX.items.filter((x) => x.type === '材料' || x.type === '碎片').map((it) => {
+        const n = (p.mat || {})[it.id] || 0;
+        return `<div class="gcell ${n ? '' : 'sel'}">${it.img
+          ? `<img src="${it.img}">` : `<div class="gi">${it.icon}</div>`}
+          <div class="gn">${it.n}</div>${n ? `<span class="gq">${n > 9999 ? (n / 1000).toFixed(1) + 'k' : n}</span>` : ''}${this.tempTag(p, it.id)}</div>`;
+      }).join('')}</div></div>
+      <div class="card"><div class="card-t">分解 <span class="sub">碎片/芯片 → 金币</span></div>
+        ${['P01', 'P02'].map((id) => {
+          const n = (p.mat || {})[id] || 0;
+          const rate = E.DISMANTLE_RATE[id];
+          return `<div class="zrow"><div class="zav">🧩</div>
+            <div class="zi"><b>${E.itemName(id)}</b><span>×${n} · 单价 ${rate} 金币</span></div>
+            <button class="btn sm ${n ? '' : 'd'}" data-dec2="${id}" ${n ? '' : 'disabled'}>分解</button></div>`;
+        }).join('')}
+        ${['白', '蓝', '红'].map((q) => {
+          const n = E.chipCountByQ(p, q);
+          const rate = ({ '白': 200, '蓝': 500, '红': 1200 })[q];
+          return `<div class="zrow"><div class="zav">🔲</div>
+            <div class="zi"><b>${q}色芯片</b><span>背包 ×${n} · 单价 ${rate} 金币</span></div>
+            <button class="btn sm ${n ? '' : 'd'}" data-decq="${q}" ${n ? '' : 'disabled'}>分解</button></div>`;
+        }).join('')}
+        <button class="btn o blk" id="bagDecAll">一键分解（碎片 + 芯片）</button>
+      </div>
+      <div class="card"><div class="card-t">宝箱</div>
+        <div class="kv"><span>持有宝箱</span><b>${(p.mat || {}).I04 || 0}</b></div>
+        ${(() => {
+          /* 产出说明按【稀缺度之后的真实值】动态生成（EX.dropDisp）。
+           * 此前写死「合金 3-5 个（70% 概率）」，而 DROP_QTY_MUL 0.80 使
+           * 实际区间变成 2~4 —— 玩家永远开不出承诺的 5 个，下限也低于 3。 */
+          const _d = (EX.dropBySrc('宝箱开箱') || [])[0];
+          if (!_d) return '<div class="sub">开启可得材料</div>';
+          const _v = EX.dropDisp(_d);
+          return '<div class="sub">开启可得：' + E.itemName(_d.item) + ' ' + _v.min + '-' + _v.max + ' 个（' + _v.pct + '% 概率）</div>';
+        })()}
+        ${(() => {
+          /* 按钮置灰必须与点击后的拦截条件一致：
+           * 此前两个按钮无条件可点，背包里一个宝箱都没有时点下去
+           * 只弹一句「宝箱不足」，玩家还以为是自己点错了。
+           * 现在数量不够就置灰并直接写明差多少。 */
+          const _n = Number((p.mat || {}).I04) || 0;
+          const _d1 = _n < 1, _d10 = _n < 10;
+          return `<button class="btn blk" id="bagChest1" ${_d1 ? 'disabled' : ''}>${_d1 ? '宝箱不足' : '开启 1 个'}</button>`
+            + `<button class="btn o blk" id="bagChest10" ${_d10 ? 'disabled' : ''}>${_d10 ? '宝箱不足（需 10）' : '开启 10 个'}</button>`;
+        })()}
+      </div>
+      <div class="card"><div class="card-t">消耗品
+        <span class="sub">点击使用</span></div>
+      <div class="grid4">${EX.items.filter((x) => x.type === '消耗').map((it) => {
+        /* 此前读 (p.use||{})[it.id] —— 但消耗品统一存放在 p.mat，
+         * p.use 只有 newPlayer 里建了个全 0 的空壳，main.js 还会把它清空。
+         * 结果：这里永远显示 ×0（连数量都不显示），玩家以为自己没有消耗品，
+         * 实际 p.mat.I01/I02/I03 里躺着一堆。
+         * 同时格子没有任何 data-* / onclick，点了完全没反应。 */
+        const n = (p.mat || {})[it.id] || 0;
+        return `<div class="gcell ${n ? '' : 'sel'}" data-bu="${it.id}" style="${n ? '' : 'opacity:.72'}">${it.img
+          ? `<img src="${it.img}">` : `<div class="gi">${it.icon}</div>`}
+          <div class="gn">${it.n}</div>${n ? `<span class="gq">×${n}</span>` : ''}</div>`;
+      }).join('')}</div>
+      <div class="lbl" style="text-align:left;margin-top:4px">战斗中点击立即生效；战斗外使用将在下一场自动生效</div></div>`;
+  },
+  b_bag(p, tab) {
+    /* 表16 消耗品使用 */
+    $$('#pnBody [data-use]').forEach((b) => { b.onclick = () => {
+      const r = E.useItem(p, b.dataset.use);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.save(p); this.open('bag', tab); this.home(); }
+    }; });
+    $$('#pnBody [data-use10]').forEach((b) => { b.onclick = () => {
+      if ((p.mat[b.dataset.use10] || 0) < 10) return this.toast('宝箱不足 10 个', 'err');
+      const rw = E.openBox(p, 10);
+      /* 同 openBox 的修复：返回值已是 {ok,msg}，且「未出货」也应算成功
+       * （宝箱已消耗，只是这次没开出东西），但不足 10 个时必须拦下不扣。 */
+      this.toast('开启 10 个宝箱：' + rw.msg, rw.ok ? 'ok' : 'err');
+      if (!rw.ok) return;
+      if (window.SND) SND.play('get');
+      E.save(p); this.open('bag', tab); this.home();
+    }; });
+
+    const c1 = $('#bagChest1'), c10 = $('#bagChest10');
+    /* 落盘：这四个入口此前都【没有保存】——宝箱数量、金币扣了/加了，
+     * 只改内存，全靠 30 秒一次的自动存档兜底。此时被系统杀进程、强关 App
+     * 或立刻换设备登录，这一笔就整体丢失（开箱得的材料凭空消失、
+     * 分解得的金币不翼而飞）。统一补 saveSoon。 */
+    if (c1) c1.onclick = () => {
+      const r = E.openChest(p, 1); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pick'); E.saveSoon(p); this.open('bag', '材料'); this.home(); }
+    };
+    if (c10) c10.onclick = () => {
+      const r = E.openChest(p, 10); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pick'); E.saveSoon(p); this.open('bag', '材料'); this.home(); }
+    };
+    /* 表05 第9项：分解碎片 */
+    $$('#pnBody [data-dec2]').forEach((b) => { b.onclick = () => {
+      const r = E.dismantleMat(p, b.dataset.dec2, 1);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('coin'); E.saveSoon(p); this.open('bag', '材料'); this.home(); }
+    }; });
+    /* 芯片分解按钮（此前 C01/C02/C03 显示的是三个角色名且按钮永远灰着） */
+    $$('#pnBody [data-decq]').forEach((b) => { b.onclick = () => {
+      const r = E.dismantleChip(p, b.dataset.decq);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('coin'); E.save(p); this.open('bag', '材料'); this.home(); }
+    }; });
+    /* 材料页「消耗品」格子：此前无绑定，点了没反应 */
+    $$('#pnBody [data-bu]').forEach((el) => { el.onclick = () => {
+      const r = E.useItem(p, el.dataset.bu);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('pickup'); E.saveSoon(p); this.open('bag', '材料'); this.home(); }
+    }; });
+    const da = $('#bagDecAll');
+    if (da) da.onclick = () => {
+      /* 一键分解不可逆，且实际范围含【普通/精英/传说芯片】（不只是碎片）。
+       * 面板的芯片区显示的是 p.bag 的另一套存储（实测 chipCountByQ 为 0、按钮 disabled），
+       * 玩家看到「芯片 ×0」，一点却把 p.mat 里的传说芯片全清了，且无任何提示。
+       * 先预演并弹出明细供玩家确认。 */
+      const pv = E.dismantlePreview(p);
+      if (!pv.cnt) { this.toast('没有可分解的物品', 'err'); return; }
+      const tip = '将分解以下物品（共 ' + pv.cnt + ' 个 → 金币 +' + E.fmt(pv.gold) + '）：\n'
+        + pv.lines.join('\n') + '\n\n注意：芯片类（含传说芯片）也会一并分解，此操作不可撤销。确定继续？';
+      if (!window.confirm(tip)) { this.toast('已取消', 'err'); return; }
+      const r = E.dismantleAll(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      /* BUG（大额不可逆操作不落盘）：一键分解实测 29 个物品 → 金币 +4900，
+       *   而这里既没 save 也没 saveSoon，全靠 30 秒一次的自动存档兜底。
+       *   玩家刚分解完（材料已消失）就被系统杀掉进程 / 强关 App / 换设备登录，
+       *   会读回云端旧档：材料原样回来、4900 金币没拿到 —— 等于白分解。
+       *   这是全项目金额最大且不可撤销的一笔操作，改为立即落盘。 */
+      if (r.ok) {
+        if (window.SND) SND.play('coin');
+        E.save(p);
+        this.open('bag', '材料'); this.home();
+      }
+    };
+    const g1 = $('#goGem'); if (g1) g1.onclick = () => this.open('gem');
+    const g2 = $('#goChip'); if (g2) g2.onclick = () => this.open('chip');
+    /* 宝石格子点击：渲染用的是 data-gem，此前全项目没有任何地方绑定它
+     * （只有宝石镶嵌面板的 data-gsel 有绑定），点了完全没反应。
+     * 格子带选中态和红点，视觉上是可交互的，现在补上跳转。 */
+    $$('#pnBody [data-gem]').forEach((el) => { el.onclick = () => {
+      this.gemSel = el.dataset.gem; this.open('gem');
+    }; });
+  },
+
+  /* ---------- 商店（截图：每日/武器/宝石/材料 三列网格） ---------- */
+  r_shop(p, tab) {
+    /* 标题直接取 tab，而 tab 未传入时是 undefined → 卡片标题显示「undefined」
+     * （实测 render('shop') 不带 tab 时，card-t 输出 undefined）。
+     * 这里兜底取该面板的第一个页签。 */
+    tab = tab || ((this.PANELS.shop && this.PANELS.shop[1] && this.PANELS.shop[1][0]) || '每日');
+    const goods = (EX.shopGoods || {})[tab] || [];
+    return `<div class="card"><div class="card-t">${tab}
+      <span class="sub">🪙 ${E.fmt(p.gold)} · 💎 ${E.fmt(p.diamond)}</span></div>
+      <div class="grid3" style="grid-template-columns:repeat(2,1fr)">${(tab === '直购') ? `
+        <div class="card" style="grid-column:1/-1"><div class="card-t">月卡 <span class="sub">每日领 钻石50 + 体力60</span></div>
+          ${E.monthCardLeft(p) > 0 ? `
+            <div class="kv"><span>剩余天数</span><b>${E.monthCardLeft(p)} 天</b></div>
+            <div class="kv"><span>今日状态</span><b>${(p.monthCard && p.monthCard.last === new Date((typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now())+8*3600000).toISOString().slice(0,10)) ? '已领取' : '待领取'}</b></div>
+            <button class="btn blk" id="shMcClaim" style="margin-top:6px">📅 领取今日（钻石50+体力60）</button>`
+            : `<div class="lbl">未开通 · 在上方购买「月卡」后 30 天内每日可领</div>`}
+        </div>
+        <div class="card" style="grid-column:1/-1"><div class="card-t">战令 <span class="sub">${p.passAdv ? '进阶版' : '普通版'} · 当前 ${E.passLevel(p)} 关</span></div>
+          <div class="lbl" style="text-align:left;margin-bottom:5px">按通关关卡数解锁，${p.passAdv ? '可领进阶档（额外钻石30）' : '购买「战令(进阶)」解锁高级奖励'}</div>
+          ${E.PASS_TIERS.map((t, i) => {
+            const un = E.passLevel(p) >= t.lv;
+            const gn = (p.passClaimed || {})['p' + i + 'n'];
+            const ga = (p.passClaimed || {})['p' + i + 'a'];
+            return `<div class="zrow" style="${un ? '' : 'opacity:.5'}">
+              <div class="zav">${un ? '🎖️' : '🔒'}</div>
+              <div class="zi"><b class="wrap">Lv.${t.lv} ${t.n}</b><span>${un ? '可领取' : '通关 ' + t.lv + ' 关解锁'}</span></div>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <button class="btn sm" data-psn="${i}" ${(un && !gn) ? '' : 'disabled'}>${gn ? '已领' : '普通'}</button>
+                <button class="btn sm" data-psa="${i}" ${(un && !ga && p.passAdv) ? '' : 'disabled'} style="font-size:var(--fs-xs)">${ga ? '已领' : '进阶'}</button>
+              </div></div>`;
+          }).join('')}
+        </div>
+      ` : ''}${goods.length ? goods.map((g) => {
+        const can = (p[g.cur || 'gold'] || 0) >= g.price;
+        /* 表35：礼包限购状态 */
+        let lm = null;
+        if (g.limit) { try { lm = E.giftCan(p, g); } catch (e) { lm = null; } }
+        const blocked = lm && !lm.ok;
+        /* 体力类商品在体力已满时应置灰：
+         * b_shop 里是扣款【前】拦截（不会白扣钱），但按钮此前照常可点，
+         * 玩家点下去只弹一句「体力已满」，看着像按钮坏了。
+         * 这里与拦截口径保持一致，直接禁用并给出文案。 */
+        const stamFull = !!(g.give && g.give.stamina && E.staminaFull && E.staminaFull(p));
+        /* 普通战令（SH06 免费档）此前点了只弹一句「已激活」，
+         * 却没有任何字段记录 —— 面板永远还是「免费领取」，
+         * 玩家以为自己没激活成功，反复点也只有同一句提示。
+         * 现在激活后写入 p.passNormal，按钮改为「已激活」。 */
+        const passOn = !!(g.pass === 'normal' && p.passNormal);
+        /* 已拥有 / 芯片背包已满：与「体力已满」同一口径 —— 扣款前就禁用并写明原因，
+         * 否则按钮照常可点，玩家点下去只弹一句提示，看着像按钮坏了。 */
+        const ownMsg = this.shopOwned(p, g, tab);
+        const noBuy = blocked || stamFull || passOn || !!ownMsg;
+        const btnTxt = stamFull ? '体力已满'
+          : ownMsg ? (ownMsg.indexOf('背包') >= 0 ? '背包已满' : '已拥有')
+          : passOn ? '已激活'
+          : (g.price === 0 ? '免费领取' : (g.cur === 'diamond' ? '💎' : '🪙') + g.price);
+        return `<div class="gcell">
+          ${g.img ? `<img src="${g.img}">` : `<div class="gi">${g.icon}</div>`}
+          <div class="gn">${g.n}${g.rmb ? `<span class="tag y" style="font-size:var(--fs-xs)">${g.rmb}</span>` : ''}</div>
+          ${g.desc ? `<div class="lbl" style="font-size:var(--fs-xs);line-height:1.3;margin:2px 0;
+            display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${g.desc}</div>` : ''}
+          ${(E.isRechargeGoods && E.isRechargeGoods(g, tab) && !p.firstRech)
+            ? `<div class="lbl" style="font-size:var(--fs-xs);color:var(--c-amber-100)">🎉 首充双倍 → 💎${Number(g.give.diamond) * 2}</div>` : ''}
+          <button class="btn sm" data-buy="${g.id}" ${(can && !noBuy) ? '' : 'disabled'}
+            style="font-size:var(--fs-xs);padding:3px 6px;margin-top:2px">
+            ${btnTxt}</button>
+          ${lm ? `<div class="lbl" style="font-size:var(--fs-xs);color:${lm.ok ? '#7ee38a' : '#ff8a8a'}">${lm.msg}</div>` : ''}
+          ${stamFull ? `<div class="lbl" style="font-size:var(--fs-xs);color:var(--c-red-400)">体力已满 ${Math.floor(p.stamina||0)}/${EX.STAMINA_MAX}</div>` : ''}
+        </div>`;
+      }).join('') : '<div class="lbl">暂无商品</div>'}</div>
     </div>`;
   },
+  /* 唯一性商品扣款前校验：已拥有的皮肤 / 武器 / 称号 / 头像框，以及芯片背包已满。
+   *
+   * BUG（白花钱）：b_shop 这条内联路径是「先扣款、后逐项发放」，
+   *   发放时虽然判重（indexOf < 0 才 push）跳过了重复入库，
+   *   但货币早已扣掉，且末尾照样 toast「已获得皮肤」+「购买成功」。
+   *   实测：
+   *     已拥有 W02（通关 1-2 就能解锁）再在商店买「霰弹枪 5000 金」
+   *       → 扣 4800 金、gunOwn 数量 0 变化，只把当前枪切成了 W02；
+   *     已拥有 sk_c01b 再买 SH08「废土战甲皮肤」680 钻（68 元）
+   *       → 扣 680 钻、p.skins 数量 0 变化，却提示「已获得皮肤」。
+   *   芯片背包满（BAG_MAX 500）时买 SH09「传说芯片包」980 钻（98 元）
+   *       → 芯片一颗没到账，反而往材料包写入 chipL 这种玩家永远用不到的垃圾键。
+   * 现在在扣款前拒绝，货币不会被白白扣掉；商品卡片同步置灰并显示原因。 */
+  shopOwned(p, g, tab) {
+    const gv = g.give || {};
+    /* 战令 / 月卡类：皮肤头像框只是附赠，主体是解锁资格，不能据此拒绝购买 */
+    const isPass = !!(g.pass || g.monthly);
+    if (!isPass) {
+      if (gv.skin && (p.skins || []).indexOf(gv.skin) >= 0) return '已拥有该皮肤，无需重复购买';
+      if (gv.title && (p.titles || []).indexOf(gv.title) >= 0) return '已拥有该称号，无需重复购买';
+      if (gv.frame && (p.frames || []).indexOf(gv.frame) >= 0) return '已拥有该头像框，无需重复购买';
+    }
+    /* 武器：玩家通关就解锁，商店再卖一次等于重复收费（give 里的材料也一并拒掉） */
+    let gid = g.gun || '';
+    if (!gid && g.n) {
+      const byName = (EX.guns || []).find((x) => x.n && (x.n === g.n || g.n.indexOf(x.n) >= 0));
+      if (byName) gid = byName.id;
+    }
+    if (gid) {
+      if ((p.gunOwn || []).indexOf(gid) >= 0) return '已拥有该武器，无需重复购买';
+      try { if (E.gunUnlocked && E.gunUnlocked(p, gid)) return '已拥有该武器，无需重复购买'; } catch (e) {}
+    }
+    /* 芯片背包容量：满了就不再入库，避免扣了钱却只落下一个看不见的垃圾键 */
+    const hasChip = Object.keys(gv).some((k) => /^chip/.test(k));
+    if (hasChip && E.BAG_MAX && (p.bag || []).length >= E.BAG_MAX) {
+      return '芯片背包已满（' + E.BAG_MAX + ' 颗），请先分解或合成';
+    }
+    return '';
+  },
   b_shop(p, tab) {
-    $$('#pnBody [data-pack]').forEach((b) => {
-      b.onclick = () => {
-        const packs = [{ g: 5000, dm: 50, p: 0 }, { g: 30000, dm: 200, p: 30 }, { g: 150000, dm: 800, p: 128 }];
-        const k = packs[+b.dataset.pack];
-        if (k.p > p.diamond) return this.toast('钻石不足', 'err');
-        p.diamond -= k.p; p.gold += k.g; p.diamond += k.dm;
-        this.toast('购买成功：金币+' + E.fmt(k.g) + ' 钻石+' + k.dm, 'ok');
-        this.open('shop', tab); this.home();
+    $$('#pnBody [data-buy]').forEach((b) => { b.onclick = () => {
+      const goods = (EX.shopGoods || {})[tab] || [];
+      const g = goods.find((x) => x.id === b.dataset.buy); if (!g) return;
+      const cur = g.cur || 'gold';
+      /* 表35 限购校验 */
+      if (g.limit) {
+        let lm = null; try { lm = E.giftCan(p, g); } catch (e) { lm = null; }
+        if (lm && !lm.ok) return this.toast(lm.msg, 'err');
+      }
+      /* 套利守卫：拦截「花 X 买回 > X 的同种货币且无限购」的商品。
+       * 否则玩家可无限循环刷取，几分钟内经济崩坏（见 E.isArbitrage 注释）。 */
+      try { if (E.isArbitrage && E.isArbitrage(g)) return this.toast('该商品暂不可购买', 'err'); } catch (e) {}
+      /* 体力类商品满体力拦截（D2「体力包」50 钻 → 60 体力）
+       * 与活动商店 ES11 同一类问题：体力已达 STAMINA_MAX 时买体力，
+       * 钱照扣、体力一点不加，却提示购买成功。
+       * 这里在扣款【之前】拦截，货币不会被白白扣掉。 */
+      if (g.give && g.give.stamina && E.staminaFull && E.staminaFull(p)) {
+        return this.toast('体力已满（' + EX.STAMINA_MAX + '），无需购买', 'err');
+      }
+      /* 体力「部分溢出」：此前只拦了「已满」，没拦「买完会超出上限」。
+       * 实测（D2 体力包 50 钻 → 60 体力）：体力 80 时购买，addStamina 钳制后
+       * 实际只加 20 点，却照扣 50 钻 —— 玩家付 60 体的钱只拿到 20，
+       * 且提示仍是「购买成功」，看不出自己亏了三分之二。
+       * 这里在扣款之前按「剩余容量」拦截，与满体力同一口径。 */
+      if (g.give && g.give.stamina) {
+        const _add = Math.max(0, Number(g.give.stamina) || 0);
+        const _max = Number(EX.STAMINA_MAX) || 100;
+        const _room = _max - Math.max(0, Number(p.stamina) || 0);
+        if (_add > _room) {
+          return this.toast('体力将溢出（当前 ' + (p.stamina || 0) + '/' + _max + '，本次只能获得 ' + Math.max(0, _room) + '），请先消耗体力', 'err');
+        }
+      }
+      /* 后台热更商品时漏填 price → `p[cur] -= undefined` 把玩家货币算成
+       * 【NaN】，此后所有购买全部失效；负数则买东西倒赚。这里统一收紧。 */
+      const price = E.safePrice(g.price);
+      if (price === null) return this.toast('商品价格配置异常，暂不可购买', 'err');
+      /* 唯一性奖励 / 芯片背包容量：必须在【扣款之前】校验（见 shopOwned 注释） */
+      const ownMsg = this.shopOwned(p, g, tab);
+      if (ownMsg) return this.toast(ownMsg, 'err');
+      if ((p[cur] || 0) < price) return this.toast('货币不足', 'err');
+      p[cur] -= price;
+      if (g.give) for (const k in g.give) {
+        if (k === 'gold') p.gold += g.give[k];
+        else if (k === 'diamond') {
+          /* 表22 EV04 首充双倍：首次充值钻石翻倍。
+           * 只对「直购 → 纯钻石档位」生效（见 E.isRechargeGoods 注释）。
+           * 此前任何含钻石的礼包都会消耗资格，玩家买个 10 钻的每日特惠
+           * 就把 1150 钻的权益换成了 10 钻。 */
+          let amt = g.give[k];
+          if (amt > 0 && E.isRechargeGoods && E.isRechargeGoods(g, tab)) {
+            const fr = E.applyFirstRecharge(p, amt);
+            if (fr.doubled) this.toast('🎉 首充双倍！钻石 ' + g.give[k] + ' → ' + fr.amt, 'ok');
+            amt = fr.amt;
+          }
+          p.diamond = (p.diamond || 0) + amt;
+        }
+        /* 走 E.addStamina（带 STAMINA_MAX 钳制）而不是直接相加。
+         * BUG：直接 `p.stamina + 60` 会晋升上限（实测体力 50 买体力包 → 110/100），
+         *      而其它所有体力来源都被钳在 100，界面上会出现「110/100」这种越界显示。 */
+        /* 兜底分支此前与主分支同病：`(p.stamina||0) + g.give[k]` 在 g.give[k]
+         * 是字符串时做的是拼接（50 + '60' → '5060' → 被钳成 100 满体力）。
+         * 这里同样先过 Number 再相加，保证与 addStamina 同一口径。 */
+        else if (k === 'stamina') {
+          try { E.addStamina(p, g.give[k]); }
+          catch (e) {
+            const sv = Math.max(0, Number(g.give[k]) || 0);
+            p.stamina = Math.min(EX.STAMINA_MAX || 100, Math.max(0, Number(p.stamina) || 0) + sv);
+          }
+        }
+        else if (k === 'gem') {
+          /* 可镶嵌宝石：give: { gem: 'G_R' }
+           * 修复：此前没有该分支，宝石类商品会落到 p.mat['gem']，
+           *       买了红宝石但宝石页数量永远为 0，无法镶嵌 */
+          const gid = g.give[k];
+          if (gid) { p.gems = p.gems || {}; p.gems[gid] = (p.gems[gid] || 0) + 1; }
+        }
+        /* 皮肤（SH08「废土战甲皮肤」680 钻）
+         * BUG：b_shop 这段是【内联发放】，不走 E.grant()，
+         *      而内联分支里根本没有 skin → 掉进最后的 else：
+         *        p.mat['skin'] = 'sk_c01b'
+         *      皮肤真实存放在 p.skins（数组），当前穿戴叫 p.skin（字符串）。
+         *      结果：花 680 钻买皮肤，扣了钻石、提示成功，
+         *            但皮肤页里根本没有、也穿不上，钻石白花。
+         *      （E.grant() 里 skin 分支是对的，这条内联路径漏了。）
+         * 顺带把 title / frame / ach / evToken 也接上，避免后台热更
+         * 给商品加上这些奖励时重演同类问题。 */
+        else if (k === 'skin') {
+          const sid = g.give[k];
+          if (sid) {
+            p.skins = p.skins || [];
+            if (p.skins.indexOf(sid) < 0) p.skins.push(sid);
+            E.setSkin(p, sid);
+          }
+        }
+        else if (k === 'title') { p.titles = p.titles || []; if (p.titles.indexOf(g.give[k]) < 0) p.titles.push(g.give[k]); }
+        else if (k === 'frame') { p.frames = p.frames || []; if (p.frames.indexOf(g.give[k]) < 0) p.frames.push(g.give[k]); }
+        else if (k === 'ach') { p.ach = (p.ach || 0) + (Number(g.give[k]) || 0); }
+        else if (k === 'evToken' || k === 'ev') {
+          const n = Number(g.give[k]) || 0;
+          if (n > 0) { p.evToken = (p.evToken || 0) + n; p.evScore = (p.evScore || 0) + n; }
+        }
+        else if (/^chip/.test(k)) {
+          /* 芯片类：直接生成对应品质芯片进背包 */
+          /* chipRed 此前【不在映射表里】：
+           *   qmap['chipRed'] = undefined → q = 'n'（普通/白色）
+           *   商店 SH09「传说芯片包」rw 配的正是 { chipRed: 2 }
+           *   → 98 元买到手的是 2 块【白色】生命芯片，不是传说红芯片。
+           *   （engine.js 战令那处 qmap 已含 chipRed，本处漏了。）
+           * 现在与 main.js 旧存档迁移表保持一致。 */
+          const qmap = { chipN: 'n', chipE: 'e', chipL: 'l', chipRed: 'l', chip: 'n' };
+          const q = qmap[k] || 'n';
+          try {
+            /* 此前传品质码给 rollChipById（它收的是 CH01~CH08 定义ID）
+             * → 恒回退 chips[0]，980 钻的「传说芯片包」到手是白色生命芯片 */
+            /* 数量：此前无论配置写几个，一律只 push 1 块。
+             *   SH09「传说芯片包」980 钻，give 是 { chipL: 2 }
+             *   → 实际只发 1 块传说芯片，宣传的「×2」少给一半。
+             *   （E.grant() 里有按数量循环，这条内联路径漏了。）
+             * 现在按配置数量发放。 */
+            const cnt = Math.max(1, Math.min(20, Math.floor(Number(g.give[k]) || 1)));
+            let ok = 0;
+            for (let i = 0; i < cnt; i++) {
+              const c = E.rollChipByQuality ? E.rollChipByQuality(q) : null;
+              /* 芯片背包封顶（与战令/抽奖/掉落同一入口规则），
+               * 满了就不再入库，走下方兜底折算，避免背包无限膨胀 */
+              if (c) { p.bag = p.bag || []; if (E.pushChip(p, c)) ok++; else break; }
+            }
+            if (!ok) p.mat[k] = (p.mat[k] || 0) + cnt;
+          } catch (e) { p.mat[k] = (p.mat[k] || 0) + (Number(g.give[k]) || 1); }
+        }
+        else p.mat[k] = (p.mat[k] || 0) + g.give[k];
+      }
+      /* 直购特殊类型：月卡 / 战令进阶 / 皮肤 */
+      if (g.monthly) {
+        /* BUG（续费吞掉已购天数 + 同日重复领取）：
+         *   until 无条件重置为 now+30 天。月卡有效期 30 天，而限购是「每月 1 次」
+         *   —— 玩家 1/31 购买，2 月即可再买，此时旧卡还剩 28 天，
+         *   实测「买前剩 10 天 → 买后剩 30 天」，白白吞掉 10 天已付费时长。
+         *   同时 last 被清成 ''，当天已领过的记录丢失，
+         *   实测同一天可连领两次 50 钻。
+         * 现在：未过期则【叠加】到原到期日之后，并保留当日领取记录。 */
+        const _now = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
+        const _old = p.monthCard;
+        /* 叠加基准同样要排除脏值：until 为 Infinity / 非数字时
+         * `Number(x) > _now` 会成立，导致 until 算出 Infinity → 永久月卡。 */
+        const _u0 = _old ? Number(_old.until) : 0;
+        const _base = (isFinite(_u0) && _u0 > _now) ? _u0 : _now;
+        const _last = (_old && _old.last) ? _old.last : '';
+        p.monthCard = { until: _base + 30 * 86400000, last: _last };
+        this.toast('月卡开通成功！剩余 ' + E.monthCardLeft(p) + ' 天，每日可领 钻石50+体力60', 'ok');
+      } else if (g.pass === 'adv') {
+        p.passAdv = 1; this.toast('进阶战令已解锁！可领取高级档位', 'ok');
+      } else if (g.pass === 'normal') {
+        /* 同上：此前只弹提示、不落状态，激活等于没发生。 */
+        p.passNormal = 1;
+        this.toast('普通战令已激活（免费档位可领取）', 'ok');
+      }
+      if (g.give && g.give.skin) {
+        p.skins = p.skins || [];
+        if (p.skins.indexOf(g.give.skin) < 0) p.skins.push(g.give.skin);
+        this.toast('已获得皮肤：' + g.n, 'ok');
+      }
+      /* 武器解锁：商店「武器」页签三件商品（突击步枪/霰弹枪/狙击枪）
+       * BUG：此前只有材料 give，没有 gun 字段 → 花 8000 金买「狙击枪」，
+       *      到手 10 个稀有金属，gunOwn 纹丝不动，武器列表一把没多。
+       *      现在 g.gun 指向真实武器 ID，购买即解锁并装备。
+       *      后台热更若没写 g.gun，这里再按商品名兜底匹配一次。 */
+      if (g.gun) {
+        try { E.unlockGun(p, g.gun); } catch (e) {}
+      } else if (tab === '武器' && g.n) {
+        const byName = (EX.guns || []).find((x) => x.n === g.n || g.n.indexOf(x.n) >= 0);
+        if (byName) { try { E.unlockGun(p, byName.id); } catch (e) {} }
+      }
+      if (g.limit) { try { E.giftMark(p, g); } catch (e) {} }
+      E.save(p); if (!g.monthly && !g.pass) this.toast('购买成功', 'ok');
+      if (window.SND) SND.play('get');
+      /* 买完不再"钉"在屏幕上：
+       * 此前无论这件商品还能不能买，一律 this.open('shop', tab) 重新把面板铺开，
+       * 玩家点了购买后看不到任何"结束"的反馈，面板一直挂在眼前；
+       * 叠加旧配置里 D2~D6 无限购，就成了「可以一直点、一直买下去」。
+       * 现在：该商品已达限购上限 → 关闭面板回到主界面（直接看到金币/钻石变化）；
+       *       还有剩余次数 → 就地刷新，方便接着买。 */
+      let soldOut = false;
+      if (g.limit) { try { const lm2 = E.giftCan(p, g); soldOut = !!(lm2 && !lm2.ok); } catch (e) { soldOut = false; } }
+      if (soldOut) { this.close(); } else { this.open('shop', tab); }
+      this.home();
+    }; });
+    /* 月卡每日领取 */
+    const mc = $('#shMcClaim'); if (mc) mc.onclick = () => {
+      const r = E.monthCardClaim(p);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.save(p); this.open('shop', tab); this.home(); }
+    };
+    /* 战令档位领取 */
+    $$('#pnBody [data-psn]').forEach((b) => { b.onclick = () => {
+      const r = E.passClaim(p, +b.dataset.psn, false);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.save(p); this.open('shop', tab); this.home(); }
+    }; });
+    $$('#pnBody [data-psa]').forEach((b) => { b.onclick = () => {
+      const r = E.passClaim(p, +b.dataset.psa, true);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.save(p); this.open('shop', tab); this.home(); }
+    }; });
+  },
+
+  /* ---------- 宝石镶嵌（截图：石质面板 + 僵尸头 + 红蓝绿紫宝石 + 黄色镶嵌） ---------- */
+  r_gem(p, tab) {
+    const gs = EX.gems || [];
+    const sel = this.gemSel || (gs[0] && gs[0].id);
+    const g = gs.find((x) => x.id === sel) || gs[0];
+    /* 镶嵌按钮按真实可用性出文案：同一颗已镶嵌就别再给"镶 嵌"，
+     * 让玩家一眼看出现在点下去不会有变化。 */
+    const _bag = g ? ((p.gems || {})[g.id] || 0) : 0;
+    const inlayOK = !!(g && _bag > 0 && p.gemOn !== g.id);
+    const inlayTxt = !g ? '请选择宝石'
+      : (p.gemOn === g.id ? '✔ 已镶嵌' : (_bag > 0 ? '镶 嵌' : '数量不足（' + _bag + ' 颗）'));
+    /* 合成按钮此前【永远可点】：既没有数量判断也没有满级判断。
+     * 而 E.gemFuse 的满级校验写在扣减之后 —— 满级时点一次就白吞 2 颗宝石
+     * （实测连点 5 次：15 颗 → 5 颗）。这里与引擎同一口径，不可用就禁用并写明原因。 */
+    const gMaxed = !!(g && E.gemLvOf && E.gemLvOf(p, g.id) >= E.GEM_MAX_LV - 1);
+    const fuseOK = !!(g && _bag >= 3 && !gMaxed);
+    const fuseTxt = !g ? '请选择宝石'
+      : gMaxed ? '✔ 宝石已满级 Lv.' + E.GEM_MAX_LV
+      : (_bag >= 3 ? '🔨 宝石合成（3 颗 → 升一级）' : '数量不足（需 3 颗，当前 ' + _bag + '）');
+    /* 置灰样式（class d）之外必须同时加 disabled：
+     * 此前只加了灰样式、按钮其实仍可点，玩家点了灰按钮照样弹一句「数量不足」，
+     * 看起来像界面坏了。现在两处口径统一。
+     * 注：本注释必须写在模板字符串【外面】——写在里面会被当普通文本渲染到面板上。 */
+    return `<div class="stone-panel">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        ${this.zAvatarHTML('gem')}
+        <div><b style="font-size:var(--fs-md)">宝石镶嵌</b>
+          <div class="sub">镶嵌宝石可大幅提升属性</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        ${gs.map((x) => {
+          const n = (p.gems || {})[x.id] || 0;
+          const on = x.id === sel;
+          const inlaid = p.gemOn === x.id;
+          return `<div class="zrow" data-gsel="${x.id}" style="${on ? 'border-color:var(--yel) !important;background:rgba(255,201,60,.12) !important' : ''}">
+            <div class="gem ${x.c === 'r' ? 'r' : x.c === 'b' ? 'b' : x.c === 'g' ? 'g' : 'p'}">${x.img
+              ? `<img src="${x.img}" style="width:26px;height:26px;object-fit:contain">` : (x.icon || '💎')}</div>
+            <div class="zi"><b>${x.n}</b><span>${x.desc}</span></div>
+            <span class="st ${inlaid ? 'on' : (n ? 'off' : 'off')}">${inlaid ? '已镶嵌' : n + ' 颗'}</span>
+          </div>`;
+        }).join('') || '<div class="lbl">暂无宝石</div>'}
+      </div>
+      <div class="sub" style="margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.2)">
+        当前选中：<b style="color:var(--yel)">${g ? g.n : '—'}</b>
+        ${g ? ' · ' + g.desc : ''}
+        ${g && p.gemOn === g.id ? '<span class="st on" style="margin-left:6px">已镶嵌</span>' : ''}
+      </div>
+      <button class="btn ${inlayOK ? '' : 'd'}" id="gemInlay" ${inlayOK ? '' : 'disabled'} style="width:100%;margin-top:10px">${inlayTxt}</button>
+      <button class="btn g" id="gemOff" style="width:100%;margin-top:6px">卸 下（返还背包）</button>
+      <button class="btn o ${fuseOK ? '' : 'd'}" id="gemFuse" ${fuseOK ? '' : 'disabled'} style="width:100%;margin-top:6px">${fuseTxt}</button>
+      <div class="sub" style="margin-top:6px">当前宝石等级：<b style="color:var(--yel)">Lv.${g ? E.gemTier(p, g.id) : (p.gemOn ? E.gemTier(p, p.gemOn) : 1)}</b>
+        加成：${E.gemBonusTxt ? E.gemBonusTxt(p) : '—'}
+        <span style="opacity:.7">（百分比加成，只随宝石合成等级提升，与角色等级无关）</span></div>
+    </div>`;
+  },
+  b_gem(p, tab) {
+    const fb = $('#gemFuse');
+    if (fb) fb.onclick = () => {
+      const id = this.gemSel;
+      const r = E.gemFuse(p, id); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      /* BUG（宝石合成不落盘）：实测消耗 3 颗红宝石（30→27）而这里既没 save
+       *   也没 saveSoon。宝石是稀有资源且合成不可逆，强关 App / 换设备登录
+       *   会读回旧档 —— 宝石回来了、合成出的高阶宝石却没留下。 */
+      if (r.ok) { try { E.save(p); } catch (e) {} if (window.SND) SND.play('upgrade'); this.open('gem'); this.home(); }
+    };
+    $$('#pnBody [data-gsel]').forEach((el) => { el.onclick = () => {
+      this.gemSel = el.dataset.gsel; this.open('gem');
+    }; });
+    const ob = $('#gemOff');
+    if (ob) ob.onclick = () => {
+      if (!p.gemOn) return this.toast('当前没有镶嵌宝石', 'err');
+      const r = E.setGem(p, null);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      /* 落盘由 E.setGem 内部统一负责，这里不重复 save */
+      if (r.ok) { if (window.SND) SND.play('upgrade'); this.open('gem'); this.home(); }
+    };
+    const ib = $('#gemInlay');
+    if (ib) ib.onclick = () => {
+      const id = this.gemSel; const g = (EX.gems || []).find((x) => x.id === id);
+      if (!g) return this.toast('请选择宝石', 'err');
+      /* 走统一入口：占用 1 颗并在更换时返还（此前直接扣且永不返还） */
+      const r = E.setGem(p, id);
+      if (!r.ok) return this.toast(r.msg, 'err');
+      if (window.SND) SND.play('upgrade');
+      /* 落盘由 E.setGem 内部统一负责，这里不重复 save */
+      this.toast('镶嵌成功：' + g.n, 'ok'); this.open('gem'); this.home();
+    };
+  },
+
+  /* ---------- 好友（截图：好友列表/申请/聊天 + 僵尸头像 + 添加好友） ---------- */
+  r_friends(p, tab) {
+    /* 好友申请 / 聊天此前是全项目「只读不写」的死数据，两个页签永远空白。
+     * 这里在渲染前按每日上限供给内容（见 E.pumpSocial）。 */
+    try { E.pumpSocial(p); } catch (e) {}
+    if (tab === '聊天') {
+      const msgs = (p.chat || []).slice(-20).reverse();
+      /* 聊天昵称和消息文本都是别的玩家随便填的，直接拼进 innerHTML 就是存储型 XSS：
+       * 对方发一句 <img src=x onerror=...> 你打开聊天就执行了。全部转义。 */
+      return `<div class="card"><div class="card-t">聊天</div>
+        ${msgs.length ? msgs.map((m) => `<div class="zrow">${this.zAvatarHTML(m.n)}
+          <div class="zi"><b>${this.nm(m.n || '匿名')}</b><span>${this.nm(m.t || '', 40)}</span></div></div>`).join('')
+        : '<div class="lbl">暂无消息</div>'}</div>`;
+    }
+    if (tab === '申请') {
+      const reqs = p.friendReq || [];
+      return `<div class="card"><div class="card-t">好友申请 <span class="sub">${reqs.length}</span></div>
+        ${reqs.length ? reqs.map((r) => `<div class="zrow">${this.zAvatarHTML(r.id)}
+          <div class="zi"><b>${this.nm(r.n)}</b><span>战力 ${E.fmt(r.pw || 0)}</span></div>
+          <button class="btn g sm" data-accept="${this.esc(r.id)}">接受</button></div>`).join('')
+        : '<div class="lbl">暂无申请</div>'}</div>`;
+    }
+    const fs = p.friends || [];
+    return `<div class="card"><div class="card-t">好友列表
+      <span class="sub">${fs.length} 人 · 每个 +0.5% 攻击</span></div>
+      ${fs.length ? fs.map((f) => { const fid = (f && f.id) || ''; return `<div class="zrow">
+        ${this.zAvatarHTML(f.id || f)}
+        <div class="zi"><b>${this.nm((f && f.n) || f.id || '未知')}</b><span>战力 ${E.fmt((f && f.pw) || 0)} · 可发送体力</span></div>
+        ${(function () {
+          const today = E.dailyKey();   /* UTC+8 业务日，与签到/礼包限购同一基准（原为本地时区） */
+          const sent = (p.sendStDate === today) ? (p.sendStTo || []) : [];
+          const fid = (f && f.id) || '';
+          const done = fid ? sent.indexOf(fid) >= 0 : false;
+          return `<button class="btn sm ${done ? 'd' : 'g'}" data-sendst="${UI.esc(fid)}" ${done ? 'disabled' : ''}>${done ? '已送' : '送体力'}</button>`;
+        })()}
+        ${/* V1.0.3 好友助战：设为助战后进战斗 +3% 攻击 */ ''}
+        <button class="btn sm ${p.assist === fid ? 'd' : 'g'}" data-assist="${UI.esc(fid)}">${p.assist === fid ? '助战中' : '设为助战'}</button>
+        <span class="st ${f.online ? 'on' : 'off'}">${f.online ? '在线' : '离线'}</span>
+      </div>`; }).join('') : '<div class="lbl">还没有好友，点击下方添加</div>'}
+      <button class="btn" id="addFriend" style="width:100%;margin-top:8px">添加好友</button>
+    </div>`;
+  },
+  b_friends(p, tab) {
+    const ab = $('#addFriend');
+    if (ab) ab.onclick = () => {
+      /* 好友上限：此前无上限，连点即可无限堆好友（详见 E.FRIEND_MAX 注释） */
+      if (((p.friends || []).length) >= E.FRIEND_MAX) {
+        this.toast('好友已达上限 ' + E.FRIEND_MAX + ' 人', 'err');
+        return;
+      }
+      const nm = '僵友' + Math.floor(Math.random() * 900 + 100);
+      (p.friends || (p.friends = [])).push({ id: 'f' + Date.now(), n: nm,
+        pw: Math.floor(Math.random() * 50000 + 5000), online: Math.random() > 0.5 });
+      E.save(p); this.toast('已添加好友 ' + nm, 'ok');
+      if (window.SND) SND.play('get'); this.open('friends'); this.home();
+    };
+    /* 送体力此前只弹一个 toast，不扣资源、不限次数、按钮永远可点
+     * → 这是个纯装饰按钮，点一万次也不产生任何数据变化。
+     * 现在：每个好友每天限送 1 次，每天总共限 10 次，
+     *       送出后自己获得好友回赠金币（单机架构无法真送到对方，但行为真实）。 */
+    $$('#pnBody [data-sendst]').forEach((b) => { b.onclick = () => {
+      const fid = b.dataset.sendst;
+      const today = E.dailyKey();   /* UTC+8 业务日，与签到/礼包限购同一基准（原为本地时区） */
+      if (p.sendStDate !== today) { p.sendStDate = today; p.sendStTo = []; }
+      p.sendStTo = p.sendStTo || [];
+      if (p.sendStTo.indexOf(fid) >= 0) return this.toast('今天已给该好友送过', 'err');
+      if (p.sendStTo.length >= 10) return this.toast('每日赠送上限 10 次', 'err');
+      p.sendStTo.push(fid);
+      const back = 30;
+      p.gold = (p.gold || 0) + back;
+      E.save(p);
+      this.toast('已赠送，好友回赠 ' + back + ' 金币', 'ok');
+      if (window.SND) SND.play('get');
+      this.open('friends'); this.home();
+    }; });
+    /* V1.0.3 好友助战：设置 / 取消助战好友，进战斗 +3% 攻击 */
+    $$('#pnBody [data-assist]').forEach((b) => { b.onclick = () => {
+      const fid = b.dataset.assist;
+      if (p.assist === fid) { delete p.assist; this.toast('已取消助战', 'ok'); }
+      else { p.assist = fid; this.toast('已设为助战，战斗攻击 +3%', 'ok'); }
+      E.save(p); if (window.SND) SND.play('get'); this.open('friends'); this.home();
+    }; });
+    $$('#pnBody [data-accept]').forEach((b) => { b.onclick = () => {
+      const id = b.dataset.accept;
+      const r = (p.friendReq || []).find((x) => x.id === id);
+      if (r) {
+        /* 同上：接受申请也要守上限，否则好友满了还是能一直加 */
+        if (((p.friends || []).length) >= E.FRIEND_MAX) {
+          this.toast('好友已达上限 ' + E.FRIEND_MAX + ' 人', 'err'); return;
+        }
+        (p.friends || (p.friends = [])).push(r);
+        p.friendReq = p.friendReq.filter((x) => x.id !== id);
+        E.save(p); this.toast('已添加 ' + r.n, 'ok'); this.open('friends', '申请'); this.home(); }
+    }; });
+  },
+
+  /* ---------- 邮件（截图：列表 + 绿色一键领取） ---------- */
+  /* 限时道具角标：运营补发的道具若带有效期，这里显示剩余时间，
+   * 到期由 MAIN.tickTempItems 回收。此前完全没有提示，玩家只会觉得物品凭空消失。 */
+  tempTag(p, id) {
+    const e = (window.MAIN && MAIN.tempExpOf) ? MAIN.tempExpOf(p, id) : 0;
+    if (!e) return '';
+    const ms = e - (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
+    if (ms <= 0) return '';
+    const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5);
+    const t = d > 0 ? '剩' + d + '天' : (h > 0 ? '剩' + h + '时' : '即将到期');
+    return `<span class="gq" style="color:var(--c-amber-120);background:rgba(255,184,77,.18)">⏳${t}</span>`;
+  },
+  /* 奖励字典 → 中文文本（用于 toast），如 {gold:100,M01:5} → 「金币×100 合金×5」 */
+  /* 单条附件（值是物品 id 字符串）→ 中文名。
+   * 抽成共用函数：此前 rwText 与 mailRwText 各写一份解析，
+   * 上一轮只修了 rwText，邮件列表那条路径漏改 ——
+   * 实测 6 封邮件里 5 封显示「无附件」，运营发的皮肤/宝石补偿玩家根本看不到。
+   * 现在两条路径共用同一份解析，避免再出现修一处漏一处。 */
+  rwItemName(k, v) {
+    const vid = String(v);
+    /* 宝石是裸 id（G_R），itemName 只认 gem_ 前缀，这里直接查宝石表 */
+    if (k === 'gem') { const g = (EX.gems || []).find((x) => x.id === vid); if (g) return g.n; }
+    /* 称号 / 头像框不在物品表里，itemName 会原样返回内部 id
+     * （实测显示「hell_clear」「ev_frame」，玩家看不懂），按 kind 查各自的表 */
+    if (k === 'title' || k === 'frame') {
+      const def = (k === 'title' ? E.titleDef(vid) : E.frameDef(vid));
+      if (def && def.n) return def.n;
+    }
+    const nm = E.itemName(vid);
+    /* nm === vid 说明没查到、原样返回了内部 id → 退回通用类别名（皮肤/称号…），
+     * 绝不把裸 id 显示在玩家面前 */
+    if (nm && nm !== vid) return nm;
+    return E.itemName(k) || nm || vid;
+  },
+  rwText(rw) {
+    /* 皮肤 / 宝石 / 称号 / 头像框这类附件的【值是物品 id 字符串】而不是数量。
+     * 原判定 `(rw[k]||0) > 0` 对字符串恒为 false（'sk_c01b' > 0 → false），
+     * 于是这类奖励在领取提示里被整条过滤掉 —— 实测一键领取一封皮肤邮件，
+     * 皮肤确实进了背包，提示却只写「金属×20 金币×500」，玩家不知道自己得了皮肤。
+     * 现在：数字按数量显示，非数字按物品名显示。 */
+    const ks = Object.keys(rw || {}).filter((k) => {
+      const v = rw[k];
+      if (typeof v === 'number') return v > 0;
+      return v != null && String(v).trim() !== '' && String(v) !== '0';
+    });
+    if (!ks.length) return '无';
+    return ks.map((k) => {
+      const v = rw[k], n = Number(v);
+      if (typeof v === 'number' || (String(v).trim() !== '' && isFinite(n))) return E.itemName(k) + '×' + E.fmt(n);
+      /* 非数字：值本身就是物品 id（skin:'sk_c01b' / gem:'G_R' / title / frame） */
+      return this.rwItemName(k, v);
+    }).join(' ');
+  },
+  /* 邮件奖励文案
+   * BUG：后台「单发邮件」把附件写在 rw（如 {gold:100}、{M01:5}），
+   * 而面板此前只读 m.gold / m.dia —— 这两个字段后台从不写入，
+   * 于是每一封邮件都显示「🪙0 💎0」，玩家根本看不出里面有什么，
+   * 只能靠盲点领取（实际领取时走 E.grant(m.rw) 是能到账的）。
+   * 现在统一按 rw 渲染物品名，并兼容旧档的 gold/dia 字段。 */
+  mailRwText(m) {
+    const rw = Object.assign({}, m.rw || {});
+    if (m.gold) rw.gold = (rw.gold || 0) + m.gold;
+    if (m.dia) rw.diamond = (rw.diamond || 0) + m.dia;
+    /* mats 是「多材料包」的写法（{M01:50}），展开成平铺字段，
+     * 否则它会被当成一个整体渲染成 [object Object]。 */
+    if (rw.mats && typeof rw.mats === 'object') {
+      Object.keys(rw.mats).forEach((k) => {
+        const v = Number(rw.mats[k]) || 0;
+        if (v > 0) rw[k] = (Number(rw[k]) || 0) + v;
+      });
+      delete rw.mats;
+    }
+    /* 与 rwText() 保持同一口径。
+     * BUG（实测 6 封邮件 5 封显示「无附件」）：
+     *   皮肤/宝石/称号/头像框这类附件的【值是物品 id 字符串】，
+     *   原判定 `(rw[k]||0) > 0` 对字符串恒为 false（'sk_c01b' > 0 → false），
+     *   整条奖励被过滤掉 → 只剩数字附件时整封显示「无附件」。
+     *   而领取走 E.grant(m.rw) 是能到账的：玩家看到「无附件」就不会点，
+     *   运营发的皮肤/宝石/称号补偿等于白发。
+     *   上一轮只修了 toast 用的 rwText，漏了邮件列表这条显示路径。 */
+    const ks = Object.keys(rw).filter((k) => {
+      const v = rw[k];
+      if (typeof v === 'number') return v > 0;
+      if (v == null) return false;
+      if (typeof v === 'object') return false;
+      return String(v).trim() !== '' && String(v) !== '0';
+    });
+    if (!ks.length) return '<span class="sub">无附件</span>';
+    return ks.map((k) => {
+      const v = rw[k], n = Number(v);
+      if (typeof v === 'number' || (String(v).trim() !== '' && isFinite(n))) {
+        return `<span class="tag y">${this.esc(E.itemName(k))}×${E.fmt(n)}</span>`;
+      }
+      /* 非数字：值本身就是物品 id。宝石是裸 id（G_R），查宝石表拿中文名，
+       * 否则玩家看到的是「G_R」而不是「红宝石」。 */
+      return `<span class="tag y">${this.esc(this.rwItemName(k, v))}</span>`;
+    }).join(' ');
+  },
+  /* 邮件是否可领（未到生效时间 / 已过期 都不可领）
+   * BUG：后台支持设「生效时间」和「有效期」，但面板此前完全不看这两个字段，
+   * 过期邮件照样显示「领取」按钮、照样能领走附件里的 9999 金币。 */
+  mailActive(m) {
+    /* 【改系统时间 BUG 修复】此前用设备时钟：玩家把时钟往回调，
+     * 已过期的补偿邮件会重新变成可领（含大额金币/钻石的运营补偿）。 */
+    const now = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
+    if (m.startAt && m.startAt > now) return false;
+    if (m.expireAt && m.expireAt < now) return false;
+    return true;
+  },
+  r_mail(p, tab) {
+    /* 排序：两个写入点（后台单发、运营指令）都是 unshift，新邮件在前。
+     * 而面板此前又做了一次 reverse —— 于是最新发的邮件被排到最后，
+     * 玩家打开邮件箱第一眼看到的是最旧的一封。这里去掉多余的反转。 */
+    const ms = (p.mail || []).slice();
+    const un = ms.filter((m) => !m.got && this.mailActive(m)).length;
+    return `<div class="card"><div class="card-t">邮件 <span class="sub">${un} 封未读</span></div>
+      ${ms.length ? ms.map((m) => {
+        const act = this.mailActive(m);
+        const exp = m.expireAt && m.expireAt < (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
+        const wait = m.startAt && m.startAt > Date.now();
+        return `<div class="zrow">
+        ${this.zAvatarHTML(m.t)}
+        <div class="zi"><b>${this.esc(m.t || '邮件')}</b><span>${this.esc(m.b || '')}</span>
+          <span>${this.mailRwText(m)}${exp ? '<span class="st off">已过期</span>' : wait ? '<span class="st off">待生效</span>' : ''}</span></div>
+        ${m.got ? '<span class="st off">已领</span>'
+          : (act ? `<button class="btn sm g" data-ml="${m.id || ''}">领取</button><i class="gdot"></i>`
+                 : '<span class="st off">不可领</span>')}
+      </div>`; }).join('') : '<div class="lbl">暂无邮件</div>'}
+      <button class="btn g" id="mailAll" style="width:100%;margin-top:8px">一键领取</button>
+    </div>`;
+  },
+  /* ---------- 排行榜（含表33排名奖励） ---------- */
+  r_rank(p) {
+    const boards = ['无尽生存榜', '战力榜', '活动冲榜'];
+    const myRank = { '无尽生存榜': p.rankEndless || 0, '战力榜': p.rankPower || 0, '活动冲榜': p.rankEv || 0 };
+    return `<div class="card"><div class="card-t">我的排名</div>
+      ${boards.map((b) => {
+        const rk = myRank[b] || 0;
+        return `<div class="kv"><span>${b}</span><b style="color:${rk ? 'var(--yel)' : 'var(--txt3)'}">${rk ? '第 ' + rk + ' 名' : '未上榜'}</b></div>`;
+      }).join('')}
+    </div>
+    <div class="card"><div class="card-t">排名奖励</div>
+      ${boards.map((b) => `<div class="sub" style="color:var(--yel);font-weight:var(--fw-bold);margin-top:6px">${b}</div>
+        ${(EX.rankRewards || []).filter((x) => x.board === b).map((rw) => {
+          const rk = myRank[b] || 0;
+          const inRank = rk >= rw.lo && rk <= rw.hi;
+          const got = (p.rankRwGot || {})[E.rankRwKey(p, b, rw)];
+          return `<div class="zrow">
+            <div class="zav">🏅</div>
+            <div class="zi"><b>${rw.rank}</b><span>${rw.cyc}结算 · ${Object.keys(rw.rw).map((k) => E.itemName(k)).join('、')}</span></div>
+            ${got ? '<span class="st on">已领取</span>'
+              : (inRank ? `<button class="btn sm g" data-rk="${b}|${rw.id}">领取</button>`
+                        : '<span class="st off">未达名次</span>')}</div>`;
+        }).join('')}`).join('')}
+    </div>
+    <div class="card"><div class="card-t">全服榜单 <span class="sub">通关后自动上传</span></div>
+      <div class="pn-tabs" style="padding:0 0 8px">${['无尽生存榜', '战力榜', '活动冲榜'].map((b) =>
+        `<div class="pt ${(this.rankBoard || '无尽生存榜') === b ? 'on' : ''}" data-rkb="${b}">${b}</div>`).join('')}</div>
+      ${(function () {
+        const board = this.rankBoard || '无尽生存榜';
+        let lb = (window.LB || []).slice();
+        /* 三个榜单此前共用同一份列表：云端只按「无尽层数」排序，
+         * 于是切到战力榜/活动冲榜看到的名次仍是按无尽层数排的 ——
+         * 战力第一的人可能显示在第十名。现在按各榜自己的字段排序。 */
+        if (board === '战力榜') lb.sort((a, b) => (b.pw || 0) - (a.pw || 0));
+        else if (board === '活动冲榜') lb.sort((a, b) => (b.ev || 0) - (a.ev || 0));
+        else lb.sort((a, b) => (b.eb || 0) - (a.eb || 0) || (b.pw || 0) - (a.pw || 0));
+        if (!lb.length) return '<div class="lbl">暂无排行数据，通关后自动上传</div>';
+        /* 榜单昵称来自云端 leaderboard.json，是别人填的 —— 必须转义。
+         * 不转义的话，谁把昵称设成 <img src=x onerror=...> 并上传成绩，
+         * 所有打开排行榜的玩家都会执行那段脚本（存储型 XSS）。 */
+        return lb.map((x, i) => `<div class="item">
+          <div class="ic" style="font-size:var(--fs-lg);background:${i < 3 ? 'linear-gradient(135deg,#ffe9a8,#f0a020)' : 'rgba(10,16,28,.7)'};color:${i < 3 ? '#2a1a00' : '#fff'}">${i + 1}</div>
+          <div class="info"><div class="nm">${this.esc(x.n || x.name || '匿名')}</div>
+            <div class="sub">${x.lv || '—'} · 无尽 ${x.eb || 0} 层</div></div>
+          <div class="act"><span class="tag y">${
+            /* BUG：无尽生存榜此前与战力榜共用 E.fmt(x.pw||0)，
+             *   榜名写着「无尽生存」，主数值列的却是【战力】，
+             *   实测「第1名 甲 无尽120层」旁边显示 5000 —— 玩家会读成 5000 层。
+             *   现在三个榜各显示自己的排名依据：层数 / 战力 / 积分。 */
+            board === '活动冲榜' ? E.fmt(x.ev || 0) + ' 积分'
+              : board === '战力榜' ? E.fmt(x.pw || 0) + ' 战力'
+                : E.fmt(x.eb || 0) + ' 层'}</span></div></div>`).join('');
+      }).call(this)}
+    </div>`;
+  },
+  b_rank(p) {
+    /* 榜单切换：此前三个榜共用同一份按无尽层数排好的列表，没有切换入口 */
+    $$('#pnBody [data-rkb]').forEach((t) => { t.onclick = () => {
+      this.rankBoard = t.dataset.rkb; this.open('rank');
+    }; });
+    $$('#pnBody [data-rk]').forEach((b) => { b.onclick = () => {
+      const [board, id] = b.dataset.rk.split('|');
+      const rw = (EX.rankRewards || []).find((x) => x.id === id);
+      const rank = board === '战力榜' ? (p.rankPower || 0) : board === '活动冲榜' ? (p.rankEv || 0) : (p.rankEndless || 0);
+      const r = E.claimRankRw(p, board, rank);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.saveSoon(p); this.open('rank'); this.home(); }
+    }; });
+  },
+
+  b_mail(p, tab) {
+    /* 单封邮件「领取」按钮
+     * BUG：r_mail 里渲染了 <button data-ml="...">领取</button>，
+     * 但 b_mail 此前只绑定了「一键领取」#mailAll，单封按钮没有任何 onclick。
+     * 结果：玩家点单封邮件的领取完全没反应（只有一键领取能用），
+     * 想只领某一封、或一键领取已用过的场景下，邮件奖励永远拿不到。
+     * 现在补上：按邮件 id 领取，发奖励并标记 got。 */
+    $$('#pnBody [data-ml]').forEach((btn) => {
+      btn.onclick = () => {
+        const mid = btn.dataset.ml || '';
+        const m = (p.mail || []).find((x) => String(x.id || '') === mid) || null;
+        if (!m) { this.toast('邮件不存在', 'err'); return; }
+        if (m.got) { this.toast('已领取过', 'err'); return; }
+        if (!this.mailActive(m)) {
+          this.toast(m.expireAt && m.expireAt < Date.now() ? '该邮件已过期' : '该邮件尚未生效', 'err');
+          return;
+        }
+        /* 【严重 BUG 修复】两处都与项目内已统一的口径脱节：
+         * ① p.gold += g 是裸加、完全没过 E.safeAmt。
+         *    后台/运营发的邮件里 gold 若是字符串（表单取值极易如此），
+         *    1000 + '100' = "2000100" —— p.gold 从【数字变成字符串】。
+         *    实测：金币 2000 领一封 gold:'100' 的邮件 → p.gold 变成字符串
+         *    "2000100"，界面还提示「金币×100」。
+         *    它一旦写进 JSON 存档，读回来所有算术全变 NaN —— 商店、结算、
+         *    升级全线崩坏，且玩家看到的数字完全正常，无从察觉。
+         *    现在一律过 safeAmt（非有限值/<=0/字符串数字都按规范处理）。
+         * ② 先 `m.got = true` 再 grant —— 附件里的物品键写错时 grant 一项都
+         *    发不出去，邮件却已被标记已领，提示还说「领取成功」。
+         *    玩家以为拿到了，实际永久丢失（运营改好配置也补不回来）。
+         *    与 claimTask / actRwTake 同一道防线：发得出去才允许标记。 */
+        const _rw = (m.rw && Object.keys(m.rw).length) ? m.rw : null;
+        if (_rw && E.validGive && !E.validGive(_rw)) {
+          this.toast('该邮件附件配置异常，暂不可领取', 'err'); return;
+        }
+        m.got = true;
+        const g = E.safeAmt(m.gold), d = E.safeAmt(m.dia);
+        p.gold = E.safeAmt(p.gold) + g;
+        p.diamond = E.safeAmt(p.diamond) + d;
+        if (_rw) E.grant(p, _rw);
+        E.save(p);
+        if (window.SND) SND.play('get');
+        this.toast('领取成功：' + this.rwText(Object.assign({}, m.rw || {}, g ? { gold: g } : {}, d ? { diamond: d } : {})), 'ok');
+        this.open('mail'); this.home();
       };
     });
-    const cb = $('#codeBtn');
-    if (cb) cb.onclick = () => {
-      const v = ($('#codeInp').value || '').trim().toUpperCase();
-      const codes = { VIP666: [8000, 60], VIP888: [15000, 100], SVIP999: [30000, 200], XJSKP888: [20000, 150], DZ789: [50000, 300] };
-      if (!codes[v]) return this.toast('兑换码无效', 'err');
-      if ((p.usedCodes || []).indexOf(v) >= 0) return this.toast('该码已使用', 'err');
-      p.usedCodes = p.usedCodes || []; p.usedCodes.push(v);
-      p.gold += codes[v][0]; p.diamond += codes[v][1];
-      this.toast('兑换成功：金币+' + E.fmt(codes[v][0]) + ' 钻石+' + codes[v][1], 'ok');
-      this.open('shop', '兑换'); this.home();
+    const ab = $('#mailAll');
+    if (ab) ab.onclick = () => {
+      /* 一键领取此前也不看生效/过期时间，过期邮件照样能领走附件。 */
+      const ms = (p.mail || []).filter((m) => !m.got && this.mailActive(m));
+      if (!ms.length) return this.toast('没有可领取的邮件', 'err');
+      let g = 0, d = 0; const all = {};
+      /* 与单条领取同一口径：
+       * ① gold/dia 过 safeAmt —— 字符串金额会把 p.gold 拼成字符串
+       *    （1000 + '100' = "2000100"），落盘后整个金币系统变 NaN。
+       * ② 附件键无效的那封【跳过且不标记已领】，避免"提示成功、永久丢失"。 */
+      let doneN = 0;
+      ms.forEach((m) => {
+        const _rw = (m.rw && Object.keys(m.rw).length) ? m.rw : null;
+        if (_rw && E.validGive && !E.validGive(_rw)) return;
+        m.got = true; doneN++;
+        g += E.safeAmt(m.gold); d += E.safeAmt(m.dia);
+        /* 后端/后台邮件常把奖励放在 rw（物品）而非 gold/dia，
+         * 此前一键领取只算 gold/dia，rw 里的材料、芯片、皮肤全部漏发。 */
+        if (m.rw && Object.keys(m.rw).length) {
+          E.grant(p, m.rw);
+          Object.keys(m.rw).forEach((k) => {
+            const v = m.rw[k], n = Number(v);
+            /* 非数字（皮肤 / 宝石 id）不能做累加 —— 累加结果 NaN，
+             * 会被 rwText 的过滤整条丢掉，提示里就看不见这件奖励。 */
+            if (typeof v === 'number' || (String(v).trim() !== '' && isFinite(n))) all[k] = (all[k] || 0) + n;
+            else all[k] = v;
+          });
+        }
+      });
+      if (!doneN) return this.toast('没有可领取的邮件（附件配置异常）', 'err');
+      if (g) all.gold = (all.gold || 0) + g;
+      if (d) all.diamond = (all.diamond || 0) + d;
+      p.gold = E.safeAmt(p.gold) + g; p.diamond = E.safeAmt(p.diamond) + d; E.save(p);
+      if (window.SND) SND.play('get');
+      this.toast('领取成功：' + this.rwText(all), 'ok');
+      this.open('mail'); this.home();
+    };
+  },
+
+  /* ---------- 活动 ---------- */
+  /* 后台「活动创建」建出来的活动（id 形如 ACTxxx）此前没有任何按钮：
+   * 游戏端的参与入口是照 EV01/EV02/EV04/EV06 硬编码的，
+   * 于是运营新建的活动玩家只能看见、点不了，成了纯展示。
+   * 这里按活动自带的 levelId / rw 生成通用入口。 */
+  actExtraBtn(p, a) {
+    /* BUG：此前 `if (isBuiltin) return ''` 把 EV01~EV06 全部排除，
+     *   6 个内置活动配了 rw（代币/芯片/钻石/限定称号）却一个领奖按钮都没有，
+     *   奖励永远发不出去。现在内置活动同样生成入口（EV04/EV05 的 rw 为空，
+     *   不会生成按钮，它们本来就有首充/商店入口）。 */
+    const got = E.actRwGot(p, a.id);
+    let h = '';
+    if (a.levelId) h += `<button class="btn sm" data-actlv="${a.id}">前往</button>`;
+    if (a.rw && Object.keys(a.rw).length) {
+      /* 未开始 / 已结束的活动此前照样渲染出「领奖」按钮（点下去也能领到，
+       * engine.actRwTake 那边已加拦截）。这里同步置灰，避免玩家点了才被拒。 */
+      const off = a.status && a.status !== '运行中';
+      /* 参与条件（等级 / 通关数 / 无尽波次 / 需先签到 / 需先打 BOSS 突袭）
+       * BUG：这里此前只判「有 rw / 未领 / 运行中」，完全不看 actCondOk ——
+       *   而 engine.actRwTake 是会判的。结果按钮渲染成绿油油的「领奖」且可点，
+       *   玩家点下去才弹一句「需无尽模式达到 1 波」被拒（实测 EV01/EV02/EV03/EV06
+       *   四个按钮全部如此），看着像按钮坏了。
+       *   与「体力已满」「已拥有」同一口径：条件不满足就置灰并说明，点了才被拒属于谎报。 */
+      let cd = { ok: true, msg: '' };
+      try { cd = (E.actCondOk ? E.actCondOk(p, a) : null) || { ok: true, msg: '' }; } catch (e) { cd = { ok: true, msg: '' }; }
+      h += got ? '<span class="st off">已领</span>'
+        : off ? `<span class="st off">${a.status === '待开启' ? '未开始' : '已结束'}</span>`
+        : !cd.ok ? `<span class="st off" title="${String(cd.msg || '').replace(/"/g, '')}">未达条件</span>`
+        : `<button class="btn sm g" data-actrw="${a.id}" style="margin-left:4px">领奖</button>`;
+    }
+    return h;
+  },
+  r_act(p, tab) {
+    /* 后台「强制下架」/已结束的活动必须隐藏：
+     * 此前游戏端原样列出全部活动，运营紧急下架了，玩家照样看得见、照样能参与。 */
+    const acts = (EX.acts || EX.activities || []).filter((a) => {
+      if (a.status === '强制下架') return false;
+      /* 同样改用权威时间：否则玩家调时钟就能让已下架/已结束的活动重新出现 */
+      const _actNow = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
+      if (a.endAt && _actNow > a.endAt) return false;
+      if (a.startAt && _actNow < a.startAt - 864e5 * 30) return false;  /* 一个月后才开始的先不显示 */
+      return true;
+    });
+    /* 计数此前直接取 acts.length，把「待开启」的后台活动也算成进行中
+     * （实测：6 个内置 + 2 个云端，其中 1 个 3 天后才开始，顶部仍写「8 个进行中」）。
+     * 内置活动无 status 字段（常驻），按运行中计。 */
+    const liveN = acts.filter((a) => !a.status || a.status === '运行中').length;
+    return `<div class="card"><div class="card-t">活动
+      <span class="sub">${liveN} 个进行中${liveN < acts.length ? '（含 ' + (acts.length - liveN) + ' 个未开始）' : ''}</span></div>
+      ${acts.length ? acts.map((a) => `<div class="zrow">
+        <div class="zav">${a.icon || '🎪'}</div>
+        <div class="zi"><b>${a.n}</b><span>${a.desc || ''}</span>
+          <span style="font-size:var(--fs-xs);color:var(--c-blue-550)">${a.time || ''} · ${a.rule || ''}</span>
+          ${a.rwDesc ? `<span style="font-size:var(--fs-xs);color:var(--c-amber-100)">🎁 ${a.rwDesc}</span>` : ''}
+          ${a.id === 'EV02' ? `<span style="font-size:var(--fs-xs);color:var(--c-amber-100)">今日剩余 ${E.bossRaidLeft(p)} / 3 次</span>` : ''}
+          ${a.id === 'EV04' ? `<span style="font-size:var(--fs-xs);color:${p.firstRech ? '#7ee38a' : '#ffd76a'}">${p.firstRech ? '已使用' : '未使用 · 首次购买钻石翻倍'}</span>` : ''}
+        </div>
+        ${a.id === 'EV02' ? (() => { const _l = E.bossRaidLeft(p);
+            return `<button class="btn sm" data-raid="1" ${_l > 0 ? '' : 'disabled'}>${_l > 0 ? '挑战' : '次数已用完'}</button>`; })() : ''}
+        ${a.id === 'EV01' ? `<button class="btn sm" data-evendless="1">参与</button>` : ''}
+        ${a.id === 'EV06' ? `<button class="btn sm" data-evrank="1">查看</button>` : ''}
+        ${this.actExtraBtn(p, a)}
+      </div>`).join('') : '<div class="lbl">暂无活动</div>'}
+    </div>
+    <div class="card"><div class="card-t">签到 <span class="sub">每日登录领取</span></div>
+      <div class="grid4">${[1, 2, 3, 4, 5, 6, 7].map((d) => {
+        const got = (p.signDays || 0) >= d;
+        return `<div class="gcell ${got ? 'sel' : ''}">
+          <div class="gi">${got ? '✔' : '🎁'}</div><div class="gn">第${d}天</div></div>`;
+      }).join('')}</div>
+      <button class="btn" id="actSign" ${E.signDone(p) ? 'disabled' : ''} style="width:100%;margin-top:8px">${E.signDone(p) ? '今日已签到' : '每日签到'}</button>
+    </div>
+    ${this.rNewbie7(p)}
+    ${this.rActBox(p)}
+    ${this.rComeback(p)}`;
+  },
+
+  /* v1.0 新手 7 日：一次性，按注册天数推进，断签不重置 */
+  rNewbie7(p) {
+    const list = EX.NEWBIE7 || [];
+    if (!list.length) return '';
+    const cur = E.newbieDay(p);
+    const got = E.newbieClaimable(p);
+    const allDone = list.every((it) => E.newbieGot(p, it.d));
+    if (allDone) return '';   // 7 天全领完就不再占位
+    return `<div class="card"><div class="card-t">新手七日 <span class="sub">注册第 ${cur} 天${got.length ? ' · ' + got.length + ' 份待领' : ''}</span></div>
+      <div style="font-size:var(--fs-xs);color:var(--txt3);margin-bottom:6px">每日登录领取，断签不清空进度</div>
+      <div class="grid4">${list.map((it) => {
+        const g = E.newbieGot(p, it.d);
+        const can = cur >= it.d && !g;
+        return `<div class="gcell ${g ? 'sel' : (can ? 'hl' : '')}" data-nb7="${it.d}" title="${this.rwText(it.rw)}">
+          <div class="gi">${g ? '✔' : it.icon}</div>
+          <div class="gn">第${it.d}天</div>
+          ${g ? '' : `<button class="btn sm" data-nb7t="${it.d}" ${can ? '' : 'disabled'} style="width:100%;margin-top:2px">${can ? '领取' : '未到'}</button>`}
+        </div>`;
+      }).join('')}</div></div>`;
+  },
+
+  /* v1.0 每日活跃度宝箱 */
+  rActBox(p) {
+    const list = EX.DAILY_ACT || [];
+    if (!list.length) return '';
+    const pt = E.dailyActPoint(p);
+    const maxV = list[list.length - 1].v;
+    return `<div class="card"><div class="card-t">今日活跃 <span class="sub">${pt} / ${maxV}</span></div>
+      <div class="bar" style="margin-bottom:8px"><i style="width:${Math.min(100, Math.round(pt / maxV * 100))}%"></i></div>
+      <div class="grid3">${list.map((b) => {
+        const g = E.actBoxGot(p, b.v);
+        const can = pt >= b.v && !g;
+        return `<div class="gcell ${g ? 'sel' : (can ? 'hl' : '')}" title="${this.rwText(b.rw)}">
+          <div class="gi">${g ? '✔' : b.icon}</div>
+          <div class="gn">${b.v}点</div>
+          ${g ? '' : `<button class="btn sm" data-abt="${b.v}" ${can ? '' : 'disabled'} style="width:100%;margin-top:2px">${can ? '开启' : '未达'}</button>`}
+        </div>`;
+      }).join('')}</div></div>`;
+  },
+
+  /* v1.0 回归奖励 */
+  rComeback(p) {
+    const c = EX.COMEBACK;
+    if (!c || !c.days || !c.days.length) return '';
+    if (!E.comebackOn(p)) return '';
+    const can = E.comebackClaimable(p);
+    return `<div class="card"><div class="card-t">回归礼包 <span class="sub">离线 ${E.awayDays(p)} 天</span></div>
+      <div style="font-size:var(--fs-xs);color:var(--txt3);margin-bottom:6px">欢迎回来！连续登录 3 天领取补给</div>
+      ${c.days.map((it) => {
+        const g = E.comebackGot(p, it.d);
+        const ok = can.indexOf(it.d) >= 0;
+        return `<div class="zrow"><div class="zav">🎁</div>
+          <div class="zi"><b>${it.n}</b><span>${this.rwText(it.rw)}</span></div>
+          <button class="btn sm" data-cbt="${it.d}" ${g ? 'disabled' : (ok ? '' : 'disabled')}>${g ? '已领取' : (ok ? '领取' : '第' + it.d + '天')}</button>
+        </div>`;
+      }).join('')}</div>`;
+  },
+
+  /* 奖励对象的展示文案（供 title / 说明行共用，避免各处各写一套） */
+  rwText(rw) {
+    if (!rw || typeof rw !== 'object') return '';
+    const MAP = { gold: '金币', diamond: '钻石', stamina: '体力', ach: '成就点', evToken: '活动代币',
+      M01: '金属', M02: '合金', M03: '稀有金属', M04: '火药', M05: '宝石材料', P01: '零件', P02: '图纸',
+      chipN: '普通芯片', chipE: '精英芯片', chipL: '传说芯片', chipRed: '传说芯片' };
+    const out = [];
+    Object.keys(rw).forEach((k) => {
+      if (k === 'gun') out.push('武器·' + ((EX.guns || []).find((x) => x.id === rw[k]) || {}).n || rw[k]);
+      else if (k === 'skin') out.push('皮肤·' + ((EX.skins || []).find((x) => x.id === rw[k]) || {}).n || rw[k]);
+      else if (k === 'title') out.push('称号');
+      else out.push((MAP[k] || k) + '×' + rw[k]);
+    });
+    return out.join(' · ');
+  },
+  b_act(p, tab) {
+    /* v1.0 新手 7 日 */
+    $$('#pnBody [data-nb7t]').forEach((b) => { b.onclick = () => {
+      const r = E.newbieTake(p, b.getAttribute('data-nb7t'));
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.saveSoon(p); this.open('act'); this.home(); }
+    }; });
+    /* v1.0 活跃度宝箱 */
+    $$('#pnBody [data-abt]').forEach((b) => { b.onclick = () => {
+      const r = E.actBoxTake(p, b.getAttribute('data-abt'));
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.saveSoon(p); this.open('act'); this.home(); }
+    }; });
+    /* v1.0 回归礼包 */
+    $$('#pnBody [data-cbt]').forEach((b) => { b.onclick = () => {
+      const r = E.comebackTake(p, b.getAttribute('data-cbt'));
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.saveSoon(p); this.open('act'); this.home(); }
+    }; });
+    const sb = $('#actSign');
+    if (sb) sb.onclick = () => {
+      const r = E.sign(p); this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('get'); E.saveSoon(p); this.open('act'); this.home(); }
+    };
+    /* 表22 EV02 BOSS突袭：每日 3 次 */
+    $$('#pnBody [data-raid]').forEach((b) => { b.onclick = () => {
+      const r = E.bossRaidStart(p);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      /* BUG：此处原为 startBattle('boss', null)，levelId 为 null 会退化成
+       *      「当前进度关卡」（普通关），点 BOSS 突袭却一个 BOSS 都遇不到。
+       *      现在显式取 BOSS 关；一个都没解锁时退回当前进度关卡。 */
+      if (r.ok) {
+        E.save(p);
+        const bId = E.bossRaidLevel ? E.bossRaidLevel(p) : null;
+        /* 第 4 个参数 raid=true：标记为活动战斗，
+         * 结算时会掷【活动掉落】（表31 DR12 精英芯片 30%）。 */
+        this.close(); startBattle('normal', bId || null, null, true);
+      }
+      else this.open('act');
+    }; });
+    /* 表22 EV01 丧尸围城 → 无尽模式 */
+    $$('#pnBody [data-evendless]').forEach((b) => { b.onclick = () => {
+      this.toast('进入丧尸围城（无尽生存）', 'ok');
+      this.close(); startBattle('endless');
+    }; });
+    /* 表22 EV06 无尽冲榜 → 排行榜 */
+    $$('#pnBody [data-evrank]').forEach((b) => { b.onclick = () => {
+      this.close(); this.open('rank');
+    }; });
+    /* 后台新建活动：前往指定关卡 */
+    $$('#pnBody [data-actlv]').forEach((b) => { b.onclick = () => {
+      const a = (EX.acts || EX.activities || []).find((x) => x.id === b.dataset.actlv);
+      if (!a) return;
+      const lv = a.levelId;
+      if (!E.levelUnlocked(p, lv)) return this.toast('该活动关卡尚未解锁', 'err');
+      this.close(); startBattle('normal', lv);
+    }; });
+    /* 活动领奖：内置 EV01~EV06 + 后台新建 ACTxxx 走同一条路径
+     * （内置活动此前被 isBuiltin 排除，一个按钮都没有） */
+    $$('#pnBody [data-actrw]').forEach((b) => { b.onclick = () => {
+      const r = E.actRwTake(p, b.dataset.actrw);
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) {
+        E.save(p);
+        if (window.SND) SND.play('get');
+        this.open('act'); this.home();
+      }
+    }; });
+  },
+
+  /* ---------- 关卡选择 ---------- */
+  r_level(p) {
+    const ch = this.curChapter || E.chapterOf(E.curLevel(p));
+    const cd = E.chapter(ch)
+      /* 章节表被清空时上面两个都是 undefined，读 cd.icon 直接抛错，
+       * 关卡选择页整体白屏。占位后至少能进界面。 */
+      || { id: 1, n: '第一章 · 街区沦陷', icon: '🏙️' };
+    /* 当前难度：普通 / 困难 / 恶魔（每关三档，各自独立记录星级与奖励） */
+    const diff = this.curDiff || 'normal';
+    const dm = E.diffMul(diff);
+    const diffs = EX.DIFFS || [{ id: 'normal', n: '普通', icon: '🌱' }];
+    const list = E.levels().filter((x) => x.ch === ch);
+    /* 难度切换条 */
+    const diffBar = `<div class="card"><div class="card-t">难度</div>
+      <div class="lvgrid" style="grid-template-columns:repeat(3,1fr)">
+      ${diffs.map((d) => {
+        const cur = d.id === dm.id;
+        const dd = E.diffMul(d.id);
+        /* 难度选中色：行内样式同样会被 V2 统一层的 !important 压掉
+         * （.lvc 的 background/border 都带了 !important），
+         * 导致「普通/困难/噩梦」选了看不出。这里显式加 !important 保住配色。 */
+        return `<button class="lvc ${cur ? 'cur' : ''}" data-df="${d.id}" style="${cur ? 'background:' + (d.color || '#5fd97a') + '22 !important;border-color:' + (d.color || '#5fd97a') + ' !important' : ''}">
+          <i style="font-size:var(--fs-4xl);font-style:normal;display:block">${d.img ? `<img src="${d.img}" style="width:30px;height:30px;object-fit:cover;border-radius:6px">` : d.icon}</i>
+          <b style="font-size:var(--fs-xs)">${d.n}</b>
+          <span style="font-size:var(--fs-xs);opacity:.85">奖励×${dd.rw} · 体力×${dd.stam}</span></button>`;
+      }).join('')}</div>
+      <div class="sub" style="margin-top:6px">${E.diffDef(dm.id).desc || ''}</div></div>`;
+    /* 章节导航：原先放在页面最底部，玩家要滚过该章全部 10 关才能切章。
+     * 现在提到关卡列表上方，与难度条并列 —— 10 章 100 关必须能一步跳转。 */
+    const chBar = `<div class="card"><div class="card-t">章节</div>
+      <div class="lvgrid" style="grid-template-columns:repeat(5,1fr)">
+      ${E.chapters().map((c) => {
+        const cs = E.chapterStat ? E.chapterStat(p, c.id, diff) : null;
+        const cur = c.id === ch;
+        const done = cs && cs.cleared >= cs.total;
+        return `<button class="lvc ${cur ? 'cur' : ''}" data-ch="${c.id}" style="${cur ? 'border-color:' + (E.diffDef(diff).color || '#5fd97a') + ' !important;background:' + (E.diffDef(diff).color || '#5fd97a') + '22 !important' : ''}">
+          <i style="font-size:var(--fs-4xl);font-style:normal;display:block">${c.img ? `<img src="${c.img}" style="width:30px;height:30px;object-fit:cover;border-radius:6px">` : c.icon}</i>
+          <b style="font-size:var(--fs-xs)">${c.n.split(' · ')[0]}</b>
+          ${cs ? `<span style="font-size:var(--fs-xs);opacity:.9;${done ? 'color:' + (E.diffDef(diff).color || '#5fd97a') : ''}">${done ? '✓' : cs.cleared + '/' + cs.total}</span>` : ''}</button>`;
+      }).join('')}</div></div>`;
+    /* 章节进度摘要：把「这章打到哪了、拿了多少星」直接摆出来 */
+    const stat = E.chapterStat ? E.chapterStat(p, ch, diff) : null;
+    const chHead = stat ? `<div class="card-t">${cd.img ? `<img src="${cd.img}" style="width:20px;height:20px;object-fit:cover;border-radius:5px;vertical-align:-4px">` : cd.icon} ${cd.n}
+      <span class="sub" style="float:right;font-size:var(--fs-xs)">通关 ${stat.cleared}/${stat.total} · ★${stat.stars}/${stat.maxStars}</span></div>` : '';
+    /* 【章节集星奖励】V1.2.0 · P-17
+     * 推图途中唯一的中途目标：把本章 10 关都打到 3 星。
+     * 进度条 + 三档领奖，星数不足时按钮置灰（不给可点的假希望）。 */
+    const csCard = (() => {
+      if (!E.chapterStarState) return '';
+      const cs = E.chapterStarState(p, ch, diff);
+      const pct = Math.max(0, Math.min(100, Math.round(cs.stars / Math.max(1, cs.maxStars) * 100)));
+      return `<div class="card"><div class="card-t">本章集星
+        <span class="sub" style="float:right;font-size:var(--fs-xs)">★ ${cs.stars}/${cs.maxStars}</span></div>
+        <div style="height:8px;background:var(--surface-3);border-radius:4px;overflow:hidden;margin:6px 0">
+          <div style="height:100%;width:${pct}%;background:var(--gold)"></div></div>
+        <div class="lvgrid" style="grid-template-columns:repeat(3,1fr)">
+        ${cs.tiers.map((t) => `<div class="lvc" style="text-align:center;${t.got ? 'opacity:.55' : ''}">
+          <b style="font-size:var(--fs-xs)">★ ${t.star}</b>
+          <div class="sub" style="font-size:var(--fs-xs)">${this.rwTxt(t.rw)}</div>
+          ${t.got ? '<span class="tag">已领取</span>'
+            : (cs.stars < t.star ? '<span class="tag r" style="opacity:.7">星数不足</span>'
+              : `<button class="btn c sm" data-csr="${t.i}">领取</button>`)}
+        </div>`).join('')}</div></div>`;
+    })();
+    return chBar + diffBar + csCard + `<div class="card">${chHead || `<div class="card-t">${cd.n}</div>`}
+      ${list.map((l) => {
+        const lock = !E.levelUnlocked(p, l.id);
+        const st = E.diffStars(p, l.id, diff);
+        const isBoss = l.cond === 'boss' || l.cond === 'bossAll';
+        const cost = E.staminaCost(l.id, diff);
+        const dlock = !E.diffUnlocked(p, l.id, diff);
+        /* 奖励按当前难度倍率展示（与实际发放同源，避免面板与实际不符） */
+        const rwv = {};
+        for (const k in (l.rw || {})) rwv[k] = k === 'gold' ? Math.round(l.rw[k] * dm.rw) : Math.round(l.rw[k] * dm.rw);
+        /* 星级可视化：实心/空心星一眼看出打了几星，比「★3」的纯数字直观 */
+        const starTxt = '★'.repeat(st || 0) + '☆'.repeat(Math.max(0, 3 - (st || 0)));
+        /* 原本第二行「20 波 · 强度 ×1.00 · 普通僵尸、疾跑僵尸」在该章 10 关里
+         * 完全相同，纯占版面（实测卡片高 128px，一屏仅 3~4 关）。
+         * 现在波次并入第二行，僵尸种类只在 BOSS 关展示（普通关构成一致，无信息量）。 */
+        const poolTxt = isBoss
+          ? ' · ' + (Array.isArray(l.pool) ? l.pool : []).map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')
+          : '';
+        return `<div class="item"><div class="ic">${isBoss ? '👹' : '🎯'}</div>
+          <div class="info"><div class="nm">${l.id} ${l.n} ${isBoss ? '<span class="tag r">BOSS</span>' : ''}
+            ${st ? '<span class="tag" style="background:' + (E.diffDef(diff).color || '#5fd97a') + '33 !important">' + E.diffDef(diff).icon + '★' + st + '</span>' : ''}</div>
+          <div class="sub wrap" style="letter-spacing:1px;color:${st ? (E.diffDef(diff).color || '#5fd97a') : 'inherit'}">${starTxt}</div>
+          <div class="sub wrap">强度 ×${(Number(l.mul) || 1).toFixed(2)} · ${l.waves} 波 · 体力 ${cost}${poolTxt}</div>
+          <div class="sub wrap">${st ? '已通关' : '未通关'} · 奖励：${this.rwTxt(rwv)}</div>
+          ${lock ? '<div class="sub" style="color:var(--c-red-300)">需先通关 ' + l.unlock + '</div>' : ''}
+          ${(!lock && dlock) ? '<div class="sub" style="color:var(--c-red-300)">需先通关「' + E.diffDef(E.diffDef(diff).unlock).n + '」难度</div>' : ''}</div>
+          <div class="act">${lock ? '<span class="tag r">未解锁</span>'
+            : dlock ? '<span class="tag r">难度未开</span>'
+            : `<button class="btn c sm" data-lv="${l.id}" data-df="${diff}">挑战</button>`
+            + (st ? `<button class="btn sm o" data-sw="${l.id}" style="margin-top:4px">扫荡</button>` : '')}</div></div>`;
+      }).join('')}</div>
+      <div class="card"><div class="card-t">无尽模式</div>
+      ${(() => {
+        /* 解锁口径统一走 E.endlessUnlocked（读 EX.ENDLESS_UNLOCK）。
+         * 此前 UI 写死「默认解锁」，配置项在后台改了界面也不认，属配置陷阱。 */
+        const _eOpen = E.endlessUnlocked ? E.endlessUnlocked(p) : true;
+        const _eNeed = (EX && EX.ENDLESS_UNLOCK) ? String(EX.ENDLESS_UNLOCK) : '';
+        return `<div class="kv"><span>最佳层数</span><b>${p.endlessBest || 0}</b></div>
+         <div class="sub">${_eOpen ? '已解锁 · 掉落/收益随进度章节提升' : '需先通关 ' + _eNeed}</div>
+         ${_eOpen
+           ? '<button class="btn c blk" data-lv="endless" data-df="normal">进入无尽（体力 2）</button>'
+           : '<span class="tag r">未解锁</span>'}`;
+      })()}</div>`;
+  },
+  b_level(p) {
+    /* 章节集星领奖：发奖成功才刷新，失败给提示且【不记账】 */
+    $$('#pnBody [data-csr]').forEach((b) => {
+      b.onclick = () => {
+        const ch = this.curChapter || E.chapterOf(E.curLevel(p));
+        const r = E.claimChapterStar(p, ch, this.curDiff || 'normal', +b.dataset.csr);
+        if (!r.ok) { this.toast(r.msg || '无法领取'); return; }
+        if (window.SND) SND.play('upgrade');
+        this.toast(r.msg + '：' + this.rwTxt(r.rw));
+        this.open('level');
+      };
+    });
+    $$('#pnBody [data-ch]').forEach((b) => { b.onclick = () => { this.curChapter = +b.dataset.ch; this.open('level'); }; });
+    /* 难度切换：只切档位并刷新列表，不进战斗 */
+    $$('#pnBody [data-df]').forEach((b) => {
+      if (b.dataset.lv) return;   /* 挑战按钮上的 data-df 由下面统一处理 */
+      b.onclick = () => { this.curDiff = b.dataset.df; this.open('level'); };
+    });
+    /* BUG：无尽入口也挂在 [data-lv] 上（data-lv="endless"），此前一律
+     *      按普通关调 startBattle('normal', 'endless')，mode 不是 'endless' 带来两处偏差：
+     *      ① startBattle 里「无尽模式不播章节 CG」的分支失效 → 进无尽前会先弹
+     *         第 1 章 CG 过场（无尽无章节归属，不该播）；
+     *      ② 解锁校验走 E.levelUnlocked(P,'endless')，而它内部 levelDef('endless')
+     *         找不到会回退到 1-1（unlock=null）→ 恒为 true，校验形同虚设。
+     *      现在按入口区分 mode。 */
+    $$('#pnBody [data-lv]').forEach((b) => { b.onclick = () => {
+      const df = b.dataset.df || this.curDiff || 'normal';
+      this.close();
+      if (b.dataset.lv === 'endless') startBattle('endless');
+      else startBattle('normal', b.dataset.lv, df);
+    }; });
+    $$('#pnBody [data-sw]').forEach((b) => { b.onclick = () => this.sweepBox(b.dataset.sw); });
+  },
+
+  /* ---------- 扫荡弹窗（表29：已通关关卡快速扫荡） ---------- */
+  sweepBox(lvId) {
+    const p = this.P; if (!p) return;
+    const ck = E.canSweep(p, lvId);
+    if (!ck.ok) return this.toast(ck.msg, 'err');
+    /* 扫荡体力按「手动打这关」的消耗（随难度变化），不再是固定的 5 点 */
+    const _swOne = E.sweepStamina ? E.sweepStamina(lvId, E.sweepDiff(p, lvId)) : EX.SWEEP_STAMINA;
+    const maxBySt = Math.floor((p.stamina || 0) / _swOne);
+    const max = Math.max(1, Math.min(EX.SWEEP_MAX, maxBySt));
+    /* 用与 E.sweep 同源的预览，避免「弹窗显示」与「实际到账」对不上 */
+    const rw1 = E.sweepPreview ? E.sweepPreview(p, lvId, 1) : EX.sweepRw(E.sweepLvNum ? E.sweepLvNum(lvId) : 1, 1);
+    const matTxt = Object.keys(rw1.mat || {}).map((k) => (E.itemName ? E.itemName(k) : k) + ' ×' + rw1.mat[k]).join(' · ');
+    /* 芯片掉落（BOSS 关特有）：sweep() 会真发进 p.bag，弹窗不显示就是「显示≠到账」 */
+    const chipTxt = Object.keys(rw1.chip || {}).map((q) => q + '品芯片 ×' + rw1.chip[q]).join(' · ');
+    const dropTxt = [matTxt, chipTxt].filter(Boolean).join(' · ') || '无';
+    const noSt = maxBySt < 1;
+    /* 用通用面板层承载扫荡弹窗 */
+    const box = document.getElementById('sweepBox');
+    if (!box) return this.sweepQuick(lvId, 1);
+    box.innerHTML = `<div class="pn-box"><div class="pn-hd"><b>扫荡 ${lvId}</b>
+      <button id="swX">✕</button></div><div class="pn-main"><div class="pn-body">
+      <div class="card"><div class="card-t">扫荡设置</div>
+      <div class="sub">单次消耗体力 ${_swOne} · 当前体力 ${Math.floor(p.stamina || 0)}</div>
+      <div class="sub" style="color:${E.diffDef(rw1.diff || 'normal').color}">扫荡难度：${E.diffDef(rw1.diff || 'normal').icon} ${E.diffDef(rw1.diff || 'normal').n}${rw1.diffRw > 1 ? '（奖励 ×' + rw1.diffRw + '）' : ''}</div>
+      <div class="sub">单次产出：金币 ${E.fmt(rw1.gold)} · ${dropTxt} · 经验 ${rw1.xp} · 体力 ${rw1.stamina}</div>
+      <div class="kv"><span>扫荡次数</span><b><input type="number" id="swN" value="${max}" min="1" max="${max}"
+        style="width:64px;padding:4px;border-radius:6px;border:1px solid var(--c-blue-750);background:var(--c-ink-560);color:var(--c-white)"></b></div>
+      <button class="btn c blk" id="swGo" ${noSt ? 'disabled style="opacity:.5"' : ''}>${noSt ? '体力不足（需 ' + _swOne + ' 点）' : '开始扫荡（最多 ' + max + ' 次）'}</button>
+      <button class="btn d blk" id="swX2">取消</button></div></div></div></div>`;
+    /* 与结算页同源的 BUG：扫荡弹窗也是独立 modal，渲染不经过 open()/stampImgs()，
+     * 于是「扫荡难度：🌱 普通」里的难度图标以原始 emoji 显示。
+     * 面板里的难度栏走的是 img（d.img 分支），只有这里走 d.icon 文本分支。 */
+    stampImgs(box);
+    box.classList.add('on');
+    const g = document.getElementById('swGo');
+    if (g) g.onclick = () => {
+      const el = document.getElementById('swN');
+      const n = Math.max(1, Math.min(max, parseInt((el && el.value) || '1', 10)));
+      const r = E.sweep(p, lvId, n);
+      try { E.logAct(p, 'shop', 'sweep'); } catch (e) {}
+          this.toast(r.msg, r.ok ? 'ok' : 'err');
+      /* BUG（扫荡不落盘 = 可无限白嫖）：
+       *   扫荡一次最多扣 10 体力、发放上百倍于单关的资源（金币/材料/经验/任务计数），
+       *   而这里既没 save 也没 saveSoon，全靠 30 秒一次的自动存档兜底。
+       *   玩家扫荡完立刻强关 App / 被系统杀进程 / 换设备登录，会读回云端旧档 ——
+       *   体力原样回来、奖励却带走，反复操作即可无限刷金币与材料。
+       *   体力是推进速度的硬通货，扫荡是最大的一次性资源出口，必须立即落盘。 */
+      if (r.ok) { try { E.save(p); } catch (e) {} if (window.SND) SND.play('pickup'); box.classList.remove('on'); this.open('level'); this.home(); }
+    };
+    const x1 = document.getElementById('swX'), x2 = document.getElementById('swX2');
+    if (x1) x1.onclick = () => box.classList.remove('on');
+    if (x2) x2.onclick = () => box.classList.remove('on');
+  },
+  sweepQuick(lvId, n) {
+    const r = E.sweep(this.P, lvId, n || 1);
+    this.toast(r.msg, r.ok ? 'ok' : 'err');
+    /* 同 sweepBox 主路径：扫荡扣体力并发大额奖励，必须立即落盘。 */
+    if (r.ok) { try { E.save(this.P); } catch (e) {} this.home(); }
+  },
+
+  /* ---------- 基地建筑 ---------- */
+  r_base(p, tab) {
+    /* tab 既可能是建筑 id（程序调用）也可能是中文名（界面 tab） */
+    const b = E.building(tab)
+      /* 建筑表被清空时上面两个都是 undefined，读 b.id 直接抛错，
+       * 基地 4 个页签全部白屏。这里给一个占位，保证界面始终可用。 */
+      || { id: 'hospital', n: '医疗站', icon: '🏥', stat: 'hp', per: 0.05, max: 20, desc: '建筑表为空' };
+    const cur = E.buildLv(p, b.id);
+    const cost = E.buildCost(p, b.id);
+    /* 仓库（stat==='gold'）此前显示写死的 offline(120)×等级，与实际产出不符 */
+    const val = b.stat === 'gold' ? E.offlineRate(p) + ' 金币/小时' : '+' + (cur * b.per * 100).toFixed(0) + '%';
+    /* 离线面板此前只显示金币数字，金属/经验写成「金属 + 经验」没有数量，
+     * 而领取时三者都发 —— 玩家看不到自己能拿多少。这里按实际计算值显示。 */
+    const ofc = E.offlineCalc(p);
+    return `<div class="card"><div class="card-t">${b.img ? `<img src="${b.img}" style="width:22px;height:22px;vertical-align:-5px;border-radius:5px">` : b.icon} ${b.n} <span class="sub">Lv.${cur}/${b.max}</span></div>
+      <div class="kv"><span>效果</span><b style="color:var(--green)">${val}</b></div>
+      <div class="kv"><span>说明</span><b style="font-size:var(--fs-xs)">${b.desc}</b></div>
+      <button class="btn c blk" id="buUp" ${p.gold < cost ? 'disabled' : ''}>升级 · ${E.fmt(cost)} 金币</button></div>
+      <div class="card"><div class="card-t">离线产出</div>
+      <div class="kv"><span>仓库离线收益</span><b style="color:var(--gold)">${E.fmt(E.offlineIncome(p))} 金币</b></div>
+      <div class="kv"><span>同时产出</span><b>${ofc.metal} 金属 · ${ofc.xp} 经验</b></div>
+      <button class="btn blk" id="buClaim" ${(ofc.gold > 0 || ofc.metal > 0 || ofc.xp > 0) ? '' : 'disabled'}>${(ofc.gold > 0 || ofc.metal > 0 || ofc.xp > 0) ? '领取离线收益' : '暂无可领（离线时间太短）'}</button>
+      <div class="lbl">离线最多累计 8 小时。</div></div>`;
+  },
+  b_base(p, tab) {
+    /* 升级必须按建筑 id 调用：
+     * tab 现在是中文名（"军械库"），而 E.upBuild 内部按 id 匹配，
+     * 直接传 tab 会找不到建筑 → 点了升级毫无反应。 */
+    const b = E.building(tab)
+      /* 建筑表被清空时上面两个都是 undefined，读 b.id 直接抛错，
+       * 基地 4 个页签全部白屏。这里给一个占位，保证界面始终可用。 */
+      || { id: 'hospital', n: '医疗站', icon: '🏥', stat: 'hp', per: 0.05, max: 20, desc: '建筑表为空' };
+    const u = $('#buUp'); if (u) u.onclick = () => {
+      const g0 = p.gold;
+      const r = E.upBuild(p, b.id);
+      if (r.ok) {
+        /* 连点改为汇总反馈：实测连点 6 次扣 14745 金币却只有最后一条 toast 可见，
+         * 玩家完全不知道总共花了多少。现在弹"升级 ×6 · 共消耗 14745 金币"。 */
+        this.burst('buUp', { cost: Math.max(0, g0 - p.gold), label: '升级', unit: ' 金币' });
+        E.saveSoon(p); this.open('base', tab); this.home();
+      } else this.toast(r.msg, 'err');
+    };
+    const c = $('#buClaim'); if (c) c.onclick = () => {
+      /* 此前只取 E.offlineIncome（仅金币）然后手动 +=，
+       * 而 E.offlineClaim（金币 + 金属 + 经验）定义了却从未被调用
+       * → 玩家离线 8 小时只拿到金币，金属和经验一直没发。
+       * 现在改走完整领取。 */
+      const r = E.offlineClaim(p);
+      /* 「离线时间太短」分支里 offlineClaim 同样推进了 p.offBase（结算基准），
+       * 属于真实的存档变更 —— 此前 !r.ok 直接 return 不落盘，
+       * 全靠 30 秒定时存档兜底：玩家点完强关/换设备会读回旧基准。
+       * 无论成败都保存，保证基准推进不回退。 */
+      if (!r.ok) { E.saveSoon(p); return this.toast(r.msg, 'err'); }
+      this.toast(r.msg, 'ok'); E.saveSoon(p); this.open('base', tab); this.home();
     };
   },
 
   /* ---------- 设置 ---------- */
-  r_set(p, tab) {
-    if (tab === '网络') {
-      return `<div class="card">
-        <div class="card-t">网络状态</div>
-        <div class="kv"><span>状态</span><b style="color:${Net.online?'var(--green)':'#ff8fa4'}">${Net.online?'● 已连接':'○ 离线'}</b></div>
-        <div class="kv"><span>端点</span><b style="font-size:10px">${Net.endpoint.replace('https://','')}</b></div>
-        <div class="kv"><span>待上传</span><b>${Net.queueLen}</b></div>
-        <button class="btn blk" id="setReNet">重新检测</button>
-        <button class="btn blk" id="setDiag">逐端点诊断</button>
-        <div id="diagBox"><div class="lbl">点「逐端点诊断」测试全部通道</div></div>
-      </div>
-      <div class="card">
-        <div class="card-t">自定义加速地址</div>
-        <textarea id="setEps" rows="2" placeholder="https://xxx.workers.dev"
-          style="width:100%;padding:8px;border-radius:8px;background:rgba(10,16,28,.85);
-          border:1px solid var(--line);color:var(--txt);font-size:11px;outline:none">${(GH.extra||[]).join('\n')}</textarea>
-        <button class="btn c blk" id="setSaveEps">保存加速地址</button>
-        <div class="lbl">部署 Cloudflare Worker 后填入，可解决国内连不上 GitHub 的问题。Worker 代码在仓库 worker/src/index.js</div>
-      </div>`;
+  /* ---------- 新手引导（表21：12 节点） ---------- */
+  showGuide(id) {
+    const p = this.P; if (!p) return;
+    const g = (EX.guides || []).find((x) => x.id === id);
+    if (!g) return;
+    /* 已完成则不弹 */
+    if ((p.guide || {})[id]) return;
+    const box = document.getElementById('guide');
+    if (!box) return;
+    /* BUG（后一条引导顶掉前一条，玩家只看得到一半）：
+     *   main.js 结算处会连续调 guideTrigger('home') 与 guideTrigger('win')，
+     *   两条都走 420ms 延迟，几乎同时到达；而这里原本是「直接覆盖」——
+     *   后到的把先弹的那条的标题/文案改掉，玩家只看到最后一条，
+     *   先到的那条既没展示、也（在旧写法下）被预标记成已完成。
+     * 现在改成排队：已有引导在展示时，后来的进队列，点「知道了」后再弹下一条。 */
+    if (this._curGuide != null) {
+      this._guideQueue = this._guideQueue || [];
+      if (this._guideQueue.indexOf(id) < 0) this._guideQueue.push(id);
+      return;
     }
-    return `<div class="card">
-      <div class="card-t">账号信息</div>
-      <div class="kv"><span>代号</span><b>${p.name}</b></div>
-      <div class="kv"><span>UID</span><b style="font-size:10px">${p.uid}</b></div>
-      <div class="kv"><span>等级</span><b>Lv.${p.lv}</b></div>
-      <div class="kv"><span>创建时间</span><b style="font-size:10px">${new Date(p.created||Date.now()).toLocaleString()}</b></div>
-      <div class="kv"><span>累计击杀</span><b>${E.fmt(p.stats?.kills||0)}</b></div>
-      <div class="kv"><span>累计场次</span><b>${p.stats?.runs||0}</b></div>
-      <div class="kv"><span>BOSS 击杀</span><b>${p.stats?.boss||0}</b></div>
-    </div>
-    <div class="card">
-      <div class="card-t">改名</div>
-      <input id="setName" maxlength="8" value="${p.name}" style="width:100%;padding:10px;border-radius:9px;
-        background:rgba(10,16,28,.85);border:1px solid var(--line);color:var(--txt);font-size:13px;outline:none">
-      <button class="btn c blk" id="setSaveName">保存（首次免费）</button>
-    </div>
-    <div class="card">
-      <div class="card-t">数据</div>
-      <button class="btn blk" id="setSave">立即保存存档</button>
-      <button class="btn d blk" id="setReset">重置存档（清空全部进度）</button>
-      <div class="lbl">存档保存于云端 GitHub 仓库，换设备登录同一代号即可继续。</div>
-    </div>
-    <div class="card">
-      <div class="card-t">后台管理</div>
-      <button class="btn blk" id="setAdmin">进入管理后台</button>
+    const t = document.getElementById('gdTitle'), c = document.getElementById('gdText');
+    if (t) t.textContent = g.n;
+    if (c) c.textContent = g.txt || g.desc || '';
+    box.classList.add('on');
+    /* BUG：引导是全屏模态遮罩（.guide z-index 999），玩家必须点「知道了」才能继续操作，
+     * 但此前【不暂停战斗】—— 实测引导弹窗开着的那 2.9 秒里，战斗计时照跑、
+     * 僵尸前进了 134px（y 53→187），paused 始终为 false。
+     * enter（移动）/ moved（射击）/ firstKill（拾取）三个节点都在战斗中触发，
+     * 正是新手最需要看清屏幕的时候，读完文案防线已经被啃。
+     * 现在按技能三选一的既有做法：弹出即暂停，关闭时恢复。
+     * 若技能三选一此时已打开（BT.paused 已为 true），这里就不登记为「因引导而暂停」，
+     * 关闭引导后不会错误地提前恢复战斗、把未完成的技能选择跳过去。
+     * 注意：这里【不能】先把 _guidePaused 无条件清成 false —— 同一引导可能被
+     * 重复触发（battle.start 内的 enter 与 guideTrigger 的延迟回调），第二次进来
+     * 时 BT.paused 已是 true，条件不满足，若此时清掉第一次登记的 true，
+     * 关闭后就再也没人把战斗恢复 → 实测卡死（时间停在 0.34 秒不动）。 */
+    if (window.BT && BT.on && BT.run && !BT.run.over && !BT.paused) {
+      BT.paused = true;
+      this._guidePaused = true;
+    }
+    this._curGuide = id;
+    const ok = document.getElementById('gdOk');
+    if (ok) ok.onclick = () => {
+      E.guideDone(p, id);
+      box.classList.remove('on');
+      if (this._guidePaused && window.BT) { BT.paused = false; this._guidePaused = false; }
+      this._curGuide = null;
+      if (window.MAIN && MAIN.save) MAIN.save();
+      /* 弹下一条排队中的引导（等当前遮罩的过渡动画走完再弹，避免视觉闪烁） */
+      const q = this._guideQueue || [];
+      if (q.length) {
+        const nx = q.shift();
+        setTimeout(() => this.showGuide(nx), 320);
+      }
+    };
+  },
+  /* 战斗内按事件触发（表21 触发时机） */
+  guideTrigger(ev) {
+    /* 表37 埋点：funnel_convert（新手漏斗） */
+    try { OPS.track('funnel_convert', { step: ev }); } catch (e) {}
+    const p = this.P; if (!p) return;
+    /* 表21 触发时机 → 引导节点 id */
+    const map = {
+      enter: 1,          /* 进入第一关：移动引导 */
+      moved: 2,          /* 移动后：射击引导 */
+      firstUpgrade: 3,   /* 第一次升级：技能三选一 */
+      firstKill: 4,      /* 击杀后：拾取引导 */
+      win: 5,            /* 第一次通关 */
+      home: 6,           /* 返回基地 */
+      gunUnlock: 7,      /* 通关1-2：武器引导 */
+      taskUnlock: 8,     /* 通关1-2：任务引导 */
+      chipUnlock: 9,     /* 通关1-4：芯片引导 */
+      talentUnlock: 10,  /* 通关1-3：天赋引导 */
+      endless: 11,       /* 通关3-3：无尽引导 */
+      fail: 12,          /* 首次失败：广告复活 */
+    };
+    const id = map[ev];
+    if (id) setTimeout(() => this.showGuide(id), 420);
+  },
+
+  /* ---------- 兑换商店（表42成就商店 / 表43活动商店） ---------- */
+  r_ashop(p, tab) {
+    tab = tab || ((this.PANELS.ashop && this.PANELS.ashop[1] && this.PANELS.ashop[1][0]) || '成就商店');
+    const isAch = tab === '成就商店';
+    const list = isAch ? (EX.achShop || []) : (EX.eventShop || []);
+    const curName = isAch ? '成就点' : '活动代币';
+    const curVal = isAch ? (p.ach || 0) : (p.evToken || 0);
+    return `<div class="card"><div class="card-t">${tab}
+      <span class="sub">持有 <b style="color:var(--yel)">${E.fmt(curVal)}</b> ${curName}</span></div>
+      ${list.map((it) => {
+        const bought = isAch ? E.achShopBought(p, it.id)
+          : (() => { const b = p.evShopBuy || {}, k = 'es_' + it.id; return b[k] ? b[k].n : 0; })();
+        const full = bought >= it.limit;
+        /* 未达通关门槛时置灰并显示条件（此前 need 从不参与判定） */
+        const locked = (it.need || 0) > 0 && Object.keys(p.cleared || {}).length < it.need;
+        /* 已拥有 / 芯片背包已满：与扣费前拦截同口径，按钮直接置灰并写明原因
+         * （否则按钮照常可点，玩家点下去只弹一句「已拥有」，看着像按钮坏了） */
+        const ownMsg = E.ownedGiveMsg ? E.ownedGiveMsg(p, it.give) : '';
+        /* 体力类：买完会超出上限时置灰并写明「只能获得 N」。
+         * 实测（ES11「体力×30」60 代币）：体力 80 时兑换只加 20 点、
+         * 却照扣 60 代币，提示仍是「兑换成功」——玩家白丢三分之一。
+         * 与商店体力包同一口径：按剩余容量判断，不只看「是否已满」。 */
+        let stRoom = -1;
+        if (it.give && it.give.stamina) {
+          const _max = Number(EX.STAMINA_MAX) || 100;
+          stRoom = Math.max(0, _max - Math.max(0, Number(p.stamina) || 0));
+          if (stRoom <= 0) stRoom = 0;
+        }
+        const stOver = stRoom >= 0 && (Math.max(0, Number(it.give.stamina) || 0) > stRoom);
+        const can = curVal >= it.cost && !full && !locked && !ownMsg && !stOver;
+        return `<div class="zrow">
+          <div class="zav">${it.t === '芯片' ? '💠' : it.t === '碎片' ? '🧩' : it.t === '皮肤' ? '👕' : it.t === '称号' ? '🏅' : '📦'}</div>
+          <div class="zi"><b>${it.n}</b><span>${it.cost} ${curName} · 限购 ${it.limit}（已兑 ${bought}）${locked ? ' · <span style="color:var(--c-red-300)">需通关 ' + it.need + ' 关</span>' : ''}</span></div>
+          <button class="btn sm ${can ? '' : 'd'}" data-buy="${it.id}" ${can ? '' : 'disabled'}>${ownMsg ? (ownMsg.indexOf('背包') >= 0 ? '背包已满' : '已拥有') : (stOver ? '体力将溢出' : '兑换')}</button>
+        </div>`;
+      }).join('')}
+      <div class="sub" style="padding:6px 2px">限购按 ${isAch ? '每日/每周/每月' : '每日/活动期'} 刷新。</div>
     </div>`;
   },
+  b_ashop(p, tab) {
+    const isAch = tab === '成就商店';
+    $$('#pnBody [data-buy]').forEach((b) => { b.onclick = () => {
+      const r = isAch ? E.achShopBuyItem(p, b.dataset.buy) : E.eventShopBuy(p, b.dataset.buy);
+      try { E.logAct(p, 'shop', 'achShopBuyItem'); } catch (e) {}
+          this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { if (window.SND) SND.play('equip'); E.saveSoon(p); this.open('ashop', tab); this.home(); }
+    }; });
+  },
+
+  /* ---------- 图鉴收集（表29） ---------- */
+  r_codex(p, tab) {
+    tab = tab || ((this.PANELS.codex && this.PANELS.codex[1] && this.PANELS.codex[1][0]) || '怪物');
+    const kindMap = { '怪物': 'zombie', '武器': 'gun', '皮肤': 'skin' };
+    const kind = kindMap[tab] || 'zombie';
+    const list = EX.codexOf(kind) || [];
+    /* 就地防御：热改档可能把 p.codex[kind] 写成 0 / {}，非数组一律按空数组处理，
+     * 否则 got.indexOf 抛异常会让整个图鉴面板崩溃（实测「武器」页白屏）。 */
+    const _cx = (p && typeof p.codex === 'object' && p.codex) || {};
+    const got = Array.isArray(_cx[kind]) ? _cx[kind] : [];
+    const cc = E.codexCount(p);
+    const rw = (EX.codexRw || {})[kind] || {};
+    return `<div class="card"><div class="card-t">收集进度
+      <span class="sub">${cc.got} / ${cc.all}</span></div>
+      <div class="sub">解锁奖励：+${rw.gold || 0} 金币 · +${rw.ach || 0} 成就点</div>
+    </div>
+    <div class="card"><div class="card-t">${tab}图鉴 <span class="sub">${got.length}/${list.length}</span></div>
+      <div class="grid4">${list.map((x) => {
+        const has = got.indexOf(x.id) >= 0;
+        return `<div class="gcell ${has ? '' : 'sel'}"${has
+            ? ` data-cdxs="${kind}|${x.id}"` : ` data-cdxh="${kind}|${x.id}"`}>
+          ${x.img ? `<img src="${x.img}" style="width:82%;height:auto;aspect-ratio:1/1;object-fit:contain;flex:none;margin-top:2px">`
+                  : `<div class="gi">${x.icon || '❓'}</div>`}
+          <div class="gn">${has ? x.n : '???'}</div>
+          ${has && x.skill ? `<div style="font-size:var(--fs-xs);color:var(--c-blue-250);line-height:1.2;margin-top:1px">${x.skill}</div>` : ''}
+          ${has ? '<span class="gq">✔</span>' : '<span class="gq" style="background:var(--c-n-700)">未解锁</span>'}
+        </div>`;
+      }).join('')}</div>
+      <div class="sub" style="padding:6px 2px">灰色条目需在游戏中真实获得后自动解锁（击败怪物 / 装备武器 / 获得皮肤），点击查看解锁条件。</div>
+    </div>`;
+  },
+  b_codex(p, tab) {
+    $$('#pnBody [data-cdxh]').forEach((b) => { b.onclick = () => {
+      const [kind, id] = b.dataset.cdxh.split('|');
+      const hint = E.codexHint(p, kind, id);
+      this.toast(hint, 'err');
+    }; });
+    /* 已解锁条目：点击查看该怪物的技能说明（表：僵尸 12 条技能） */
+    $$('#pnBody [data-cdxs]').forEach((b) => { b.onclick = () => {
+      const [kind, id] = b.dataset.cdxs.split('|');
+      const z = (EX.zombies || []).find((x) => x.id === id);
+      if (!z || !z.skill) { this.toast('暂无技能说明', 'ok'); return; }
+      this.toast(z.skill + '：' + (z.sk || ''), 'ok');
+    }; });
+  },
+
+  r_set(p, tab) {
+    /* ---------- 音频（音乐/音效开关 + 音量） ----------
+     * 补齐：SND 一直有 musicOn/sfxOn/volMusic/volSfx 四个状态，
+     * 但设置面板里从未提供入口，玩家无法关音乐音效、无法调音量，
+     * 且状态从不保存（刷新即回默认）。这里补上控制与持久化。 */
+    if (tab === '音频') {
+      const S = window.SND || null;
+      const mo = S ? S.musicOn : true, so = S ? S.sfxOn : true;
+      const vm = S ? S.volMusic : 0.28, vs = S ? S.volSfx : 0.5;
+      return `<div class="card"><div class="card-t">声音开关</div>
+        <div class="zrow"><div class="zav">🎵</div>
+          <div class="zi"><b>背景音乐</b><span>末日低频氛围 BGM</span></div>
+          <button class="btn sm ${mo ? 'g' : ''}" data-snd="music">${mo ? '开' : '关'}</button></div>
+        <div class="zrow"><div class="zav">🔊</div>
+          <div class="zi"><b>音效</b><span>枪声 / 爆炸 / 命中</span></div>
+          <button class="btn sm ${so ? 'g' : ''}" data-snd="sfx">${so ? '开' : '关'}</button></div>
+      </div>
+      <div class="card"><div class="card-t">音量</div>
+        <div class="kv"><span>音乐音量</span><b style="color:var(--yel)">${Math.round(vm * 100)}%</b></div>
+        <input type="range" id="volM" min="0" max="100" value="${Math.round(vm * 100)}"
+          style="width:100%;margin:6px 0">
+        <div class="kv"><span>音效音量</span><b style="color:var(--yel)">${Math.round(vs * 100)}%</b></div>
+        <input type="range" id="volS" min="0" max="100" value="${Math.round(vs * 100)}"
+          style="width:100%;margin:6px 0">
+        <div class="sub">拖动调节，设置会自动保存。</div>
+      </div>`;
+    }
+    /* ---------- 多语言（表39） ---------- */
+    if (tab === '语言') {
+      /* 单语言版本：仅简体中文，不再提供语种切换入口。
+       * 文案预览保留 —— 运营可在后台改文案，这里能看到改后的中文。 */
+      const only = (EX.LANGS || [{ k: 'zh', n: '简体中文' }])[0];
+      return `<div class="card"><div class="card-t">语言</div>
+        <div class="zrow">
+          <div class="zav">🌐</div>
+          <div class="zi"><b>${only.n}</b><span>${only.k}</span></div>
+          <span class="st on">使用中</span>
+        </div>
+        <div class="sub">本游戏仅支持简体中文，无需切换。</div>
+      </div>
+      <div class="card"><div class="card-t">文本预览 <span class="sub">共 ${Object.keys(EX.I18N || {}).length} 条</span></div>
+        ${Object.keys(EX.I18N || {}).map((id) => `<div class="kv">
+          <b style="font-size:var(--fs-xs)">${window.OPS ? OPS.t(id) : (EX.I18N[id] || {}).zh}</b></div>`).join('')}
+      </div>`;
+    }
+    /* ---------- 运营（表37 埋点 / 表38 版本 / 表40 接口 / 表36 命名 / 热更新） ---------- */
+    if (tab === '运营') {
+      const st = window.OPS ? OPS.trackStat() : {};
+      const mi = window.OPS ? OPS.manifestInfo() : { ver: '-', n: 0 };
+      const cv = window.OPS ? OPS.curVersion() : null;
+      return `<div class="card"><div class="card-t">热更新</div>
+        <div class="kv"><span>资源版本号</span><b style="color:var(--yel)">${mi.ver}</b></div>
+        <div class="kv"><span>清单条目</span><b>${mi.n} 个</b></div>
+        <div class="sub">启动时比对版本，不一致自动刷新缓存并提示。</div></div>
+
+      <div class="card"><div class="card-t">版本</div>
+        <div class="kv"><span>当前版本</span><b style="color:var(--green)">${cv ? cv.v + ' ' + cv.n : '-'}</b></div>
+        ${(EX.VERSIONS || []).map((v) => `<div class="zrow"><div class="zav">${v.done ? '✔' : '○'}</div>
+          <div class="zi"><b>${v.v} ${v.n}</b><span>${v.wk} · ${v.c}</span></div>
+          <span class="st ${v.done ? 'on' : 'off'}">${v.done ? '已完成' : '开发中'}</span></div>`).join('')}
+      </div>
+
+      <div class="card"><div class="card-t">数据埋点 <span class="sub">共 ${window.OPS ? OPS.trackBuf().length : 0} 条</span></div>
+        ${Object.keys(st).length ? Object.keys(st).map((k) => `<div class="zrow">
+          <div class="zav">📊</div>
+          <div class="zi"><b>${st[k].n}</b><span>${k} · ${st[k].pr} · ${st[k].cnt} 次</span></div></div>`).join('')
+          : '<div class="lbl">暂无埋点数据</div>'}
+        <button class="btn d blk" id="opsClearTrack">清空埋点</button>
+      </div>
+
+      <div class="card"><div class="card-t">后端接口</div>
+        ${(EX.APIS || []).map((a) => `<div class="kv">
+          <span style="font-size:var(--fs-xs)">${a.id} ${a.n}</span>
+          <b class="wrapv" style="font-size:var(--fs-xs);color:var(--txt3)">${a.impl}</b></div>`).join('')}
+      </div>
+
+      <div class="card"><div class="card-t">资源命名规范</div>
+        ${(EX.NAMING || []).map((n) => `<div class="kv">
+          <span style="font-size:var(--fs-xs)"><b style="color:var(--yel)">${n.pre}</b> ${n.t}</span>
+          <b style="font-size:var(--fs-xs);color:var(--txt3)">${n.eg}</b></div>`).join('')}
+      </div>`;
+    }
+    /* ---------- 兑换码（后台礼包码系统） ---------- */
+    if (tab === '兑换码') {
+      return `<div class="card"><div class="card-t">礼包码兑换 <span class="sub">后台生成</span></div>
+        <div class="fld"><label>输入兑换码</label>
+          <input id="cdInput" placeholder="请输入 CDKEY" style="width:100%;text-transform:uppercase"
+            autocomplete="off"></div>
+        <button class="btn blk" id="cdGo">🎁 立即兑换</button>
+        <div id="cdTip" class="lbl">兑换码由后台「礼包码 → 生成兑换码」产出</div>
+      </div>
+      <div class="card"><div class="card-t">说明</div>
+        <div class="lbl" style="text-align:left;line-height:1.7">
+          · 每个兑换码有使用次数上限，先到先得<br>
+          · 过期 / 作废 / 已绑定的码无法使用<br>
+          · 若礼包模板设置了「限领 1 次」，同一账号只能兑换一次<br>
+          · 兑换成功后奖励直接发放到背包
+        </div>
+      </div>`;
+    }
+    if (tab === '网络') {
+      return `<div class="card"><div class="card-t">网络状态</div>
+        <div class="kv"><span>状态</span><b style="color:${Net.online ? 'var(--green)' : '#ff8fa4'}">${Net.online ? '● 已连接' : '○ 离线'}</b></div>
+        <div class="kv"><span>端点</span><b style="font-size:var(--fs-xs)">${Net.endpoint.replace('https://', '')}</b></div>
+        <button class="btn blk" id="setReNet">重新检测</button>
+        <button class="btn blk" id="setDiag">逐端点诊断</button>
+        <div id="diagBox"><div class="lbl">点「逐端点诊断」测试全部通道</div></div></div>
+        <div class="card"><div class="card-t">自定义加速地址</div>
+        <textarea id="setEps" rows="2" placeholder="https://xxx.workers.dev"
+          style="width:100%;padding:8px;border-radius:8px;background:rgba(10,16,28,.85);border:1px solid var(--line);color:var(--txt);font-size:var(--fs-xs);outline:none">${(GH.extra || []).join('\n')}</textarea>
+        <button class="btn c blk" id="setSaveEps">保存加速地址</button>
+        <div class="lbl" style="margin-top:6px;line-height:1.6">每行填一个地址，保存后优先走这些通道。<br>
+        推荐自建 Cloudflare Worker（免费，10 万次/天）：令牌存在云端不下发到玩家浏览器，还能缓存省配额。做法见仓库内 <b>Cloudflare代理-照着做.md</b>。<br>
+        <span style="opacity:.75">注意：地址要填域名根（如 https://xxx.workers.dev），不要带 /https://api.github.com 后缀。</span></div></div>`;
+    }
+    if (tab === '数值') {
+      /* BUG：资料表的 note（口径澄清）与 growth 的 key（关键提示）此前【零渲染】——
+       * 界面只显示「名称 + 公式」，于是那些专门写来防玩家算错的说明
+       * （如「暴伤 150% 即 ×1.5，不是 ×2.5」「经验加成 = 天赋 + 研究所」
+       *  「护盾最多叠到防线上限 ×1.5」「吸血有节流上限」）一条都看不到。
+       * 玩家只看公式反而更容易按错误口径估算。这里补上说明行。 */
+      const _note = (s) => (s ? `<div style="grid-column:1/-1;font-size:var(--fs-xs);opacity:.72;line-height:1.5;margin:-2px 0 4px;white-space:normal;word-break:break-all">${this.esc(s)}</div>` : '');
+      return `<div class="card"><div class="card-t">伤害公式 <span class="sub">资料 ${(EX.formulas || []).length} 条</span></div>
+        ${EX.formulas.map((f) => `<div class="kv"><span style="font-size:var(--fs-xs)">${f.n}</span><b class="wrapv" style="font-size:var(--fs-xs)">${f.f}</b></div>${_note(f.note)}`).join('')}</div>
+        <div class="card"><div class="card-t">成长曲线</div>
+        ${EX.growth.map((g) => `<div class="kv"><span style="font-size:var(--fs-xs)">${g.n}</span><b class="wrapv" style="font-size:var(--fs-xs)">${g.curve}</b></div>${_note(g.key)}`).join('')}</div>`;
+    }
+    const ac = window.UA ? UA.remembered() : {};
+    return `<div class="card"><div class="card-t">账号 <span class="sub">账号密码登录</span></div>
+      <div class="kv"><span>账号名</span><b>${this.esc(ac.name || '—')}</b></div>
+      <div class="kv"><span>账号 ID</span><b style="font-size:var(--fs-xs)">${this.esc(ac.uid || '—')}</b></div>
+      <div class="kv"><span>下次登录</span><b style="font-size:var(--fs-xs)">${ac.name ? '需输入密码（已记住账号名）' : '需重新输入'}</b></div>
+      <div class="lbl" style="text-align:left;margin-top:6px">换设备时用同一账号名+密码登录，存档自动继承</div></div>
+    <div class="card"><div class="card-t">修改密码</div>
+      <div class="fld"><label>原密码</label><input id="spOld" type="password" placeholder="原密码"></div>
+      <div class="fld"><label>新密码</label><input id="spNew" type="password" placeholder="新密码（至少6位）"></div>
+      <div class="fld"><label>确认新密码</label><input id="spNew2" type="password" placeholder="再输入一次"></div>
+      <button class="btn blk" id="spGo">🔑 修改密码</button>
+      <div class="lbl" id="spTip"></div></div>
+    <div class="card"><div class="card-t">注销账号 <span class="sub">不可恢复</span></div>
+      <div class="lbl" style="text-align:left;color:var(--c-red-300)">注销会删除云端存档并封禁该账号，无法恢复</div>
+      <div class="fld"><label>输入密码确认</label><input id="spDel" type="password" placeholder="当前密码"></div>
+      <button class="btn d blk" id="spDelGo">🗑 确认注销</button></div>
+    <div class="card"><div class="card-t" style="color:var(--c-red-450)">永久删除账号 <span class="sub">物理删除 · 不可恢复</span></div>
+      <div class="lbl" style="text-align:left;color:var(--c-red-300)">与「注销」不同：<b>注销</b>只是停用并保留账号记录（可在后台找回）；<b>永久删除</b>会把账号、存档、索引、榜单条目全部物理删除，删除后任何界面都不再显示，且无法恢复。仅在你确定不再需要该账号时使用。</div>
+      <div class="fld"><label>输入密码确认</label><input id="spPurge" type="password" placeholder="当前密码"></div>
+      <button class="btn d blk" id="spPurgeGo">🔥 永久删除</button>
+      <div class="lbl" id="spPurgeTip"></div></div>
+    <div class="card">
+      <button class="btn n blk" id="setSwitchAcct">🔁 退出登录 / 切换账号</button></div>
+    <div class="card"><div class="card-t">账号信息</div>
+      <div class="kv"><span>代号</span><b>${this.esc(p.name)}</b></div>
+      <div class="kv"><span>UID</span><b style="font-size:var(--fs-xs)">${this.esc(p.uid || '—')}</b></div>
+      <div class="kv"><span>角色</span><b>${E.char(p).n}</b></div>
+      <div class="kv"><span>通关关卡</span><b>${Object.keys(p.cleared || {}).length} / ${EX.levels.length}</b></div>
+      <div class="kv"><span>体力</span><b>${Math.floor(p.stamina || 0)}/${EX.STAMINA_MAX} <button class="btn sm" id="setAdStam">看广告+10</button></b></div>
+      <div class="kv"><span>成就点</span><b>${E.fmt(p.ach || 0)}</b></div>
+      <div class="kv"><span>累计击杀</span><b>${E.fmt((p.stats && p.stats.kills) || 0)}</b></div></div>
+      <div class="card"><div class="card-t">🏅 我的称号 <span class="sub">${(p.titles || []).length} 个</span></div>
+      ${(p.titles || []).length ? (p.titles || []).map((id) => {
+        const t = E.titleDef(id);
+        const on = (p.title || '') === id;
+        return `<div class="zrow"><div class="zav">🏅</div>
+          <div class="zi"><b style="color:${t ? t.color : 'var(--txt)'}">${t ? t.n : id}</b>
+          <span>${t ? t.desc : '称号'}</span></div>
+          ${on ? '<span class="st on">已装备</span>'
+               : `<button class="btn sm" data-eqt="${id}">装备</button>`}</div>`;
+      }).join('') + ((p.title) ? '<button class="btn d sm blk" data-eqt="">卸下当前称号</button>' : '')
+        : '<div class="lbl">暂无称号（成就商店 / 排行榜奖励可获得）</div>'}</div>
+      <div class="card"><div class="card-t">🖼️ 我的头像框 <span class="sub">${(p.frames || []).length} 个</span></div>
+      ${(p.frames || []).length ? (p.frames || []).map((id) => {
+        const t = E.frameDef(id);
+        const on = (p.frame || '') === id;
+        return `<div class="zrow"><div class="zav">🖼️</div>
+          <div class="zi"><b style="color:${t ? t.color : 'var(--txt)'}">${t ? t.n : id}</b>
+          <span>头像框</span></div>
+          ${on ? '<span class="st on">已装备</span>'
+               : `<button class="btn sm" data-eqf="${id}">装备</button>`}</div>`;
+      }).join('') + ((p.frame) ? '<button class="btn d sm blk" data-eqf="">卸下当前头像框</button>' : '')
+        : '<div class="lbl">暂无头像框（活动商店可获得）</div>'}</div>
+      <div class="card"><div class="card-t">引导进度 <span class="sub">${Object.keys(p.guide || {}).length}/${EX.guides.length}</span></div>
+      ${EX.guides.filter((g) => g.must).map((g) => `<div class="kv"><span style="font-size:var(--fs-xs)">${g.n}</span>
+        <b style="font-size:var(--fs-xs);color:${(p.guide || {})[g.id] ? 'var(--green)' : '#6b7899'}">${(p.guide || {})[g.id] ? '✔ 已完成' : '待引导'}</b></div>`).join('')}</div>
+      <div class="card"><div class="card-t">广告福利</div>
+      <div class="kv"><span style="font-size:var(--fs-xs)">免费体力 AD03</span>
+        <b><button class="btn sm" id="setAdStam2">看广告 +10 体力（剩 ${E.adLeft(p, 'AD03')}）</button></b></div>
+      <div class="kv"><span style="font-size:var(--fs-xs)">免费抽奖 AD04</span>
+        <b><button class="btn sm" id="setAdDraw">看广告 抽奖1次（剩 ${E.adLeft(p, 'AD04')}）</button></b></div>
+      <div class="kv"><span style="font-size:var(--fs-xs)">额外宝箱 AD05</span>
+        <b><button class="btn sm" id="setAdBox">看广告 宝箱×1（剩 ${E.adLeft(p, 'AD05')}）</button></b></div>
+      <div class="lbl" style="text-align:left">每日上限：体力5次 · 抽奖3次 · 宝箱5次（每日重置）</div></div>
+      <div class="card"><div class="card-t">数据</div>
+      <button class="btn blk" id="setSave">立即保存存档</button>
+      <button class="btn d blk" id="setReset">重置存档（清空全部进度）</button>
+      <div class="lbl">存档保存于云端仓库，换设备登录同一代号可继续。</div></div>
+      ${adminEntryVisible() ? `<div class="card"><div class="card-t">后台管理</div>
+      <button class="btn blk" id="setAdmin">进入管理后台</button></div>` : ''}`;
+  },
   b_set(p, tab) {
-    const sn = $('#setSaveName'); if (sn) sn.onclick = () => {
-      const v = ($('#setName').value || '').trim();
-      if (v.length < 2) return this.toast('代号至少 2 个字', 'err');
-      if (!p.renamed) { p.name = v; p.renamed = 1; this.toast('改名成功', 'ok'); }
-      else if (p.diamond >= 100) { p.diamond -= 100; p.name = v; this.toast('改名成功（消耗100钻石）', 'ok'); }
-      else return this.toast('改名需 100 钻石', 'err');
-      this.open('set', '账号'); this.home();
+    /* ---------- 音频开关 / 音量 ---------- */
+    if (tab === '音频') {
+      const S = window.SND;
+      $$('[data-snd]').forEach((btn) => {
+        btn.onclick = () => {
+          if (!S) { this.toast('音频未初始化', 'err'); return; }
+          const k = btn.dataset.snd;
+          if (k === 'music') { S.setMusic(!S.musicOn); if (S.musicOn) S.bgm('base'); }
+          else { S.setSfx(!S.sfxOn); }
+          S.saveCfg();
+          if (k === 'sfx' && S.sfxOn) S.play('click');
+          this.open('set', '音频'); this.home();
+        };
+      });
+      const vm = $('#volM'), vs2 = $('#volS');
+      const applyVol = () => {
+        if (!S) return;
+        const m = clamp(1, 0, (Number(vm && vm.value) || 0) / 100);
+        const sv = clamp(1, 0, (Number(vs2 && vs2.value) || 0) / 100);
+        S.setVol(m, sv); S.saveCfg();
+        this.open('set', '音频'); this.home();
+      };
+      if (vm) vm.onchange = applyVol;
+      if (vs2) vs2.onchange = applyVol;
+      return;
+    }
+    /* 称号装备 / 卸下（此前 p.titles 写入后全项目零读取，玩家看不到也用不了） */
+    $$('#pnBody [data-eqt]').forEach((b) => { b.onclick = () => {
+      const r = E.equipTitle(p, b.dataset.eqt || '');
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { E.save(p); this.open('set'); this.home(); }
+    }; });
+    /* 头像框装备 / 卸下 */
+    $$('#pnBody [data-eqf]').forEach((b) => { b.onclick = () => {
+      const r = E.equipFrame(p, b.dataset.eqf || '');
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      if (r.ok) { E.save(p); this.open('set'); this.home(); }
+    }; });
+    /* 修改密码 */
+    const sp = $('#spGo');
+    if (sp) sp.onclick = async () => {
+      const tip = $('#spTip');
+      const ac = UA.remembered();
+      const o = ($('#spOld') || {}).value || '';
+      const n1 = ($('#spNew') || {}).value || '';
+      const n2 = ($('#spNew2') || {}).value || '';
+      if (!ac.name) { if (tip) tip.textContent = '未获取到账号名'; return; }
+      if (!o) { if (tip) tip.textContent = '请输入原密码'; return; }
+      if (n1 !== n2) { if (tip) tip.textContent = '两次新密码不一致'; return; }
+      /* 防连点（与「永久删除」同一口径）：
+       * 改密码是写云端账号文件，此前按钮点下去【既不置灰也不改字】，
+       * await 期间可以再点 —— 实测连点 3 次会并发发起 3 次 changePwd，
+       * 多次写同一份 user.json 存在互相覆盖的竞态，且玩家看不到任何"在处理"的反馈。
+       * 现在：处理期间置灰并提示，结束后复原。 */
+      sp.disabled = true; sp.textContent = '修改中…';
+      let r;
+      try { r = await UA.changePwd(ac.name, o, n1); }
+      catch (e) { r = { ok: false, msg: '修改异常：' + (e && e.message || e) }; }
+      sp.disabled = false; sp.textContent = '🔑 修改密码';
+      if (tip) tip.textContent = r.ok ? (r.msg || '修改成功') : r.msg;
+      this.toast(r.ok ? '密码已修改' : r.msg, r.ok ? 'ok' : 'err');
+      /* 改完清空三个输入框：密码属于敏感信息，不该一直留在 DOM 里
+       * （后台/截屏/他人拿到手机时都能直接看到）。 */
+      if (r.ok) { ['spOld', 'spNew', 'spNew2'].forEach((id) => { const el = $('#' + id); if (el) el.value = ''; }); }
     };
+    /* 注销账号 */
+    const sd = $('#spDelGo');
+    if (sd) sd.onclick = async () => {
+      const ac = UA.remembered();
+      const w = ($('#spDel') || {}).value || '';
+      if (!w) { this.toast('请输入密码确认', 'err'); return; }
+      /* 原生 confirm → 游戏内危险确认弹窗（含"不可撤销"警示 + 0.9s 冷却防误点） */
+      const okDel = await this.ask('注销账号', '账号「' + (ac.name || '') + '」将被注销，云端存档一并删除，无法恢复！',
+        { danger: true, yes: '注销账号' });
+      if (!okDel) return;
+      /* 防连点（与下方「永久删除」同一口径）：
+       * 注销是【不可恢复】操作（删云端存档 + 封禁账号 + 清榜单），
+       * 但此前这个按钮点下去【既不置灰也不改字】，await 期间还能继续点 ——
+       * 实测连点 3 次 → UA.destroy 被并发调用 3 次（对照组「永久删除」
+       * 有 disabled 保护，同样点 3 次只触发 1 次）。
+       * 并发销毁会同时读写同一份 index / leaderboard / player 文件，
+       * 存在互相覆盖的竞态；且 destroy 成功后各自 setTimeout(logout, 800)，
+       * 多次 reload 也会打架。
+       * 现在：处理期间置灰并提示，失败才恢复可点（成功反正要退出登录）。 */
+      sd.disabled = true; sd.textContent = '注销中…';
+      let r;
+      try { r = await UA.destroy(ac.name, w); }
+      catch (e) { r = { ok: false, msg: '注销异常：' + (e && e.message || e) }; }
+      this.toast(r.msg || (r.ok ? '已注销' : '注销失败'), r.ok ? 'ok' : 'err');
+      if (r.ok) { setTimeout(() => { if (window.UA) UA.logout(); }, 800); return; }
+      sd.disabled = false; sd.textContent = '🗑 确认注销';
+    };
+    /* 永久删除账号：与注销不同，物理删除账号文件本身，不可恢复 */
+    const spg = $('#spPurgeGo');
+    if (spg) spg.onclick = async () => {
+      const ac = UA.remembered();
+      const w = ($('#spPurge') || {}).value || '';
+      const tip = $('#spPurgeTip');
+      if (!w) { if (tip) tip.textContent = '请输入密码确认'; this.toast('请输入密码确认', 'err'); return; }
+      /* 原生 confirm 连用两次（玩家会养成无脑连点两次确定的习惯，等于没有确认）
+       * → 合并为一次游戏内危险弹窗，按钮文案直接写后果，冷却结束后才可按。 */
+      const okPurge = await this.ask('永久删除账号',
+        '账号「' + (ac.name || '') + '」及其存档 / 索引 / 榜单将全部物理删除，删除后不再显示且无法恢复！',
+        { danger: true, yes: '永久删除' });
+      if (!okPurge) return;
+      spg.disabled = true; spg.textContent = '删除中…';
+      const r = await UA.purge(ac.name, w);
+      spg.disabled = false; spg.textContent = '🔥 永久删除';
+      if (tip) tip.textContent = r.msg || '';
+      this.toast(r.msg || (r.ok ? '已永久删除' : '删除失败'), r.ok ? 'ok' : 'err');
+      if (r.ok) setTimeout(() => { if (window.UA) UA.logout(); }, 1200);
+    };
+    /* 退出登录 / 切换账号 */
+    const sw = $('#setSwitchAcct');
+    if (sw) sw.onclick = async () => {
+      const okSw = await this.ask('退出当前账号', '退出后需要重新输入账号密码才能进入。', { yes: '退出登录' });
+      if (!okSw) return;
+      if (window.UA) UA.logout();
+    };
+    /* 礼包码兑换 */
+    const cdg = $('#cdGo');
+    if (cdg) cdg.onclick = async () => {
+      const v = ($('#cdInput') && $('#cdInput').value) || '';
+      if (!v.trim()) return this.toast('请输入兑换码', 'err');
+      cdg.disabled = true; cdg.textContent = '兑换中…';
+      const r = await MAIN.redeemCode(v);
+      cdg.disabled = false; cdg.textContent = '🎁 立即兑换';
+      const tip = $('#cdTip');
+      if (tip) tip.innerHTML = `<span style="color:${r.ok ? 'var(--green)' : 'var(--red)'}">${this.esc(r.msg)}</span>`;
+      this.toast(r.msg, r.ok ? 'ok' : 'err');
+      /* BUG（兑换码奖励不落盘）：实测兑换成功发放 1000 金币 + 50 钻石，
+       *   而这里既没 save 也没 saveSoon。兑换码是一次性资源，玩家领完立刻
+       *   强关 App / 换设备登录会读回旧档 —— 码已作废、奖励却没留下。
+       *   本地已兑记录 P.cdkGot 同样需要落盘，否则刷新后本地去重失效。 */
+      if (r.ok) { try { E.save(P || this.P); } catch (e) {} if (window.SND) SND.play('pick'); this.home(); }
+    };
+    /* 表39 多语言：单语言版本，界面已不再输出 [data-lang] 切换按钮。
+     * 这里保留一段兜底 —— 若缓存的旧 HTML 里还残留该按钮，点了只会提示，
+     * 不会真的切到其它语种。 */
+    $$('#pnBody [data-lang]').forEach((b) => { b.onclick = () => {
+      if (window.OPS) OPS.setLang('zh');
+      this.toast('本游戏仅支持简体中文', 'warn');
+      this.open('set', '语言'); this.home();
+    }; });
+    /* 表37 清空埋点 */
+    const oct = $('#opsClearTrack');
+    if (oct) oct.onclick = () => {
+      if (window.OPS) OPS.clearTrack(); this.toast('埋点数据已清空', 'ok'); this.open('set', '运营');
+    };
+    /* 防连点：上传存档是异步写云端，此前连点会并发发起多份写入
+     * （虽有 stale 守卫兜底，仍是浪费且存在写冲突），且按钮无任何反馈。
+     * 现在处理期间置灰，结束/失败都复原。 */
     const sv = $('#setSave'); if (sv) sv.onclick = async () => {
-      await MAIN.save(); this.toast('存档已上传', 'ok');
+      sv.disabled = true; const _t = sv.textContent; sv.textContent = '上传中…';
+      try { await MAIN.save(); this.toast('存档已上传', 'ok'); }
+      catch (e) { this.toast('上传失败：' + (e && e.message || e), 'err'); }
+      sv.disabled = false; sv.textContent = _t || '☁️ 立即上传存档';
     };
-    const rs = $('#setReset'); if (rs) rs.onclick = () => {
-      if (!confirm('确定清空全部进度？此操作不可恢复！')) return;
-      localStorage.removeItem('zb_uid');
+    const rs = $('#setReset'); if (rs) rs.onclick = async () => {
+      const okRs = await this.ask('清空全部进度',
+        '云端存档与本地缓存将一并删除，账号保留但进度归零，此操作不可恢复！',
+        { danger: true, yes: '清空进度' });
+      if (!okRs) return;
+      rs.disabled = true; rs.textContent = '重置中…';
+      /* 置位「重置中」：阻止 beforeunload/pagehide 的同步快照、
+       * 30 秒定时存档、以及离线队列把刚删掉的进度重新写回去 */
+      window.__zbResetting = true;
+      const uid = (window.P && P.uid) || lsGet('zb_uid', '');
+      /* ① 真删云端存档。
+       * 此前只 removeItem('zb_uid') + reload，云端 players/<uid>.json 原封不动，
+       * 玩家重载后重新登录同一账号，进度原样回来 —— 「清空全部进度」从未生效过。 */
+      if (uid && window.Net) { try { await Net.del('data/zb/players/' + uid + '.json'); } catch (e) {} }
+      /* 指令队列也要删：它和存档是分开的两份文件，只删存档的话
+       * 历史补发指令仍留在云端，重置后新档 opsDone 为空会把它们全部重发一遍。
+       * （main.js 的 seedOpsDone 是第二道兜底，删除失败时仍能挡住。） */
+      if (uid && window.Net) { try { await Net.del('data/zb/ops/' + uid + '.json'); } catch (e) {} }
+      /* ② 清本地残留。账号名保留以便重新登录，其余全部清除。
+       *    必须清 ss_queue（离线待写队列）—— 里面若存着旧存档，
+       *    重置后会被重新消费并写回云端，等于白重置。
+       *    也要清 ss_cache_* / zb_snap_*，否则会被当成"云端读取失败"的兜底档恢复。 */
+      try {
+        const keep = ['zb_name', 'zb_uname', 'zb_gender'];
+        Object.keys(localStorage).forEach((k) => {
+          if (keep.indexOf(k) >= 0) return;
+          if (k === 'zb_uid' || k === 'zb_auto' || k === 'zb_ucache' || k === 'ss_queue' ||
+              k.indexOf('zb_snap_') === 0 || k.indexOf('zb_idxat_') === 0 ||
+              k.indexOf('ss_cache_') === 0) localStorage.removeItem(k);
+        });
+      } catch (e) {}
       location.reload();
     };
     const ad = $('#setAdmin'); if (ad) ad.onclick = () => { location.href = 'admin/'; };
-    const rn = $('#setReNet'); if (rn) rn.onclick = async () => {
-      this.toast('检测中…'); await Net.reset(); this.open('set', '网络');
+    const st = $('#setAdStam'); if (st) st.onclick = () => {
+      /* 体力已满时先看广告会白扣次数（每日仅 10 次），提前拦截 */
+      if (E.staminaFull(p)) return this.toast('体力已满（' + EX.STAMINA_MAX + '），无需观看', 'err');
+      const r = E.useAd(p, 'AD03');
+      if (!r.ok) return this.toast(r.msg, 'err');
+      const got = E.addStamina(p, 10);
+      /* 与「广告」页签里同一个功能（#setAdStam2）此前不一致：那边调了 E.save(p)、
+       * 这边没调。看广告扣掉的 AD03 次数与加到的体力都只停在内存里，
+       * 玩家看完广告若未触发自动存档就退出/刷新，体力回退、等于白看一次。
+       * 两个入口必须同步落盘。 */
+      E.save(p);
+      this.toast('体力 +' + got + '（今日剩余 ' + E.adLeft(p, 'AD03') + ' 次）', 'ok');
+      this.open('set', '账号'); this.home();
     };
+    /* 表24 AD04 免费抽奖 */
+    const dw = $('#setAdDraw'); if (dw) dw.onclick = () => {
+      const r = E.useAd(p, 'AD04');
+      if (!r.ok) return this.toast(r.msg, 'err');
+      const got = E.adDraw(p);
+      if (window.SND) SND.play('get');
+      /* 表04 VO_010：抽到稀有档（钻石/芯片/稀有金属，合计 20%）才出这句 */
+      if (got && got.rare) { try { if (window.VO) VO.say('VO_010'); } catch (e) {} }
+      this.toast('抽奖获得：' + got.n + '（今日剩余 ' + E.adLeft(p, 'AD04') + ' 次）', 'ok');
+      E.save(p); this.open('set', '账号'); this.home();
+    };
+    /* 表24 AD05 额外宝箱 */
+    const bx = $('#setAdBox'); if (bx) bx.onclick = () => {
+      const r = E.useAd(p, 'AD05');
+      if (!r.ok) return this.toast(r.msg, 'err');
+      const got = E.adBoxReward(p);
+      if (window.SND) SND.play('get');
+      this.toast('获得：' + got.n + '（今日剩余 ' + E.adLeft(p, 'AD05') + ' 次）', 'ok');
+      E.save(p); this.open('set', '账号'); this.home();
+    };
+    const st2 = $('#setAdStam2'); if (st2) st2.onclick = () => {
+      if (E.staminaFull(p)) return this.toast('体力已满（' + EX.STAMINA_MAX + '），无需观看', 'err');
+      const r = E.useAd(p, 'AD03');
+      if (!r.ok) return this.toast(r.msg, 'err');
+      const got = E.addStamina(p, 10);
+      this.toast('体力 +' + got + '（今日剩余 ' + E.adLeft(p, 'AD03') + ' 次）', 'ok');
+      E.save(p); this.open('set', '账号'); this.home();
+    };
+    const rn = $('#setReNet'); if (rn) rn.onclick = async () => { this.toast('检测中…'); await Net.reset(); this.open('set', '网络'); };
     const dg = $('#setDiag'); if (dg) dg.onclick = async () => {
       const box = $('#diagBox'); box.innerHTML = '<div class="lbl">测试中…</div>';
       const list = await Net.diagnose();
-      const ok = list.filter(x => x.ok).length;
+      const ok = list.filter((x) => x.ok).length;
       box.innerHTML = `<div class="lbl" style="margin-bottom:5px">${ok}/${list.length} 个通道可用</div>` +
-        list.map(x => `<div class="kv"><span style="font-size:9px;word-break:break-all">${x.ep.replace('https://','')}</span>
-          <b style="font-size:9px;color:${x.ok?'var(--green)':'#ff8fa4'}">${x.ok?'✔':'✘'} ${x.st}</b></div>`).join('');
+        list.map((x) => `<div class="kv"><span style="font-size:var(--fs-xs);word-break:break-all">${x.ep.replace('https://', '')}</span>
+          <b style="font-size:var(--fs-xs);color:${x.ok ? 'var(--green)' : '#ff8fa4'}">${x.ok ? '✔' : '✘'} ${x.st}</b></div>`).join('');
       await Net.reset(); this.open('set', '网络');
     };
     const se = $('#setSaveEps'); if (se) se.onclick = () => {
-      const v = ($('#setEps').value || '').split('\n').map(x => x.trim()).filter(Boolean);
-      GH.extra = v; try { localStorage.setItem('zb_extra', JSON.stringify(v)); } catch (e) {}
-      alert('已保存 ' + v.length + ' 个加速地址'); Net.reset();
+      const v = ($('#setEps').value || '').split('\n').map((x) => x.trim()).filter(Boolean);
+      GH.extra = v; try { lsSet('zb_extra', JSON.stringify(v)); } catch (e) {}
+      /* 原生 alert → 游戏内 toast（alert 会阻塞整个页面直至手动点掉） */
+      this.notify('已保存 ' + v.length + ' 个加速地址'); Net.reset();
     };
   },
 
   /* ================= 战斗 HUD ================= */
-  btInit(p, levelNo, endless) {
-    $('#btLevel').textContent = endless ? ('无尽 第 ' + levelNo + ' 层') : ('第 ' + levelNo + ' 关');
-    $('#btGold').textContent = '0';
-    $('#btKill').textContent = '0';
-    this.btRenderSkills();
-    this.btRenderBuild();
+  btInit(p, levelId, endless) {
+    const d = BT.run ? BT.run.def : null;
+    /* 全部做判空：任何一个元素缺失都不能让战斗初始化中断 */
+    const set = (id, v) => { const e = $(id); if (e) e.textContent = v; };
+    const setH = (id, v) => { const e = $(id); if (e) e.innerHTML = v; };
+    const setV = (id, v) => { const e = $(id); if (e) e.value = v; };
+    set('#btLevel', endless ? '无尽模式' : (d ? d.n : E.levelName(levelId)));
+    set('#btKill', '0');
+    set('#btGold', '0');
+    set('#btLv', '1');
+    setH('#btSkills', '');
+    set('#btTime', '00:00');
+    set('#btWave', '1');
+    set('#btWaveMax', d ? d.waves : 20);
+    set('#btMag2', BT.run ? BT.run.mag : 30);
+    set('#btMagMax', BT.run ? BT.run.magMax : 30);
+    set('#btCoin', '0');
+    this.btTick();
   },
-  btRenderSkills() {
-    const r = BT.run; if (!r) return;
-    const box = $('#btSkill');
-    box.innerHTML = r.actives.map((id) => {
-      const s = EX.skills.find((x) => x.id === id); if (!s) return '';
-      const cd = r.cds[id] || 0;
-      const ready = cd <= 0 && r.energy >= s.cost;
-      return `<button class="sk ${ready ? 'ready' : ''}" data-sk="${id}">
-        <i>${s.icon}</i>
-        <div class="lv">${r.skills[id] || 1}</div>
-        <div class="cost">${s.cost}</div>
-        ${cd > 0 ? `<div class="cd">${Math.ceil(cd)}</div>` : ''}
-      </button>`;
-    }).join('');
-    $$('#btSkill .sk').forEach((b) => {
-      b.onclick = () => BT.cast(b.dataset.sk);
-    });
+  /* 战斗对话气泡（截图45/46：核心G-94 协同作战） */
+  btTalk(text, ms) {
+    const el = $('#btTalk'), tx = $('#btTalkTx');
+    if (!el || !tx || !text) return;
+    tx.textContent = text;
+    emojify(tx);   /* 台词前缀 🎙️ 此前是死 emoji，这里统一换成图片 */
+    el.classList.add('on');
+    clearTimeout(this._talkT);
+    this._talkT = setTimeout(() => el.classList.remove('on'), ms || 4200);
   },
-  btRenderBuild() {
-    const r = BT.run; if (!r) return;
-    $('#btBuild').innerHTML = BT.TURRET_TYPES.map((t, i) =>
-      `<button class="bb" data-tur="${i}"><i>${t.icon}</i><b>${t.cost}</b></button>`).join('');
-    $$('#btBuild .bb').forEach((b) => {
-      b.onclick = () => {
-        const idx = r.turretSlots.findIndex((s) => !s.t);
-        if (idx < 0) return this.toast('炮台位已满', 'err');
-        const res = BT.buildTurret(idx, +b.dataset.tur);
-        this.toast(res.msg, res.ok ? 'ok' : 'err');
-        if (res.ok) this.btRenderBuild();
-      };
-    });
+
+  /* ---------- 表04 配音字幕 ----------
+   * 全项目此前没有任何台词/字幕通道，VO 表也不存在。
+   * 现在 VO.say() 统一走这里出字幕：即使美术还没给到人声素材，
+   * 台词信息也不会丢失。战斗内复用 btTalk，战斗外用 toast，
+   * 都不会因为缺 DOM 而报错。 */
+  subtitle(text, dur) {
+    if (!text) return;
+    try {
+      const inBt = !!(window.BT && BT.run && !BT.run.over);
+      if (inBt && document.getElementById('btTalk')) {
+        this.btTalk('🎙️ ' + text, Math.max(1600, (dur || 1.6) * 1000));
+        return;
+      }
+      if (document.getElementById('btTalk') && window.BT && BT.on) {
+        this.btTalk('🎙️ ' + text, Math.max(1600, (dur || 1.6) * 1000));
+        return;
+      }
+      this.toast('🎙️ ' + text, 'ok');
+    } catch (e) {}
   },
+
+  /* 开局台词（截图45/46） */
+  /* =========================================================
+   * 维护模式拦截（后台「服务器运维 → 启停维护」）
+   * 真正挡住战斗入口，而不是只弹一行提示就放行。
+   * ========================================================= */
+  MAINT: null,
+
+  /* ---------- 全屏遮罩排队 ----------
+   * BUG（实测确认）：「发现新版本」「公告」「维护中」三个弹窗共用 #maintMask
+   * 同一个容器，后弹的会整份 innerHTML 覆盖先弹的。
+   * 登录流程的实际顺序是 applyHotfix(showUpdate) → syncCloudCfg 末尾 showNotice，
+   * 于是「发现新版本」被公告整份吞掉：玩家只看到公告，点「知道了」直接进游戏，
+   * 拿不到新代码 —— 而 z_hot_seen 已把该版本号记为已提示，本次版本内不会再弹，
+   * 等于永久错过（正是「修好了但你刷新看不到」的老毛病）。
+   * 维护优先级最高，仍然直接覆盖（维护期间其它提示都不重要）。 */
+  maskBusy() {
+    const box = document.getElementById('maintMask');
+    return !!(box && box.style.display === 'flex');
+  },
+  maskHide() {
+    const box = document.getElementById('maintMask');
+    if (box) box.style.display = 'none';
+  },
+  maskQueue(fn) {
+    if (!this.maskBusy()) return false;
+    (this._maskQ || (this._maskQ = [])).push(fn);
+    return true;
+  },
+  maskNext() {
+    const q = this._maskQ || (this._maskQ = []);
+    const f = q.shift();
+    if (f) { try { f(); } catch (e) {} }
+  },
+
+  showMaint(d) {
+    this.MAINT = d || {};
+    const box = document.getElementById('maintMask');
+    if (box) {
+      box.innerHTML = '<div class="mt-box">' +
+        '<div class="mt-ico">🖥️</div>' +
+        '<div class="mt-t">服务器维护中</div>' +
+        '<div class="mt-s">' + ((d && d.msg) || '服务器正在维护，请稍后再来') + '</div>' +
+        /* 后台「预计时长」是自由文本，写入字段为 eta（此前 UI 只读 until，
+         * 后台填的「预计 2 小时」永远显示不出来） */
+        ((d && (d.eta || d.until)) ? '<div class="mt-u">预计维护时长：' + (d.eta || (d.until + ' 分钟')) + '</div>' : '') +
+        '<button class="mt-btn" onclick="location.reload()">重新检测</button>' +
+        '</div>';
+      box.style.display = 'flex';
+    }
+  },
+  /* ---------- 公告（后台「公告管理」接入前端） ----------
+   * 此前 notice.json 不在 CFG_FILES 内，后台页面自己都标着"待开发"，
+   * 运营发布的公告玩家一条都看不到。现在：
+   *   ① 登录时若有未读公告 → 弹窗（按 id 记已读，不重复骚扰）
+   *   ② 「公告」面板可随时回看全部（含已读）
+   * 过期公告（endAt < 现在）在 main.applyCloudCfg 里已过滤。 */
+  noticeUnread() {
+    const list = (typeof EX !== 'undefined' && Array.isArray(EX.NOTICE)) ? EX.NOTICE : [];
+    const p = window.P; if (!p || !list.length) return [];
+    p.noticeRead = Array.isArray(p.noticeRead) ? p.noticeRead : [];
+    return list.filter((x) => p.noticeRead.indexOf(x.id) < 0);
+  },
+  noticeMarkRead(id) {
+    const p = window.P; if (!p) return;
+    p.noticeRead = Array.isArray(p.noticeRead) ? p.noticeRead : [];
+    if (id && p.noticeRead.indexOf(id) < 0) p.noticeRead.push(id);
+    if (p.noticeRead.length > 200) p.noticeRead = p.noticeRead.slice(-200);
+    try { if (window.MAIN && MAIN.save) MAIN.save(); } catch (e) {}
+  },
+  showNotice() {
+    const un = this.noticeUnread();
+    if (!un.length) return;
+    /* 【PM 体验】公告不得打断战斗。
+     * showNotice 由云端配置同步完成后异步触发（main.js startCfgSync 末尾），
+     * 时机不可控：玩家点「出击」进战斗后配置才同步完，公告全屏遮罩就会
+     * 盖在战斗画面上，与战斗引导叠在一起（实测首场战斗同时出现
+     * 「📢 画面特效全新升级」横幅 + 「战斗引导」弹窗）。
+     * 这里在战斗中改为延迟重试，等战斗结束再弹。 */
+    try {
+      const scr = document.getElementById('battle');
+      const inBattle = (typeof BT !== 'undefined' && BT && BT.on) ||
+        (scr && scr.offsetParent !== null);
+      if (inBattle) {
+        clearTimeout(this._ntDefer);
+        this._ntDefer = setTimeout(() => { try { this.showNotice(); } catch (e) {} }, 2000);
+        return;
+      }
+    } catch (e) {}
+    /* 遮罩已被占用（例如「发现新版本」正弹着）→ 排队，等前一个关闭后再弹，
+     * 否则会把前一个整份覆盖掉 */
+    if (this.maskQueue(() => this.showNotice())) return;
+    const x = un[0];
+    const KIND = { info: ['📢', '普通'], warn: ['⚠️', '重要'], hot: ['🎉', '活动'] };
+    const k = KIND[x.kind] || KIND.info;
+    const box = document.getElementById('maintMask');
+    if (!box) return;
+    const esc = (v) => String(v == null ? '' : v).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const more = un.length > 1 ? '<div class="mt-s" style="opacity:.75">还有 ' + (un.length - 1) + ' 条未读公告，可在「公告」面板查看</div>' : '';
+    /* 【属性注入漏洞修复】
+     * 此前两个按钮用内联 onclick 拼接后台配置的 x.id：
+     *   onclick="UI.noticeMarkRead('…' + x.id.replace(/'/g,'') + '…')"
+     * 只过滤了单引号，而外层是【双引号】属性 —— id 里放一个双引号就能闭合属性、
+     * 往按钮上挂任意属性（实测 id='a" onmouseover="…' 成功注入 onmouseover）。
+     * 公告 id 由后台配置，等同于把一段可执行 HTML 塞进所有玩家的登录弹窗。
+     * 现在改成先建 DOM、再用 addEventListener 绑定，id 只走 dataset 不进 HTML。 */
+    box.innerHTML = '<div class="mt-box">' +
+      '<div class="mt-ico">' + k[0] + '</div>' +
+      '<div class="mt-t">' + esc(x.title) + '</div>' +
+      '<div class="mt-s" style="white-space:pre-wrap;text-align:left;max-height:200px;overflow:auto">' + esc(x.body || '') + '</div>' +
+      more +
+      '<button class="mt-btn" id="ntOk">知道了</button>' +
+      '<button class="mt-btn" id="ntAll" style="margin-top:8px;background:rgba(255,255,255,.1)">查看全部公告</button>' +
+      '</div>';
+    const hide = () => { this.maskHide(); this.maskNext(); };
+    const okBtn = box.querySelector('#ntOk');
+    if (okBtn) okBtn.onclick = () => { this.noticeMarkRead(x.id); hide(); this.showNotice(); };
+    const allBtn = box.querySelector('#ntAll');
+    if (allBtn) allBtn.onclick = () => { this.noticeMarkRead(x.id); hide(); this.open('notice'); };
+    box.style.display = 'flex';
+  },
+  r_notice(p, tab) {
+    const list = (typeof EX !== 'undefined' && Array.isArray(EX.NOTICE)) ? EX.NOTICE : [];
+    p.noticeRead = Array.isArray(p.noticeRead) ? p.noticeRead : [];
+    const esc = (v) => String(v == null ? '' : v).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    if (!list.length) {
+      return '<div class="card"><div class="empty">暂无公告</div>' +
+        '<div class="lbl">运营在后台「公告管理」发布后，这里会显示。</div></div>';
+    }
+    const KIND = { info: ['📢', '普通', '#7fd0ff'], warn: ['⚠️', '重要', '#ffb74d'], hot: ['🎉', '活动', '#ff6fae'] };
+    return '<div class="card"><div class="card-t">公告<span class="sub">共 ' + list.length + ' 条</span></div>' +
+      list.map((x) => {
+        const k = KIND[x.kind] || KIND.info;
+        const read = p.noticeRead.indexOf(x.id) >= 0;
+        const dt = x.at ? new Date(Number(x.at)).toLocaleString('zh-CN', { hour12: false }) : '';
+        return '<div style="border-left:3px solid ' + k[2] + ';padding:8px 10px;margin:8px 0;background:rgba(255,255,255,.04);border-radius:6px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+          '<b style="color:' + k[2] + '">' + k[0] + ' ' + esc(x.title) + '</b>' +
+          '<span class="sub">' + (read ? '已读' : '<span style="color:var(--c-red-450)">未读</span>') + '</span></div>' +
+          (x.body ? '<div style="margin:6px 0;opacity:.9;white-space:pre-wrap">' + esc(x.body) + '</div>' : '') +
+          '<div class="sub">' + dt + (x.endAt ? ' · 展示至 ' + new Date(Number(x.endAt)).toLocaleDateString('zh-CN') : '') + '</div>' +
+          '</div>';
+      }).join('') + '</div>';
+  },
+  b_notice(p) {
+    /* 打开面板即全部标记已读 */
+    const list = (typeof EX !== 'undefined' && Array.isArray(EX.NOTICE)) ? EX.NOTICE : [];
+    list.forEach((x) => this.noticeMarkRead(x.id));
+  },
+
+  /* 云端推送了新版本：提示玩家刷新拿新代码
+   * 此前版本号只写死在 index.html 的 ?v= —— 后台「推送到云端」后
+   * 玩家不强制刷新就拿不到新代码，反复出现"修好了但你看不到"。 */
+  showUpdate(ver) {
+    const box = document.getElementById('maintMask');
+    if (!box) return;
+    /* 遮罩已被占用 → 排队，等前一个关闭后再弹，避免互相覆盖 */
+    if (this.maskQueue(() => this.showUpdate(ver))) return;
+    /* 与 showNotice 同一类属性注入：ver 来自云端推送，却同时被拼进
+     * 正文与内联 onclick（外层双引号）。这里也改成 DOM 绑定 + textContent。 */
+    const esc = (v) => String(v == null ? '' : v).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const sv = String(ver == null ? '' : ver);
+    box.innerHTML = '<div class="mt-box">' +
+      '<div class="mt-ico">🔄</div>' +
+      '<div class="mt-t">发现新版本</div>' +
+      '<div class="mt-s">已发布 ' + esc(sv) + '，刷新后即可体验最新内容</div>' +
+      '<button class="mt-btn" id="upNow">立即刷新</button>' +
+      '<button class="mt-btn" id="upLater" style="margin-top:8px;background:rgba(255,255,255,.1)">稍后再说</button>' +
+      '</div>';
+    const nb = box.querySelector('#upNow');
+    if (nb) nb.onclick = () => {
+      try {
+        const u = location.href.split('#')[0].split('?')[0];
+        location.replace(u + '?v=' + encodeURIComponent(sv));
+      } catch (e) { location.reload(); }
+    };
+    const lb = box.querySelector('#upLater');
+    if (lb) lb.onclick = () => { this.maskHide(); this.maskNext(); };
+    box.style.display = 'flex';
+  },
+  /* 统一的战斗入口守卫：维护中一律不放行 */
+  guardBattle() {
+    if (this.MAINT && this.MAINT.mode === '维护') {
+      this.toast('🖥️ ' + (this.MAINT.msg || '服务器维护中，暂无法进入战斗'), 'err');
+      this.showMaint(this.MAINT);
+      return false;
+    }
+    return true;
+  },
+
+
+  btIntroTalk(r) {
+    const lines = [
+      '丧尸越来越多了，守住防线！',
+      '丧尸大队马上赶到，弹药资源有限，申请支援！',
+      '我是来自后方实验室的核心G-94，我的任务是协同你一起作战，对抗尸潮。请快速填充弹药，接下来我会配合你的。',
+    ];
+    this.btTalk(lines[Math.floor(Math.random() * lines.length)], 4600);
+  },
+
   btTick() {
     const r = BT.run; if (!r) return;
-    $('#btWave').textContent = '第 ' + r.wave + ' / ' + r.waveTotal + ' 波';
-    const s = Math.floor(r.time);
-    $('#btTime').textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
-    $('#btLv').textContent = r.lv;
-    $('#btXpBar').style.width = Math.min(100, r.xp / r.xpNeed * 100) + '%';
-    $('#btGold').textContent = E.fmt(r.gold);
-    $('#btKill').textContent = r.kills;
-    $('#btEnergy').style.height = (r.energy / r.energyMax * 100) + '%';
-    this.btRenderSkills();
+    /* 顶部关卡 / 波次 */
+    const blv = $('#btLevel');
+    if (blv) {
+      /* 截图格式：1.城市大街 */
+      const nm = r.endless ? ('无尽 ' + r.wave + ' 层')
+        : (r.def && r.def.n ? r.def.n : ('第 ' + r.wave + ' 波'));
+      blv.textContent = r.endless ? nm : ((r.ch || 1) + '.' + String(nm).replace(/^第\s*|^\s*关/g, ''));
+    }
+    const bw0 = $('#btWave'); if (bw0) bw0.textContent = r.wave;
+    const bwm0 = $('#btWaveMax'); if (bwm0) bwm0.textContent = r.waveTotal;
+    const bt = $('#btTime');
+    if (bt) { const s = Math.floor(r.time);
+      bt.textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+    /* 血量（旧布局，保留兼容） */
+    const hb = $('#btHpBar'); if (hb) hb.style.width = Math.max(0, r.hp / r.maxHp * 100) + '%';
+    const ht = $('#btHpTxt'); if (ht) ht.textContent = Math.ceil(r.hp) + '/' + Math.ceil(r.maxHp);
+    const sh = $('#btShWrap'), sb = $('#btShBar');
+    if (sh && sb) { if (r.maxShield > 0) { sh.style.display = ''; sb.style.width = (r.shield / r.maxShield * 100) + '%'; }
+      else sh.style.display = 'none'; }
+    const bk = $('#btKill'); if (bk) bk.textContent = r.kills;
+    const cg = $('#btCoin'); if (cg) cg.textContent = E.fmt(r.coin != null ? r.coin : r.gold);
+    /* BUG：局内金币 HUD 从未刷新，一直是 0 */
+    const bg = $('#btGold'); if (bg) bg.textContent = E.fmt(r.coin != null ? r.coin : r.gold);
+    const bd2 = $('#btDia2'); if (bd2) bd2.textContent = E.fmt((BT.P && BT.P.diamond) || 0);
+    /* 修复：index.html 里有两个 id="btLv"（顶部状态栏与左上英雄区），
+     * getElementById 只返回第一个，导致左上「Lv.N」永远停在 1。
+     * 现拆成两个独立 id 并都更新；同时补判空避免元素缺失时抛错打断渲染。 */
+    const bl1 = $('#btLv'); if (bl1) bl1.textContent = r.lv;
+    const bl2 = $('#btHeroLv'); if (bl2) bl2.textContent = r.lv;
+    /* 顶部波次 */
+    const bw = $('#btWave'); if (bw) bw.textContent = r.wave;
+    const bwm = $('#btWaveMax'); if (bwm) bwm.textContent = r.waveTotal;
+    /* 波次进度条（战斗 HUD 重构）：把「还要打多久」从纯数字变成可扫读的进度条。
+     * 无尽模式 waveTotal 可能极大，用 clamp 收在 0~1；r.wave 从 1 开始，
+     * 因此第 1/N 波显示 1/N 而不是 0，玩家不会误以为没开始。 */
+    const wbp = $('#btWaveBar');
+    if (wbp) {
+      const tot = Number(r.waveTotal) || 0;
+      wbp.style.width = (tot > 0 ? clamp((Number(r.wave) || 1) / tot, 0, 1) : 0) * 100 + '%';
+    }
+    /* P 判空：战斗 HUD 每帧刷新，若玩家对象异常会连续抛错打断渲染。
+     * 此前 this.P 为 null 时 E.power(null) / this.P.diamond 直接崩溃。 */
+    if (!this.P) return;
+    /* 左上英雄立绘 + 战力 */
+    const hi = $('#btHeroImg');
+    if (hi && !hi.src) { const av = (E.char(this.P) || {}).img; if (av) hi.src = av + '?v=' + IMG_V; }
+    const bpw = $('#btPower'); if (bpw) bpw.textContent = E.fmt(E.power(this.P));
+    const bd = $('#btDia'); if (bd) bd.textContent = E.fmt(this.P.diamond || 0);
+    /* 武器图标（底部 + 右上） */
+    const gi = $('#btGunImg');
+    if (gi && !gi.src) { const g = E.gun(this.P); if (g && g.img) gi.src = g.img + '?v=' + IMG_V; }
+    const gi2 = $('#btGunImg2');
+    if (gi2 && !gi2.src) { const g2 = E.gun(this.P); if (g2 && g2.img) gi2.src = g2.img + '?v=' + IMG_V; }
+    /* 右上弹药 30/30 */
+    const mg2 = $('#btMag2'), mgm = $('#btMagMax');
+    if (mg2) mg2.textContent = r.mag != null ? r.mag : 30;
+    if (mgm) mgm.textContent = (E.attrs(this.P).mag) || 30;
+    /* 倍速按钮 */
+    const sp = $('#btSpeed'); if (sp) sp.textContent = 'X' + (BT.speed || 1);
+    /* 防线血条 */
+    const wb = $('#btWallBar'), wt = $('#btWallTxt');
+    if (wb) {
+      const wm = r.wallMax || r.maxHp, wv = r.wallHp != null ? r.wallHp : r.hp;
+      wb.style.width = Math.max(0, wv / wm * 100) + '%';
+      if (wt) wt.textContent = Math.ceil(Math.max(0, wv));
+      /* 截图：只显示当前血量数值（如 3000），不显示上限 */
+    }
+    /* 护盾条：新布局此前完全没有对应元素，护盾生效也看不见。
+     * maxShield>0 时显示并按比例填充，无护盾时隐藏，避免占位 */
+    const shw = $('#btShWrap'), shb = $('#btShBar');
+    if (shw && shb) {
+      const ms = Number(r.maxShield) || 0;
+      if (ms > 0) {
+        shw.style.display = '';
+        shb.style.width = clamp(1, 0, (Number(r.shield) || 0) / ms) * 100 + '%';
+      } else shw.style.display = 'none';
+    }
+    const rl = $('#btReload');
+    if (r.reloading) {
+      rl.classList.add('reloading');
+      const total = E.gun(this.P).reload;
+      $('#btMag').textContent = '换弹…';
+      $('#btReloadBar').style.width = ((1 - r.reloadT / total) * 100) + '%';
+    } else {
+      rl.classList.remove('reloading');
+      $('#btMag').textContent = r.mag + '/' + r.magMax;
+      $('#btReloadBar').style.width = '0';
+    }
+    const sk = $('#btSkills');
+    const ids = Object.keys(r.skills).filter((id) => {
+      const d = EX.skills.find((x) => x.id === id); return d && d.kind !== 'passive';
+    });
+    const key = ids.join(',') + '|' + ids.map((i) => (r.cd[i] || 0).toFixed(1)).join(',');
+    if (sk.dataset.k !== key) {
+      sk.dataset.k = key;
+      sk.innerHTML = ids.map((id) => {
+        const d = EX.skills.find((x) => x.id === id); if (!d) return '';
+        const cd = r.cd[id] || 0;
+        const el = EX.elements.find((x) => x.k === d.el) || { c: '#ffd76a' };
+        return `<div class="bs ${cd > 0 ? 'cd' : ''}" data-cast="${id}"
+          style="border-color:${el.c}66">
+          ${d.img ? `<img src="${d.img}" style="width:26px;height:26px;border-radius:6px;object-fit:cover">`
+                  : d.icon}<b>${r.skills[id]}</b>
+          <u style="width:${cd > 0 ? Math.min(100, cd / (d.cd || 5) * 100) : 0}%"></u></div>`;
+      }).join('');
+      $$('#btSkills [data-cast]').forEach((b) => {
+        b.onclick = () => {
+          const res = BT.castSkill(b.dataset.cast);
+          if (res && res.msg) this.toast(res.msg, res.ok ? 'ok' : 'err');
+        };
+      });
+    }
+    /* 炮台建造栏 */
+    const tb = $('#btTurret');
+    if (tb && !tb.dataset.init) {
+      tb.dataset.init = '1';
+      tb.innerHTML = EX.turrets.map((t) => {
+        const el = EX.elements.find((x) => x.k === t.el) || { c: '#ffd76a' };
+        return `<button data-turret="${t.id}" style="border-color:${el.c}55">${t.img
+          ? `<img src="${t.img}" style="width:24px;height:24px;border-radius:5px;object-fit:cover;display:block;margin:0 auto 2px">`
+          : t.icon + ' '}${t.n}<br><span class="tp" data-tp="${t.id}">${t.cost}金</span></button>`;
+      }).join('');
+      $$('#btTurret [data-turret]').forEach((b) => {
+        b.onclick = () => {
+          const r = BT.run; if (!r) return;
+          /* BUG：此前一律 pickFreeSlot()，槽位全满时返回【第一个】已建炮台的槽位，
+           * 于是点任意炮台按钮都会去升第一座 —— 你点火焰，升的却是寒冰，
+           * 而且按钮上写死的「${t.cost}金」是建造价，实际扣的是升级价，二者完全不同。
+           * 现在：有空槽 → 建造；槽位满 → 优先升同类型，其次升第一座并明确告知。 */
+          let slot = null;
+          for (const s of (EX.turretSlots || [])) {
+            if (!r.turrets.find((t) => t.k === s.k)) { slot = s.k; break; }
+          }
+          if (!slot) {
+            const same = r.turrets.find((t) => t.def && t.def.id === b.dataset.turret);
+            const tgt = same || r.turrets[0];
+            if (!tgt) return this.toast('炮台槽位已满', 'err');
+            slot = tgt.k;
+            if (!same) {
+              const nm = (tgt.def && tgt.def.n) || '炮台';
+              this.toast('槽位已满，改为升级已有的「' + nm + '」', 'err');
+            }
+          }
+          const res = BT.buildTurret(slot, b.dataset.turret);
+          this.toast(res.msg, res.ok ? 'ok' : 'err');
+          if (res.ok && window.SND) SND.play('equip');
+          this.turretPrice();
+        };
+      });
+      this.turretPrice();
+    }
   },
 
   /* ---------- 技能三选一 ---------- */
   showSkillChoice(picks) {
+    /* 健壮性修复：picks 为空/未传时（战斗外调用、或抽取失败）会一路崩到
+     * `picks.map(...)`，且 15 秒倒计时回调里 `picks[0]` 会二次崩溃。
+     * 这里统一兜底：无候选则直接收起面板，避免白屏与报错刷屏 */
+    if (!picks || !picks.length) {
+      picks = (BT._picks && BT._picks.length) ? BT._picks : [];
+    }
+    if (!picks.length) {
+      try { this.hideChoice(); } catch (e) {}
+      return;
+    }
+    /* 截图特征：顶部「选择技能」+ 15 秒倒计时 */
+    const chT = $('#chTitle'); if (chT) chT.textContent = EX.txt('TXT_006');
+    this.chTime = 15;
+    const tm = $('#chTimer');
+    if (tm) {
+      tm.textContent = '15';
+      clearInterval(this._chIv);
+      this._chIv = setInterval(() => {
+        this.chTime--;
+        if (tm) tm.textContent = Math.max(0, this.chTime);
+        if (this.chTime <= 0) {
+          clearInterval(this._chIv); this._chIv = null;
+          /* 超时自动选第一个
+           * 兜底：若战斗已结束/已退出（run 为空或 over），
+           * 倒计时仍会触发（此前点击卡片只 remove('on') 没清 timer），
+           * 此时 pickSkill 会往已作废的 run 里写技能、并对 null 取属性报错。 */
+          if (picks[0] && BT.run && !BT.run.over) BT.pickSkill(picks[0].id);
+          this.hideChoice();
+        }
+      }, 1000);
+    }
+    const owned = (BT.run && BT.run.skills) ? BT.run.skills : {};
+    /* 截图47：刷新按钮 + 当局剩余观看次数 */
+    this.rfLeft = (this.rfLeft == null ? 1 : this.rfLeft);
+    const rfB = $('#chRefresh');
+    if (rfB) {
+      rfB.innerHTML = '<img class="ei" src="assets/icon/hud_switch.png?v=' + IMG_V + '" alt=""> 刷新';
+      rfB.disabled = this.rfLeft <= 0;
+      rfB.style.opacity = this.rfLeft > 0 ? '1' : '.45';
+    }
+    const rfN = $('#chRfNum');
+    if (rfN) rfN.textContent = '当局剩余观看次数 ' + Math.max(0, this.rfLeft) + '/1';
     $('#chCards').innerHTML = picks.map((s) => {
-      const L = (BT.run.skills[s.id] || 0);
+      const isNew = !owned[s.id];
+      const L = ((BT.run && BT.run.skills ? BT.run.skills[s.id] : 0) || 0);
       const el = EX.elements.find((x) => x.k === s.el) || { c: '#ffd76a' };
-      const kindTxt = s.kind === 'active' ? '主动技能' : s.kind === 'gun' ? '枪械强化' : '被动强化';
+      const kindTxt = s.kind === 'passive' ? '被动强化（自动生效）' : s.kind === 'summon' ? '召唤' : '主动释放';
       return `<button class="ccard" data-pick="${s.id}">
-        <i style="background:${el.c}22">${s.icon}</i>
-        <div class="ci">
-          <div class="cn"><span style="color:${el.c}">${s.n}</span>
-            <span class="tag" style="background:${el.c}22;color:${el.c}">${s.el||'物'}</span>
-            ${L ? `<span class="tag y">Lv.${L}→${L+1}</span>` : '<span class="tag g">NEW</span>'}</div>
+        ${isNew ? '<i class="cc-new">新</i>' : ''}
+        <i style="background:${el.c}22">${s.img
+          ? `<img src="${s.img}" style="width:38px;height:38px;border-radius:8px;object-fit:cover">`
+          : s.icon}</i>
+        <div class="ci"><div class="cn"><span style="color:${el.c}">${s.n}</span>
+          ${L ? `<span class="tag y">Lv.${L}→${L + 1}</span>`
+              : (isNew ? '' : '<span class="tag g">未学习</span>')}</div>
           <div class="cd2">${s.desc}</div>
-          <div class="cl">${kindTxt}${s.kind==='active'?` · 耗能${s.cost} · CD${s.cd}s`:''}</div>
+          <div class="cl">${isNew ? '<b style="color:var(--c-red-450)">学习' + s.n + '</b>' : kindTxt} · ${s.up}</div>
         </div>
-      </button>`;
+        <div class="ch-arrow">▼</div></button>`;
     }).join('');
     $$('#chCards .ccard').forEach((b) => {
-      b.onclick = () => { $('#choice').classList.remove('on'); BT.pickSkill(b.dataset.pick); };
+      /* 表37 埋点：skill_select */
+      try { OPS.track('skill_select', { sk: b.dataset.pick }); } catch (e) {}
+      /* 严重BUG：此前只 remove('on') 收起面板，却没有 clearInterval(this._chIv)。
+       * 15 秒倒计时仍在后台跑，到点后会执行「超时自动选第一个」——
+       * 玩家手动选完技能，15 秒后被白送 picks[0] 一级（实测 lianfa Lv.1 → Lv.2）。
+       * 连升多级时每次选择都会额外白送，局内技能等级失控。
+       * 现在点击即走 hideChoice()，与超时路径一样清掉计时器。 */
+      b.onclick = () => { BT.pickSkill(b.dataset.pick); this.hideChoice(); };
     });
     $('#choice').classList.add('on');
   },
-  hideChoice() { $('#choice').classList.remove('on'); },
+  hideChoice() { clearInterval(this._chIv); this._chIv = null; $('#choice').classList.remove('on'); },
 
   /* ---------- 结算 ---------- */
+  /* 章节 CG 过场（首次进入该章节播放一次） */
+  showCG(cg, ch, chapterName, onGo) {
+    const m = $('#cgModal');
+    if (!m || !cg) { if (onGo) onGo(); return; }
+    const im = $('#cgImg');
+    if (im) {
+      im.onerror = () => { im.style.display = 'none'; };
+      im.style.display = '';
+      im.src = cg.src;
+    }
+    const c1 = $('#cgCh'); if (c1) c1.textContent = '第 ' + ch + ' 章';
+    const c2 = $('#cgName'); if (c2) c2.textContent = chapterName || '';
+    const c3 = $('#cgDesc'); if (c3) c3.textContent = (EX.chapterDesc || {})[ch] || '';
+    const go = $('#cgGo');
+    if (go) go.onclick = () => { m.classList.remove('on'); if (onGo) onGo(); };
+    m.classList.add('on');
+    try { OPS.track('cg_show', { ch: ch }); } catch (e) {}
+    if (window.SND) SND.play('upgrade');
+  },
+
+  /* 升级弹窗（截图52：发光圆形徽章数字 + 奖励 R币） */
+  showLvUp(lv, rw) {
+    const b = $('#lvup');
+    if (!b) return;
+    $('#lvupNum').textContent = lv;
+    /* 「R币」是早期套用参考截图时的残留叫法，全项目其余地方（商店/军团/提示/关卡面板）
+     * 一律称「金币」，玩家在结算页看到「R币」会以为是另一种货币。统一为「金币」。
+     *
+     * 【公示必须等于实发】BUG：这里原写 `(rw || 200)`，而战斗外升级走
+     *   E.addXp() → UI.showLvUp(p.lv, 0) 明确传 0（addXp 只加等级属性与天赋点，
+     *   不发任何金币）。`0 || 200` 被兜成 200，弹窗于是显示「获得 200 金币」，
+     *   实测金币增量 0 —— 玩家每次在战斗外升级（领任务/邮件/扫荡/签到都会调 addXp）
+     *   都会看到一个从没发过的奖励。
+     *   现在按真实值渲染：发多少显示多少，0 就整行不显示（只留等级徽章）。
+     *   战斗内升级由 battle.js 传真实 lvRw（并确实加进 r.coin），不受影响。 */
+    const _lvRw = Math.max(0, Math.floor(Number(rw) || 0));
+    $('#lvupRw').innerHTML = _lvRw > 0
+      ? '获得 <b style="color:var(--yel)">' + E.fmt(_lvRw) + '</b> 金币'
+      : '';
+    b.classList.add('on');
+    /* 角色/局内等级提升走 'levelup'（audio.js 里专门做的「上行三音」），
+     * 此前这里播的是 'upgrade' —— 那条在音效表里的注释是「强化成功」，
+     * 与武器强化、装备打造共用同一个音，玩家分不清自己是升级了还是强化了。
+     * 'levelup' 此前整项目零调用，属于配了没接线的死音效。 */
+    if (window.SND) SND.play('levelup');
+    clearTimeout(this._lvT);
+    this._lvT = setTimeout(() => b.classList.remove('on'), 2200);
+  },
+
   showResult(res, d) {
     const win = res === 'win';
-    $('#rsTitle').textContent = win ? '战 斗 胜 利' : (res === 'lose' ? '防 线 失 守' : '撤 离 战 场');
+    /* 表37 埋点：level_finish */
+    try { OPS.track('level_finish', { win: win, t: Math.floor(d.time || 0) }); } catch (e) {}
+    /* 截图51/52：标题「恭喜获得」+ 剩余血量% + 新纪录 */
+    /* 【V1.1.0】胜利标题走运营热改层（TXT_003），败/撤离保持硬编码（运营暂不可改，避免误改负面文案） */
+    $('#rsTitle').textContent = win ? EX.txt('TXT_003') : (res === 'lose' ? '防 线 失 守' : '撤 离 战 场');
     $('#rsTitle').className = 'rs-t ' + (win ? 'win' : 'lose');
-    $('#rsLevel').textContent = BT.run.endless ? ('无尽 第 ' + BT.run.levelNo + ' 层')
-      : (E.levelName(BT.run.levelNo));
-    const mm = Math.floor((d.time || 0) / 60), ss = Math.floor((d.time || 0) % 60);
-    $('#rsGrid').innerHTML = `
-      <div class="rs-i"><div class="v">${d.kills}</div><div class="l">击杀僵尸</div></div>
-      <div class="rs-i"><div class="v">${mm}:${String(ss).padStart(2,'0')}</div><div class="l">战斗时长</div></div>
-      <div class="rs-i"><div class="v">${E.fmt(d.rw.gold)}</div><div class="l">获得金币</div></div>
-      <div class="rs-i"><div class="v">${d.rw.diamond}</div><div class="l">获得钻石</div></div>`;
-    $('#rsNext').style.display = win ? '' : 'none';
+    const r = BT.run || {};
+    const hpPct = r.wallMax ? Math.round(Math.max(0, r.wallHp) / r.wallMax * 100) : 0;
+    const best = (this.P.bestHpPct || {})[(r.def || {}).id] || 0;
+    const isNew = win && hpPct > best;
+    if (isNew) { this.P.bestHpPct = this.P.bestHpPct || {}; this.P.bestHpPct[(r.def || {}).id] = hpPct; }
+    $('#rsLevel').innerHTML = `剩余血量：<b style="color:var(--grn)">${hpPct}%</b>`
+      + (isNew ? ' <span class="rs-new">新纪录</span>' : '')
+      + ((r.def || {}).n ? ' · ' + r.def.n : '');
+    /* 奖励（截图51：EXP / 枪械部件 / 技能 / 宝石 / 图纸 / R币） */
+    const rw = d.rw || {};
+    /* BUG：第四格「1阶枪械部件」读的是从未赋值的 rw.parts，恒为 0；
+     * 而关卡真正发放的材料（rw.mat，如 1-1 的 M02×5）一行都不显示，
+     * 玩家领了材料却看不见。现在按实际发放渲染材料格 + 星级格。 */
+    const mk = Object.keys(rw.mat || {}).filter((k) => (rw.mat[k] || 0) > 0);
+    const cell = (v, l) => `<div class="rs-i"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+    /* 【公示必须等于实发】EXP 格此前写 `rw.exp || 15`：
+     * 只要本局实发经验算出 0（典型场景：广告复活后重复结算，
+     * xpGain 被 paid.xp 去重减成 0），面板照样显示「15 EXP」，
+     * 而 p.xp 纹丝不动 —— 玩家以为拿了经验，实际一分没有。
+     * 现在按真实发放值渲染：发多少显示多少，0 就不显示这一格。 */
+    $('#rsGrid').innerHTML = (rw.exp ? cell(E.fmt(rw.exp), 'EXP') : '')
+      + cell(E.fmt(rw.gold || 0), '金币')   /* 原为「R币」，与全项目「金币」叫法不一致，已统一 */
+      + cell(d.kills, '击杀')
+      /* 最大连杀：JUICE 连杀系统的战后回执。
+       * 连杀此前只在内存累加、界面从不显示，玩家打出一串连杀与一只只慢慢磨
+       * 反馈完全相同；现在结算给出本局最高连杀，让「打得漂亮」被看见。 */
+      + ((BT.run && BT.run.comboBest) ? cell(BT.run.comboBest, '最大连杀') : '')
+      + cell(win ? (d.stars || 0) : 0, '星级')
+      + (rw.chip ? cell(rw.chip, '芯片') : '')
+      + (rw.diamond ? cell(rw.diamond, '钻石') : '')
+      /* 图鉴解锁奖励：此前由 E.grant 直接进 P.gold，结算面板不显示，
+       * 玩家看到的合计比实际到账少一笔（实测 1-1：面板 2260 / 到账 2360）。 */
+      + (rw.cdxGold ? cell(E.fmt(rw.cdxGold), '图鉴解锁') : '')
+      /* 无尽模式：核心成绩是「活到第几波」+ 换来的活动代币。
+       * 此前结算面板在无尽里只有 EXP/金币/击杀，波次与代币一格都没有，
+       * 玩家打完只看到一堆数字，不知道自己撑了几波。 */
+      + (BT.run && BT.run.endless ? cell(rw.wave || 0, '波次') : '')
+      + (BT.run && BT.run.endless && rw.evToken ? cell(rw.evToken, '活动代币') : '')
+      + mk.map((k) => cell(rw.mat[k], E.itemName ? E.itemName(k) : k)).join('');
+    /* 难度标签：让玩家知道自己打的是哪一档（三档奖励差 6.5 倍，必须可见） */
+    const rsDf = $('#rsDiff');
+    if (rsDf) {
+      const d = E.diffDef((BT.run && BT.run.diff) || 'normal');
+      rsDf.innerHTML = BT.run && BT.run.endless ? '<span class="tag">无尽模式</span>'
+        : `<span class="tag" style="background:${d.color || '#5fd97a'}33 !important">${d.icon || ''} ${d.n}难度</span>`
+          + (rw.firstBonus ? `<span class="tag" style="background:var(--c-amber-250) !important">🎁 首通 +${rw.firstBonus} 钻石</span>` : '');
+      rsDf.style.display = '';
+    }
+    /* 伤害来源统计
+     * BUG：hurt() 记录的是【伤害来源/元素】（'物' '火' '电' '冰' 'barrel'），
+     *      而这里拿它去 EX.skills 里按 id 查名字 —— 来源键不是技能 id，
+     *      恒查不到，于是直接把原始键显示出来：
+     *        实测结算面板出现「物 147 11/s」「barrel 260 20/s」
+     *      英文键与单字混在中文界面里，玩家完全看不懂。
+     * 现在按来源键映射中文名，标题也改为与实际内容相符的「伤害来源」，
+     * 并按伤害量从高到低排序（原来是对象插入序，杂乱）。 */
+    const dm = $('#rsDmg');
+    if (dm) {
+      const SRC_NAME = { 物: '子弹', 火: '火焰', 冰: '冰霜', 电: '电磁', 风: '风暴',
+        barrel: '油桶爆炸', gun: '子弹', poison: '中毒' };
+      const st = (r.skillDmg || {});
+      const ks = Object.keys(st).filter((k) => (st[k] || 0) > 0)
+        .sort((a, b) => st[b] - st[a]);
+      const sec = Math.max(1, Math.floor(r.time || 1));
+      dm.innerHTML = ks.length ? `<div class="rsd-t">伤害来源</div>` + ks.map((k) => {
+        const nm = SRC_NAME[k] || k;
+        return `<div class="rsd-r"><span>${nm}</span>
+          <b>${E.fmt(st[k])}</b><i>${E.fmt(Math.round(st[k] / sec))}/s</i></div>`;
+      }).join('') : '';
+    }
+    /* 剩余体力：挑战次数已改为纯体力制，不再显示「今日剩余次数 x/3」 */
+    const tn = $('#rsTimes');
+    if (tn) {
+      const left = E.runLeft ? E.runLeft(this.P) : 0;
+      tn.textContent = '剩余体力：' + Math.max(0, left) + '/' + ((window.EX && EX.STAMINA_MAX) || 100);
+    }
+    /* BUG：此前只按「是否胜利 + 是否无尽」决定显隐，没判断【有没有下一关】。
+     * 实测通关末关 10-10（E.nextLevel 返回 null）时，「下一关」按钮照样亮着，
+     * 玩家点下去被直接踢回主界面 —— 按钮写着「下一关」，却不存在下一关，
+     * 玩家只会以为游戏把关卡弄丢了。末关时隐藏该按钮，只留「再挑战 / 返回」。 */
+    /* 注：run 里没有 run.id / run.levelId 这类字段，关卡号在 run.def.id 上
+     * （run 只是把 levelDef() 的返回值整体挂在 def 下）。 */
+    const _curLv = BT.run.endless ? null : ((BT.run.def && BT.run.def.id) || BT.run.id || BT.run.levelId);
+    const _hasNext = win && !BT.run.endless && !!(E.nextLevel && _curLv && E.nextLevel(_curLv));
+    $('#rsNext').style.display = _hasNext ? '' : 'none';
+    /* 广告：双倍奖励 / 复活 */
+    const adBox = $('#rsAd');
+    if (adBox) {
+      /* BUG（自相矛盾 + 可刷奖励）：此前「撤离」(quit) 与「失守」(lose) 共用复活按钮。
+       * 暂停面板里「放弃本关」的确认文案明写「退出将放弃本关奖励」，
+       * 但撤离后结算面板照样给「看广告原地复活」，玩家复活→再撤离即可重复领奖。
+       * 现在只有「防线失守」才提供复活；主动撤离不给。 */
+      if (win) adBox.innerHTML = `<button class="btn c blk" id="rsAd2x">📺 看广告双倍奖励（剩 ${E.adLeft(this.P, 'AD02')} 次）</button>`;
+      else if (res === 'lose') adBox.innerHTML = `<button class="btn c blk" id="rsAdRev">📺 ${EX.txt('TXT_004')}（剩 ${E.adLeft(this.P, 'AD01')} 次）</button>`;
+      else adBox.innerHTML = `<div class="sub" style="text-align:center;padding:6px 0">已主动撤离，本局结束</div>`;
+      /* BUG（画面不一致）：结算面板是独立 DOM，渲染不经过 open()，
+       * 而 open() 里那句 emojify() 是全站 emoji→图片的唯一入口。
+       * 结果结算页上的 emoji 从未被替换，实测（393 宽、困难难度、有首通奖励）
+       * 玩家看到的是：
+       *   🎁 首通 +88 钻石      （映射表里有 sh01_gift.jpg）
+       *   🔥 困难难度           （映射表里有 diff_hard.jpg）
+       *   📺 看广告双倍奖励     （映射表里有 nav_act.png）
+       * 三个都有对应图片，缺的只是这一行调用。
+       * 放在 adBox 赋值之后：难度标签(#rsDiff)在它之前写入，此时一并替换。 */
+      emojify(document.getElementById('result') || adBox);
+      const b2 = $('#rsAd2x');
+      if (b2) b2.onclick = () => {
+        const r = E.useAd(this.P, 'AD02'); if (!r.ok) return this.toast(r.msg, 'err');
+      try { OPS.track('ad_watch', {}); } catch (e) {}
+        /* 表24 AD02 配置的 rw 是「通关奖励 ×2」，但此前只补了一份金币，
+         * 钻石与经验不翻倍，与按钮文案「双倍奖励」及配置表不符。
+         * 这里按结算包整体再补一份（金币 / 钻石 / 经验）。
+         *
+         * BUG（宣传与实发不符，实测）：结算面板明明列出了「金属×50 合金×20 芯片×2」，
+         * 按钮也写着「双倍奖励」，但这三样【一点没翻倍】——只补了金币/钻石/经验。
+         * 实测点击后 M01 100→100（应为 150）、芯片也不变，玩家花一次广告
+         * 只拿到承诺的一半。现在把 rw.mat 与 rw.chip 一并补发。 */
+        const g2 = Math.floor((d.rw.gold || 0));
+        const d2 = Math.floor((d.rw.diamond || 0));
+        const e2 = Math.floor((d.rw.exp || d.rw.xp || 0));
+        this.P.gold += g2;
+        if (d2) this.P.diamond += d2;
+        if (e2 && window.E) E.addXp(this.P, e2);
+        const parts = [];
+        if (g2) parts.push('金币 +' + E.fmt(g2));
+        if (d2) parts.push('钻石 +' + d2);
+        if (e2) parts.push('经验 +' + e2);
+        /* 材料：按结算包里列出的每样再补一份（芯片背包已满时不硬塞） */
+        const m2 = (d.rw && d.rw.mat) || {};
+        this.P.mat = this.P.mat || {};
+        Object.keys(m2).forEach((k) => {
+          const n = Math.floor(Number(m2[k]) || 0);
+          if (n <= 0) return;
+          this.P.mat[k] = (this.P.mat[k] || 0) + n;
+          parts.push((E.itemName ? E.itemName(k) : k) + ' +' + E.fmt(n));
+        });
+        /* 芯片：按品质补发，走与关卡发放同一条入库路径（背包满则跳过） */
+        const c2 = Math.floor(Number((d.rw && d.rw.chip) || 0));
+        for (let i = 0; i < c2; i++) {
+          if (!(window.E && E.pushChip && E.rollChipById && E.pushChip(this.P, E.rollChipById('CH01')))) break;
+          parts.push('芯片 +1');
+        }
+        this.toast('奖励翻倍！' + (parts.join(' · ') || '已翻倍'), 'ok');
+        /* BUG修复：结算面板的「下一关 / 再挑战 / 返回」以及「看广告原地复活」
+         * 都会收起 #result，唯独这里只调 home() 刷新了主界面数据、却不移除 on ——
+         * 实测点击后 result.classList 仍含 on：结算面板继续盖在主界面上方，
+         * 面板里的「剩余体力」还是旧值，「下一关 / 再挑战」也仍可点，
+         * 玩家看到的就是「领完奖励界面卡住了」。
+         * 现在与其余出口一致：先收起结算面板，再回主界面并落盘。 */
+        b2.disabled = true; b2.textContent = '已领取双倍';
+        this.hideResult(); this.home(); MAIN.save();
+      };
+      const br = $('#rsAdRev');
+      if (br) br.onclick = () => {
+        const r = E.useAd(this.P, 'AD01'); if (!r.ok) return this.toast(r.msg, 'err');
+        try { OPS.track('ad_watch', {}); } catch (e) {}
+        try { OPS.track('resurrect', {}); } catch (e) {}
+        /* 表26 用例5：原地复活（保留波次/击杀/技能，仅回满血量）
+         * 此前是 startBattle() 重开整关，进度全部丢失 */
+        const rv = BT.revive ? BT.revive() : { ok: false, msg: '复活失败' };
+        if (!rv.ok) return this.toast(rv.msg, 'err');
+        this.hideResult();
+        /* 与同弹窗的「双倍奖励」(#rsAd2x) 不一致：那边结尾调了 MAIN.save()，
+         * 这边没有。AD01 的每日次数扣减只留在内存里，玩家复活后若未触发
+         * 自动存档就退出，次数回退 —— 与 addStamina 同类的「扣了没落盘」。 */
+        try { MAIN.save(); } catch (e) {}
+        this.toast('💚 ' + rv.msg + '（今日剩 ' + E.adLeft(this.P, 'AD01') + ' 次）', 'ok');
+        if (window.SND) SND.play('upgrade');
+      };
+    }
     $('#result').classList.add('on');
+  },
+  /* 炮台按钮标价：建造价 / 升级价随槽位状态实时更新
+   * 此前按钮写死建造价，槽位满后点下去扣的却是升级价，玩家看到的和花的不一致。 */
+  turretPrice() {
+    const r = BT.run; if (!r) return;
+    const bar = $('#btTurret'); if (!bar) return;
+    let free = null;
+    for (const s of (EX.turretSlots || [])) { if (!r.turrets.find((t) => t.k === s.k)) { free = s.k; break; } }
+    $$('#btTurret [data-tp]').forEach((sp) => {
+      const id = sp.dataset.tp;
+      const def = (EX.turrets || []).find((t) => t.id === id);
+      if (!def) return;
+      if (free) { sp.textContent = (def.cost || 0) + '金'; return; }
+      const same = r.turrets.find((t) => t.def && t.def.id === id);
+      const tgt = same || r.turrets[0];
+      if (!tgt) { sp.textContent = (def.cost || 0) + '金'; return; }
+      const ud = tgt.def || def;
+      const cost = Math.round((ud.upCost != null ? ud.upCost : def.upCost || 0) * (1 + (tgt.lv || 1) * 0.6));
+      sp.textContent = cost + '金⬆';
+    });
+  },
+  pickFreeSlot() {
+    const r = BT.run; if (!r) return null;
+    for (const s of EX.turretSlots) {
+      const has = r.turrets.find((t) => t.k === s.k);
+      if (!has) return s.k;
+    }
+    /* 全满则升级第一个 */
+    return r.turrets.length ? r.turrets[0].k : null;
   },
   hideResult() { $('#result').classList.remove('on'); },
 };
