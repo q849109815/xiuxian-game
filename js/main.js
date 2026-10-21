@@ -856,6 +856,11 @@ const MAIN = {
     /* 公告：后台「公告管理」此前标记"待开发、前端未接入"，
      * 该路径也不在列表内 —— 运营发的公告玩家永远看不到。现在接入。 */
     notice: 'data/zb/notice.json',
+    /* 版本排期（路线图）：后台「热更新 / 版本排期」页可在线增删改，
+     * 此前排期只写死在 config.js 的 VERSIONS 里 —— 运营改排期必须改代码发版，
+     * 而 V1.0 之后的实际版本（V1.0.1~V1.2.1）一条都没进表，
+     * 玩家在设置页看到的是一张停留在 V1.0 的过期排期表。现在接入云端。 */
+    roadmap: 'data/zb/roadmap.json',
   },
   /* ============ 热更新：版本提示 + 定时计划 ============ */
   applyHotfix(db) {
@@ -1247,6 +1252,47 @@ const MAIN = {
         }
         if (db.friendMax != null) EX.FRIEND_MAX = Number(db.friendMax) || EX.FRIEND_MAX;
         log('[cfg] 社交云端配置已应用');
+      } else if (key === 'roadmap') {
+        /* 版本排期（后台「热更新 / 版本排期」在线维护 → 玩家端「设置→前瞻」可见）
+         * 保护：后台若把排期表清空/写成非数组，玩家端不能跟着变空白 ——
+         * 这里只在【非空数组】时才覆盖，其余情况保持内置 VERSIONS。 */
+        const list = Array.isArray(db.list) ? db.list : (Array.isArray(db) ? db : null);
+        if (list && list.length && list.every((x) => x && typeof x === 'object')) {
+          const clean = list
+            .filter((x) => String(x.v || '').trim())
+            .map((x) => ({
+              v: String(x.v || '').trim(),
+              n: String(x.n || '').trim() || '未命名版本',
+              wk: String(x.wk || '').trim(),
+              eta: String(x.eta || '').trim(),
+              tp: (['patch', 'minor', 'major'].indexOf(x.tp) >= 0) ? x.tp : 'patch',
+              c: String(x.c || '').trim(),
+              ok: String(x.ok || '').trim(),
+              pr: String(x.pr || 'P2').trim(),
+              ms: String(x.ms || '').trim(),
+              done: !!x.done,
+              /* pub 默认 true：运营新增排期时若忘了勾，玩家端就永远看不到，
+               * 而运营自己以为已经公开了 —— 默认公开更符合预期，
+               * 想保密的规划显式设 pub:false 即可。 */
+              pub: x.pub === false ? false : true,
+              hi: Array.isArray(x.hi) ? x.hi.filter((t) => String(t || '').trim()).map((t) => String(t).trim()) : [],
+              /* dp = 六部门分工（V1.2.3）：后台排期可填「策划/美术/程序/音频/测试/运营」
+               * 各自负责什么，玩家端「设置→前瞻」会以「各部门进度」的形式展示。
+               * 只透传这 6 个已知键，防止后台表单乱填把内部字段泄给玩家。 */
+              dp: (function () {
+                const D = {};
+                ['策划', '美术', '程序', '音频', '测试', '运营'].forEach((k) => {
+                  const t = x.dp && x.dp[k];
+                  if (t && String(t).trim()) D[k] = String(t).trim().slice(0, 60);
+                });
+                return D;
+              })(),
+            }));
+          if (clean.length) {
+            EX.ROADMAP = clean;
+            log('[cfg] 版本排期云端覆盖 ' + clean.length + ' 条');
+          }
+        }
       }
     } catch (e) { console.error('applyCloudCfg ' + key, e); }
   },
