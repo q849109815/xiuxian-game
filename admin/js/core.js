@@ -148,6 +148,9 @@ const DBP = {
   stats: 'data/zb/stats.json',
   index: 'data/zb/index.json',
   ops: 'data/zb/ops.json',
+  /* 版本排期（路线图）：V1.2.2 新增。后台「热更新 / 版本排期」页在线维护，
+   * 游戏端 main.js 的 CFG_FILES.roadmap 读取，玩家在「设置→前瞻」可见。 */
+  roadmap: 'data/zb/roadmap.json',
   notice: 'data/zb/notice.json',
   shop: 'data/zb/shop.json',
   ad: 'data/zb/ad.json',
@@ -397,6 +400,10 @@ const PERM = {
     adSave: 'config.edit', lgSave: 'config.edit', scSave: 'config.edit', spEdit: 'config.edit',
     /* 热更 / 版本 */
     hvSave: 'hotfix.push', hvPush: 'hotfix.push',
+    /* 版本排期维护：新增/编辑/删除/公开/下发，与热更推送同级
+     * （写进 roadmap.json 推给全体玩家，玩家端前瞻页直接展示） */
+    rmAdd: 'hotfix.push', rmEdit: 'hotfix.push', rmDel: 'hotfix.push',
+    rmPub: 'hotfix.push', rmDone: 'hotfix.push', rmPush: 'hotfix.push', rmReset: 'hotfix.push',
     /* 数值热更「立即生效 / 加入定时计划」：改写 cfg.json 并推给全体玩家，
      * 影响面大于任何单点操作，此前完全不受权限约束 */
     hkNow: 'hotfix.push', hkPlan: 'hotfix.push',
