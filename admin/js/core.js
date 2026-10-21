@@ -356,6 +356,42 @@ const PERM = {
     devops: { n: '运维', p: ['server.*', 'hotfix.*', 'bi.view', 'bi.upload', 'log.*'] },
     audit: { n: '只读审计', p: ['account.query', 'save.view', 'bi.view', 'log.view'] },
   },
+  /* =============================================================
+   * 权限字典（V1.2.3 维护轮3 新增）
+   *
+   * 此前只有「角色 → 权限」的授予表，没有「哪些权限名是合法的」字典。
+   * 后果：ACT 里写错一个权限名（如 'hotfix.pushX'）不会报错、不会告警 ——
+   *   has() 对所有人返回 false，该按钮对非超管角色彻底失效，
+   *   而超管因持有 'all' 照样能点，所以开发自测根本发现不了。
+   *   实测 admperm.cjs 的变异验证就是这么漏过去的。
+   *
+   * 这里显式声明全部合法权限名。ACT 的取值必须在字典内，否则守卫 FAIL。
+   * 标注「仅超管」的权限：故意不授予任何普通角色，属最小权限设计，
+   * 字典里显式列出以便与「拼错」区分开。
+   */
+  PERMS: [
+    /* 账号 */
+    'account.query', 'account.create', 'account.resetpwd', 'account.ban',
+    'account.destroy', 'account.purge',
+    /* 存档 */
+    'save.view', 'save.log', 'save.edit', 'save.rollback', 'save.reset',
+    /* 运营操作 */
+    'ops.grant', 'ops.ban',
+    /* 排行榜 */
+    'rank.rw', 'rank.rebuild', 'rank.settle',
+    /* 邮件 / 兑换码 */
+    'mail.send', 'mail.single', 'cdkey.gen', 'cdkey.void',
+    /* 配置与热更 */
+    'config.edit', 'hotfix.push',
+    /* 商店 / 广告 / 公告 */
+    'shop.edit', 'ad.cfg', 'notice.edit',
+    /* 服务器 */
+    'server.maint',
+    /* 日志与埋点 —— bi.clear / log.clear 为破坏性操作，仅超管 */
+    'log.view', 'log.clear', 'bi.view', 'bi.upload', 'bi.clear',
+    /* 社交 */
+    'social.edit',
+  ],
   curRole() { try { return localStorage.getItem('zb_role') || 'admin'; } catch (e) { return 'admin'; } },
   setRole(r) { try { localStorage.setItem('zb_role', r); } catch (e) {} },
   has(p) {
