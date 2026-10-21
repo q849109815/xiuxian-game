@@ -4011,7 +4011,14 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
           _got++;
         }
       }
-      else if (k === 'frame') { const v = give[k]; if (typeof v === 'string' && v) { p.frames = p.frames || []; if (p.frames.indexOf(v) < 0) p.frames.push(v); _got++; } }
+      /* 头像框：走 grantFrame（已知性校验 + 去重），不再裸 push。
+       * BUG：此前这里直接 p.frames.push(v)，只判非空字符串、不校验 id 是否存在，
+       *   后台把 frame 配错（如填中文名或拼错 id）会写进 p.frames，
+       *   玩家头像框列表里出现一格永远渲染不出来的垃圾数据，且无法删除。
+       *   —— 与 V1.0.2 给 grant() 加奖励键白名单同源，那次管的是键名 k，
+       *     这次补的是 frame 的取值 v。
+       *   grantFrame 已含校验但此前【零调用】（死代码），这里接上。 */
+      else if (k === 'frame') { if (this.grantFrame(p, give[k])) _got++; }
       /* 武器直发（v1.0 新手7日 D7 送 W02 散弹）
        * 走 unlockGun 而不是直接塞 gunOwn：unlockGun 内部会做图鉴解锁，
        * 否则玩家拿到武器但图鉴里那一格永远是问号。 */
