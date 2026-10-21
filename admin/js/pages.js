@@ -14,6 +14,46 @@ const PAGES = {
     const tab = (k, def) => { if (!APP.T[k]) APP.T[k] = def; return APP.T[k]; };
 
     /* =================================================================
+     * 版本排期（路线图）本地工作区
+     * -----------------------------------------------------------------
+     * 后台读的是「云端 roadmap.json」，没有才回退 config.js 内置 VERSIONS。
+     * 编辑在内存里做，点「下发到云端」才写入 —— 避免每点一次按钮就发一次请求。
+     * =============================================================== */
+    const RM_KEY = '__zb_rm';
+    /* V1.2.3：六部门分工。后台排期可逐部门填写「这个版本该部门负责什么」，
+     * 游戏端「设置→前瞻」以「各部门进度」形式展示给玩家。 */
+    const DEPS = ['策划', '美术', '程序', '音频', '测试', '运营'];
+    const rmDp = (v) => (v && v.dp && typeof v.dp === 'object') ? v.dp : {};
+    /* 六部门分工表单（新增/编辑共用）。id 用下标而非中文，避免选择器兼容问题。 */
+    const dpForm = (v) => {
+      const d = rmDp(v);
+      return `<div class="fr"><label class="wide">六部门分工</label><div style="flex:1">${
+        DEPS.map((k, j) => `<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+          <span class="bd b" style="min-width:34px">${k}</span>
+          <input id="dp_${j}" style="flex:1" value="${U.esc(String(d[k] || ''))}" placeholder="该部门在本版本负责什么（玩家可见）">
+        </div>`).join('')}</div></div>`;
+    };
+    /* 从表单收集六部门分工：空值不写入，避免玩家端看到一排「未排」 */
+    const dpRead = function (self) {
+      const d = {};
+      DEPS.forEach((k, j) => { const t = self.str('#dp_' + j); if (t && t.trim()) d[k] = t.trim(); });
+      return d;
+    };
+    const rmList = () => {
+      if (!window[RM_KEY]) {
+        window[RM_KEY] = ((EX && EX.VERSIONS) || []).map((x) => Object.assign({}, x));
+      }
+      return window[RM_KEY];
+    };
+    const rmSet = (l) => { window[RM_KEY] = l; };
+    const rmLoad = async () => {
+      try {
+        const d = await DB.reload(DBP.roadmap);
+        if (d && Array.isArray(d.list) && d.list.length) rmSet(d.list.map((x) => Object.assign({}, x)));
+      } catch (e) {}
+    };
+
+    /* =================================================================
      * 1. 账号系统
      * ================================================================= */
     A.account = {
@@ -1657,17 +1697,47 @@ const PAGES = {
             </div>
             <pre class="json" style="margin-top:10px">${U.esc(JSON.stringify(H, null, 2))}</pre>`;
         } else if (t === 'ver') {
-          /* 排期表的周期字段是 wk（如「第1-2周」），此前读 v.date ——
-           * 表里根本没有 date 字段，日期列永远显示「—」，等于白占一列。
-           * 现在改读 wk，并把内容/验收标准也显示出来。 */
-          body = `<div id="vsBox">${(OPS.versions ? OPS.versions() : []).length
-            ? this.table(['版本', '名称', '周期', '内容', '状态'],
-              OPS.versions().map((v) => [U.esc(v.v || v.id || ''), U.esc(v.n || ''),
-                U.esc(v.wk || '—'), U.esc((v.c || '—') + (v.ok ? ' ｜ 验收：' + v.ok : '')),
-                v.done ? '<span class="bd g">已发布</span>' : '<span class="bd y">排期中</span>']))
-            : this.empty('配置表 VERSIONS 为空')}</div>
-            <div class="hint">版本排期读取 EX.VERSIONS（config.js）</div>`;
-        } else {
+          /* V1.2.2：版本排期从「只读表格」升级为「在线可维护」。
+           * 此前这一页只是把 config.js 的 VERSIONS 打出来 —— 运营改排期必须
+           * 改代码发版，且表里停在 V1.0，V1.0.1~V1.2.1 全都没有，
+           * 玩家端看到的也是同一张过期表。现在可增删改并下发到 roadmap.json，
+           * 游戏端 main.js CFG_FILES.roadmap 读取，玩家在「设置→前瞻」可见。 */
+          const RM = rmList();
+          const TP = { patch: '小更新', minor: '新版本', major: '大版本' };
+          const done = RM.filter((x) => x.done).length;
+          const pub = RM.filter((x) => x.pub !== false).length;
+          body = `<div class="kpis">
+              <div class="kpi"><div class="v">${RM.length}</div><div class="k">排期总数</div></div>
+              <div class="kpi"><div class="v">${done}</div><div class="k">已发布</div></div>
+              <div class="kpi"><div class="v">${RM.length - done}</div><div class="k">预告中</div></div>
+              <div class="kpi"><div class="v">${pub}</div><div class="k">玩家可见</div></div>
+            </div>
+            <div class="hint">「玩家可见」= 出现在游戏内「设置 → 前瞻」；取消勾选即为内部规划，玩家端完全看不到。只有「亮点」会展示给玩家，内容与验收标准仅后台可见。</div>
+            <div class="btns" style="margin:8px 0">
+              <button class="btn pri" data-a="rmAdd">➕ 新增版本</button>
+              <button class="btn" data-a="rmPush">📤 下发到云端</button>
+              <button class="btn d" data-a="rmReset">↩ 恢复内置排期</button>
+            </div>
+            ${RM.length ? this.table(['版本', '名称', '类型', '上线', '内容 / 亮点', '六部门分工', '状态', '玩家可见', '操作'],
+              RM.map((v, i) => [U.esc(v.v || ''), U.esc(v.n || ''),
+                U.esc(TP[v.tp] || '小更新'), U.esc(v.eta || v.wk || '—'),
+                U.esc((v.c || '—') + (((v.hi || []).length) ? ' ｜ 亮点：' + v.hi.join('；') : '')),
+                /* 六部门分工：已填的显示「部门：任务」，未填的显示灰色占位，
+                 * 运营一眼能看出哪个部门还没排活。 */
+                DEPS.map((k) => {
+                  const t = U.esc(String(rmDp(v)[k] || '').trim());
+                  return t ? `<div><span class="bd b">${k}</span> ${t}</div>`
+                    : `<div style="opacity:.45"><span class="bd b">${k}</span> 未排</div>`;
+                }).join(''),
+                v.done ? '<span class="bd g">已发布</span>' : '<span class="bd y">排期中</span>',
+                (v.pub === false ? '<span class="bd b">内部</span>' : '<span class="bd g">公开</span>'),
+                `<button class="btn sm" data-a="rmEdit" data-i="${i}">编辑</button>
+                 <button class="btn sm" data-a="rmPub" data-i="${i}">${v.pub === false ? '公开' : '隐藏'}</button>
+                 <button class="btn sm" data-a="rmDone" data-i="${i}">${v.done ? '撤回' : '标记发布'}</button>
+                 <button class="btn sm d" data-a="rmDel" data-i="${i}">删除</button>`]))
+            : this.empty('排期为空，点「新增版本」或「恢复内置排期」')}
+            <div class="hint">下发后写入 data/zb/roadmap.json，玩家重启游戏即可看到最新路线图。</div>`;
+                } else {
           const L = (EX && EX.LANGS) || [{ k: 'zh', n: '中文' }];
           const cur = (window.OPS && OPS.getLang) ? OPS.getLang() : 'zh';
           /* 真文案表是 EX.I18N，结构是 { TXT_001: { zh,en,zhTW,ja,ru } }
@@ -1706,6 +1776,126 @@ const PAGES = {
             AUDIT.log('推送热更版本', v, '');
             this.toast('已推送到云端 hotfix.json', 'ok');
           }
+        },
+        /* ---------------- 版本排期维护（V1.2.2） ---------------- */
+        rmAdd() {
+          this.openModal(`<h3>新增版本</h3>
+            <div class="fr"><label>版本号</label><input id="rm_v" placeholder="如 V1.3.0"></div>
+            <div class="fr"><label>名称</label><input id="rm_n" placeholder="如 推图过程的可感知成长"></div>
+            <div class="fr"><label>类型</label><select id="rm_tp">
+              <option value="patch">小更新（修BUG/小幅优化）</option>
+              <option value="minor" selected>新版本（新玩法/新系统）</option>
+              <option value="major">大版本（题材/架构级）</option></select></div>
+            <div class="fr"><label>上线日期</label><input id="rm_eta" placeholder="如 2026-11"></div>
+            <div class="fr"><label>周期(内部)</label><input id="rm_wk" placeholder="如 冲刺1"></div>
+            <div class="fr"><label>内容(内部)</label><input id="rm_c" placeholder="内部可见"></div>
+            <div class="fr"><label>验收标准</label><input id="rm_ok" placeholder="内部可见"></div>
+            <div class="fr"><label>玩家亮点</label><textarea id="rm_hi" rows="3" placeholder="一行一条，例：\n卡关诊断提示\n新增星级达成特效"></textarea></div>
+            ${dpForm({})}
+            <div class="fr"><label>状态</label><select id="rm_done">
+              <option value="0" selected>排期中</option><option value="1">已发布</option></select></div>
+            <div class="fr"><label>玩家可见</label><select id="rm_pub">
+              <option value="1" selected>公开（出现在游戏内前瞻页）</option>
+              <option value="0">内部规划（玩家端隐藏）</option></select></div>
+            <div class="btns"><button class="btn pri" data-m="ok">确定</button><button class="btn" data-m="close">取消</button></div>`, {
+            ok: async () => {
+              const v = this.str('#rm_v');
+              if (!v) { this.toast('版本号不能为空', 'warn'); return; }
+              const L2 = rmList();
+              if (L2.some((x) => String(x.v) === v)) { this.toast('该版本号已存在', 'warn'); return; }
+              L2.push({
+                v, n: this.str('#rm_n'), tp: this.str('#rm_tp') || 'patch',
+                eta: this.str('#rm_eta'), wk: this.str('#rm_wk'),
+                c: this.str('#rm_c'), ok: this.str('#rm_ok'),
+                hi: this.str('#rm_hi').split('\n').map((x) => x.trim()).filter(Boolean),
+                done: this.str('#rm_done') === '1', pub: this.str('#rm_pub') !== '0',
+                pr: 'P2', dp: dpRead(this),
+              });
+              rmSet(L2);
+              AUDIT.log('新增版本排期', v, '');
+              this.toast('已加入本地列表，点「下发到云端」生效', 'ok');
+              this.render();
+            },
+          });
+        },
+        rmEdit(t) {
+          const i = parseInt(t.dataset.i, 10);
+          const v = rmList()[i]; if (!v) return;
+          this.openModal(`<h3>编辑 · ${U.esc(v.v || '')}</h3>
+            <div class="fr"><label>版本号</label><input id="rm_v" value="${U.esc(v.v || '')}"></div>
+            <div class="fr"><label>名称</label><input id="rm_n" value="${U.esc(v.n || '')}"></div>
+            <div class="fr"><label>类型</label><select id="rm_tp">
+              ${['patch', 'minor', 'major'].map((k) => `<option value="${k}"${v.tp === k ? ' selected' : ''}>${
+                { patch: '小更新', minor: '新版本', major: '大版本' }[k]}</option>`).join('')}</select></div>
+            <div class="fr"><label>上线日期</label><input id="rm_eta" value="${U.esc(v.eta || '')}"></div>
+            <div class="fr"><label>周期(内部)</label><input id="rm_wk" value="${U.esc(v.wk || '')}"></div>
+            <div class="fr"><label>内容(内部)</label><input id="rm_c" value="${U.esc(v.c || '')}"></div>
+            <div class="fr"><label>验收标准</label><input id="rm_ok" value="${U.esc(v.ok || '')}"></div>
+            <div class="fr"><label>玩家亮点</label><textarea id="rm_hi" rows="3">${U.esc((v.hi || []).join('\n'))}</textarea></div>
+            ${dpForm(v)}
+            <div class="fr"><label>状态</label><select id="rm_done">
+              <option value="0"${!v.done ? ' selected' : ''}>排期中</option>
+              <option value="1"${v.done ? ' selected' : ''}>已发布</option></select></div>
+            <div class="fr"><label>玩家可见</label><select id="rm_pub">
+              <option value="1"${v.pub !== false ? ' selected' : ''}>公开</option>
+              <option value="0"${v.pub === false ? ' selected' : ''}>内部规划</option></select></div>
+            <div class="btns"><button class="btn pri" data-m="ok">确定</button><button class="btn" data-m="close">取消</button></div>`, {
+            ok: async () => {
+              const L2 = rmList();
+              const nv = this.str('#rm_v');
+              if (!nv) { this.toast('版本号不能为空', 'warn'); return; }
+              L2[i] = Object.assign({}, L2[i], {
+                v: nv, n: this.str('#rm_n'), tp: this.str('#rm_tp') || 'patch',
+                eta: this.str('#rm_eta'), wk: this.str('#rm_wk'),
+                c: this.str('#rm_c'), ok: this.str('#rm_ok'),
+                hi: this.str('#rm_hi').split('\n').map((x) => x.trim()).filter(Boolean),
+                done: this.str('#rm_done') === '1', pub: this.str('#rm_pub') !== '0',
+                dp: dpRead(this),
+              });
+              rmSet(L2);
+              AUDIT.log('编辑版本排期', nv, '');
+              this.toast('已改，点「下发到云端」生效', 'ok');
+              this.render();
+            },
+          });
+        },
+        rmDel(t) {
+          const i = parseInt(t.dataset.i, 10);
+          const L2 = rmList(); const v = L2[i]; if (!v) return;
+          if (!confirm('确定删除版本 ' + (v.v || '') + ' ？')) return;
+          L2.splice(i, 1); rmSet(L2);
+          AUDIT.log('删除版本排期', String(v.v || ''), '');
+          this.toast('已删除（需下发）', 'ok'); this.render();
+        },
+        rmPub(t) {
+          const i = parseInt(t.dataset.i, 10);
+          const L2 = rmList(); if (!L2[i]) return;
+          L2[i].pub = (L2[i].pub === false); rmSet(L2);
+          AUDIT.log('切换版本公开', String(L2[i].v || '') + (L2[i].pub ? ' 公开' : ' 隐藏'), '');
+          this.toast(L2[i].pub ? '已公开给玩家' : '已设为内部规划', 'ok'); this.render();
+        },
+        rmDone(t) {
+          const i = parseInt(t.dataset.i, 10);
+          const L2 = rmList(); if (!L2[i]) return;
+          L2[i].done = !L2[i].done; rmSet(L2);
+          AUDIT.log('切换版本状态', String(L2[i].v || '') + (L2[i].done ? ' 已发布' : ' 排期中'), '');
+          this.render();
+        },
+        async rmPush() {
+          const L2 = rmList();
+          if (!L2.length) { this.toast('排期为空，不下发', 'warn'); return; }
+          const d = await DB.reload(DBP.roadmap);
+          d.list = L2; d.updatedAt = Date.now(); d.by = 'admin';
+          if (await DB.set(DBP.roadmap, d, '下发版本排期 ' + L2.length + ' 条')) {
+            AUDIT.log('下发版本排期', L2.length + ' 条', '');
+            this.toast('已下发 roadmap.json（玩家重启游戏生效）', 'ok');
+          }
+        },
+        async rmReset() {
+          if (!confirm('用 config.js 内置排期覆盖当前列表？')) return;
+          rmSet(((EX && EX.VERSIONS) || []).map((x) => Object.assign({}, x)));
+          AUDIT.log('恢复内置版本排期', '', '');
+          this.toast('已恢复内置（点下发生效）', 'ok'); this.render();
         },
         lgSave() {
           /* 单语言版本：语言选择器已禁用，这里只做兜底提示 */
@@ -1750,6 +1940,9 @@ const PAGES = {
           });
         },
       },
+      /* 进入本页时拉一次云端排期：否则运营改完下发后，
+       * 重新打开后台看到的仍是 config.js 内置表，会以为下发没生效。 */
+      bind() { rmLoad(); },
     };
 
     /* =================================================================
