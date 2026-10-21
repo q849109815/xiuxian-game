@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '20270228a';
+const IMG_V = '1.2.3';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -478,6 +478,28 @@ const UI = {
       bn = (_c && ((_c.gold || 0) > 0 || (_c.metal || 0) > 0 || (_c.xp || 0) > 0)) ? 1 : 0;
     } catch (e) { bn = 0; }
     set('base', bn);
+    /* 赛季：可领档位数（阶梯未领 + 循环奖励可领）
+     *
+     * BUG（赛季奖励长期被漏领）：navDots 只给 task / mail / act / base 四个入口
+     *   打红点，而「赛季」入口是 V1.1.0 冲刺3 后加的，忘了同步进来。
+     *   同时 E.seasonClaimable() 定义了却【零调用】（静态审计实测：全项目
+     *   只出现在 engine.js 定义处一次），成了死代码。
+     *   结果：玩家赛季积分攒够了，不主动点进赛季面板根本不知道有东西可领，
+     *   赛季是 4 周一期的长线玩法，奖励漏领后当赛季即作废。
+     *   —— 与上面「活动红点缺失」完全同源，那次修了 act，这次补 season。
+     * 口径与 r_season 渲染 / b_season 领取保持一致：
+     *   阶梯 can = 未领取 && score >= need；循环 can = score >= seasonLoopNeed。 */
+    let sn = 0;
+    try {
+      const _cl = (E.seasonClaimable ? E.seasonClaimable(p) : null) || [];
+      sn = _cl.length;
+      const _need = E.seasonLoopNeed ? E.seasonLoopNeed(p) : null;
+      if (_need != null) {
+        const _s = E.seasonOf ? E.seasonOf(p) : null;
+        if (_s && (_s.score || 0) >= Number(_need)) sn += 1;
+      }
+    } catch (e) { sn = 0; }
+    set('season', sn);
   },
 
   /* 任务面板「页签级」红点：主线/日常/周常/成就各档"已完成但未领取"的数量。
@@ -630,7 +652,9 @@ const UI = {
     act: ['活动', ['活动'], 'top'],
     rank: ['排行榜', ['全服'], 'top'],
     /* 【V1.1.0】关键文案走运营热改层 EX.txt()，默认与原文一致 */
-    set: [EX.txt('TXT_002'), ['账号', '音频', '兑换码', '网络', '数值', '语言', '运营'], 'side'],
+    /* V1.2.2：新增「前瞻」页签 —— 玩家在设置里就能看到版本路线图与后续预告，
+     * 此前排期表只在「运营」页以内部字段展示，且停留在 V1.0，玩家没有任何前瞻信息。 */
+    set: [EX.txt('TXT_002'), ['账号', '音频', '兑换码', '网络', '数值', '语言', '前瞻', '运营'], 'side'],
     level: ['关卡选择', ['章节'], 'top'],
     /* BUG：此前 tab 只有 ['建筑'] 一项，而 r_base 用 tab 去匹配建筑 id，
      *      匹配不到就永远回退 EX.buildings[0]（医疗站）。
@@ -3982,6 +4006,60 @@ r_tavern(p, tab) {
           <b style="font-size:var(--fs-xs)">${window.OPS ? OPS.t(id) : (EX.I18N[id] || {}).zh}</b></div>`).join('')}
       </div>`;
     }
+    /* ---------- 前瞻（V1.2.2：玩家可见的版本路线图） ----------
+     * 只展示 pub !== false 的版本：内部规划（pub:false）不会外泄，
+     * 且展示的是 hi（玩家亮点）而不是 c/ok（内部内容与验收标准）。 */
+    if (tab === '前瞻') {
+      /* 本地转义：ui.js 里没有全局 U 对象，模板里所有外显文本都必须过一层，
+       * 防止后台排期里带标签/引号把面板结构打乱（后台是自由文本输入）。 */
+      const E9 = (x) => String(x == null ? '' : x).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const O = window.OPS || {};
+      const cur = O.curVerNum ? O.curVerNum() : '';
+      const done = O.pubDone ? O.pubDone(8) : [];
+      const next = O.pubNext ? O.pubNext() : [];
+      const TPN = { patch: '小更新', minor: '新版本', major: '大版本' };
+      const TPC = { patch: 'bd b', minor: 'bd g', major: 'bd y' };
+      const row = (v, isNext) => {
+        const hi = (v.hi || []).slice(0, 3);
+        const tp = TPN[v.tp] || '小更新';
+        const when = E9(v.eta || v.wk || '');
+        const sub = [when, tp].filter(Boolean).join(' · ');
+        return '<div class="zrow">'
+          + '<div class="zav">' + (isNext ? '&#128278;' : '&#10003;') + '</div>'
+          + '<div class="zi"><b>' + E9(v.v) + ' ' + E9(v.n || '') + '</b>'
+          + '<span>' + sub + '</span>'
+          + (hi.length ? '<span style="margin-top:2px;display:block">'
+              + hi.map((t) => '· ' + E9(t)).join('<br>') + '</span>' : '')
+          + '</div>'
+          + '<span class="' + (TPC[v.tp] || TPC.patch) + '">' + tp + '</span>'
+          + '</div>';
+      };
+      return '<div class="card"><div class="card-t">当前版本</div>'
+        + '<div class="kv"><span>版本号</span><b style="color:var(--green)">' + E9(cur) + '</b></div>'
+        + '<div class="sub">路线图由运营实时维护，重启游戏即可看到最新排期。</div></div>'
+        + '<div class="card"><div class="card-t">即将到来 <span class="sub">' + next.length + ' 个</span></div>'
+        + (next.length ? next.map((v) => row(v, true)).join('')
+            : '<div class="lbl">暂无预告 &#8212;&#8212; 当前排期已全部发布</div>')
+        + '</div>'
+        /* V1.2.3：各部门进度 —— 下一个版本六部门各自在做什么。
+         * 玩家看得见"这游戏在被认真做"，运营也多一个预期管理入口。
+         * 只取 next[0]，避免一屏塞满部门清单。 */
+        + (function () {
+            const n0 = next[0] || null;
+            const dp = (n0 && n0.dp && typeof n0.dp === 'object') ? n0.dp : {};
+            const ICO = { 策划: '&#128203;', 美术: '&#127912;', 程序: '&#9881;', 音频: '&#127925;', 测试: '&#128269;', 运营: '&#128226;' };
+            const ks = ['策划', '美术', '程序', '音频', '测试', '运营']
+              .filter((k) => String(dp[k] || '').trim());
+            if (!n0 || !ks.length) return '';
+            return '<div class="card"><div class="card-t">各部门进度<span class="sub">' + E9(n0.v || '') + ' 正在做</span></div>'
+              + ks.map((k) => '<div class="zrow"><div class="zav">' + ICO[k] + '</div>'
+                + '<div class="zi"><b>' + k + '</b><span>' + E9(dp[k]) + '</span></div></div>').join('')
+              + '</div>';
+          })()
+        + '<div class="card"><div class="card-t">已发布 <span class="sub">最近 ' + done.length + ' 个</span></div>'
+        + (done.length ? done.map((v) => row(v, false)).join('') : '<div class="lbl">暂无记录</div>')
+        + '</div>';
+    }
     /* ---------- 运营（表37 埋点 / 表38 版本 / 表40 接口 / 表36 命名 / 热更新） ---------- */
     if (tab === '运营') {
       const st = window.OPS ? OPS.trackStat() : {};
@@ -3994,7 +4072,9 @@ r_tavern(p, tab) {
 
       <div class="card"><div class="card-t">版本</div>
         <div class="kv"><span>当前版本</span><b style="color:var(--green)">${cv ? cv.v + ' ' + cv.n : '-'}</b></div>
-        ${(EX.VERSIONS || []).map((v) => `<div class="zrow"><div class="zav">${v.done ? '✔' : '○'}</div>
+        <div class="kv"><span>排期条数</span><b>${(window.OPS ? OPS.versions() : []).length} 条</b></div>
+        <div class="sub">后台「热更新 / 版本排期」可在线维护本表；玩家请在「前瞻」页查看。</div>
+        ${(window.OPS ? OPS.versions() : (EX.VERSIONS || [])).map((v) => `<div class="zrow"><div class="zav">${v.done ? '✔' : '○'}</div>
           <div class="zi"><b>${v.v} ${v.n}</b><span>${v.wk} · ${v.c}</span></div>
           <span class="st ${v.done ? 'on' : 'off'}">${v.done ? '已完成' : '开发中'}</span></div>`).join('')}
       </div>
