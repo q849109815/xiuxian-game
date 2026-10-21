@@ -2,180 +2,425 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<script>
+/* localStorage 全局兜底（必须最先执行）
+ * iOS 无痕模式 / 配额写满 / 企业策略禁用第三方存储时，
+ * localStorage.setItem 会直接抛 QuotaExceededError 或 SecurityError。
+ * 实测把 setItem 改成必抛后：
+ *   MAIN.enterWith → 第 54 行裸调 setItem('zb_uid') 抛出 → 登录流程整个中断
+ *   登录按钮  → 已经提示「登录成功，正在进入…」才写 zb_uid，
+ *              抛出后玩家永远停在「正在进入」，按钮不恢复、界面无报错
+ *   注册按钮  → 同上，注册成功却进不去游戏
+ * 全项目有 20 余处裸调 setItem/getItem/removeItem，逐个包 try 易漏，
+ * 这里统一在原型上兜一层：失败静默返回，存储只是退化成「不记住」，
+ * 不影响云端存档（进度本来就存在 GitHub），游戏照常可玩。 */
+(function () {
+  try {
+    var P = window.Storage ? window.Storage.prototype : Object.getPrototypeOf(localStorage);
+    ['setItem', 'getItem', 'removeItem', 'clear', 'key'].forEach(function (m) {
+      if (typeof P[m] !== 'function') return;
+      var orig = P[m];
+      P[m] = function () {
+        try { return orig.apply(this, arguments); }
+        catch (e) { return m === 'getItem' ? null : undefined; }
+      };
+    });
+    /* length 访问在某些浏览器无痕模式下也会抛 */
+    try {
+      var d = Object.getOwnPropertyDescriptor(P, 'length');
+      if (d && d.get) {
+        Object.defineProperty(P, 'length', {
+          configurable: true, enumerable: d.enumerable,
+          get: function () { try { return d.get.call(this); } catch (e) { return 0; } }
+        });
+      }
+    } catch (e) {}
+  } catch (e) {}
+})();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#1a2637">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>向僵尸开炮</title>
-<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:,">
+<!-- 设计令牌：单一真源（必须在 style.css 之前，改配色/字号/间距只改本文件） -->
+<link rel="stylesheet" href="css/tokens.css?v=1.2.1">
+<link rel="stylesheet" href="css/style.css?v=1.2.1">
 </head>
 <body>
+
+<div id="stage">
 <div id="app">
 
-  <!-- ============ 加载 ============ -->
-  <div id="loading" class="screen on">
-    <div class="ld-logo">💥</div>
-    <div class="ld-title">向 僵 尸 开 炮</div>
-    <div class="ld-sub">末 日 尸 潮 · 守 住 防 线</div>
-    <div class="ld-bar"><i id="ldBar"></i></div>
-    <div class="ld-txt" id="ldTxt">正在装填弹药…</div>
+<!-- ========== 加载 ========== -->
+<div class="screen on" id="loading">
+  <div class="ld-logo"><img src="assets/icon/logo_boom.jpg?v=1.2.1" alt=""></div>
+  <div class="ld-title">向 僵 尸 开 炮</div>
+  <div class="ld-sub">ZOMBIES BOOM · 末日尸潮</div>
+  <div class="ld-bar"><i id="ldBar"></i></div>
+  <div class="ld-txt" id="ldTxt">正在装填弹药…</div>
+</div>
+
+<!-- ========== 登录（账号密码） ========== -->
+<div class="screen" id="login">
+  <div class="lg-box">
+    <div class="lg-logo"><img class="ei" src="assets/icon/logo_boom.jpg?v=1.2.1" alt=""></div>
+    <div class="lg-t">向 僵 尸 开 炮</div>
+    <div class="lg-s">末 日 尸 潮 · 守 住 最 后 防 线</div>
+
+    <!-- 账号密码登录 -->
+    <div class="lg-form" id="lgLoginForm">
+      <input id="lgUser" maxlength="16" placeholder="账号（2-16 位）" autocomplete="username"
+             enterkeyhint="next" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text">
+      <input id="lgPwd" type="password" maxlength="32" placeholder="密码（至少 6 位）" autocomplete="current-password"
+             enterkeyhint="go" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <div class="lg-row">
+        <label class="lg-keep"><input type="checkbox" id="lgKeep" checked><span>记住账号名</span></label>
+        <a href="javascript:;" id="lgFind">忘记密码？</a>
+      </div>
+      <div style="font-size:11px;color:#9aa3b8;text-align:left;margin:-1px 0 3px">每次进入游戏都需输入账号与密码</div>
+      <button class="lg-btn" id="lgBtn">登 录</button>
+      <div class="lg-tip" id="lgTip"></div>
+      <div class="lg-reg">还没有账号？<a href="javascript:;" id="lgGoReg">立即注册</a></div>
+    </div>
+
+    <!-- 注册 -->
+    <div class="lg-form" id="lgRegForm" style="display:none">
+      <input id="rgUser" maxlength="16" placeholder="账号（2-16 位）" autocomplete="username"
+             enterkeyhint="next" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text">
+      <input id="rgPwd" type="password" maxlength="32" placeholder="密码（至少 6 位）" autocomplete="new-password"
+             enterkeyhint="next" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <input id="rgPwd2" type="password" maxlength="32" placeholder="确认密码" autocomplete="new-password"
+             enterkeyhint="next" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <input id="rgNick" maxlength="8" placeholder="游戏昵称（2-8 字，可留空）" autocomplete="nickname"
+             enterkeyhint="done" autocorrect="off" spellcheck="false">
+      <div class="lg-gender" id="rgGender">
+        <button class="gd on" data-g="m"><img src="assets/char/hero_m.jpg?v=1.2.1" alt="">男</button>
+        <button class="gd" data-g="f"><img src="assets/char/hero_f.jpg?v=1.2.1" alt="">女</button>
+      </div>
+      <button class="lg-btn" id="rgBtn">注 册 并 进 入</button>
+      <div class="lg-tip" id="rgTip"></div>
+      <div class="lg-reg">已有账号？<a href="javascript:;" id="lgGoLogin">返回登录</a></div>
+    </div>
+
+    <div class="lg-net" id="lgNet">○ 检测网络…</div>
+  </div>
+</div>
+
+<!-- ========== 基地主界面 ========== -->
+<div class="screen" id="home">
+  <!-- 氛围背景层（此前 .hm-bg 有样式但页面里没有这个元素，主界面一直缺这层光晕与扫描线） -->
+  <div class="hm-bg"></div>
+  <div class="hm-top">
+    <div class="hm-av" id="hmAv"><i id="hmAvIco"><img class="ei" src="assets/icon/av_a01.png?v=1.2.1" alt=""></i></div>
+    <div class="hm-info">
+      <div class="hm-name"><b id="hmName">—</b><span class="hm-lv" id="hmLv">Lv.1</span><span id="hmTitle" style="font-size:11px;font-weight:700;margin-left:4px;display:none"></span></div>
+      <div class="hm-pw">战力 <b id="hmPower">0</b></div>
+      <div class="hm-prog">进度 <span id="hmLevel">第 1 关</span></div>
+    </div>
+    <div class="hm-cur">
+      <span class="cu"><img id="cuGoldIco" style="width:14px;height:14px;vertical-align:-2px" onerror="this.style.display='none'"> <b id="cuGold">0</b></span>
+      <span class="cu"><img id="cuDiaIco" style="width:14px;height:14px;vertical-align:-2px" onerror="this.style.display='none'"> <b id="cuDia">0</b></span>
+      <span class="cu"><img id="cuStaIco" style="width:14px;height:14px;vertical-align:-2px" onerror="this.style.display='none'"> <b id="hmStamina">100/100</b></span>
+    </div>
+    <!-- 设置：全局入口，一贯位于右上角。原混在「其他」分组最后一格，
+         玩家要滑到菜单最底部才找得到，不符合任何平台惯例。 -->
+    <button class="hm-set" id="hmSet" aria-label="设置"><img src="assets/icon/nav_set.png?v=1.2.1" alt="设置"></button>
   </div>
 
-  <!-- ============ 登录 / 创角 ============ -->
-  <div id="login" class="screen">
-    <div class="lg-bg"></div>
-    <div class="lg-box">
-      <div class="lg-title">向僵尸开炮</div>
-      <div class="lg-slogan">ZOMBIES BOOM · 末日先锋官</div>
-      <div class="lg-field">
-        <label>先锋官代号</label>
-        <input id="lgName" maxlength="8" placeholder="请输入代号（2-8字）" value="先锋官">
+  <div class="hm-acts">
+    <button class="ha go" id="hmGo"><i><img src="assets/icon/nav_go.png?v=1.2.1"></i><b>出击</b><span id="hmLevelName">第 1 关</span><span class="ha-sub" id="hmGoSub"></span></button>
+    <button class="ha" id="hmEndless"><i><img src="assets/icon/nav_endless.png?v=1.2.1"></i><b>无尽模式</b><span id="hmEndBest">最佳 0 层</span><span class="ha-sub" id="hmEndSub"></span></button>
+  </div>
+
+  <!-- 主界面「下一步」目标指引：新号/回归玩家不知道先做什么。
+       由 UI.renderGuide() 按当前状态算出一个最该做的动作并可直接点进去。 -->
+  <div class="hm-guide" id="hmGuide" style="display:none"></div>
+
+  <div class="hm-base" id="hmBase"></div>
+
+  <!-- 主菜单：原「5 格一级 + 17 个横滑二级」= 22 个散按钮，一排滑不到头且功能分散。
+       现整合为 5 个功能分组的网格，21 个入口一个不少（"战斗"格与上方"出击"完全重复，已去掉）。 -->
+  <div class="hm-menu" id="hmMenu">
+    <div class="hmg">
+      <div class="hmg-t">养成</div>
+      <div class="hmg-b">
+        <button class="hmb" data-p="role"><i><img src="assets/icon/nav_role.png?v=1.2.1"></i><span>角色</span></button>
+        <button class="hmb" data-p="gun"><i><img src="assets/icon/nav_gun.png?v=1.2.1"></i><span>武器</span></button>
+        <button class="hmb" data-p="chip"><i><img src="assets/icon/nav_chip.png?v=1.2.1"></i><span>芯片</span></button>
+        <button class="hmb" data-p="talent"><i><img src="assets/icon/nav_talent.png?v=1.2.1"></i><span>天赋</span></button>
+        <button class="hmb" data-p="core"><i><img src="assets/icon/nav_core.png?v=1.2.1"></i><span>核心</span></button>
+        <button class="hmb" data-p="gem"><i><img src="assets/icon/nav_gem.png?v=1.2.1"></i><span>宝石</span></button>
+        <button class="hmb" data-p="base"><i><img src="assets/icon/nav_base.png?v=1.2.1"></i><span>基地</span></button>
+        <!-- V1.1.0 军衔：通关后的长线成长线（50 阶） -->
+        <button class="hmb" data-p="realm"><i><img src="assets/icon/nav_realm.png?v=1.2.1"></i><span>军衔</span></button>
       </div>
-      <div class="lg-field">
-        <label>性别</label>
-        <div class="lg-gender" id="lgGender">
-          <button class="gd on" data-g="m"><i>👨‍🚀</i><span>男</span></button>
-          <button class="gd" data-g="f"><i>👩‍🚀</i><span>女</span></button>
-        </div>
+    </div>
+    <div class="hmg">
+      <div class="hmg-t">资源</div>
+      <div class="hmg-b">
+        <button class="hmb" data-p="shop"><i><img src="assets/icon/nav_shop.png?v=1.2.1"></i><span>商城</span></button>
+        <button class="hmb" data-p="bag"><i><img src="assets/icon/nav_bag.png?v=1.2.1"></i><span>背包</span></button>
+        <button class="hmb" data-p="ashop"><i><img src="assets/icon/nav_ashop.png?v=1.2.1"></i><span>兑换</span></button>
+        <button class="hmb" data-p="act"><i><img src="assets/icon/nav_act.png?v=1.2.1"></i><span>活动</span></button>
       </div>
-      <button class="lg-btn" id="lgBtn">进 入 战 区</button>
-      <div class="lg-tip">已有存档将自动读取 · 数据存于云端</div>
-      <div class="lg-net">网络：<span id="lgNet">检测中…</span></div>
+    </div>
+    <div class="hmg">
+      <div class="hmg-t">社交</div>
+      <div class="hmg-b">
+        <button class="hmb" data-p="legion"><i><img src="assets/icon/nav_legion.png?v=1.2.1"></i><span>军团</span></button>
+        <button class="hmb" data-p="friends"><i><img src="assets/icon/nav_friends.png?v=1.2.1"></i><span>好友</span></button>
+        <button class="hmb" data-p="mail"><i><img src="assets/icon/nav_mail.png?v=1.2.1"></i><span>邮件</span></button>
+        <button class="hmb" data-p="notice"><i><img src="assets/icon/nav_notice.png?v=1.2.1"></i><span>公告</span></button>
+      </div>
+    </div>
+    <div class="hmg">
+      <div class="hmg-t">玩法</div>
+      <div class="hmg-b">
+        <button class="hmb" data-p="task"><i><img src="assets/icon/nav_task.png?v=1.2.1"></i><span>任务</span></button>
+        <button class="hmb" data-p="exped"><i><img src="assets/icon/nav_exped.png?v=1.2.1"></i><span>远征</span></button>
+        <button class="hmb" data-p="tavern"><i><img src="assets/icon/nav_tavern.png?v=1.2.1"></i><span>酒馆</span></button>
+        <button class="hmb" data-p="codex"><i><img src="assets/icon/nav_codex.png?v=1.2.1"></i><span>图鉴</span></button>
+        <button class="hmb" data-p="rank"><i><img src="assets/icon/nav_rank.png?v=1.2.1"></i><span>排行</span></button>
+        <!-- V1.1.0 冲刺3 · 赛季远征（玩法组，4 周一期） -->
+        <button class="hmb" data-p="season"><i><img src="assets/icon/nav_season.png?v=1.2.1"></i><span>赛季</span></button>
+      </div>
     </div>
   </div>
 
-  <!-- ============ 基地主界面 ============ -->
-  <div id="home" class="screen">
-    <div class="hm-bg"></div>
-    <!-- 顶部信息 -->
-    <div class="hm-top">
-      <div class="hm-av" id="hmAv"><i id="hmAvIco">👨‍🚀</i><em id="hmLv">Lv.1</em></div>
-      <div class="hm-mid">
-        <div class="hm-nm" id="hmName">先锋官</div>
-        <div class="hm-pw"><span>⚔</span><b id="hmPower">0</b></div>
-      </div>
-      <div class="hm-cur">
-        <div class="cu"><i>🪙</i><b id="cuGold">0</b></div>
-        <div class="cu"><i>💎</i><b id="cuDia">0</b></div>
-      </div>
-    </div>
+  <!-- 主界面底部「今日进度」条：此前菜单最后一行结束在 y=748 而视口高 852，
+       底部 104px 是空的，整屏内容没填满、视觉发空。这里补上体力回满倒计时、
+       今日任务进度与主线总进度，并靠 margin-top:auto 吸底。
+       注意：本条必须放在 #hmMenu 【之后】且菜单改为自然高度（不滚动），
+       否则会挤占菜单空间导致 20 个入口一屏放不下（历史上修过的老问题）。 -->
+  <div class="hm-today" id="hmToday"></div>
+</div>
 
-    <!-- 关卡入口大按钮 -->
-    <div class="hm-main">
-      <button class="hm-go" id="hmGo">
-        <div class="go-t">主 线 关 卡</div>
-        <div class="go-l" id="hmLevel">第 1 关</div>
-        <div class="go-s" id="hmLevelName">城市大街</div>
+<!-- ========== 战斗 ========== -->
+<div class="screen" id="battle">
+  <canvas id="C"></canvas>
+
+  <!-- 顶栏：暂停 | 关卡 + 波次进度（玩家最关心的「还要打多久」前置） | 倍速 -->
+  <div class="bt-topbar">
+    <button class="btb-icon" id="btPause"><img class="ei" src="assets/icon/hud_pause.png?v=1.2.1" alt="暂停"></button>
+    <div class="btb-mid">
+      <div class="btb-lv" id="btLevel">1.城市大街</div>
+      <div class="btb-sub">
+        <span class="btb-wv">波次 <b id="btWave">1</b>/<span id="btWaveMax">20</span></span>
+        <span class="btb-tm" id="btTime">00:00</span>
+        <span class="btb-lvn"><b id="btLv">1</b>级</span>
+      </div>
+      <div class="btb-prog"><i id="btWaveBar"></i></div>
+    </div>
+    <button class="btb-speed" id="btSpeed">X1</button>
+  </div>
+
+  <!-- 状态条：防线生命 + 局内资源，压成一行
+       原设计把「金币/钻石」同时渲染在右上角两处（bt-coin 与 bt-cur）、
+       「弹药」渲染在两处（bt-ammo 与底部换弹盘）、另有一整块「等级/战力」占左上，
+       四块悬浮面板各占一角，把 canvas 可视区挤掉近三分之一。
+       现合并为顶栏下一条状态带：左侧生命（最关键），右侧金币/钻石/击杀。 -->
+  <div class="bt-status">
+    <div class="bs-hp">
+      <img class="ei" src="assets/icon/hud_hp.png?v=1.2.1" alt="">
+      <div class="bs-bar"><i id="btWallBar"></i></div>
+      <b id="btWallTxt">0</b>
+    </div>
+    <div class="bs-sh" id="btShWrap" style="display:none"><i id="btShBar"></i></div>
+    <div class="bs-res">
+      <span title="本局战斗内获得的金币，结算时并入总金币"><i class="bs-lb">本局</i><img class="ei" src="assets/icon/hud_gold.png?v=1.2.1"><b id="btGold">0</b></span>
+      <span><img class="ei" src="assets/icon/hud_diamond.png?v=1.2.1"><b id="btDia2">0</b></span>
+      <span><img class="ei" src="assets/icon/hud_kill.png?v=1.2.1"><b id="btKill">0</b></span>
+    </div>
+  </div>
+
+  <!-- 右侧功能：自动 / 切换（竖排小按钮，不遮挡战斗区） -->
+  <div class="bt-side">
+    <button class="bts" id="btAuto" title="自动"><img class="ei" src="assets/icon/hud_auto.png?v=1.2.1"></button>
+    <button class="bts" id="btSwitch" title="切换"><img class="ei" src="assets/icon/hud_switch.png?v=1.2.1"></button>
+  </div>
+
+  <!-- 中央对话气泡 -->
+  <div class="bt-talk" id="btTalk"><span id="btTalkTx"></span></div>
+
+  <!-- 底部操作区：炮台栏 + 技能栏（武器换弹浮动在技能行右端，不再独占一行）
+       原布局底部五层各自 absolute 手写 bottom，炮台栏实测侵入技能栏 26px。
+       现改为单一 flex 列容器，层高由内容决定，彻底不再互相压盖。 -->
+  <div class="bt-dock">
+    <div class="bt-turret" id="btTurret"></div>
+    <div class="bt-act">
+      <div class="bt-skills" id="btSkills"></div>
+      <button class="bt-reload" id="btReload">
+        <img id="btGunImg" class="gun-ic" onerror="this.style.display='none'">
+        <span id="btMag">30/30</span>
+        <em id="btReloadBar"></em>
       </button>
-      <div class="hm-side">
-        <button class="hm-sbtn" id="hmEndless"><i>♾️</i><span>无尽</span></button>
-        <button class="hm-sbtn" id="hmRank"><i>🏆</i><span>排行</span></button>
-      </div>
-    </div>
-
-    <!-- 基地模块 -->
-    <div class="hm-sec">基 地</div>
-    <div class="hm-base" id="hmBase"></div>
-
-    <!-- 底部导航 -->
-    <div class="hm-nav">
-      <button class="hn on" data-p="role"><i>🧍</i><span>角色</span></button>
-      <button class="hn" data-p="gun"><i>🔫</i><span>枪械</span></button>
-      <button class="hn" data-p="bag"><i>🎒</i><span>背包</span></button>
-      <button class="hn" data-p="merc"><i>👥</i><span>佣兵</span></button>
-      <button class="hn" data-p="shop"><i>🏪</i><span>商城</span></button>
-      <button class="hn" data-p="set"><i>⚙️</i><span>设置</span></button>
     </div>
   </div>
 
-  <!-- ============ 战斗 ============ -->
-  <div id="battle" class="screen">
-    <canvas id="C"></canvas>
-    <!-- 顶部 HUD -->
-    <div class="bt-top">
-      <button class="bt-ic" id="btPause">⏸</button>
-      <div class="bt-info">
-        <div class="bt-lv" id="btLevel">第 1 关</div>
-        <div class="bt-wv" id="btWave">第 1 / 3 波</div>
-      </div>
-      <div class="bt-timer" id="btTime">00:00</div>
-    </div>
-    <!-- 左上：局内等级 + 经验条 -->
-    <div class="bt-xp">
-      <div class="xp-n">Lv.<b id="btLv">1</b></div>
-      <div class="xp-bar"><i id="btXpBar"></i></div>
-    </div>
-    <!-- 右上：金币/击杀 -->
-    <div class="bt-st">
-      <div><i>🪙</i><b id="btGold">0</b></div>
-      <div><i>☠️</i><b id="btKill">0</b></div>
-    </div>
-    <!-- 右侧技能 -->
-    <div class="bt-skill" id="btSkill"></div>
-    <!-- 右下能量条 -->
-    <div class="bt-energy">
-      <div class="en-bar"><i id="btEnergy"></i></div>
-      <div class="en-t">能量</div>
-    </div>
-    <!-- 底部炮台建造 -->
-    <div class="bt-build" id="btBuild"></div>
+  <!-- 兼容层：旧 HUD 冗余元素的 DOM 保留（JS 仍会写入，无害），不渲染不占位。
+       直接删除会让 btMag / btSkills 等非判空引用报错，保留是最低风险做法。 -->
+  <div class="bt-legacy" hidden aria-hidden="true">
+    <span id="btCoin"></span><span id="btDia"></span><span id="btHeroLv"></span><span id="btPower"></span>
+    <span id="btMag2"></span><span id="btMagMax"></span><span id="btCoinWrap"></span>
+    <img id="btGunImg2" alt=""><img id="btHeroImg" alt="">
   </div>
 
-  <!-- ============ 通用面板 ============ -->
-  <div id="panel">
-    <div class="pn-mask" id="pnMask"></div>
-    <div class="pn-box">
-      <div class="pn-head">
-        <b id="pnTitle">面板</b>
-        <button class="pn-x" id="pnX">✕</button>
-      </div>
+  <!-- 连杀 Combo HUD（JUICE 打击感引擎）
+       此前 noHitStreak 只在内存里累加，界面上从不显示也不给收益。
+       这里显示实时连杀数、衰减条与当前金币倍率，并随连杀分级变色。 -->
+  <div class="jc-wrap" id="juiceCombo" aria-hidden="true">
+    <div class="jc-n"><b id="jcNum">0</b><span class="jc-x">连杀</span></div>
+    <div class="jc-bar"><i id="jcBar"></i></div>
+    <div class="jc-mul" id="jcMul">金币 ×1.00</div>
+  </div>
+
+  <!-- 全屏冲击闪（受伤红闪 / 爆炸橙闪 / BOSS 击杀白闪） -->
+  <div class="jc-flash" id="juiceFlash" aria-hidden="true"></div>
+</div>
+<!-- ========== 技能三选一 ========== -->
+<div class="modal" id="choice">
+  <div class="ch-box">
+    <div class="ch-head">
+      <b id="chTitle">选择技能</b>
+      <span class="ch-timer"><img class="ei" src="assets/icon/ic_timer.png?v=1.2.1" alt="倒计时"> <i id="chTimer">15</i> 秒</span>
+    </div>
+    <div class="ch-sub">局内技能选择 · 可叠加至 10 级</div>
+    <div id="chCards"></div>
+    <div class="ch-rfnum" id="chRfNum">当局剩余观看次数 1/1</div>
+    <button class="ch-rf" id="chRefresh"><img class="ei" src="assets/icon/hud_switch.png?v=1.2.1" alt=""> 刷新</button>
+  </div>
+</div>
+
+<!-- ========== 结算 ========== -->
+<div class="modal" id="result">
+  <div class="rs-box">
+    <div class="rs-t" id="rsTitle">战 斗 胜 利</div>
+    <div class="rs-lv" id="rsLevel">第 1 关</div>
+    <div id="rsDiff" style="display:none;justify-content:center;gap:6px;flex-wrap:wrap;margin:2px 0 6px"></div>
+    <div class="rs-grid" id="rsGrid"></div>
+    <div class="rs-dmg" id="rsDmg"></div>
+    <div class="rs-times" id="rsTimes">剩余体力：100/100</div>
+    <div id="rsAd"></div>
+    <div class="rs-btns">
+      <button class="btn c" id="rsNext">下一关</button>
+      <button class="btn" id="rsAgain">再挑战</button>
+      <button class="btn d" id="rsBack">返回</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 新手引导遮罩（表21） ========== -->
+<div class="guide" id="guide">
+  <div class="gd-mask"></div>
+  <div class="gd-finger" id="gdFinger"><img class="ei" src="assets/icon/hud_finger.png?v=1.2.1"></div>
+  <div class="gd-box">
+    <div class="gd-t" id="gdTitle">引导</div>
+    <div class="gd-c" id="gdText"></div>
+    <button class="btn c blk" id="gdOk">知道了</button>
+  </div>
+</div>
+
+<!-- ========== 扫荡弹窗 ========== -->
+<div class="modal" id="sweepBox"></div>
+
+<!-- ========== 章节 CG 过场 ========== -->
+<div class="modal" id="cgModal">
+  <div class="cg-box">
+    <img class="cg-img" id="cgImg" src="" alt="">
+    <div class="cg-cap">
+      <div class="cg-ch" id="cgCh">第 1 章</div>
+      <div class="cg-n" id="cgName">废弃街道</div>
+      <div class="cg-d" id="cgDesc"></div>
+      <button class="btn c" id="cgGo">进 入 战 区</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 等级提升（截图52） ========== -->
+<div class="modal" id="lvup">
+  <div class="lvup-box">
+    <div class="lvup-badge" id="lvupNum">5</div>
+    <div class="lvup-t">等 级 提 升</div>
+    <div class="lvup-rw" id="lvupRw"></div>
+  </div>
+</div>
+
+<!-- ========== 暂停 ========== -->
+<div class="modal" id="pause">
+  <div class="ps-box">
+    <div class="ps-t">已 暂 停</div>
+    <button class="btn c blk" id="psResume">继续战斗</button>
+    <button class="btn d blk" id="psQuit">放弃本关</button>
+  </div>
+</div>
+
+<!-- ========== 通用面板 ========== -->
+<div class="modal" id="panel">
+  <div class="pn-mask" id="pnMask"></div>
+  <div class="pn-box">
+    <div class="pn-hd">
+      <span class="pn-back" id="pnBack"><img class="ei" src="assets/icon/ic_back.png?v=1.2.1" alt="返回"></span>
+      <b id="pnTitle">标题</b>
+      <button id="pnX"><img class="ei" src="assets/icon/hud_close.png?v=1.2.1"></button>
+    </div>
+    <div class="pn-main" id="pnMain">
       <div class="pn-tabs" id="pnTabs"></div>
       <div class="pn-body" id="pnBody"></div>
     </div>
   </div>
-
-  <!-- ============ 技能三选一 ============ -->
-  <div id="choice">
-    <div class="ch-mask"></div>
-    <div class="ch-box">
-      <div class="ch-t">选择技能</div>
-      <div class="ch-sub" id="chSub">击杀升级！选择一项强化</div>
-      <div class="ch-cards" id="chCards"></div>
-      <button class="ch-refresh" id="chRefresh">🔄 刷新（观看后重置）</button>
-    </div>
-  </div>
-
-  <!-- ============ 结算 ============ -->
-  <div id="result">
-    <div class="rs-mask"></div>
-    <div class="rs-box">
-      <div class="rs-t" id="rsTitle">战斗胜利</div>
-      <div class="rs-lv" id="rsLevel">第 1 关</div>
-      <div class="rs-grid" id="rsGrid"></div>
-      <div class="rs-btns">
-        <button class="rs-b c" id="rsAgain">再 战</button>
-        <button class="rs-b" id="rsNext">下 一 关</button>
-        <button class="rs-b d" id="rsBack">返 回 基 地</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ 暂停 ============ -->
-  <div id="pause">
-    <div class="ps-mask"></div>
-    <div class="ps-box">
-      <div class="ps-t">已暂停</div>
-      <button class="ps-b c" id="psResume">继续战斗</button>
-      <button class="ps-b d" id="psQuit">放弃并结算</button>
-    </div>
-  </div>
-
-  <div id="toasts"></div>
 </div>
 
-<script src="js/net.js"></script>
-<script src="js/config.js"></script>
-<script src="js/engine.js"></script>
-<script src="js/battle.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/main.js"></script>
+<div id="toasts"></div>
+
+<!-- 服务器维护遮罩（后台「服务器运维 → 启停维护」开启后显示） -->
+<div id="maintMask" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(8,12,20,.94);
+  align-items:center;justify-content:center;font-family:inherit">
+</div>
+
+<script>
+/* 手机软键盘适配：把可视高度写进 --vvh，供 #app 使用。
+ * 背景：点输入框弹出软键盘后，可视高度从 852 压到 ~400，
+ * 若仍按 100vh 布局，登录框会被顶到可视区之外看不见；
+ * CSS 侧也据此回落，不依赖具体浏览器对 vh 的实现差异。 */
+(function () {
+  function kbFit() {
+    var st = document.documentElement.style, vv = window.visualViewport;
+    var vh = vv ? vv.height : window.innerHeight;
+    var ih = window.innerHeight;
+    /* 只有"确实被键盘压矮了"才覆盖，桌面端/无键盘时保持 100vh 不动 */
+    if (ih - vh > 60) {
+      st.setProperty('--vvh', Math.round(vh) + 'px');
+      /* 打上标记：登录页改为顶部对齐 + 可滚动。
+       * 否则 524px 高的登录框在 ~400px 的可视区里居中会【上下各溢出 62px】，
+       * 顶部的标题和底部的按钮同时被切掉且滚不到。 */
+      document.documentElement.setAttribute('data-kb', '1');
+    } else {
+      st.removeProperty('--vvh');
+      document.documentElement.removeAttribute('data-kb');
+    }
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', kbFit);
+    window.visualViewport.addEventListener('scroll', kbFit);
+  }
+  window.addEventListener('resize', kbFit);
+  window.addEventListener('orientationchange', function () { setTimeout(kbFit, 300); });
+  kbFit();
+})();
+</script>
+<script src="js/net.js?v=1.2.1"></script>
+<script src="js/config.js?v=1.2.1"></script>
+<script src="js/ops.js?v=1.2.1"></script>
+<script src="js/engine.js?v=1.2.1"></script>
+<script src="js/chibi.js?v=1.2.1"></script>
+<script src="js/juice.js?v=1.2.1"></script>
+<script src="js/battle.js?v=1.2.1"></script>
+<script src="js/ui.js?v=1.2.1"></script>
+<!-- qr.js 已移除：登录改为账号密码，扫码功能不再使用（原引用 404） -->
+<script src="js/user.js?v=1.2.1"></script>
+<script src="js/audio.js?v=1.2.1"></script>
+<script src="js/main.js?v=1.2.1"></script>
+</div>
+</div>
 </body>
 </html>
