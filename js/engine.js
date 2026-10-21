@@ -1,303 +1,5021 @@
 /* =========================================================
- * engine.js —— 玩家数据 / 养成系统 / 关卡生成
+ * engine.js —— 养成引擎
+ * 依据资料：GD-003角色 / GD-004武器 / GD-005技能天赋 /
+ *   GD-007关卡 / GD-009芯片 / GD-010基地 / GD-011任务 /
+ *   GD-017数值 / 伤害公式(10) / 成长曲线 / 解锁条件
  * ========================================================= */
 
 const E = {
+  /* 武器：线性成长，每级 +20%；每 5 级进阶一次 */
+  GUN_GROW: 0.20,
+  /* =========================================================
+   * 数值平衡常数（卡关 → 攒金币 → 升级武器 → 晋升 循环）
+   * ========================================================= */
+  GUN_GROW_RATE: 1.078,      /* 武器攻击复利率：每级 ×1.078 */
+  /* 武器升级费复利率。
+   * 平衡分析：关卡金币奖励按「每关 ×1.108」增长（章节间 ×2.8 / 10 关），
+   * 而原升级成本按「每级 ×1.16」增长 —— 成本增速长期快于收益增速，
+   * 后期单级成本（Lv70 达 843 万）远超单关收益，玩家必然卡死。
+   * 配合本轮关卡奖励曲线上调，这里同步下调到 1.14，使两者增速匹配。 */
+  /* 本次上调（难度重构）：
+   * 基数 300 → 520（前几级立刻变贵，开局就要取舍"升级还是买装备"），
+   * 复利 1.14 → 1.145（略提）。
+   * 刻意只抬基数、不大动复利率：复利率对高等级是指数放大，
+   * 1.14→1.17 会让 Lv100 成本从 1.3 亿涨到 16.8 亿（≈175 关收益），
+   * 那不是"更难"而是"根本升不动"。抬基数则是全等级等比变贵，
+   * Lv100 约 2.5 亿（≈26 关收益），仍属于需要攒但够得着。 */
+  GUN_COST_RATE: 1.145,
+  GUN_COST_BASE: 520,
+  /* 强化等级封顶。后台 GM 可任意设置 gunLv，不设上限时：
+   *   1.14^lv 溢出成 Infinity → gold - Infinity = -Infinity（存档金币被污染）
+   *   1.078^lv 溢出成 Infinity → 攻击无穷 → 战斗内 coin/结算金币一起溢出
+   * 正常玩到 10-10 约 Lv78，999 远超可达范围，不影响任何正常玩法。 */
+  GUN_MAX_LV: 999,
+  TALENT_MAX_LV: 999,
+  BUILD_MAX_LV: 999,
+  SPD_MUL: 22,          // 资料移速 6.0 → 像素 132
 
-  /* ---------- 新角色 ---------- */
+  fmt(n) {
+    n = Math.round(Number(n) || 0);
+    /* Infinity / NaN：JSON 存档会把它们写成 null，读回来是 0，这里保持一致显示 0，
+     * 否则界面会出现「Infinity亿」这种既荒谬又撑破布局的文本。 */
+    if (!isFinite(n)) return '0';
+    const a = Math.abs(n);
+    /* 单位链必须连续、每档相差 1e4：这样任意档位除完的结果都落在 1~1e4 之间，
+     * 字符串长度天然 <= 8，永远不会退化成科学计数法。
+     * BUG：此前只到「京」(1e16)，于是 1e16~1e37 这一整段 ——
+     *   (n/1e16).toFixed(2) 要么产出「100000000000000.00京」这种 20+ 字符的超长串撑破 UI，
+     *   要么在 n>=1e37 时 toFixed 自己返回「1e+292」、拼上单位变成「1e+292京」；
+     *   而兜底又把两者统统换成 n.toExponential(2) —— 玩家看到「1.13e+35」，
+     *   既不是数字也不是单位，完全读不懂。
+     *   （实测：后台把武器等级改成 99999，角色页「战力 1.13e+35 / 攻击 9.94e+33」。）
+     * 现在补全 垓/秭/穰/沟/涧 五档，覆盖到 1e40；1e40 以上仍走兜底。 */
+    const UNITS = [
+      [1e44, '载'], [1e40, '正'],
+      [1e36, '涧'], [1e32, '沟'], [1e28, '穰'], [1e24, '秭'], [1e20, '垓'],
+      [1e16, '京'], [1e12, '兆'], [1e8, '亿'],
+    ];
+    let s = null;
+    for (const [base, u] of UNITS) {
+      if (a >= base) { s = (n / base).toFixed(2) + u; break; }
+    }
+    if (s === null) {
+      if (a >= 1e4) {
+        /* 万档只保留 1 位小数；若恰好为 .0 则去掉尾零，避免出现「1000.0万」这种冗余写法 */
+        const w = n / 1e4;
+        if (w >= 9999.95) {
+          /* 四舍五入后满 10000 万，进位到亿档，避免出现「10000万」这种别扭写法 */
+          s = (n / 1e8).toFixed(2) + '亿';
+        } else {
+          let v = w.toFixed(1);
+          if (v.slice(-2) === '.0') v = v.slice(0, -2);
+          s = v + '万';
+        }
+      } else s = String(n);
+    }
+    /* 兜底：仅当数值大到超出单位链（>=1e40）时才会触发 */
+    if (s.length > 10 || /e/i.test(s)) s = n.toExponential(2);
+    return s;
+  },
+  qi(q) { return EX.qualities.indexOf(q); },
+  item(id) { return EX.items.find((x) => x.id === id); },
+  /* 物品名。
+   * BUG（奖励文本看不懂）：物品表里只有 R01/R02 与 M/P/C/I 系列，
+   *   而 grant / 任务奖励 / 活动奖励里的键还有 gold、diamond、ach、evToken、
+   *   stamina、xp、skin、title、frame、gem、gun、char、chipN/E/L 等。
+   *   这些键走 fallback 直接【原样返回英文键名】——
+   *   于是成就任务面板一直显示「ach+100」、活动面板显示「evToken+60」，
+   *   玩家根本不知道拿到的是什么。
+   *   现在补上完整别名映射（成就点读 EX.ACH_POINT，运营改名会自动跟随）。 */
+  itemName(id) {
+    const t = this.item(id);
+    if (t) return t.n;
+    /* 带前缀的复合 id（军团商店 / 后台热更会用到）
+     * BUG：军团商店 LS06「红宝石」的 item 写的是 'gem_G_R'
+     *   （发放时靠 `slice(4)` 取真实宝石 id G_R，发放本身是对的），
+     *   但卡片上直接调 E.itemName(g.item) —— 别名表里没有这个键，
+     *   fallback 原样返回 → 界面显示【gem_G_R ×1】，
+     *   玩家看到一串内部 id，不知道自己买的是什么。
+     * 现在按前缀查真实表，找不到再退回原名。 */
+    if (typeof id === 'string' && id.indexOf('gem_') === 0) {
+      const g = (EX.gems || []).find((x) => x.id === id.slice(4));
+      if (g) return g.n;
+    }
+    if (typeof id === 'string' && id.indexOf('gun_') === 0) {
+      const w = (EX.guns || []).find((x) => x.id === id.slice(4));
+      if (w) return w.n;
+    }
+    if (typeof id === 'string' && id.indexOf('sk_') === 0) {
+      const s = (EX.skins || []).find((x) => x.id === id);
+      if (s) return s.n;
+    }
+    const ALIAS = {
+      gold: '金币', diamond: '钻石', ach: EX.ACH_POINT || '成就点',
+      evToken: '活动代币', ev: '活动代币', evScore: '活动积分',
+      stamina: '体力', xp: '经验', tp: '天赋点',
+      skin: '皮肤', title: '称号', frame: '头像框', gem: '宝石',
+      gun: '武器', char: '角色', chip: '芯片',
+      chipN: '普通芯片', chipE: '精英芯片', chipL: '传说芯片', chipRed: '传说芯片',
+    };
+    return ALIAS[id] || id;
+  },
+
+  /* 【字段缺失就地兜底】—— 与 sanitize 同一口径，但可在运行中随时调用。
+   * 为什么需要它（实测）：
+   *   sanitize 只在【登录读档】时跑一次。后台 GM 热改档 / 云端热更覆盖会
+   *   在 session 内直接改写 P 的子对象，绕过 sanitize。实测逐个删掉存档字段后
+   *   打开全部面板，5 个字段会让 4~6 个面板整体抛 TypeError 白屏：
+   *     talents → role/gun/legion/exped 抛（engine 战力链 p.talents.t_armor）
+   *     build   → base 抛
+   *     cleared → role/chip/task/talent 抛
+   *     tasks   → task/set 抛
+   *   而同样的缺失【经过 sanitize 后】81 个字段全部正常（已实测 0 处异常），
+   *   说明缺口只在"运行中改写"这一条路径上。
+   * 这里只做【存在性】补齐（不做数值钳制），成本 O(字段数)，可在 UI.open 里常驻调用。 */
+  ensureDicts(p) {
+    if (!p || typeof p !== 'object') return p;
+    for (const k of this.ARRS) if (!Array.isArray(p[k])) p[k] = [];
+    for (const k of this.OBJS) if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {};
+    /* build 缺失要补默认值而不是 {}：各建筑"未建造"语义是 1 级，
+     * 补 {} 会让基地面板渲染出 Lv.undefined。与 main.js 读档兜底同口径。 */
+    if (!p.build || typeof p.build !== 'object' || Array.isArray(p.build)
+        || !Object.keys(p.build).length) {
+      p.build = { hospital: 1, armory: 1, lab: 1, warehouse: 1 };
+    }
+    return p;
+  },
+
+  /* =================================================
+   * 新玩家
+   * ================================================ */
   newPlayer(uid, name, gender) {
     return {
       uid, name, gender: gender || 'm',
-      avatar: gender === 'f' ? '👩‍🚀' : '👨‍🚀',
-      avatarImg: gender === 'f' ? 'assets/char/hero_f.jpg' : 'assets/char/hero_m.jpg',
-      lv: 1, exp: 0,
-      level: 1, maxLevel: 1, endlessBest: 0,
-      gold: 500, diamond: 100,
-      gun: 'g1', gunLv: 1,
-      equip: { head: null, cloth: null, shoe: null, arm: null, pants: null, glove: null },
-      gems: {},
-      bag: [],
-      mercs: [],
-      techs: {},
-      wallLv: 1,
-      stats: { kills: 0, runs: 0, wins: 0, boss: 0, time: 0 },
-      lastSeen: Date.now(), created: Date.now(),
+      char: 'C01',                 // 当前角色
+      chars: ['C01'],              // 已解锁角色
+      skin: 'sk_c01a', skins: ['sk_c01a'],
+      avatar: '🧑‍🚀', avatarImg: gender === 'f' ? 'assets/char/hero_f.jpg' : 'assets/char/hero_m.jpg',
+      lv: 1, xp: 0, tp: 3,
+      gold: 2000, diamond: 100, ach: 0,
+      /* V1.1.0 军衔：spirit=军功，realm=层数(0=未入门)。
+       * 老存档缺失时由 sanitize 的 NUMS 兜底补 0，行为与"未开始修炼"一致。 */
+      spirit: 0, realm: 0,
+      /* 材料（资料物品表） */
+      mat: { M01: 0, M02: 0, M03: 0, M04: 0, M05: 0, P01: 0, P02: 0 },
+      /* 消耗品 */
+      use: { I01: 0, I02: 0, I03: 0 },
+      gun: 'W01', gunLv: 1, gunAdv: 0, gunStats: {},   // 武器等级/进阶/词条
+      gunOwn: ['W01'],
+      gun2: null,            // 支援武器槽（医疗包/护盾发生器，战斗中自动生效，不占出战武器）
+      chips: {}, bag: [],
+      talents: {},
+      build: { hospital: 1, armory: 1, lab: 1, warehouse: 1 },
+      mercs: [],              // 已招募佣兵（酒馆）
+      cleared: {},            // { '1-1': stars }
+      curLevel: '1-1',
+      endlessBest: 0, endlessTime: 0,
+      stamina: 100, staminaAt: Date.now(),
+      tasks: { mainClaimed: [], dailyClaimed: [], dailyDate: '', dailyProg: {},
+        weeklyClaimed: [], weeklyKey: '', weeklyProg: {}, achieveClaimed: [] },
+      stats: { kills: 0, runs: 0, bossKill: 0, noHitBest: 0, endlessBest: 0 },
+      adUsed: {}, adDate: '',
+      guide: {},               // 引导完成标记
+      /* v1.0 留存系统字段
+       * regDay：注册当天(YYYYMMDD)，新手7日的唯一判据。
+       *         必须在建号时就写死 —— 若留空由 _regDay() 兜底取"今天"，
+       *         老玩家每次读档都会被当成"今天注册"，7 日奖励永远停在第 1 天。
+       * newbie7 / actBox / comeback：三项留存的领取记录。 */
+      regDay: (function () { const d = new Date(Date.now() + 8 * 3600000);
+        return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); })(),
+      newbie7: [],
+      actBox: { k: 0, got: [] },
+      comeback: { on: false, got: [] },
+      offlineAt: Date.now(),
+      /* 离线收益【结算基准】：只由 offlineClaim 推进，绝不被自动存档刷新。
+       * offlineAt 另作「最后活跃时间」供回档守卫使用（见 main.js syncSnap/save），
+       * 两个语义此前共用同一字段 → 离线收益被 30 秒定时存档清零。 */
+      offBase: Date.now(),
+      mail: [], created: Date.now(), lastSeen: Date.now(),
     };
   },
 
-  /* ---------- 工具 ---------- */
-  fmt(n) {
-    n = Math.round(n || 0);
-    if (n >= 1e8) return (n / 1e8).toFixed(2) + '亿';
-    if (n >= 1e4) return (n / 1e4).toFixed(2) + '万';
-    return '' + n;
+  /* =================================================
+   * 关卡（资料关卡表：3 章 10 关）
+   * ================================================ */
+  levels() { return (EX.levels && EX.levels.length) ? EX.levels : [this._nullLevel()]; },
+  /* 空表兜底：关卡表被清空时 EX.levels[0] 为 undefined，
+   * 而 levelUnlocked / battle.js 随后读 d.unlock / d.waves → 关卡面板与战斗
+   * 整体抛错（实测 levelDef 返回 null）。 */
+  _nullLevel() {
+    return { id: '1-1', ch: 1, n: '（关卡表为空）', waves: 20, pool: ['putong'], per: [10, 15],
+      mul: 1.0, cond: 'clear', rw: { gold: 100 }, unlock: null, scene: 'city' };
   },
-  qi(q) { const i = EX.qualities.findIndex((x) => x.n === q); return i < 0 ? 0 : i; },
-  qMul(q) { return (EX.qualities.find((x) => x.n === q) || { mul: 1 }).mul; },
-  qColor(q) { return (EX.qualities.find((x) => x.n === q) || { c: '#888' }).c; },
-
-  /* ---------- 账号经验 ---------- */
-  xpNeed(lv) { return Math.round(100 * Math.pow(1.16, lv - 1)); },
-  addExp(p, v) {
-    p.exp += v;
-    let up = 0;
-    while (p.exp >= this.xpNeed(p.lv)) { p.exp -= this.xpNeed(p.lv); p.lv++; up++; }
-    return up;
+  levelDef(id) { return this.levels().find((x) => x.id === id) || this.levels()[0]; },
+  levelIdx(id) { const i = this.levels().findIndex((x) => x.id === id); return i < 0 ? 0 : i; },
+  nextLevel(id) {
+    const l = this.levels(); const i = this.levelIdx(id);
+    return i < l.length - 1 ? l[i + 1].id : null;
   },
-
-  /* ---------- 枪械 ---------- */
-  gun(p) { return EX.guns.find((x) => x.id === p.gun) || EX.guns[0]; },
-  /* 枪械：乘性成长（主指数来源），与僵尸血量曲线匹配 */
-  GUN_GROW: 1.20,
-  gunAtk(p) { return Math.round(this.gun(p).dmg * Math.pow(this.GUN_GROW, p.gunLv - 1)); },
-  gunUpgradeCost(p) { return Math.round(300 * Math.pow(1.26, p.gunLv - 1)); },
-  upgradeGun(p) {
-    const c = this.gunUpgradeCost(p);
-    if (p.gold < c) return { ok: false, msg: '金币不足' };
-    p.gold -= c; p.gunLv++;
-    return { ok: true, msg: '枪械强化至 Lv.' + p.gunLv };
+  /* 空表兜底：章节表被清空时 EX.chapters[0] 为 undefined，
+   * r_level 读 cd.icon → 关卡选择面板整体崩溃（实测）。 */
+  _nullChapter() {
+    return { id: 1, n: '第一章', icon: '🏙️' };
   },
-
-  /* ---------- 装备生成 ---------- */
-  rollEquip(slot, lvHint) {
-    const L = Math.max(1, lvHint || 1);
-    const qs = ['白', '绿', '蓝', '紫', '橙', '红'];
-    let idx = 0;
-    const r = Math.random();
-    if (r > 0.94) idx = 4; else if (r > 0.8) idx = 3; else if (r > 0.55) idx = 2; else if (r > 0.25) idx = 1;
-    const q = qs[Math.min(idx, 5 - Math.floor(L / 60))];
-    const base = Math.round((18 + L * 3.2) * this.qMul(q));
-    const it = {
-      id: 'eq' + Math.random().toString(36).slice(2, 8),
-      slot, q, lv: 0,
-      atk: Math.round(base * (0.8 + Math.random() * 0.5)),
-      def: Math.round(base * (0.5 + Math.random() * 0.4)),
-      hp: Math.round(base * (3 + Math.random() * 2)),
-      subs: [],
-    };
-    // 蓝品以上带副词条
-    const nsub = Math.max(0, idx - 1);
-    for (let i = 0; i < nsub; i++) it.subs.push(this.rollSub());
-    return it;
+  chapter(id) {
+    const l = this.chapters();
+    return l.find((x) => x.id === id) || l[0];
   },
-  rollSub() {
-    const keys = [['atk', 0.06, '攻击'], ['def', 0.05, '防御'], ['hp', 0.05, '生命'],
-      ['crit', 0.03, '暴击率'], ['cdr', 0.025, '冷却缩减'], ['dmg', 0.05, '伤害']];
-    const [k, base, n] = keys[Math.floor(Math.random() * keys.length)];
-    return { k, n, v: +(base * (0.7 + Math.random() * 0.8)).toFixed(3) };
+  chapters() { return (EX.chapters && EX.chapters.length) ? EX.chapters : [this._nullChapter()]; },
+  /* 关卡是否已解锁：前一关通关 */
+  levelUnlocked(p, id) {
+    const d = this.levelDef(id);
+    if (!d.unlock) return true;
+    return !!p.cleared[d.unlock];
   },
-
-  /* ---------- 装备锻造 ---------- */
-  forgeCost(it) { return Math.round(120 * Math.pow(1.22, it.lv)); },
-  forge(p, slot) {
-    const it = p.equip[slot];
-    if (!it) return { ok: false, msg: '该部位未装备' };
-    if (it.lv >= 50) return { ok: false, msg: '已达强化上限' };
-    const c = this.forgeCost(it);
-    if (p.gold < c) return { ok: false, msg: '金币不足' };
-    p.gold -= c; it.lv++;
-    it.atk = Math.round(it.atk * 1.06); it.def = Math.round(it.def * 1.06); it.hp = Math.round(it.hp * 1.06);
-    return { ok: true, msg: '强化成功 +' + it.lv };
+  /* 当前可挑战的下一关 */
+  curLevel(p) {
+    const l = this.levels();
+    for (const x of l) if (!p.cleared[x.id]) return x.id;
+    return l[l.length - 1].id;
   },
-
-  /* ---------- 升品 ---------- */
-  upQuality(p, slot) {
-    const it = p.equip[slot];
-    if (!it) return { ok: false, msg: '该部位未装备' };
-    const i = this.qi(it.q);
-    if (i >= 5) return { ok: false, msg: '已是最高品质' };
-    const cost = Math.round(400 * Math.pow(2.2, i));
-    if (p.gold < cost) return { ok: false, msg: '金币不足（需 ' + this.fmt(cost) + '）' };
-    p.gold -= cost;
-    it.q = EX.qualities[i + 1].n;
-    const m = this.qMul(it.q) / this.qMul(EX.qualities[i].n);
-    it.atk = Math.round(it.atk * m); it.def = Math.round(it.def * m); it.hp = Math.round(it.hp * m);
-    if (i + 1 >= 2) it.subs.push(this.rollSub());
-    return { ok: true, msg: '升品成功 → ' + it.q };
+  /* 真实进度章节：已通关最大章 与 p.curLevel 所在章 取较大者
+   * 用途：巡逻收益档位、无尽模式掉落档位等一切"按章节取档"的地方都必须用它，
+   *       不能直接用 chapterOf(p.curLevel) —— 后者会被"回头重打旧关卡"打回低章节。
+   * （详见 clearLevel 里的进度回退 BUG 注释） */
+  progressChapter(p) {
+    let ch = this.chapterOf(p.curLevel || '1-1') || 1;
+    for (const id in (p.cleared || {})) {
+      const c = Number(String(id).split('-')[0]) || 1;
+      if (c > ch) ch = c;
+    }
+    return Math.max(1, ch);
   },
-
-  /* ---------- 洗炼 ---------- */
-  reroll(p, slot) {
-    const it = p.equip[slot];
-    if (!it) return { ok: false, msg: '该部位未装备' };
-    if (this.qi(it.q) < 2) return { ok: false, msg: '蓝色品质以上才能洗炼' };
-    const cost = Math.round(600 * Math.pow(1.9, this.qi(it.q)));
-    if (p.gold < cost) return { ok: false, msg: '金币不足（需 ' + this.fmt(cost) + '）' };
-    p.gold -= cost;
-    it.subs = it.subs.map(() => this.rollSub());
-    return { ok: true, msg: '洗炼完成' };
+  levelName(id) {
+    const d = this.levelDef(id);
+    return d.id + ' ' + d.n;
   },
-
-  /* ---------- 分解 ---------- */
-  decompose(p, idx) {
-    const it = p.bag[idx];
-    if (!it) return { ok: false, msg: '物品不存在' };
-    p.bag.splice(idx, 1);
-    const got = Math.round(40 * Math.pow(1.8, this.qi(it.q)));
-    p.gold += got;
-    return { ok: true, msg: '分解获得 ' + this.fmt(got) + ' 金币' };
+  chapterOf(id) { return this.levelDef(id).ch; },
+  /* ---------- 章节 CG 过场 ----------
+   * EX.cgImg / EX.chapterCg 此前是死配置：CG 图已生成但全项目零引用，
+   * 玩家从头到尾看不到任何过场演出。现在进入新章节时播放一次。 */
+  cgOf(ch) {
+    const map = (EX.chapterCg || {});
+    const id = map[ch]; if (!id) return null;
+    const src = (EX.cgImg || {})[id]; if (!src) return null;
+    return { id: id, src: src };
   },
-
-  /* ---------- 宝石 ---------- */
-  socketGem(p, slot, gemId) {
-    const it = p.equip[slot];
-    if (!it) return { ok: false, msg: '该部位未装备' };
-    if (this.qi(it.q) < 2) return { ok: false, msg: '蓝色品质以上才能镶宝石' };
-    p.gems[slot] = gemId;
-    return { ok: true, msg: '镶嵌成功' };
+  /* 是否已播放过；首次进入该章节时返回 CG 数据并登记。
+   * 【BUG修复】此前按 cg.id 登记，而第 4 章与第 10 章共用同一张 cg02_defense，
+   *   玩家在第 4 章看过之后，最终章第 10 章的过场被判定为「已看过」而永久跳过。
+   *   改为按「章节号 ch」登记：每章只播一次，且各章互不影响。 */
+  cgTake(p, ch) {
+    const cg = this.cgOf(ch);
+    if (!cg) return null;
+    p.cgSeen = p.cgSeen || {};
+    if (p.cgSeen[ch]) return null;
+    p.cgSeen[ch] = 1;
+    return cg;
   },
-
-  /* ---------- 佣兵 ---------- */
-  recruitCost(id) {
-    const m = EX.mercs.find((x) => x.id === id);
-    return { gold: Math.round(800 * Math.pow(2.4, this.qi(m.q))), diamond: this.qi(m.q) >= 4 ? 50 : 0 };
+  /* 体力消耗：普通 1 / BOSS 3 / 无尽 2，高难度【递增】而不是相乘
+   * 相乘的后果实测过：BOSS 关 ×3 → 恶魔难度 9 点体力，
+   * 而体力上限 100、每 5 分钟才回 1 点 = 打一关要等 45 分钟，直接劝退。
+   * 改为 基础 + (难度档 - 1)：普通 1 / 困难 2 / 恶魔 3，BOSS 关 3/4/5。
+   * diff 为空时按普通算，老存档/其他调用点不受影响。 */
+  staminaCost(id, diff) {
+    const dm = this.diffMul(diff);
+    const add = Math.max(0, Math.round(dm.stam) - 1);
+    if (id === 'endless') return 2 + add;
+    const d = this.levelDef(id);
+    const base = (d.cond === 'boss' || d.cond === 'bossAll') ? 3 : 1;
+    return base + add;
   },
-  recruit(p, id) {
-    if (p.mercs.some((m) => m.id === id)) return { ok: false, msg: '已拥有该佣兵' };
-    const c = this.recruitCost(id);
-    if (p.gold < c.gold) return { ok: false, msg: '金币不足' };
-    if (p.diamond < (c.diamond || 0)) return { ok: false, msg: '钻石不足' };
-    p.gold -= c.gold; p.diamond -= (c.diamond || 0);
-    p.mercs.push({ id, lv: 1, out: p.mercs.length < 2 });
-    return { ok: true, msg: '招募成功' };
+  /* ---------- 难度（普通 / 困难 / 恶魔） ---------- */
+  diffDef(id) {
+    const t = (EX.DIFFS || []);
+    if (!t.length) return { id: 'normal', n: '普通', hpMul: 1, dmgMul: 1, cntMul: 1, spdMul: 1, rwMul: 1, stam: 1 };
+    return t.find((x) => x.id === id) || t[0];
   },
-  mercUpgradeCost(m) { return Math.round(500 * Math.pow(1.4, m.lv - 1)); },
-  upMerc(p, id) {
-    const m = p.mercs.find((x) => x.id === id);
-    if (!m) return { ok: false, msg: '未拥有' };
-    const c = this.mercUpgradeCost(m);
-    if (p.gold < c) return { ok: false, msg: '金币不足' };
-    p.gold -= c; m.lv++;
-    return { ok: true, msg: '佣兵升至 Lv.' + m.lv };
-  },
-
-  /* ---------- 科技 ---------- */
-  techCost(id, cur) {
-    const t = EX.techs.find((x) => x.id === id);
-    return Math.round(t.base * Math.pow(t.grow, cur));
-  },
-  upTech(p, id) {
-    const t = EX.techs.find((x) => x.id === id);
-    const cur = p.techs[id] || 0;
-    if (cur >= t.max) return { ok: false, msg: '已满级' };
-    const c = this.techCost(id, cur);
-    if (p.gold < c) return { ok: false, msg: '金币不足' };
-    p.gold -= c; p.techs[id] = cur + 1;
-    return { ok: true, msg: t.n + ' 提升至 Lv.' + (cur + 1) };
-  },
-
-  /* ---------- 防线 ---------- */
-  wallCost(p) { return Math.round(500 * Math.pow(1.45, p.wallLv - 1)); },
-  upWall(p) {
-    const c = this.wallCost(p);
-    if (p.gold < c) return { ok: false, msg: '金币不足' };
-    p.gold -= c; p.wallLv++;
-    return { ok: true, msg: '防线强化至 Lv.' + p.wallLv };
-  },
-
-  /* ---------- 综合属性（局外养成汇总） ---------- */
-  attrs(p) {
-    let base = this.gunAtk(p), range = this.gun(p).range, rate = this.gun(p).rate;
-    let pierce = this.gun(p).pierce, spread = this.gun(p).spread || 1;
-    let crit = 0.05, critDmg = 0.5, wallHp = 1000, cdr = 0, goldMul = 1;
-    let flat = 0, mult = 1;   // 装备固定值 + 总倍率
-
-    // 装备：固定值（前期有用） + 品质/锻造成倍率（后期主导）
-    EX.slots.forEach((s) => {
-      const it = p.equip[s.k];
-      if (!it) return;
-      flat += it.atk; wallHp += it.hp;
-      mult += (this.qMul(it.q) - 1) * 0.06 + (it.lv || 0) * 0.006;
-      (it.subs || []).forEach((sb) => {
-        if (sb.k === 'atk') flat += Math.round(flat * sb.v) + Math.round(base * sb.v * 0.3);
-        if (sb.k === 'hp') wallHp = Math.round(wallHp * (1 + sb.v));
-        if (sb.k === 'crit') crit += sb.v;
-        if (sb.k === 'cdr') cdr += sb.v;
-        if (sb.k === 'dmg') mult += sb.v * 0.5;
-        if (sb.k === 'def') wallHp = Math.round(wallHp * (1 + sb.v * 0.6));
-      });
-    });
-    // 宝石
-    Object.values(p.gems || {}).forEach((gid) => {
-      const g = EX.gems.find((x) => x.id === gid);
-      if (!g) return;
-      if (g.id === 'gm1') crit += g.v;
-      if (g.id === 'gm2') cdr += g.v;
-      if (g.id === 'gm3') pierce += g.v;
-      if (g.id === 'gm4') spread += g.v;
-      if (g.id === 'gm5') atk = Math.round(atk * (1 + g.v));
-      if (g.id === 'gm10') atk = Math.round(atk * (1 + g.v));
-      if (g.id === 'gm12') critDmg += g.v;
-    });
-    // 科技
-    const t = p.techs || {};
-    mult += (t.t1 || 0) * 0.02;
-    range = Math.round(range * (1 + (t.t2 || 0) * 0.015));
-    rate = rate * (1 + (t.t3 || 0) * 0.02);
-    wallHp = Math.round(wallHp * (1 + (t.t4 || 0) * 0.03));
-    cdr += (t.t5 || 0) * 0.025;
-    goldMul += (t.t6 || 0) * 0.03;
-    // 防线等级
-    wallHp = Math.round(wallHp * (1 + (p.wallLv - 1) * 0.22));
-    // 佣兵出战（按当前战力百分比加成，后期仍有意义）
-    let mercPct = 0;
-    (p.mercs || []).filter((m) => m.out).forEach((m) => {
-      const d = EX.mercs.find((x) => x.id === m.id);
-      if (d) mercPct += 0.06 + (m.lv - 1) * 0.01;
-    });
-    mult += mercPct;
-    cdr = Math.min(0.6, cdr);
-    crit = Math.min(0.75, crit);
-
-    const atk = Math.round((base * mult) + flat);
-    return { atk, base, mult, flat, range, rate, pierce, spread, crit, critDmg, wallHp, cdr, goldMul };
-  },
-
-  power(p) {
-    const a = this.attrs(p);
-    return Math.round(a.atk * 12 + a.wallHp * 0.6 + a.crit * 900 + (p.lv || 1) * 220 + (p.maxLevel || 1) * 320);
-  },
-
-  /* ---------- 关卡定义 ---------- */
-  /* 血量成长：需与枪械 GUN_GROW=1.18 及装备/科技倍率匹配 */
-  HP_GROW: 1.082,
-  DMG_GROW: 1.072,
-  GOLD_GROW: 1.16,
-  levelDef(n, endless) {
-    const isBoss = n % 10 === 0;
-    const waves = Math.min(9, 3 + Math.floor(n / 14));
-    const hpMul = Math.pow(this.HP_GROW, n - 1) * (endless ? Math.pow(1.04, n) : 1);
-    const dmgMul = Math.pow(this.DMG_GROW, n - 1);
-    // 僵尸池
-    let pool = ['z1', 'z2'];
-    if (n >= 12) pool.push('z3');
-    if (n >= 20) pool.push('z4');
-    if (n >= 28) pool.push('z5');
-    if (n >= 36) pool.push('z7');
-    if (n >= 45) pool.push('z6');
-    if (n >= 55) pool.push('z8');
-    if (n >= 65) pool.push('z9');
-    if (n >= 75) pool.push('z10');
-    if (n >= 100) pool.push('z11');
-    const boss = isBoss ? EX.bosses[Math.min(EX.bosses.length - 1, Math.floor(n / 10) - 1)] : null;
+  /* 取难度倍率（非法值一律退化为普通，绝不让 undefined 参与乘法） */
+  diffMul(diff) {
+    const d = this.diffDef(diff);
+    const num = (v, dft) => (isFinite(Number(v)) ? Number(v) : dft);
     return {
-      n, waves, isBoss, boss, pool,
-      hpMul, dmgMul,
-      countBase: Math.min(26, 6 + Math.floor(n * 0.30)),
-      name: this.levelName(n),
+      id: d.id, n: d.n,
+      hp: num(d.hpMul, 1), dmg: num(d.dmgMul, 1), cnt: num(d.cntMul, 1),
+      spd: num(d.spdMul, 1), rw: num(d.rwMul, 1), stam: num(d.stam, 1),
     };
   },
-  levelName(n) {
-    const scenes = ['城市大街', '废弃工厂', '辐射废墟', '地下隧道', '麦田荒野', '雪原哨站', '雾境迷宫', '深渊裂谷'];
-    return '第' + n + '关 · ' + scenes[Math.floor((n - 1) / 30) % scenes.length];
+  /* 该关卡某难度是否已解锁：
+   *   普通 → 关卡本身解锁即可
+   *   困难 → 通关该关普通
+   *   恶魔 → 通关该关困难
+   * 旧存档只有 p.cleared（无难度记录），视为已通关普通，不会把老玩家卡死。 */
+  diffUnlocked(p, lvId, diff) {
+    const d = this.diffDef(diff);
+    if (!d.unlock) return true;
+    const rec = (p.diffCleared || {})[d.unlock] || {};
+    if (rec[lvId]) return true;
+    /* 兼容旧档：cleared 里有的关视为已通普通 */
+    return d.unlock === 'normal' ? !!(p.cleared || {})[lvId] : false;
+  },
+  /* 单次扫荡消耗体力
+   * BUG：此前恒取 EX.SWEEP_STAMINA = 5，与关卡/难度完全脱钩。
+   *   手动打 1-1 普通只要 1 点体力，扫荡同样这关却要 5 点，
+   *   拿的是一模一样的奖励 —— 扫荡花 5 倍体力，性价比只有手动的 1/5。
+   *   玩家算过账就不会再点扫荡，这个功能等于废掉。
+   * 现在改为「= 手动打这关的体力」（按难度 1/2/3…），
+   *   扫荡的定位回归为【省时间】而不是【多收税】。 */
+  sweepStamina(lvId, diff) {
+    const d = this.diffDef(diff).id;
+    const c = Number(this.staminaCost(lvId, d));
+    if (!isFinite(c) || c <= 0) return Math.max(1, Number(EX.SWEEP_STAMINA) || 5);
+    return c;
+  },
+  /* 扫荡取哪一个难度？取该关【已通关的最高难度】。
+   * BUG：扫荡此前完全不看难度，恒按关卡表原始奖励（= 普通难度）发放。
+   *   玩家辛苦打通恶魔难度（怪物血量 ×5.5），回头扫荡却只拿 1/6.5 的奖励，
+   *   扫荡次数越多亏得越多 —— 高难度通关的正反馈被扫荡直接抹平。
+   * 现在按已通关最高难度放大，让「手动打高难度」的付出能在扫荡里兑现。 */
+  sweepDiff(p, lvId) {
+    const dc = p.diffCleared || {};
+    for (const d of ['hell', 'hard']) {
+      if (dc[d] && dc[d][lvId]) return d;
+    }
+    return 'normal';
+  },
+  /* 某难度通关星级（0 = 未通关） */
+  diffStars(p, lvId, diff) {
+    const rec = (p.diffCleared || {})[this.diffDef(diff).id] || {};
+    return rec[lvId] || 0;
+  },
+  /* 首次通关某难度的额外奖励：按章节递增，越后期越值钱 */
+  diffFirstRw(diff, ch) {
+    const d = this.diffDef(diff);
+    if (d.id === 'normal') return null;
+    const c = Math.max(1, Number(ch) || 1);
+    if (d.id === 'hard') return { diamond: 10 + c * 6, gold: 0 };
+    return { diamond: 40 + c * 25, gold: 0 };
+  },
+  /* 体力：每 5 分钟 +1，上限 100 */
+  /* =========================================================
+   * 存档类型规范化（sanitize）
+   * ---------------------------------------------------------
+   * 问题：UI 大量使用 `(p.X || 0)` 兜底，但这个写法【挡不住字符串】。
+   *   例：`Math.floor(p.stamina || 0)`，当 p.stamina === 'abc' 时
+   *       'abc' 是 truthy → `|| 0` 不生效 → Math.floor('abc') = NaN
+   *       → 设置页体力显示成「NaN/100」。
+   *   实测（隔离验证）：注入 stamina='abc' → 设置页出现 NaN/100 ✔
+   *       注入 stamina=null / gold='abc' / lv='abc' → 干净，无 NaN
+   *   触发途径：后台 GM 改字段、热更写入、存档损坏、跨版本残留。
+   * 做法：登录后统一把关键字段强制成正确类型，从源头杜绝脏值扩散，
+   *   而不是逐个渲染点加保护（UI 里有 18 处同类写法）。
+   * ========================================================= */
+  /* endlessTime / offBase / offlineAt / created / lastSeen 此前【不在任何清洗列表】：
+   * 后台 GM 改档写入 -999 / 'CORRUPT' / NaN 时 sanitize 原样保留，
+   * 其中 offlineAt 还是 main.js 回档守卫的判据（虽然下游有 Number()||0 兜底，
+   * 但语义上会退化成「从未活跃过」）。这里统一纳入数值清洗。 */
+  NUMS: ['gold','diamond','stamina','lv','xp','tp','ach','evToken','evScore',
+         'patrolAcc','patrolT','patrolFast','legionExp','legionContrib',
+         'charStar','gunLv','gunAdv','endlessBest','adTotal','staminaAt',
+         'endlessTime','offBase','offlineAt','created','lastSeen',
+         /* v1.0 注册日(YYYYMMDD)：新手7日唯一判据。
+          * 被写成字符串/NaN 时 newbieDay 会算出 NaN → 面板显示「注册第 NaN 天」，
+          * 且 cur >= it.d 恒 false → 7 天奖励永远领不到。 */
+         'regDay',
+         /* V1.1.0 军衔：spirit=军功余额，realm=当前层数(0~50)。
+          * 被后台改档写成 'abc' / NaN / -1 时必须钳制 ——
+          * 否则 realmBonus 算出 NaN 会让 attrs/战力全链污染。 */
+         'spirit','realm'],
+  /* mailGot / cdkGot 是【数组】（存已领邮件ID、已兑换码），
+   * 此前误列进 OBJS → sanitize 把数组改写成对象 {}，
+   * 实测：登录后 mailGot=['m1','m2'] → {}，接着执行
+   *   `P.mailGot.indexOf(...)` 直接抛 "indexOf is not a function"，
+   * 且已领记录清空意味着【邮件、兑换码可以无限重复领取】（可刷奖励）。
+   * 现在归入 ARRS。 */
+  ARRS: [/* v1.0 新手7日已领天数数组（老存档缺失时必须补成 []，
+           * 否则 newbieGot 里 p.newbie7.indexOf 直接抛异常 → 活动面板白屏） */
+         'newbie7',
+         'bag','skins','titles','frames','mercs','chars','gunOwn','friends',
+         'friendReq','chat',
+         'sendStTo','tempBuff','logs','mailGot','cdkGot',
+         /* mail 此前【不在任何列表里】：存档里 p.mail 被写成对象时，
+          * sanitize 完全不管，邮件面板 `(p.mail || []).slice()` 直接抛
+          * "slice is not a function" → 邮件面板整体崩溃。 */
+         'mail'],
+  OBJS: ['mat','chips','cleared','codex','equip','gems','build','talents',
+         'tasks','stats','giftBuy','evShopBuy','achShopBuy','lgShopBuy',
+         'adUsed','gunStats',
+         /* v1.0 留存：actBox {k:日期, got:[档位]}、comeback {on, got:[天数]}。
+          * 老存档没有这两个字段，且被误存成字符串时 actBoxGot/comebackGot
+          * 读 .got 会抛错 → 活动面板白屏。归入 OBJS 统一兜底。 */
+         'actBox','comeback',
+         /* gunAffix 此前【不在任何列表里】：它是 { 枪id: 词条数组 }，
+          * 被写成字符串/数组时，gunAffixes 里的补齐逻辑与 role/gun/chip
+          * 等 6 个面板全部抛错白屏。归入 OBJS 统一重置为 {}。 */
+         'gunAffix',
+         /* passClaimed / rankRwGot 是【已领取记录字典】（键=档位/名次，值=1）。
+          * 此前【不在任何列表里】，被后台 GM 误存成字符串/数字时 sanitize
+          * 完全不管，实测后果分两种，且都能刷爆经济：
+          *   passClaimed='xx' → `p.passClaimed[key]=1` 对字符串赋值静默失败
+          *     → 同一档战令【连领 3 次成功 3 次】，金币 1000→4000
+          *   rankRwGot=5      → 排名奖励【连领 3 次成功 3 次】
+          * 归入 OBJS 后污染值一律重置为 {}，领取只能成功一次。 */
+         'passClaimed', 'rankRwGot',
+         /* skinByChar 是 { 角色id: 该角色上次穿的皮肤id }，用于切换角色时
+          * 恢复玩家自己穿的那件皮肤。被改档写成字符串/数组时，
+          * switchChar 读 p.skinByChar[id] 会静默失败（切回来又变回默认款）。 */
+         'skinByChar'],
+  /* 【昵称 / 他人名字安全化】补的是「长度 + 不可见字符」这一层。
+   * XSS 由 UI.esc 挡（实测 15 种 payload 全部未执行，无需再改），
+   * 但实测发现两处真实破坏：
+   *   ① 后台改档 / 云端下发可绕过前端 chkNick 的「2-8 字」校验，
+   *      500 字昵称把设置页「代号」一行撑到 3762px，整行溢出面板；
+   *   ② 控制字符（\u0000 \u0007）与换行会打断 DOM 文本排版。
+   * 所以这里统一：去控制字符 → 压空白 → 超长截断。 */
+  cleanName(v, max) {
+    let s = String(v == null ? '' : v);
+    s = s.replace(/[\u0000-\u001F\u007F]/g, '').replace(/\s+/g, ' ').trim();
+    const lim = max || 24;
+    if (s.length > lim) s = s.slice(0, lim) + '…';
+    return s;
+  },
+  sanitize(p) {
+    if (!p || typeof p !== 'object') return p;
+    const N = (v, d) => { const n = Number(v); return isFinite(n) ? n : (d || 0); };
+    /* 时间戳类字段缺失时不能补 0：
+     *   patrolT=0 → 巡逻算成「离线 8 小时」白送金币（此前已修的 BUG 会复活）
+     *   staminaAt=0 → 体力瞬间回满
+     * 缺失一律补当前时间。 */
+    const TS = { patrolT: 1, staminaAt: 1, offlineAt: 1, created: 1, lastSeen: 1, offBase: 1 };
+    this.NUMS.forEach((k) => {
+      if (p[k] == null) { p[k] = TS[k] ? Date.now() : 0; return; }
+      const _n = N(p[k], 0);
+      /* 时间戳字段：脏值（负数/0/NaN）此前只被 Math.max(0,…) 钳成 0，
+       * 语义上等于 1970 年「从未活跃过」，让离线基准与回档判据失去意义。
+       * 这里与「字段缺失」同等处理，一律补当前时刻。 */
+      if (TS[k] && (!isFinite(_n) || _n <= 0)) { p[k] = Date.now(); return; }
+      p[k] = Math.max(0, _n);
+    });
+    p.stamina = Math.min(EX.STAMINA_MAX || 100, p.stamina);
+    /* V1.1.0 军衔：层数钳到 0~MAX_LAYER，军功钳到 0~SPIRIT_CAP。
+     * 不钳制的后果与 gunLv 溢出同类：realm=999 → bonus 爆炸 → 战力溢出，
+     * realm='abc' → NaN 污染整条属性链。与既有钳制口径一致（先 max(0) 再封顶）。 */
+    const _RC = (EX.REALM || {});
+    const _rMax = _RC.MAX_LAYER || 50;
+    p.realm = Math.max(0, Math.min(_rMax, Math.floor(N(p.realm, 0))));
+    p.spirit = Math.max(0, Math.min(_RC.SPIRIT_CAP || 9999999, Math.floor(N(p.spirit, 0))));
+    /* 后台 GM 可把 gunLv 设成任意值，不钳制会让 1.078^lv 溢出成 Infinity，
+     * 进而让战斗内的 coin 与结算金币一起溢出。上限取 GUN_MAX_LV。 */
+    p.gunLv = Math.max(1, Math.min(this.GUN_MAX_LV, p.gunLv || 1));
+    /* 出战武器兜底：旧存档/后台改档可能把 p.gun 指向支援武器（S07 医疗包 / S08 护盾）。
+     * 这类武器 dmg=0，战斗中 atk=0 → 永远杀不死怪 → 波次只能超时推进 → 必败卡死。
+     * 登录即纠正为第一把有伤害的武器，让已中招的玩家能直接恢复，不必手动换枪。 */
+    if (p.gun) {
+      const _cg = ((typeof EX !== 'undefined' && EX.guns) || []).find((g) => g.id === p.gun);
+      if (_cg && !this.gunCanFight(_cg)) {
+        const _fb = ((typeof EX !== 'undefined' && EX.guns) || []).find((g) => this.gunCanFight(g));
+        if (_fb) p.gun = _fb.id;
+      }
+    }
+    /* 支援槽清洗：后台改档/热更可能把非支援武器或有伤害的枪写进 gun2，
+     * 战斗里会按支援逻辑处理（只回血不开火）造成「装了枪却不开火」的假象。
+     * 非法值一律清空，玩家重新在武器库里装即可。 */
+    if (p.gun2 != null) {
+      const _g2 = ((typeof EX !== 'undefined' && EX.guns) || []).find((g) => g.id === p.gun2);
+      if (!_g2 || !this.gunIsSupport(_g2)) p.gun2 = null;
+      else if (this.gunCanFight(_g2) && !this.gunIsSupport(_g2)) p.gun2 = null;
+    }
+    if (!p.lv || p.lv < 1) p.lv = 1;   /* 等级最小 1，补 0 会让升级/经验计算异常 */
+    /* 【修复：charStar 脏值污染角色页与整条战力链】
+     * 原写法 `if (p.charStar != null) p.charStar = Math.min(5, Math.max(0, p.charStar))`
+     * 两个漏洞：
+     *   1) 只在字段非 null 时才修正 —— null 原样保留，后续 `p.charStar || 0` 虽能兜住，
+     *      但任何直接读 p.charStar 的地方都拿到 null；
+     *   2) 没有做数字强转 —— Math.max(0, {}) === NaN、Math.max(0,'abc') === NaN，
+     *      Math.min(5, NaN) 仍是 NaN。脏值原封不动写回存档。
+     * 实测后果：角色页显示「[object Object] / 5 星」「当前 +NaN%」；
+     *   且 EX.starBonus(p.charStar) 参与攻击/生命/战力乘法，NaN 会沿乘法链传染，
+     *   让战力也变成 NaN（榜单上传同样被污染）。
+     * 现统一用 N() 收敛为有限数字再钳制到 0~STAR_MAX，null 也一并归 0。 */
+    p.charStar = Math.min(EX.STAR_MAX || 5, Math.max(0, N(p.charStar, 0)));
+    /* BUG修复（旧存档/损坏存档白屏）：
+     * 原写法是 `if (p[k] != null && ...)` —— 只在【字段存在但类型错】时才修正，
+     * 字段【整个缺失】时直接跳过，保持 undefined。
+     * 实测：删除 cleared / build / talents / tasks 任一字段后调用 UI.home()
+     *   全部抛 TypeError（读 undefined 的属性），主界面完全不渲染 → 玩家白屏。
+     * 触发途径：旧版本存档（字段后加的）、后台 GM 清空、存档写入被截断。
+     * 现在改为【缺失即补齐】：数组补 []、对象补 {}，从源头杜绝。
+     * 空集合与"未拥有/未通关"语义等价（如 build 缺失 → 各建筑取默认 1 级）。 */
+    this.ARRS.forEach((k) => { if (!Array.isArray(p[k])) p[k] = []; });
+    /* 已领记录的容量上限
+     * mailGot / cdkGot 此前只增不减（写入处没有截断），老存档里已经堆到
+     * 几百上千条也没有任何地方会清理 —— 光靠写入处截断救不了存量数据。
+     * 这里在每次读档时一并收紧，保证存档体积与登录时的线性扫描都可控。 */
+    if (p.mailGot.length > 300) p.mailGot = p.mailGot.slice(-300);
+    if (p.cdkGot.length > 200) p.cdkGot = p.cdkGot.slice(-200);
+    this.OBJS.forEach((k) => { if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {}; });
+    /* 图鉴子项归一：p.codex 是 { 类别: 已解锁ID数组 }，只保证【外层】是对象还不够。
+     * 实测历史存档里 p.codex.zombie 被早期 sanitize 的 Number() 转换写成了 0，
+     * 后台 GM 改档 / 传输截断也会写入 {} 之类的非数组值 —— 后果：
+     *   · 图鉴「武器」页 got.indexOf 直接抛 → 面板整体崩溃
+     *   · E.codexCount 的 got 变 NaN → 图鉴顶部显示「NaN / 57」
+     *   · E.stats().codexGot 同步变 NaN → 后台玩家详情的图鉴完成度也显示 NaN
+     *   · E.codexBackfill 抛异常，被 main.js 的 try/catch 吞掉，回填静默失效
+     * 这里按 codexKinds 逐类归一遍数组，从源头杜绝。 */
+    {
+      const cx = p.codex;
+      const kinds = (EX.codexKinds || []).map((x) => x && x.k).filter(Boolean);
+      kinds.forEach((k) => { if (!Array.isArray(cx[k])) cx[k] = []; });
+      /* 顺带剔掉不在 codexKinds 里的垃圾键，避免它们被计入完成度 */
+      Object.keys(cx).forEach((k) => { if (kinds.indexOf(k) < 0) delete cx[k]; });
+    }
+    /* skinByChar 只校验了「是对象」，内部条目从不校验。
+     * 实测被写成 { C01: 123 } 或 { C01: 'sk_c02b' }（别的角色的皮肤）时，
+     * switchChar 会恢复出一个不属于该角色的皮肤 id：
+     * 外观穿错角色，而皮肤加成照常生效。这里逐条剔除无效项。 */
+    {
+      const m = p.skinByChar;
+      Object.keys(m).forEach((cid) => {
+        const sid = m[cid];
+        const sk = typeof sid === 'string' ? (EX.skins || []).find((x) => x.id === sid) : null;
+        if (!sk || sk.char !== cid) delete m[cid];
+        else if ((p.skins || []).indexOf(sid) < 0) delete m[cid];
+      });
+    }
+    /* p.tasks 是对象，但【内部的已领取数组】此前从不校验。
+     * 实测 mainClaimed 被写成字符串/数字时，claimTask 里
+     *   `p.tasks[key].indexOf(id)` / `.push(id)` 直接抛
+     *   "indexOf is not a function" → 玩家点「领取」整个 JS 崩掉、面板卡死。
+     * 写成嵌套对象时同样抛错。这里逐个子字段规范化。 */
+    if (p.tasks && typeof p.tasks === 'object' && !Array.isArray(p.tasks)) {
+      ['mainClaimed', 'dailyClaimed', 'weeklyClaimed', 'achieveClaimed'].forEach((k) => {
+        if (!Array.isArray(p.tasks[k])) p.tasks[k] = [];
+      });
+      ['dailyProg', 'weeklyProg'].forEach((k) => {
+        if (!p.tasks[k] || typeof p.tasks[k] !== 'object' || Array.isArray(p.tasks[k])) p.tasks[k] = {};
+      });
+    }
+    /* 只把【值确实是"数量"】的字典做数值收敛。
+     * BUG修复：chips / codex 曾在这个列表里，但它们的值【不是数量】：
+     *   chips = { 槽位: 芯片对象 }   → 实测 {s1:{id:'c1',...}} 被 Number() 成 {s1:0}
+     *   codex = { 类别: 已解锁ID数组 } → 实测 {z:['z1','z2']} 被 Number() 成 {z:0}
+     * 即：玩家每次登录，已装备的芯片与图鉴解锁记录【全部清零】。
+     * 现在移出该列表（保留 mat/gems/cleared 等真正的数量字典）。 */
+    /* build / talents / adUsed 此前【不在任何数值清洗列表里】：
+     *   build   = { 建筑id: 等级 }  读法 (p.build[id] || 1) * per
+     *   talents = { 天赋id: 等级 }  读法 (p.talents[id] || 0) * per
+     *   adUsed  = { 广告id: 今日已看次数 }
+     * 三者都是纯"数量"字典，但 sanitize 从不收敛内部值。
+     * 实测后台 GM 改档写入 'BAD' / {} 时：
+     *   · E.power() 直接变 NaN → 主界面与后台战力栏显示 NaN，榜单上传值也被污染
+     *   · 武器面板出现 NaN 文本
+     * 现在与 mat/gems 等一并按非负有限数收敛。 */
+    ['mat','gems','cleared','evShopBuy','achShopBuy','lgShopBuy','giftBuy',
+     'build','talents','adUsed'].forEach((k) => {
+      if (!p[k]) return;
+      /* 下限钳 0：此前只做 Number() 转换、没有 Math.max(0,…)，
+       * 后台 GM 改档写入负数时残留（实测材料 -5、宝石 -2、已通关星级 -2），
+       * 界面直接显示「金属 -5」「持有宝箱 -1」，且负数会让
+       * `mat[id] >= cost` 之外的判断（如累加、分解单价×数量）算出负收益。 */
+      Object.keys(p[k]).forEach((i) => { const n = Number(p[k][i]); p[k][i] = isFinite(n) ? Math.max(0, n) : 0; });
+    });
+    /* p.stats 在 OBJS 里只校验了「是对象」，内部数值从不收敛。
+     * 实测注入 {kills:-100, runs:-5, bossKill:-3} 后 sanitize 原样保留，
+     * 设置页「累计击杀」直接显示 -100。统计类字段恒 >= 0，这里统一钳制。 */
+    if (p.stats && typeof p.stats === 'object' && !Array.isArray(p.stats)) {
+      ['kills','runs','bossKill','noHitBest','endlessBest'].forEach((k) => {
+        const n = Number(p.stats[k]); p.stats[k] = isFinite(n) ? Math.max(0, n) : 0;
+      });
+    }
+    /* 字符串字段：此前一律 String(p[k])，对象会被转成 "[object Object]"
+     * 直接显示在设置页账号栏（实测 uid/name 被写成对象 → 界面显示
+     * [object Object]）。现在只有 string / number 才转换，其它一律
+     * 置为安全默认，不让乱码透到界面。 */
+    const STRDEF = { name: '指挥官', char: 'C01', skin: 'sk_c01a', curLevel: '1-1', gun: 'W01' };
+    /* gunStats 的元素必须是 { k, v } 对象。
+     * 实测注入 { a: 1 }（数字值）时，affixBonus 里 st.k 读到 undefined，
+     * 武器强化面板直接抛错白屏。这里清掉非对象元素。 */
+    if (p.gunStats && typeof p.gunStats === 'object') {
+      Object.keys(p.gunStats).forEach((s) => {
+        const st = p.gunStats[s];
+        if (!st || typeof st !== 'object' || Array.isArray(st)) delete p.gunStats[s];
+      });
+    }
+    /* gender / avatar / avatarImg / adDate 此前【不在任何清洗列表】：
+     * 后台改档写入数字/对象时 sanitize 原样保留，头像与性别栏显示异常
+     * （实测 gender=-999、avatarImg={x:1} 均透到界面）。
+     * adDate 是 'YYYY-MM-DD' 日期键，用于每日广告次数重置，非字符串会让重置失效。 */
+    const STRDEF2 = { gender: 'm', avatar: '🧑‍🚀', avatarImg: 'assets/char/hero_m.jpg', adDate: '' };
+    Object.keys(STRDEF2).forEach((k) => {
+      const t = typeof p[k];
+      /* NaN 的 typeof 也是 'number'，直接 String() 会得到字面量 "NaN"
+       * 并透到界面上，这里先判有限性再转换。 */
+      if (p[k] == null || (t !== 'string' && t !== 'number') || (t === 'number' && !isFinite(p[k]))) {
+        p[k] = STRDEF2[k]; return;
+      }
+      p[k] = String(p[k]);
+    });
+    /* use / guide 是对象字典，此前只在 newPlayer 里初始化，
+     * 被改档写成数字/数组时 sanitize 不管，后续读 p.guide.step 会静默失败。
+     * （p.use 已废弃——消耗品统一存 p.mat，main.js 会清空它，这里只兜底类型。） */
+    ['use','guide'].forEach((k) => {
+      if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {};
+    });
+    ['uid','name','char','skin','curLevel','gun'].forEach((k) => {
+      const t = typeof p[k];
+      if (p[k] == null) { p[k] = STRDEF[k] !== undefined ? STRDEF[k] : ''; return; }
+      /* 只对【昵称】做清理。uid 是账号名、要用于登录与云端路径，
+       * 截断或改空白会直接让人登不上号，绝不能动。 */
+      if (t === 'string') { if (k === 'name') p[k] = this.cleanName(p[k], 24); return; }
+      if (t === 'number' && isFinite(p[k])) { p[k] = String(p[k]); return; }
+      p[k] = STRDEF[k] !== undefined ? STRDEF[k] : '';
+    });
+    return p;
+  },
+  tickStamina(p) {
+    /* 【改系统时间刷体力 BUG 修复】
+     * 恢复量 add = (now - staminaAt) / 间隔，而 now 此前取的是【设备时钟】。
+     * 玩家把系统时间往后调 1 天 → add 直接 +288 点（间隔 300 秒），体力瞬间回满；
+     * 调回当天再调前，可无限重复，体力上限形同虚设（实测调前 1 天立刻满体力）。
+     * 改为取服务器校准时间（见 now()），设备时钟不再影响恢复速度。 */
+    const now = this.now();
+    /* 【时间回拨 BUG 修复】
+     * 若 p.staminaAt 被写成【未来时间】（玩家改过系统时间、或设备时钟同步跳变），
+     * 则 now - staminaAt 恒为负数 → add 恒 <= 0 → 体力【永远不恢复】，
+     * 一直要等到真实时间追上那个未来时刻为止。
+     * 实测（恢复间隔 300 秒 / 点）：把时间调前 1 天再改回，
+     *   改回当时 0 点、3 小时后 0 点、12 小时后仍是 0 点，
+     *   整整停摆 24 小时 —— 玩家只会以为「体力系统坏了」。
+     * 修法：基准点落在未来时先钳回当前时刻，恢复立刻正常。 */
+    if (!(p.staminaAt > 0) || p.staminaAt > now) p.staminaAt = now;
+    /* 【体力值自身兜底】
+     * 此前只钳了【上限】，没有钳【下限】，也没处理非有限值。
+     * 而 sanitize 之外的写入路径（后台改档、热更覆盖、旧档残留、传输截断）
+     * 都可能把 stamina 写成负数 / 对象 / NaN：
+     *   实测 stamina=-50  → tick 后仍是 -26（负）→ 提示「体力不足（需 2，当前 -26）」
+     *   实测 stamina={}   → ({}||0)+add = NaN → Math.min(MAX, NaN) = NaN
+     *     → 体力永久变成 NaN，此后 `p.stamina -= c` 也一直是 NaN，
+     *       玩家看到「当前 NaN」且再也无法进任何关卡（除非 sanitize 恰好修掉）。
+     * 现在统一钳到 [0, STAMINA_MAX]，非有限值归零后按正常恢复规则累积。 */
+    const MAX = EX.STAMINA_MAX || 100;
+    let cur = p.stamina;
+    if (typeof cur === 'string') cur = Number(cur);   /* 后台表单常把数字存成字符串 */
+    if (typeof cur !== 'number' || !isFinite(cur)) cur = 0;
+    cur = clamp(MAX, 0, cur);
+    const add = Math.floor((now - (p.staminaAt || now)) / EX.STAMINA_MS);
+    if (add > 0) {
+      cur = Math.min(MAX, cur + add);
+      p.staminaAt = now;
+    }
+    p.stamina = cur;
+    return p.stamina;
+  },
+  /* 只检查体力是否够，【不扣除】
+   * BUG：此前 startBattle 一开始就扣体力，而章节 CG 分支随后 return，
+   *      玩家若关掉 CG 弹窗而不点「进入战区」，战斗根本没开始，体力却已被扣 —— 白扣。
+   *      现在检查与扣除分离：startBattle 只检查，battleGo 真正进战斗时才扣。 */
+  checkStamina(p, id, diff) {
+    this.tickStamina(p);
+    const c = this.staminaCost(id, diff);
+    if ((p.stamina || 0) < c) return { ok: false, msg: EX.tip('popup.noStaminaCur', { v: c, n: Math.floor(p.stamina) }) };
+    return { ok: true, cost: c };
+  },
+  spendStamina(p, id, diff) {
+    this.tickStamina(p);
+    const c = this.staminaCost(id, diff);
+    if ((p.stamina || 0) < c) return { ok: false, msg: EX.tip('popup.noStaminaCur', { v: c, n: Math.floor(p.stamina) }) };
+    p.stamina -= c; p.staminaAt = this.now();
+    return { ok: true, cost: c };
+  },
+  addStamina(p, v) {
+    this.tickStamina(p);
+    /* 入参收紧：v 此前直接参与 `before + v`，而商店/热更/后台表单里的
+     * 数量经常是【字符串】—— 此时 `+` 做的是拼接而不是加法：
+     *   实测 stamina=50、v='10' → '5010' → Math.min(100, 5010) = 100
+     *   玩家花 50 钻买「体力包 +60」，结果【直接被灌满 100】。
+     * 非数字（'CH01' / {} / NaN / undefined）则算出 NaN，
+     * 体力永久损坏、此后任何扣减都失败（进不了关）。
+     * 负数会把体力减成负值（实测 -999 → -949）。
+     * 现在统一按 safeAmt 取正，并同时钳住上下限。 */
+    const raw = Number(p.stamina);
+    const before = Math.max(0, isFinite(raw) ? raw : 0);
+    const add = this.safeAmt(v);
+    const after = Math.min(EX.STAMINA_MAX, before + add);
+    p.stamina = after;
+    /* 返回【实际增加量】而不是增加后的总量
+     * BUG：此前返回 p.stamina（总量），调用方无从判断到底加没加。
+     *   体力已达上限时 Math.min 会把增量截成 0 —— 玩家看广告领体力，
+     *   提示「体力 +10」，实际一点没加，而【广告次数已经被 useAd 扣掉了】，
+     *   每日 10 次的额度白白蒸发一次。
+     * 现在返回实际增量，UI 可据此提示真实数值；staminaFull() 供调用前拦截。 */
+    return Math.max(0, after - before);
+  },
+  staminaFull(p) {
+    this.tickStamina(p);
+    return (p.stamina || 0) >= EX.STAMINA_MAX;
   },
 
-  /* ---------- 通关奖励 ---------- */
-  clearReward(n, win) {
-    const gold = Math.round(60 * Math.pow(this.GOLD_GROW, n - 1) * (win ? 1 : 0.35));
-    const diamond = win && n % 10 === 0 ? 20 + Math.floor(n / 10) : (win ? 4 : 1);
-    return { gold, diamond, exp: Math.round(30 + n * 8) };
+  /* =================================================
+   * 角色 / 皮肤
+   * ================================================ */
+  /* 判空防御：p 为空时会抛 "Cannot read properties of null (reading 'char')"，
+   * 例如军团面板在未加入分支里用 this.P（尚未赋值）调用 E.power(this.P)，
+   * 首次渲染即整页崩溃。 */
+  /* 空表兜底：运营在后台把整张表清空 / 热更推送了空数组时，
+   * EX.chars[0] 是 undefined，而 attrs() 随后读 c.hp / c.armor / c.crit
+   * → 角色、武器、芯片、军团、设置共 7 个面板整体抛错白屏（实测）。
+   * 表为空时返回一个同结构的占位对象，保证界面与战斗始终可用。 */
+  _nullChar() {
+    return { id: 'C01', n: '角色', icon: '🧑', img: '', hp: 1000, spd: 1,
+      armor: 0, crit: 0.05, unlockLv: null, unlockTxt: '', desc: '（角色表为空）' };
+  },
+  char(p) {
+    const list = (EX.chars && EX.chars.length) ? EX.chars : null;
+    if (!list) return this._nullChar();
+    if (!p) return list[0];
+    return list.find((c) => c.id === p.char) || list[0];
+  },
+  charUnlocked(p, id) {
+    const c = EX.chars.find((x) => x.id === id); if (!c) return false;
+    if (!c.unlockLv) return true;
+    return !!p.cleared[c.unlockLv];
+  },
+  _nullSkin() {
+    return { id: 'sk_c01a', n: '默认外观', char: 'C01', icon: '🧑', img: '', price: 0, bonus: {}, desc: '' };
+  },
+  skin(p) {
+    const list = (EX.skins && EX.skins.length) ? EX.skins : null;
+    if (!list) return this._nullSkin();
+    return list.find((s) => s.id === p.skin) || list[0];
+  },
+  skinOf(charId) { return EX.skins.filter((s) => s.char === charId); },
+  /* 穿戴皮肤的唯一入口
+   * BUG（换角色会把你穿的皮肤冲掉）：switchChar 原先取的是
+   *   「该角色第一件【拥有】的皮肤」，而不是玩家【正在穿】的那件。
+   *   实测：C01 穿着 880 钻买的「沙漠突击」(攻击 +8%)，战力 1257 / 攻击 28；
+   *   切到 C02 再切回 C01，皮肤被自动换回默认款 sk_c01a，
+   *   战力掉到 1233、攻击掉到 26 —— 花了钻石买的加成无声失效，
+   *   而且每换一次角色都要手动重穿一次。
+   * 这里按角色记住「上次穿的」，切回来自动恢复。 */
+  setSkin(p, id) {
+    const sk = (EX.skins || []).find((x) => x.id === id);
+    if (!sk) return false;
+    p.skin = id;
+    if (sk.char) {
+      if (!this._sbc(p)) p.skinByChar = {};
+      p.skinByChar[sk.char] = id;
+    }
+    return true;
+  },
+  /* skinByChar 是 { 角色id: 皮肤id } 字典，类型不对时重置（并保留可用项） */
+  _sbc(p) {
+    if (!p.skinByChar || typeof p.skinByChar !== 'object' || Array.isArray(p.skinByChar)) return null;
+    return p.skinByChar;
+  },
+  switchChar(p, id) {
+    if (!this.charUnlocked(p, id)) {
+      const c = EX.chars.find((x) => x.id === id);
+      return { ok: false, msg: '需通关 ' + (c ? c.unlockLv : '?') + ' 解锁' };
+    }
+    /* 离开前：把当前角色身上穿的记下来（仅当这件皮肤确实属于当前角色） */
+    const cur = (EX.skins || []).find((x) => x.id === p.skin);
+    if (cur && cur.char && cur.char === p.char) {
+      if (!this._sbc(p)) p.skinByChar = {};
+      p.skinByChar[cur.char] = cur.id;
+    }
+    p.char = id;
+    const owned = (p.skins || []);
+    const mine = this.skinOf(id);
+    const last = this._sbc(p) ? p.skinByChar[id] : '';
+    /* 优先级：该角色上次穿过的（且已拥有、且属于该角色）
+     *        > 第一件拥有的 > 该角色的第一件 */
+    let want = '';
+    if (last && mine.some((x) => x.id === last) && owned.indexOf(last) >= 0) want = last;
+    else { const f = mine.find((x) => owned.indexOf(x.id) >= 0) || mine[0]; if (f) want = f.id; }
+    if (want) p.skin = want;
+    return { ok: true, msg: '已切换为 ' + this.char(p).n };
+  },
+  /* 皮肤购买统一走下方那个 buySkin（带 Array.isArray 守卫 / 价格校验 /
+   * 角色归属校验）。此处原先还有一个同名 buySkin，被后定义覆盖后成为
+   * 永远不生效的死代码 —— 留着会让「改了没反应」，故删除。 */
+
+  /* =================================================
+   * 武器（资料武器表 10 把 + 进阶）
+   * ================================================ */
+  /* 同 char()：武器表被清空时 EX.guns[0] 为 undefined，
+   * attrs() 读 g.dmg → 角色/武器/芯片/军团 面板整体白屏（实测）。 */
+  _nullGun() {
+    return { id: 'W01', n: '武器', img: '', kind: '步枪', type: '', dmg: 20,
+      rate: 2, mag: 30, reload: 1.5, bullet: 1, pierce: 0, pellets: 1,
+      range: 380, spread: 0, recoil: 0, bspd: 12, icon: '🔫', q: '白',
+      unlockLv: null, slots: 0, crit: 0.05, critDmg: 1.5, dmgMin: 0, dmgMax: 0 };
+  },
+  gun(p) {
+    const list = (EX.guns && EX.guns.length) ? EX.guns : null;
+    if (!list) return this._nullGun();
+    return list.find((g) => g.id === p.gun) || list[0];
+  },
+  /* ===== 支援武器槽（gun2）=====
+   * 此前 S07 医疗包 / S08 护盾发生器 dmg=0，装备上就是 atk=0 的必败局，
+   * 只能禁止装备 —— 玩家解锁了却永远用不上，等于两张废卡。
+   * 现在给它们独立的「支援槽」：不占出战武器，战斗中按自己的射速/弹匣
+   * 自动触发治疗与护盾。伤害仍是 0，所以不会与出战武器抢输出位。 */
+  gunIsSupport(g) {
+    if (!g || typeof g !== 'object') return false;
+    if (String(g.type) === '支援') return true;
+    return (Number(g.dmg) || 0) <= 0 && ((Number(g.heal) || 0) > 0 || (Number(g.shield) || 0) > 0);
+  },
+  /* 支援槽内当前武器（未装备返回 null） */
+  gun2(p) {
+    if (!p || !p.gun2) return null;
+    const list = (EX.guns && EX.guns.length) ? EX.guns : null;
+    if (!list) return null;
+    const g = list.find((x) => x.id === p.gun2);
+    return (g && this.gunIsSupport(g)) ? g : null;
+  },
+  /* 装备/卸下支援武器。只有支援型武器能进这个槽。 */
+  switchGun2(p, id) {
+    if (!id) { p.gun2 = null; return { ok: true, msg: '已卸下支援武器' }; }
+    const g = (EX.guns || []).find((x) => x.id === id);
+    if (!g) return { ok: false, msg: '武器不存在' };
+    if (!this.gunUnlocked(p, id)) return { ok: false, msg: '需通关 ' + (g.unlockLv || '?') + ' 解锁' };
+    if (!this.gunIsSupport(g)) return { ok: false, msg: g.n + ' 不是支援武器，请装备为出战武器' };
+    if ((p.gunOwn || []).indexOf(id) < 0) {
+      p.gunOwn = Array.isArray(p.gunOwn) ? p.gunOwn : ['W01'];
+      p.gunOwn.push(id);
+    }
+    if (p.gun2 === id) { p.gun2 = null; return { ok: true, msg: '已卸下 ' + g.n, off: true }; }
+    p.gun2 = id;
+    try { this.codexUnlock(p, 'gun', id); } catch (e) {}
+    return { ok: true, msg: '支援槽已装备 ' + g.n };
+  },
+
+  /* 武器射程换算（表44 range 15~80 → 像素）
+   * 此前硬编码 380（≈全场），导致六把枪射程完全一致：
+   * 散弹枪与狙击枪除伤害外零差异，武器表 range 字段形同废弃。
+   * 换算下限保证 > 远程僵尸最大 atkR(210)，避免「走不进射程→打不死→卡关」。
+   * 详见 config.js RANGE_BASE / RANGE_STEP 注释。 */
+  gunRange(g) {
+    const v = Number(g && g.range);
+    if (!isFinite(v) || v <= 0) return 380;            /* 无配置 → 维持旧行为 */
+    const base = Number((typeof EX !== 'undefined' && EX.RANGE_BASE) || 170);
+    const step = Number((typeof EX !== 'undefined' && EX.RANGE_STEP) || 5.9);
+    const px = Math.round(base + v * step);
+    /* 硬下限：绝不允许低于远程僵尸最大攻击距离，否则必然出现打不死的僵尸 */
+    return Math.max(240, Math.min(680, px));
+  },
+
+  /* 武器后坐力换算（表44 recoil 低/中/高 → 倍率）
+   * 【BUG 修复】此前 recoil 字段全项目零消费：
+   *   config.js 里每把枪都写了 recoil:'低'/'中'/'高'，
+   *   但 battle.js drawHeroShape 用的是写死的 `fire * sz * 0.030`，
+   *   与配表毫无关系 —— 狙击枪和加特林的开火后坐、屏幕震动完全一致，
+   *   "高后坐力枪更难压"的手感差异彻底失效（全项目 grep .recoil 只有定义处）。
+   * 现在按配表返回倍率，battle.js 直接乘用。 */
+  gunRecoil(g) {
+    const v = (g && g.recoil) ? String(g.recoil) : '';
+    if (v === '低') return 0.55;
+    if (v === '高') return 1.60;
+    if (v === '中') return 1.00;
+    const n = Number(v);
+    /* 数值型兜底（后台改配时填数字）：按 0.5~2 收敛 */
+    if (isFinite(n) && n > 0) return Math.max(0.4, Math.min(2.0, n));
+    return 1.00;
+  },
+
+  gunUnlocked(p, id) {
+    const g = EX.guns.find((x) => x.id === id); if (!g) return false;
+    if (!g.unlockLv) return true;
+    /* 已购买 = 已解锁（付费提前解锁），与 unlockGun 的发放口径保持一致。
+     * BUG：此前只看 p.cleared[unlockLv]，完全不管玩家是否已经花钱买到手。
+     *   商店 4 件带解锁关卡的武器（霰弹枪 1-2 / 狙击枪 2-2 / 医疗包 4-1 /
+     *   护盾发生器 5-1）全部中招 —— 实测新号购买后 gunUnlocked 恒为 false：
+     *     ① 武器库里玩家【正在使用】的霰弹枪显示「需通关 1-2｜未解锁」；
+     *     ② 战斗中 🔄 换枪按 gunUnlocked 过滤列表，买来的枪根本不在列表里；
+     *     ③ 一旦切走，switchGun 被「需通关 1-2」拒绝，再也换不回来 —— 钱白花；
+     *     ④ 支援武器点「卸下」后 switchGun2 同样拒绝，再也装不回去。
+     *   unlockGun 购买时明明已写进 gunOwn 并装备上，这里却说未解锁，自相矛盾。
+     * 未购买的武器仍按通关条件判定，通关解锁的意义不变。 */
+    if (Array.isArray(p.gunOwn) && p.gunOwn.indexOf(id) >= 0) return true;
+    return !!p.cleared[g.unlockLv];
+  },
+  /* 该武器能否作为【出战武器】造成伤害
+   * 严重BUG：武器库按「主/副」分组只是 UI 标签，战斗里【只有 p.gun 一把枪生效】
+   *   （battle.js 全程 E.gun(this.P)，没有任何副武器槽）。
+   *   而新增的支援武器 S07 医疗包 / S08 护盾发生器 dmg=0 ——
+   *   玩家在武器库点「装备」→ p.gun='S07' → attrs().atk=0 →
+   *   实测跑满 25 秒击杀 0 只，波次只能靠超时推进，最终防线必破 = 100% 卡死，
+   *   界面却照常提示「已装备 医疗包」，玩家完全不知道为什么打不死怪。
+   * 这里给出统一判定：dmg<=0 的纯支援武器不得作为出战武器。 */
+  gunCanFight(g) {
+    if (!g || typeof g !== 'object') return false;
+    return (Number(g.dmg) || 0) > 0;
+  },
+  switchGun(p, id) {
+    if (!this.gunUnlocked(p, id)) {
+      const g = EX.guns.find((x) => x.id === id);
+      return { ok: false, msg: '需通关 ' + (g ? g.unlockLv : '?') + ' 解锁' };
+    }
+    const _g = EX.guns.find((x) => x.id === id);
+    if (!this.gunCanFight(_g)) {
+      return { ok: false, msg: (_g ? _g.n : '该武器') + ' 是支援武器（无伤害），不能作为出战武器' };
+    }
+    if ((p.gunOwn || []).indexOf(id) < 0) p.gunOwn.push(id);
+    p.gun = id;
+    try { this.codexUnlock(p, 'gun', id); } catch (e) {}
+    return { ok: true, msg: '已装备 ' + this.gun(p).n };
+  },
+  /* 直接解锁武器（购买 / 后台发放用，跳过通关条件）
+   * 商店「武器」页签此前只给材料不给枪，就是缺这个入口。 */
+  unlockGun(p, id) {
+    const g = (EX.guns || []).find((x) => x.id === id);
+    if (!g) {
+      /* 兼容：传进来的是中文名（后台热更可能只写名字） */
+      const byName = (EX.guns || []).find((x) => x.n === id);
+      if (!byName) return { ok: false, msg: '武器不存在：' + id };
+      return this.unlockGun(p, byName.id);
+    }
+    p.gunOwn = Array.isArray(p.gunOwn) ? p.gunOwn : ['W01'];
+    const isNew = p.gunOwn.indexOf(id) < 0;
+    if (isNew) p.gunOwn.push(id);
+    /* 支援武器不顶替出战武器（见 gunCanFight 注释），改为落入【支援槽】：
+     * 支援槽为空时自动装上，玩家立刻能在下一场战斗里吃到治疗/护盾，
+     * 不用自己去武器库再点一次（此前解锁了却用不上，等于白解锁）。 */
+    if (!this.gunCanFight(g)) {
+      let _auto = false;
+      if (this.gunIsSupport(g) && !this.gun2(p)) { p.gun2 = id; _auto = true; }
+      try { this.codexUnlock(p, 'gun', id); } catch (e) {}
+      /* 支援槽只有一个：已装着医疗包时再买护盾发生器，不会自动顶替。
+       * 原提示「已解锁 护盾发生器（支援武器）」不说去哪切换，
+       * 玩家花了 18000 金币却看不出东西在哪，只会以为钱白花了。
+       * 这里明确指向武器库。 */
+      const _tail = _auto ? '，已自动装入支援槽'
+        : (this.gun2(p) ? '，可在武器库→支援槽切换' : '（支援武器）');
+      const _m = (isNew ? '已解锁 ' : '已有 ') + g.n + _tail;
+      return { ok: true, msg: _m, isNew: isNew };
+    }
+    /* 出战武器切换：只在新枪【更强】时才自动顶替
+     * BUG：此前这里是无条件 p.gun = id —— 实测玩家装备狙击枪(dmg260)
+     *   时花 6500 金买榴弹枪(dmg120)，出战武器被直接切成更弱的一把，
+     *   玩家花金币反而变弱，还得自己去武器库切回来（商店购买走的就是这条路径）。
+     * 现在按理论 DPS（dmg × rate × 弹丸数）比较：
+     *   新枪更强 / 当前枪不存在或不能出战 → 自动装备（买强枪立刻用上，符合预期）
+     *   不如当前出战枪 → 只入库，明确提示去武器库切换，当前枪原样保留
+     * 手动点「装备」走的是 switchGun，不受这里影响，仍是无条件切换。 */
+    const _cur = (EX.guns || []).find((x) => x.id === p.gun);
+    const _dps = (w) => (Number(w && w.dmg) || 0) * (Number(w && w.rate) || 0) * (Number(w && w.pellets) || 1);
+    const _better = !_cur || !this.gunCanFight(_cur) || _dps(g) > _dps(_cur);
+    try { this.codexUnlock(p, 'gun', id); } catch (e) {}
+    if (_better) {
+      p.gun = id;
+      return { ok: true, msg: isNew ? ('已解锁并装备 ' + g.n) : ('已装备 ' + g.n), isNew: isNew };
+    }
+    return { ok: true, msg: (isNew ? '已解锁 ' : '已有 ') + g.n
+      + '，可在武器库切换（当前「' + _cur.n + '」更强，已为你保留）', isNew: isNew };
+  },
+  /* 进阶等级：每 5 级一次 */
+  advOf(lv) {
+    let a = 0;
+    for (let i = 0; i < EX.gunAdvance.length; i++) if (lv >= EX.gunAdvance[i].lv) a = i;
+    return a;
+  },
+  advInfo(lv) {
+    /* 兜底：表被清空/损坏时不得返回 undefined，否则 UI 读 adv.q 直接抛错、
+     * 整个武器面板白屏（实测：清空 gunAdvance → 武器页渲染崩溃）。
+     * 这里返回一个合法的白品占位，界面照常显示，只是不显示进阶名。 */
+    const t = EX.gunAdvance && EX.gunAdvance.length ? EX.gunAdvance[this.advOf(lv)] : null;
+    return t || { lv: 1, q: '白', n: '普通', mul: 1 };
+  },
+  /* 升级：金币，线性 +20% */
+  /* 武器升级费用：300 × 1.16^(lv-1)
+   * 原 1.28 增长过快：Lv80 需 1170亿、Lv84 金币不足永久卡死 */
+  gunUpgradeCost(p) {
+    /* 等级封顶后不再计算费用：否则 1.14^lv 会溢出成 Infinity，
+     * 而 gold - Infinity = -Infinity 会把存档里的金币直接污染掉。 */
+    if ((p.gunLv || 1) >= this.GUN_MAX_LV) return Infinity;
+    const c = this.GUN_COST_BASE * Math.pow(this.GUN_COST_RATE, p.gunLv - 1);
+    return isFinite(c) ? Math.round(c) : Infinity;
+  },
+  upgradeGun(p) {
+    if ((p.gunLv || 1) >= this.GUN_MAX_LV) {
+      return { ok: false, msg: '🔫 武器已达最高等级 Lv.' + this.GUN_MAX_LV };
+    }
+    const c = this.gunUpgradeCost(p);
+    if (!isFinite(c)) return { ok: false, msg: '🔫 已达强化上限' };
+    if (p.gold < c) return { ok: false, msg: EX.tip('popup.noCoin', { v: this.fmt(c) }) };
+    p.gold -= c; p.gunLv++;
+    const oldA = this.advOf(p.gunLv - 1), newA = this.advOf(p.gunLv);
+    let extra = '';
+    if (newA > oldA) {
+      p.gunAdv = newA;
+      /* 进阶解锁新词条槽（表30：按品质加权 蓝60%/紫30%/红10%） */
+      const slot = EX.gunAdvance[newA].slot;
+      const st = this.rollGunAffix(p, p.gun);
+      p.gunStats = p.gunStats || {};
+      p.gunStats['s' + slot] = { id: st.id, k: st.k, n: st.n, q: st.q, v: +(st.v * (1 + newA * 0.5)).toFixed(4) };
+      extra = ' ⬆进阶至' + EX.gunAdvance[newA].q + '品，解锁词条：' + st.n;
+    }
+    this.logAct(p, 'gunup', '武器升级 Lv.' + p.gunLv);
+    /* v1.0 每日任务「强化1次」进度 */
+    try {
+      this.resetTasks(p);
+      p.tasks.dailyProg.up = (p.tasks.dailyProg.up || 0) + 1;
+    } catch (e) {}
+    /* 表04 VO_009 武器升级：台词与合成音效（sfx 'upgrade'）此前零触发 */
+    try { if (window.VO) VO.say('VO_009'); } catch (e) {}
+return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra };
+  },
+  gunStatVal(p, k) {
+    let v = 0;
+    for (const s in p.gunStats || {}) { const st = p.gunStats[s]; if (st && st.k === k) v += st.v; }
+    return v;
+  },
+
+  /* =================================================
+   * 芯片（资料芯片表 8 个固定）
+   * ================================================ */
+  chipDef(id) { return EX.chips.find((c) => c.id === id); },
+  /* 按【品质】随机生成一块芯片
+   * 严重BUG：此前所有发放点都写 `rollChipById('n'/'e'/'l')`，
+   *          但 rollChipById 收的是【芯片定义ID】（CH01~CH08），不是品质码。
+   *          chipDef('l') → undefined → `|| EX.chips[0]` 回退
+   *          → 无论配的是 chipL(传说) 还是 chipE(精英)，
+   *            一律发出 chips[0] = CH01「生命芯片·白」（最垃圾的一档）。
+   * 实测：商店 SH09「传说芯片包」980 钻买 chipL:2 → 到手 2 块白色生命芯片；
+   *       战令 Lv50「传说芯片×1」→ 白色；免费抽奖「芯片×1」→ 白色。 */
+  rollChipByQuality(q) {
+    /* 兼容【字母码】与【中文品质名】两种入参
+     * 隐患：原映射表只有 n/e/l/white/blue/red，中文 '白'/'蓝'/'红' 不在表里
+     *  → Q['蓝'] 为 undefined → `|| '白'` 兜底成【白色】
+     *  → rollChipByQuality('蓝') / ('红') 静默返回白芯片，品质被吞掉。
+     * 当前调用点都传字母码所以没暴露，但 giveChipByQuality 收的是中文名，
+     * 两条路径入参语义不一致，极易写错。现在两种都认。 */
+    const Q = { n: '白', e: '蓝', l: '红', white: '白', blue: '蓝', red: '红' };
+    const want = Q[q] || (q === '蓝' || q === '红' ? q : '白');
+    const pool = (EX.chips || []).filter((c) => c.q === want);
+    const use = pool.length ? pool : (EX.chips || []);
+    if (!use.length) return null;
+    return this.rollChipById(use[Math.floor(Math.random() * use.length)].id);
+  },
+  rollChipById(defId) {
+    const d = this.chipDef(defId) || EX.chips[0];
+    const subs = [];
+    for (const k of d.subPool || []) {
+      const sd = EX.chipSubStats.find((x) => x.k === k);
+      if (sd) subs.push({ k, v: +(sd.base * (0.8 + Math.random() * 0.6)).toFixed(4) });
+    }
+    return { id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      def: d.id, q: d.q, main: { ...d.main }, stats: subs, slot: null };
+  },
+  chipName(c) {
+    const d = this.chipDef(c.def); if (!d) return '芯片';
+    const mn = ({ hp: '生命', atk: '攻击', armor: '护甲', crit: '暴击率' })[c.main.k] || c.main.k;
+    const unit = c.main.k === 'crit' ? '%' : '%';
+    let s = d.n + '（' + mn + '+' + (c.main.v * 100).toFixed(0) + unit + '）';
+    if (c.stats && c.stats.length) {
+      s += ' ' + c.stats.map((x) => {
+        const sd = EX.chipSubStats.find((y) => y.k === x.k);
+        return (sd ? sd.n : x.k) + '+' + (x.v * 100).toFixed(1) + '%';
+      }).join(' ');
+    }
+    return s;
+  },
+  chipUnlocked(p) { return !!p.cleared['1-4']; },     // 资料：通关1-4解锁
+  equipChip(p, chipId, slot) {
+    if (!this.chipUnlocked(p)) return { ok: false, msg: '需通关 1-4 解锁芯片系统' };
+    /* 槽位合法性：slot 必须是芯片槽表里真实存在的 key。
+     * 调用方此前可能传进 undefined（玩家没点过槽位），于是
+     * p.chips['undefined'] = 芯片 —— 槽位计数变 7/6、六个格子全空、
+     * 再装只能顶掉自己、卸下按钮还卸不掉。这里统一挡住。 */
+    if (!EX.chipSlots.some((s) => s.k === slot)) {
+      const free = EX.chipSlots.find((s) => !p.chips[s.k]);
+      if (!free) return { ok: false, msg: '芯片槽已满（6/6）' };
+      slot = free.k;
+    }
+    const i = (p.bag || []).findIndex((c) => c.id === chipId);
+    if (i < 0) return { ok: false, msg: '未找到该芯片' };
+    const c = p.bag[i];
+    const old = p.chips[slot];
+    p.chips[slot] = c; p.bag.splice(i, 1);
+    if (old) p.bag.push(old);
+    return { ok: true, msg: '已装备 ' + this.chipName(c) };
+  },
+  unequipChip(p, slot) {
+    const c = p.chips[slot]; if (!c) return { ok: false, msg: '该槽位为空' };
+    p.bag.push(c); delete p.chips[slot];
+    return { ok: true, msg: '已卸下芯片' };
+  },
+  /* 拆解单颗芯片 → 按品质给枪械碎片
+   * BUG（同名覆盖）：本方法原先也叫 dismantleChip，而下方 2204 行
+   *   还有一个「按品质批量分解、给金币」的同名方法。
+   *   JS 对象字面量里重复键【后定义覆盖前定义】，于是本方法被彻底顶掉，
+   *   芯片面板每颗芯片上的「分解」按钮（ui.js data-dec，传的是芯片 id）
+   *   落到按品质版本 → {白/蓝/红}[芯片id] = undefined → 恒返回
+   *   「未知芯片品质」，玩家点了永远分解不掉，背包只增不减。
+   * 现改名为 dismantleChipById，两个入口各走各的语义，互不覆盖。 */
+  dismantleChipById(p, chipId) {
+    const i = (p.bag || []).findIndex((c) => c.id === chipId);
+    if (i < 0) return { ok: false, msg: '未找到该芯片' };
+    const c = p.bag[i];
+    const gain = { '白': 1, '蓝': 3, '红': 9 }[c.q] || 1;
+    p.bag.splice(i, 1);
+    p.mat = p.mat || {};
+    p.mat.P01 = (p.mat.P01 || 0) + gain;
+    return { ok: true, msg: '拆解获得 枪械碎片 ×' + gain };
+  },
+  /* 合成：3 块同品质 → 升一级（资料：3x普通芯片 / 3x精英芯片） */
+  fuseChip(p, ids) {
+    if (ids.length !== 3) return { ok: false, msg: '合成需要 3 块同品质芯片' };
+    const cs = ids.map((id) => (p.bag || []).find((c) => c.id === id));
+    if (cs.some((c) => !c)) return { ok: false, msg: '芯片不存在' };
+    const q = cs[0].q;
+    if (cs.some((c) => c.q !== q)) return { ok: false, msg: '必须为同品质芯片' };
+    let target;
+    if (q === '白') target = ['CH04', 'CH05'][Math.floor(Math.random() * 2)];
+    else if (q === '蓝') target = ['CH06', 'CH07', 'CH08'][Math.floor(Math.random() * 3)];
+    else return { ok: false, msg: '红品已是最高品质' };
+    ids.forEach((id) => { const i = p.bag.findIndex((c) => c.id === id); if (i >= 0) p.bag.splice(i, 1); });
+    const nc = this.rollChipById(target); p.bag.push(nc);
+    /* 操作日志：合成（后台「玩家操作日志」页标称覆盖「合成」，此前从未记录） */
+    try { this.logAct(p, 'chip', '芯片合成 → ' + this.chipName(nc)); } catch (e) {}
+    return { ok: true, msg: '合成成功：' + this.chipName(nc) };
+  },
+  /* 洗练：钻石重 roll 副词条 */
+  rerollChip(p, chipId) {
+    const c = (p.bag || []).find((x) => x.id === chipId) ||
+      Object.values(p.chips || {}).find((x) => x && x.id === chipId);
+    if (!c) return { ok: false, msg: '未找到该芯片' };
+    const cost = EX.REROLL_COST[c.q] || 50;
+    if ((p.diamond || 0) < cost) return { ok: false, msg: EX.tip('popup.noDiamond', { v: cost }) };
+    const d = this.chipDef(c.def);
+    if (!d || !(d.subPool || []).length) return { ok: false, msg: '该芯片无副词条可洗' };
+    p.diamond -= cost;
+    c.stats = (d.subPool || []).map((k) => {
+      const sd = EX.chipSubStats.find((y) => y.k === k);
+      return { k, v: +(sd.base * (0.8 + Math.random() * 0.6)).toFixed(4) };
+    });
+    return { ok: true, msg: '洗练完成：' + this.chipName(c) };
+  },
+  chipVal(p, k) {
+    let v = 0;
+    for (const s in p.chips || {}) {
+      const c = p.chips[s]; if (!c) continue;
+      if (c.main && c.main.k === k) v += c.main.v;
+      for (const st of c.stats || []) if (st.k === k) v += st.v;
+    }
+    return v;
+  },
+
+  /* =================================================
+   * 天赋
+   * ================================================ */
+  talentVal(p, stat) {
+    const t = EX.talents.find((x) => x.stat === stat);
+    if (!t) return 0;
+    /* 同上：热改档写入非数字时按 0 级算，绝不让战力算出 NaN */
+    const lv = Number((p.talents || {})[t.id]);
+    return (isFinite(lv) && lv > 0 ? lv : 0) * t.per;
+  },
+  talentUnlocked(p, id) {
+    const t = EX.talents.find((x) => x.id === id); if (!t) return false;
+    if (!t.unlock) return true;
+    return !!p.cleared[t.unlock];
+  },
+  talentCost(p, id) {
+    const t = EX.talents.find((x) => x.id === id); if (!t) return 0;
+    /* 封顶后返回 Infinity，调用方据此拒绝升级，避免金币被减成 -Infinity */
+    if ((p.talents[id] || 0) >= this.TALENT_MAX_LV) return Infinity;
+    const c = t.cost0 * Math.pow(t.costGrow, p.talents[id] || 0);
+    return isFinite(c) ? Math.round(c) : Infinity;
+  },
+  /* 天赋点：每 10 级 +1（表25 #1「每10级解锁新技能槽」），初始赠送 3 点 */
+  TP_INIT: 3,
+  tpOf(p) { return p.tp == null ? this.TP_INIT : (p.tp || 0); },
+  upTalent(p, id) {
+    const t = EX.talents.find((x) => x.id === id); if (!t) return { ok: false, msg: '天赋不存在' };
+    if (!this.talentUnlocked(p, id)) return { ok: false, msg: '需通关 ' + t.unlock + ' 解锁' };
+    const cur = p.talents[id] || 0;
+    if (cur >= t.max) return { ok: false, msg: '已达最高等级' };
+    /* BUG修复：此前天赋点只发不扣、且不足时不拦截，导致可无限刷属性。
+     * 表25 #7「金币点选」→ 金币为主消耗；天赋点为额外门槛（每10级+1） */
+    const tp = this.tpOf(p);
+    if (tp <= 0) return { ok: false, msg: '天赋点不足（每升 10 级 +1 点）' };
+    if (cur >= this.TALENT_MAX_LV) return { ok: false, msg: '⭐ ' + t.n + ' 已达最高等级' };
+    const c = this.talentCost(p, id);
+    if (!isFinite(c)) return { ok: false, msg: '⭐ ' + t.n + ' 已达最高等级' };
+    if (p.gold < c) return { ok: false, msg: EX.tip('popup.noCoin', { v: this.fmt(c) }) };
+    p.gold -= c; p.tp = tp - 1; p.talents[id] = cur + 1;
+    return { ok: true, msg: '⭐ ' + t.n + ' Lv.' + p.talents[id] + '（剩 ' + p.tp + ' 天赋点）' };
+  },
+
+  /* =================================================
+   * 基地建筑
+   * ================================================ */
+  /* 空表兜底：建筑表被清空时 EX.buildings[0] 为 undefined，
+   * r_base / b_base 读 b.id → 基地建筑四个页签全部崩溃（实测）。 */
+  _nullBuilding() {
+    return { id: 'hospital', n: '建筑', icon: '🏥', desc: '（建筑表为空）',
+      stat: 'hp', per: 0, cost0: 0, grow: 1, max: 1 };
+  },
+  building(tab) {
+    const l = (EX.buildings && EX.buildings.length) ? EX.buildings : null;
+    if (!l) return this._nullBuilding();
+    return l.find((x) => x.id === tab || x.n === tab) || l[0];
+  },
+  /* 建筑等级的唯一读取口：主界面按钮、基地面板、换弹公式之前各自写
+   * `p.build[id] || 1`，被热改档写成 'BAD' / {} 时分别渲染成
+   * 「Lv.BAD」「Lv.[object Object]」以及换弹时间 NaN。统一走这里取 1~max 的整数。 */
+  buildLv(p, id) {
+    const n = Number((p && p.build ? p.build : {})[id]);
+    if (!isFinite(n) || n < 1) return 1;
+    const b = (EX.buildings || []).find((x) => x.id === id);
+    const mx = b && b.max ? b.max : (this.BUILD_MAX_LV || 20);
+    return Math.min(mx, Math.floor(n));
+  },
+  buildVal(p, stat) {
+    const b = EX.buildings.find((x) => x.stat === stat);
+    if (!b) return 0;
+    /* 就地防御：sanitize 只在登录时跑，后台 GM 热改档后可能已把
+     * p.build[id] 写成字符串/对象（实测 'BAD' / {} 让战力变 NaN）。
+     * 这里统一转有限数，取不到就按 1 级算。 */
+    const lv = Number((p.build || {})[b.id]);
+    /* 【属性必须和显示同上限】buildLv() 会把等级钳到 b.max（配置 30），
+     * 但这里此前直接用原始 lv —— 后台 GM 热改档把 p.build[id] 写成 999 时，
+     * 面板显示「Lv.30」而属性却按 999 级结算（hospital: 999×0.06=59.94
+     * 对比 30 级的 1.8，差 33 倍），显示与实装严重不一致。
+     * 现在统一钳到 b.max，与 buildLv() 同口径。 */
+    const mx = (b.max ? b.max : (this.BUILD_MAX_LV || 20));
+    const cl = Math.min(mx, Math.max(1, Math.floor(isFinite(lv) && lv > 0 ? lv : 1)));
+    return cl * b.per;
+  },
+  buildCost(p, id) {
+    const b = EX.buildings.find((x) => x.id === id); if (!b) return 0;
+    if ((p.build[id] || 1) >= this.BUILD_MAX_LV) return Infinity;
+    const c = b.cost0 * Math.pow(b.grow, (p.build[id] || 1) - 1);
+    return isFinite(c) ? Math.round(c) : Infinity;
+  },
+  upBuild(p, id) {
+    const b = EX.buildings.find((x) => x.id === id); if (!b) return { ok: false, msg: '建筑不存在' };
+    const cur = p.build[id] || 1;
+    if (cur >= b.max) return { ok: false, msg: '已达最高等级' };
+    if (cur >= this.BUILD_MAX_LV) return { ok: false, msg: '🏗️ ' + b.n + ' 已达最高等级' };
+    const c = this.buildCost(p, id);
+    if (!isFinite(c)) return { ok: false, msg: '🏗️ ' + b.n + ' 已达最高等级' };
+    if (p.gold < c) return { ok: false, msg: EX.tip('popup.noCoin', { v: this.fmt(c) }) };
+    p.gold -= c; p.build[id] = cur + 1;
+    return { ok: true, msg: '🏗️ ' + b.n + ' 升至 Lv.' + p.build[id] };
+  },
+  /* =========================================================
+   * 表34 离线挂机产出表（P1）
+   * 此前只产金币；文档要求同时产出「金属 + 经验」，且上限 8 小时
+   * 场景档位按已通关最高章节自动匹配：
+   *   ≥5 章 → 已通关最高关卡（金币50-200/金属2-5/经验100-300）
+   *   ≥2 章 → 已通关普通关（金币30-80/金属1-3/经验80-150）
+   *   其余   → 挂机关卡1-1（金币20-40/金属1/经验50-80）
+   * ========================================================= */
+  OFFLINE_TIERS: [
+    { minCh: 5, gold: [50, 200], metal: [2, 5], xp: [100, 300], n: '最高关卡' },
+    { minCh: 2, gold: [30, 80], metal: [1, 3], xp: [80, 150], n: '普通关' },
+    { minCh: 0, gold: [20, 40], metal: [1, 1], xp: [50, 80], n: '关卡 1-1' },
+  ],
+  /* 巡逻收益（远征堡垒）：按已解锁章节取档位
+   * BUG修复：p.patrolRate 从没被赋值过，UI 里一直用 `p.patrolRate || 16`，
+   *          导致无论玩家打到第几章，巡逻收益永远是 16 金币/小时，
+   *          表 patrolRateByCh（16→250）形同废纸 */
+  patrolRateOf(p) {
+    const arr = (EX.patrolRateByCh || [16]);
+    /* chapterOf 收的是关卡 id，不是玩家对象
+     * 【进度回退保护】原直接用 chapterOf(p.curLevel)，一旦玩家回头重打旧关卡
+     * 档位就会掉回第 1 章（16/小时）。改用 progressChapter 取真实进度章节，
+     * 与配置表「按已解锁章节取档位」的语义一致。 */
+    const ch = Math.max(1, Math.min(arr.length, this.progressChapter(p)));
+    return arr[ch - 1];
+  },
+  /* 【挂机收益折扣】离线挂机 / 巡逻 / 快速巡逻统一打 6 折。
+   * 只有这一个常量控制，改折扣只改这里；显示与发放必须共用它，
+   * 否则面板写 100、实发 60 就成了账目不一致。 */
+  IDLE_MUL: 0.6,
+  /* 巡逻每小时【实发】金币（已含折扣）——面板显示与领取都必须用它 */
+  patrolRateReal(p) {
+    const base = Number(p && p.patrolRate) || this.patrolRateOf(p) || 16;
+    return base * this.IDLE_MUL;
+  },
+  syncPatrol(p) {
+    const r = this.patrolRateOf(p);
+    if (p.patrolRate !== r) p.patrolRate = r;
+    /* 【时间回拨保护】玩家改过系统时间（或设备时钟自动同步跳变）后，
+     * p.patrolT 可能落在未来，导致 (now - patrolT) 恒为负数：
+     *   ① 巡逻面板「累计可领」显示负数金币（实测 -334）
+     *   ② 点领取必走 gain<=0 分支被拒绝，且 patrolT 不重置
+     *   ③ 结果巡逻永久卡住，要等真实时间追上那个未来时刻才恢复
+     * 与体力 staminaAt 是同一类问题（后者已修）。这里统一钳回当前时刻。 */
+    if (p.patrolT && p.patrolT > this.now()) p.patrolT = this.now();
+    /* 【当前章节】p.ch 全项目【只读不写】：
+     *      UI 里两处 `第 ${p.ch || 1} 章`（巡逻面板、主线任务面板）
+     *      永远显示「第 1 章」，即使玩家已经打到第 10 章。
+     *      这里顺便把 p.ch 同步成真实当前章节（取 已通关最大章 与 curLevel 的较大者）。 */
+    const curCh = this.chapterOf(p.curLevel || '1-1') || 1;
+    let maxCh = 1;
+    for (const id in (p.cleared || {})) {
+      const c = Number(String(id).split('-')[0]) || 1;
+      if (c > maxCh) maxCh = c;
+    }
+    p.ch = Math.max(curCh, maxCh);
+    return p.patrolRate;
+  },
+  offlineTier(p) {
+    const ch = this.maxChapter ? this.maxChapter(p) : 1;
+    let maxCh = 1;
+    for (const id in (p.cleared || {})) {
+      const c = Number(String(id).split('-')[0]) || 1;
+      if (c > maxCh) maxCh = c;
+    }
+    const use = Math.max(ch, maxCh);
+    return this.OFFLINE_TIERS.find((t) => use >= t.minCh) || this.OFFLINE_TIERS[2];
+  },
+  /* 返回 {hrs, gold, metal, xp, tier}，仅计算不发放 */
+  offlineCalc(p) {
+    const b = EX.buildings.find((x) => x.id === 'warehouse');
+    const lv = p.build.warehouse || 1;
+    const t = this.offlineTier(p);
+    /* 基准必须用独立的 offBase，不能用 offlineAt：
+     * offlineAt 每次自动存档（30 秒定时）/切后台/关页面都会被刷成当前时间，
+     * 用它算离线时长 → 玩家打开游戏几十秒后收益就被清零，永远领不到。
+     * 旧档无 offBase 时回退 offlineAt；并钳到当前时刻（防改系统时间导致负数）。
+     * 【改系统时间刷离线收益 BUG 修复】
+     * 此前两处 Date.now() 都取自设备时钟：玩家把时间往后调 8 小时再打开游戏，
+     * hrs 直接算满 8 小时上限（第5章+ 约 700 金币/小时·级 → 一次白拿 5600×等级），
+     * 领完调回当天再调前，可无限重复。改为取服务器校准时间后设备时钟不再参与。 */
+    const _now = this.now();
+    const base = Math.min(Number(p.offBase) || Number(p.offlineAt) || _now, _now);
+    const hrsRaw = (_now - base) / 3600000;
+    const hrs = Math.min(8, Math.max(0, hrsRaw));           /* 表34：上限 8 小时 */
+    if (hrs < 0.05) return { hrs: 0, gold: 0, metal: 0, xp: 0, tier: t };
+    const mul = lv;                                          /* 仓库等级放大金币 */
+    const pick = (r) => Math.round((r[0] + (r[1] - r[0]) * 0.6) * hrs);
+    /* 挂机收益打 6 折（IDLE_MUL）：金币/金属/经验三项同折，
+     * 否则玩家会发现"金币少了、金属没少" */
+    const IDLE = this.IDLE_MUL;
+    return {
+      hrs, tier: t,
+      gold: Math.round(pick(t.gold) * mul * IDLE),
+      metal: Math.round(pick(t.metal) * IDLE),
+      xp: Math.round(pick(t.xp) * IDLE),
+    };
+  },
+  /* 兼容旧调用：只返回金币 */
+  offlineIncome(p) { return this.offlineCalc(p).gold; },
+  /* 仓库离线金币的「每小时实际产出」（供面板显示）
+   * BUG：基地面板此前写死 `buildings.warehouse.offline(120) × 等级` 显示，
+   *   而 offlineCalc 的真实公式是「章节档位 × 等级」：
+   *     第1章 32/小时·级、第2~4章 60、第5章+ 140。
+   *   实测（仓库 Lv5）：UI 恒显示 600/小时，
+   *     第1章实际只有 160（高估 3.75 倍），第6章实际 700（又低估）。
+   *   玩家按错误数字决定要不要升级仓库。现在直接返回真实值。 */
+  offlineRate(p) {
+    const lv = (p.build && p.build.warehouse) || 1;
+    const t = this.offlineTier(p);
+    const g = t.gold || [20, 40];
+    return Math.round((g[0] + (g[1] - g[0]) * 0.6) * lv * this.IDLE_MUL);
+  },
+  /* 领取离线收益（金币 + 金属 + 经验） */
+  offlineClaim(p) {
+    const c = this.offlineCalc(p);
+    if (c.gold <= 0 && c.metal <= 0 && c.xp <= 0) {
+      p.offBase = this.now();
+      return { ok: false, msg: '离线时间太短，暂无可领收益' };
+    }
+    p.gold = (p.gold || 0) + c.gold;
+    p.mat.M01 = (p.mat.M01 || 0) + c.metal;
+    /* 推进【结算基准】，不动 offlineAt（后者是回档守卫用的最后活跃时间，
+     * 由 syncSnap/save 负责刷新，两者必须解耦） */
+    p.offBase = this.now();
+    /* BUG：方法名写错（addExp vs 实际的 addXp），且被 try/catch 静默吞掉
+     * → 提示写着「经验 +544」，实际 p.xp 纹丝不动，离线经验从来没发过。
+     * 现在用正确方法名，并去掉会掩盖问题的空 catch。 */
+    if (c.xp > 0 && this.addXp) this.addXp(p, c.xp);
+    const h = Math.floor(c.hrs), m = Math.round((c.hrs - h) * 60);
+    return { ok: true, msg: `离线 ${h}小时${m}分（${c.tier.n}）：金币 +${c.gold} 金属 +${c.metal} 经验 +${c.xp}` };
+  },
+
+  /* =========================================================
+   * 表25 #1 角色等级：击杀经验升级，前期快后期慢（对数曲线）
+   * 此前 p.xp 一直在累加，但 p.lv 永远停在 1 —— 升级系统完全没实现
+   * 每级 +生命 +攻击；每 10 级 +1 天赋点（表25：每10级解锁新技能槽）
+   * ========================================================= */
+  xpNeed(lv) {
+    /* 本次上调（难度重构）：50·lv^1.45 → 58·lv^1.56。
+     * 实测：Lv10 需 2,106（原 1,392）· Lv50 需 25,931（原 14,450）· Lv80 需 53,982（原 26,900）。
+     * （旧注释里 Lv50=30,900 / Lv80=70,300 是按前一组系数手算的，与实际公式不符。）
+     * 升级变慢 → 每级给的生命/攻击加成到位更晚 → 后期关卡压力更真实。
+     * 指数只提 0.11：再高会让中后期单级经验需求超过整关产出，升级彻底停滞。 */
+    return Math.round(58 * Math.pow(Math.max(1, lv), 1.56));   /* 对数曲线 */
+  },
+  addXp(p, amt) {
+    amt = Math.round(Number(amt) || 0);
+    if (amt <= 0) return { ok: false, lv: p.lv, ups: 0 };
+    p.xp = (p.xp || 0) + amt;
+    let ups = 0, guard = 0;
+    while (guard++ < 200) {
+      const need = this.xpNeed(p.lv || 1);
+      if ((p.xp || 0) < need) break;
+      p.xp -= need;
+      p.lv = (p.lv || 1) + 1;
+      ups++;
+      p.lvBonusHp = (p.lvBonusHp || 0) + 80;   /* 每级 +生命 */
+      p.lvBonusAtk = (p.lvBonusAtk || 0) + 6;  /* 每级 +攻击 */
+      if (p.lv % 10 === 0) p.tp = (p.tp || 0) + 1;   /* 每10级 +1天赋点 */
+    }
+    if (ups > 0) {
+      try { if (window.UI && UI.showLvUp) UI.showLvUp(p.lv, 0); } catch (e) {}
+      try { OPS.track('level_up', { lv: p.lv }); } catch (e) {}
+    }
+    return { ok: true, lv: p.lv, ups, msg: ups > 0 ? ('升级！Lv.' + p.lv + (ups > 1 ? '（连升 ' + ups + ' 级）' : '')) : '' };
+  },
+  xpProgress(p) {
+    const need = this.xpNeed(p.lv || 1);
+    return { cur: Math.floor(p.xp || 0), need, pct: Math.min(100, (p.xp || 0) / need * 100) };
+  },
+
+  /* =================================================
+   * 属性汇总（资料伤害公式）
+   * 基础伤害 = 武器伤害 × (1 + 攻击强化%)
+   * ================================================ */
+  /* ================================================================
+   * V1.1.0 末日废土 · 军衔系统（策划 P-10 / 程序 D-10）
+   *
+   * 定位：通关之后的长线成长线。主线 10 章 100 关打完后玩家没有目标，
+   * 军衔线给出 50 阶可追求的成长，且与 atk/hp/crit 真实挂钩。
+   *
+   * 数值口径（与参考游戏"属性加成必须能被面板验证"的做法一致）：
+   *   每层 +1.5% 攻击 / +1.2% 生命；每 5 层额外 +0.5% 暴击。
+   *   满阶 50 层 = +75% 攻击 / +60% 生命 / +5% 暴击。
+   * ================================================================ */
+  realmBonus(p) {
+    const R = (typeof EX !== 'undefined' && EX.REALM) || {};
+    if (R.ON === false) return { atkPct: 0, hpPct: 0, crit: 0 };
+    /* 钳制必须在入口做：后台热改档可绕过 sanitize 直接写 p.realm，
+     * 'abc' / {} / NaN 会让整条属性链变 NaN（与 starBonus 同一教训）。 */
+    const n = Math.max(0, Math.min(R.MAX_LAYER || 50, Math.floor(Number(p && p.realm) || 0)));
+    return {
+      atkPct: n * (R.ATK_PER || 0.015),
+      hpPct: n * (R.HP_PER || 0.012),
+      crit: Math.floor(n / (R.CRIT_EVERY || 5)) * (R.CRIT_PER || 0.005),
+    };
+  },
+  /* 层数 → 军衔（返回 TIERS 中的一项 + 阶内层号） */
+  realmTier(n) {
+    const R = (typeof EX !== 'undefined' && EX.REALM) || {};
+    const list = R.TIERS || [];
+    n = Math.max(0, Math.min(R.MAX_LAYER || 50, Math.floor(Number(n) || 0)));
+    for (const t of list) if (n >= t.from && n <= t.to) return { t, inner: n - t.from + 1, layer: n };
+    return { t: null, inner: 0, layer: n };
+  },
+  /* 晋升到第 n 层所需军功（n 从 1 起） */
+  realmCost(n) {
+    const R = (typeof EX !== 'undefined' && EX.REALM) || {};
+    n = Math.max(1, Math.floor(Number(n) || 1));
+    return Math.round((R.COST0 || 120) * Math.pow(R.COST_GROW || 1.085, n - 1));
+  },
+  /* 晋升：扣军功 +1 层，返回 {ok, reason, layer} */
+  realmUp(p) {
+    if (!p) return { ok: false, reason: 'nodata' };
+    const R = (typeof EX !== 'undefined' && EX.REALM) || {};
+    const max = R.MAX_LAYER || 50;
+    const cur = Math.max(0, Math.min(max, Math.floor(Number(p.realm) || 0)));
+    if (cur >= max) return { ok: false, reason: 'max', layer: cur };
+    const cost = this.realmCost(cur + 1);
+    const sp = Math.max(0, Math.floor(Number(p.spirit) || 0));
+    if (sp < cost) return { ok: false, reason: 'poor', layer: cur, cost, need: cost - sp };
+    p.spirit = sp - cost;
+    p.realm = cur + 1;
+    return { ok: true, layer: p.realm, cost };
+  },
+  /* 加军功（唯一入口，统一钳制）。
+   * P-14：此前军功只有"通关"一处写入，活跃宝箱与运营发放两条通路零实现，
+   *       各调用点若各自裸写 p.spirit，钳制口径会再次分叉（与金币污染同类教训）。 */
+  addSpirit(p, n) {
+    if (!p || typeof p !== 'object') return 0;
+    const add = this.safeAmt(n);
+    if (!(add > 0)) return 0;
+    const R = (typeof EX !== 'undefined' && EX.REALM) || {};
+    if (R.ON === false) return 0;
+    const cap = Number(R.SPIRIT_CAP) || 9999999;
+    const before = Math.max(0, Math.floor(Number(p.spirit) || 0));
+    p.spirit = Math.min(cap, before + add);
+    return p.spirit - before;
+  },
+  /* 关卡结算军功产出：按章节递增（第 1 章 3，第 10 章 30，±20% 抖动） */
+  realmSpiritDrop(chapter) {
+    const R = (typeof EX !== 'undefined' && EX.REALM) || {};
+    if (R.ON === false) return 0;
+    const ch = Math.max(1, Math.floor(Number(chapter) || 1));
+    const base = (R.DROP_BASE || 3) + (R.DROP_STEP || 3) * (ch - 1);
+    return Math.max(1, Math.round(base * (0.8 + Math.random() * 0.4)));
+  },
+
+  /* =========================================================
+   * V1.1.0 冲刺2 · P-12 武器流派加成
+   * 口径：按【已装备的主武器 p.gun + 副武器 p.gun2】的 type 归属计数。
+   *   主副同流派 → 走纯构筑拿二档；主副跨流派 → 同时拿两个一档混搭。
+   *   这是构筑深度的来源：不是堆数值，而是选路线。
+   * 消费点：atkPct→attrs().atkUp（全局层）、crit→attrs().crit（共享 0.85 封顶）、
+   *   critDmg→attrs().critDmg、erPct→attrs().erMul、
+   *   slow/dot→battle.js 命中段（attrs 只透传 schoolSlow/schoolDot）。
+   * 安全：EX.GUN_SCHOOLS 缺失或 p 脏值 → 全 0，不产生 NaN。
+   * ========================================================= */
+  schoolBonus(p) {
+    const out = { atkPct: 0, crit: 0, critDmg: 0, erPct: 0, slow: 0, dot: 0, active: null, tiers: {} };
+    const S = (typeof EX !== 'undefined' && EX.GUN_SCHOOLS) || [];
+    if (!S.length || !p) return out;
+    const guns = (typeof EX !== 'undefined' && EX.guns) || [];
+    const eq = [p.gun, p.gun2].filter((x) => typeof x === 'string' && x);
+    const cnt = {};
+    let mainSc = null;
+    eq.forEach((id, i) => {
+      const g = guns.find((x) => x && x.id === id);
+      if (!g) return;
+      const sc = S.find((s) => (s.types || []).indexOf(g.type) >= 0);
+      if (!sc) return;
+      cnt[sc.id] = (cnt[sc.id] || 0) + 1;
+      if (i === 0) mainSc = sc.id;
+    });
+    S.forEach((sc) => {
+      const n = cnt[sc.id] || 0;
+      if (n <= 0) return;
+      /* 取已满足的最高档（tiers 按 need 升序，配置已保证） */
+      let tier = null;
+      (sc.tiers || []).forEach((t) => { if (n >= (t.need || 1)) tier = t; });
+      if (!tier) return;
+      out.tiers[sc.id] = { n: n, need: tier.need, tier: (sc.tiers || []).indexOf(tier) + 1 };
+      out.atkPct += Number(tier.atkPct) || 0;
+      out.crit += Number(tier.crit) || 0;
+      out.critDmg += Number(tier.critDmg) || 0;
+      out.erPct += Number(tier.erPct) || 0;
+      out.slow = Math.max(out.slow, Number(tier.slow) || 0);
+      out.dot += Number(tier.dot) || 0;
+    });
+    /* active 用于 UI 展示：主武器所属流派 + 该流派当前档位 */
+    if (mainSc && out.tiers[mainSc]) {
+      const sc = S.find((x) => x.id === mainSc);
+      out.active = { id: mainSc, n: sc ? sc.n : mainSc, icon: sc ? sc.icon : '', tier: out.tiers[mainSc].tier, cnt: out.tiers[mainSc].n };
+    }
+    return out;
+  },
+  attrs(p) {
+    const c = this.char(p), g = this.gun(p);
+    const sk = this.skin(p);
+    /* 武器面板伤害：复利（指数）成长
+     * 原为线性 `1 + (gunLv-1) * GUN_GROW`，导致：
+     *   攻击 Lv1=26 → Lv80=441（仅 17 倍）
+     *   费用 Lv1=300 → Lv80=1170亿（39 亿倍）
+     * 收益线性 vs 成本指数 → Lv84 永久卡死，且后期越打越轻松。
+     * 改复利后收益与成本同为指数，卡关→攒金币→升级→晋升 的循环才成立。 */
+    /* 等级再钳一次：sanitize 只在登录时跑，后台 GM 热改档后可能绕过 */
+    /* Number() 必须在 || 之前：'abc' / {} 是 truthy，
+     * 旧写法 `p.gunLv || 1` 会把它们原样放进来 → Math.min(999,'abc') = NaN
+     * → gunBase NaN → 攻击/战力/伤害全线 NaN，面板显示 "NaN"。
+     * 实测：gunLv='abc' → 战力 NaN（修复后 1147）。 */
+    const _gLv = Math.max(1, Math.min(this.GUN_MAX_LV, Number(p.gunLv) || 1));
+    const gunBase = g.dmg * Math.pow(this.GUN_GROW_RATE || 1.078, _gLv - 1);
+    /* =========================================================
+     * 攻击强化% —— 必须区分「基础层」与「全局层」
+     * 严重BUG：此前天赋/军械库/芯片/皮肤的攻击加成全部塞进同一个 atkUp，
+     *   统一只乘 gunBase（武器基础伤害），而角色等级提供的固定攻击
+     *   （p.lvBonusAtk，表25 每级 +6）完全不参与。
+     *   实测（gunBase 恒为 25，lvBonusAtk = lv×6）：
+     *     宣称             lv1      lv50     lv80
+     *     天赋 全局伤害+3%  2.326%   0.23%    0.148%
+     *     芯片 传说攻击+20% 15.5%    1.533%   0.988%
+     *     皮肤 攻击+8%      6.202%   0.613%   （缩水）
+     *   等级越高越接近 0 —— lv80 时充值产出的「传说攻击 +20%」实际只有 0.988%，
+     *   不到宣称值的 1/20。而作用在总值层的对照组（好友 +0.5%、升星 +8%、
+     *   装备 +0.8%）三档全部精确命中，证明就是这两套口径并存导致的。
+     * 现在按各来源的【文案描述】分口径：
+     *   基础层 = 军械库「提升武器伤害」（只作用于武器基础伤害，符合描述）
+     *   全局层 = 天赋「全局伤害」/ 芯片「攻击」/ 皮肤「攻击 +X%」
+     *           （作用于含等级固定攻击在内的全部攻击）
+     * ========================================================= */
+    /* V1.1.0 军衔加成（每层 +1.5% 攻击）：并入全局层，与文案口径一致 */
+    const rb = this.realmBonus(p);
+    /* V1.1.0 P-12 武器流派：攻击% 并入全局层（与天赋/芯片/皮肤同口径） */
+    const _sb = this.schoolBonus(p);
+    const atkUp = this.talentVal(p, 'atk') + this.buildVal(p, 'atk') + this.chipVal(p, 'atk') + rb.atkPct + (_sb.atkPct || 0)
+      /* 皮肤攻击加成（表：sk_c01c 沙漠突击 880 钻「攻击 +8%」）
+       * BUG：sk.bonus 里 hp / armor / crit 三处都有接入，唯独 atk 漏了 ——
+       *      花 880 钻买的「攻击 +8%」实际属性纹丝不动，战力也不涨。
+       *      现在补上（进阶词条的 dmg 已并入 affixBonus().dmg，勿在此重复相加）。 */
+      + ((sk && sk.bonus && sk.bonus.atk) || 0);
+    /* 基础层不再单独乘百分比：所有攻击%统一在下面作用于【全部攻击】 */
+    const atk = gunBase;
+    /* 生命：角色基础 + 天赋 + 医疗站 + 芯片 + 皮肤（同样统一到总值层） */
+    const hpUp = this.talentVal(p, 'hp') + this.buildVal(p, 'hp') + this.chipVal(p, 'hp') + rb.hpPct
+      + ((sk && sk.bonus && sk.bonus.hp) || 0);
+    const hp = c.hp;
+    /* 护甲：角色基础 × (1+天赋) + 芯片；皮肤加成 */
+    const armorUp = this.talentVal(p, 'armor') + this.chipVal(p, 'armor')
+      + ((sk && sk.bonus && sk.bonus.armor) || 0);
+    /* 护甲天赋固定值部分
+     * 严重BUG：默认角色 C01 基础护甲就是 0，而天赋是纯百分比（+3%/级），
+     * 0 × (1+20×3%) = 0 —— 点满 20 级花掉数十万金币，护甲纹丝不动。
+     * 加每级 +3 点固定护甲，基础为 0 的角色也能真正受益。 */
+    const armorFlat = (p.talents.t_armor || 0) * 3;
+    /* 【百分比护甲必须有非零基数】默认角色 C01 的基础护甲就是 0，
+     * 纯百分比加成一律得到 0 × (1+x) = 0。上一轮只给天赋补了固定值部分，
+     * 芯片和皮肤这两条仍然无效 —— 实测：
+     *   CH03 护甲芯片（活动/充值产出）+5%  → 装在 C01 上护甲 0 → 0
+     *   sk_c03b 装甲骑士（680 钻）+20%    → 装在 C01 上护甲 0 → 0
+     *   sk_c02c 防化服（880 钻）+12%      → 同上
+     * 玩家花钻石/代币买的东西在面板上完全看不出变化。
+     * 而且护甲数值本身很小（角色基础只有 0/3/5/15），5% 的增益
+     * 经 Math.round 会被直接吃掉（C02：5×1.05=5.25→5，C04：3.15→3）。
+     * 现在按参考基数把百分比【同时】折算成一份固定值，
+     * 保证任何角色、任何量级的护甲加成都能在面板上真实体现。
+     * （减伤公式本身有收益递减且封顶 50%，不会因此失衡。） */
+    const armor = c.armor * (1 + armorUp) + armorFlat + armorUp * (this.ARMOR_REF || 20);
+    /* 暴击 */
+    /* 武器词条加成（表30） */
+    const af = this.affixBonus(p);
+    /* 武器自带暴击/暴伤（表44） */
+    const gCrit = (g && g.crit) || 0, gCritDmg = (g && g.critDmg) || 1.5;
+    const crit = Math.min(0.85, c.crit + gCrit + af.crit + this.talentVal(p, 'crit') + this.chipVal(p, 'crit') + rb.crit
+      + ((sk && sk.bonus && sk.bonus.crit) || 0) + (_sb.crit || 0));   /* 进阶 crit 已并入 af.crit */
+    const critDmg = gCritDmg + af.critDmg + this.chipVal(p, 'critDmg') + (_sb.critDmg || 0);
+    /* 移速 */
+    const spdUp = this.chipVal(p, 'spd') + ((sk && sk.bonus && sk.bonus.spd) || 0);
+    const moveSpd = c.spd * this.SPD_MUL * (1 + spdUp);
+    /* 军团加成：军团面板明确宣传「军团可提供属性加成」，
+     * 但 legionBonus() 写好后从未接入 attrs() —— 全项目零调用。
+     * 实测：加入军团并捐到 10000 贡献（= 花 5 万金币），
+     *   atk 26.25 → 26.25、hp 1060 → 1060、战力 1236 → 1236，纹丝不动。
+     * 对照组（好友 +0.13、装备 +1.44）正常生效，证明就是这条没接。
+     * 现在按 legionBonus 的返回值接入（每 1000 贡献 +1%，上限 10%）。 */
+    const lb = this.legionBonus(p);
+    /* 最终攻击力（含角色等级固定值 + 天赋/建筑/芯片/皮肤% + 词条 + 宝石
+     * + 装备强化 + 好友 + 军团 + 升星）。
+     * 必须在 return 之前算出来，因为下面 dmgMin/dmgMax 要按它等比缩放
+     * —— 对象字面量里无法引用同级的 atk。 */
+    const atkTotal = ((atk + (p.lvBonusAtk || 0)) * (1 + atkUp) * (1 + af.dmg) * (1 + this.gemBonus(p).atkPct + this.equipBonus(p).atkPct + this.friendBonus(p) + this.assistBonus(p) + lb.atkPct)) * (1 + EX.starBonus(p.charStar));
+    return {
+      /* 表25 #1：角色等级成长（每级 +攻击6 / +生命80） */
+      /* 好友加成：面板写「每个 +0.5% 攻击」，但 attrs 从不读 p.friends
+       * → 实测加 10 个好友攻击纹丝不动（26.25 → 26.25）。
+       * 现在接入，并设 20 人上限（否则无限加好友可无限堆攻击）。 */
+      /* atkUp / hpUp：天赋·建筑·芯片·皮肤的百分比，统一作用于【全部】
+       * （含角色等级提供的固定加成 p.lvBonusAtk / p.lvBonusHp）。
+       * 此前它们被并进只乘基础值的那一层，导致等级越高收益越接近 0，详见上方注释。 */
+      atk: atkTotal,
+      hp: ((Math.round(hp) + (p.lvBonusHp || 0)) * (1 + hpUp) * (1 + this.gemBonus(p).hpPct + this.equipBonus(p).hpPct + lb.hpPct)) * (1 + EX.starBonus(p.charStar)),
+      gunBase, armor: Math.round(armor),
+      /* 护盾（常驻值）
+       * 严重BUG：attrs() 此前从不返回 shield，而 battle.js 用
+       *   shield: a.shield, maxShield: a.shield  初始化 run，
+       *   applyMods() 里 r.shield = Math.max(r.shield, r.mods.shield)
+       * → Math.max(undefined, 0) = NaN，run.shield 全程 NaN。
+       * 后果：① if (r.shield > 0) 恒为 false，护盾从不吸收伤害
+       *       ② 头顶护盾圈（r.shield > 0）从不绘制
+       *       ③ 护盾天赋/芯片的常驻加成永远不生效
+       *       （仅有 I02 护盾发生器能临时生效，因为那行写了 (r.shield||0)）
+       * 现在返回数值（当前配置无护盾天赋/芯片 → 恒 0，但类型正确）。
+       * 后台若新增 stat:'shield' 的天赋或芯片主属性，会自动生效。 */
+      shield: Math.round(this.talentVal(p, 'shield') + this.chipVal(p, 'shield')),
+      mag: g.mag + af.mag,   /* 进阶 mag 已并入 af.mag */
+      pierce: g.pierce + af.pierce,   /* 进阶 pierce/pierce2 已并入 af.pierce */
+            /* 射程 300→380：僵尸从上方走到射程边缘约需 8 秒（spd 58），
+       * 射程太短导致每波实际射击窗口仅 6 秒，玩家清不完一波就超时推进，
+       * 僵尸逐波累积 → 防线必破（实测 1-1 也过不去，防线 160/636） */
+      /* 散射角度（度）：此前硬编码 0，武器表 spread（W01=2/W02=8/狙击=0）
+       * 全项目零消费 —— 所有武器的弹幕扇形由 battle.js 写死的 0.13 弧度决定，
+       * 与配表无关，武器之间的"精准/散射"差异完全失效。现在按武器表返回。 */
+      pellets: (g.pellets || 1) + af.extra, range: this.gunRange(g), spread: (Number(g.spread) || 0),
+      /* 后坐力倍率：此前全项目零消费，所有枪开火反馈一致。见 gunRecoil 注释。 */
+      recoil: this.gunRecoil(g),
+      crit: Math.min(0.85, crit + this.gemBonus(p).crit),
+      critDmg: critDmg + this.gemBonus(p).critDmg,
+      rate: g.rate * (1 + af.rate + this.chipVal(p, 'rate') + this.gemBonus(p).ratePct),
+      moveSpd: Math.round(moveSpd),
+      /* 词条额外项：吸血 / 换弹 / 爆炸范围 / 双倍概率 */
+      reloadCut: af.reload, erMul: 1 + af.er + (_sb.erPct || 0), doubleChance: af.double,
+      /* V1.1.0 P-12 流派：减速/持续伤害由 battle.js 命中段消费（attrs 只透传） */
+      schoolSlow: _sb.slow || 0, schoolDot: _sb.dot || 0,
+      school: _sb.active || null,
+      /* 表44 伤害浮动区间：必须随武器等级等比缩放
+       * 严重BUG：此前直接返回表里写死的 g.dmgMin/g.dmgMax（突击步枪 22-28），
+       * 会完全覆盖按武器等级算出的伤害 —— 结果武器从 Lv1 升到 Lv80，
+       * 每发子弹始终是 22~28 点，升级对伤害毫无影响。
+       *
+       * 第二轮 BUG（更严重）：上一轮修成了按 gunBase 等比放大，
+       *   而 gunBase = 武器基础伤害 × 等级复利，【不含】
+       *     角色等级固定攻击 p.lvBonusAtk（表25 每级 +6）
+       *     天赋/建筑/芯片/皮肤的攻击%
+       *     武器词条 af.dmg
+       *     宝石 / 装备强化 / 好友 / 军团 / 升星
+       *   而 battle.shoot() 一旦命中这个区间就【完全丢弃 r.atk】：
+       *       dmg = r.dmgMin + rand*(r.dmgMax - r.dmgMin)
+       *   实测（gunLv60 / lv60，W01）：
+       *      面板攻击   无加成 2577.86 → 天赋满级(+60%) 4050.92   (+57.1%)
+       *      实际子弹   无加成 1861.96 → 天赋满级(+60%) 1983.46   (+6.5%，纯随机)
+       *   —— 天赋/芯片/皮肤/宝石/装备/好友/军团/升星/角色升级，
+       *      全都只涨面板数字，实战伤害纹丝不动。武器表凡配了
+       *      dmgMin/dmgMax 的枪（几乎全部）都中招。
+       *   现在改成按【最终攻击力 atkTotal】等比缩放，区间均值 = atkTotal。 */
+      dmgMin: (g.dmgMin != null && g.dmg) ? atkTotal * (g.dmgMin / g.dmg) : null,
+      dmgMax: (g.dmgMax != null && g.dmg) ? atkTotal * (g.dmgMax / g.dmg) : null,
+      ls: this.talentVal(p, 'ls') + this.chipVal(p, 'ls') + af.lifesteal + this.gemBonus(p).ls,
+      revive: Math.floor(p.talents.t_revive || 0),
+      goldMul: 1 + this.talentVal(p, 'gold'),
+      xpMul: 1 + this.talentVal(p, 'xp') + this.buildVal(p, 'xp'),
+      charName: c.n, gunName: g.n,
+    };
+  },
+  /* 装备强化加成
+   * BUG：forgeEquip 只写 p.equip[slot].lv，但 attrs() 从不读它
+   * → 玩家花几万金币强化 8 个部位，战力数字涨了，
+   *   实际攻击/生命/打怪伤害纹丝不动。装备系统等于只涨数字不涨实力。
+   * 现在按槽位类型提供真实百分比加成（与宝石同思路，纯百分比不随等级膨胀）。 */
+  equipBonus(p) {
+    const eq = p.equip || {};
+    /* 攻击类槽位 / 生命类槽位 */
+    const ATK_SLOTS = ['weapon', 'ring', 'fabao'];
+    const HP_SLOTS = ['head', 'cloth', 'neck', 'boot', 'brace'];
+    let atkPct = 0, hpPct = 0;
+    Object.keys(eq).forEach((k) => {
+      const e = eq[k] || {};
+      const lv = e.lv || 0, adv = e.adv || 0;
+      if (lv <= 0) return;
+      /* 每级 +0.8%，每进阶（每 5 级）+1% */
+      const v = lv * 0.008 + adv * 0.01;
+      if (ATK_SLOTS.indexOf(k) >= 0) atkPct += v;
+      else if (HP_SLOTS.indexOf(k) >= 0) hpPct += v;
+      else { atkPct += v * 0.5; hpPct += v * 0.5; }
+    });
+    return { atkPct: atkPct, hpPct: hpPct };
+  },
+
+  /* 好友加成：每个 +0.5% 攻击，上限 20 人（+10%） */
+  friendBonus(p) {
+    const n = Math.min(20, (p.friends || []).length);
+    return n * 0.005;
+  },
+  /* 【V1.0.3 社交】好友助战加成
+   * 在好友面板把某个好友「设为助战」后，进入战斗额外获得 +3% 攻击。
+   * 与好友数量加成（每人 +0.5%）叠加，但助战同时只能有 1 个，
+   * 避免多人叠加把社交数值拉爆。 */
+  assistBonus(p) {
+    return (p && p.assist) ? 0.03 : 0;
+  },
+  /* 好友数上限
+   * BUG：好友列表此前【只增不减、且没有任何上限】。
+   *   「添加好友」按钮每次点击都随机造一个假好友 push 进去，
+   *   实测连点 60 次 → friends.length = 60、战力 1211→1243、攻击 26.25→28.88。
+   *   数值上 friendBonus 有 20 人封顶（+10%）所以没爆表，但：
+   *     ① 存档只增不减，friends 数组可无限膨胀；
+   *     ② 好友面板要渲染几十上百行，滚动卡顿；
+   *     ③ 「每个 +0.5% 攻击」的面板说明会让玩家以为能一直堆。
+   * 现在统一按 20 人封顶（与加成上限一致），超出时提示，不再入库。 */
+  FRIEND_MAX: 20,
+
+  /* =========================================================
+   * 社交（好友申请 / 聊天）内容供给
+   * BUG：p.friendReq 与 p.chat 全项目【只读不写】——
+   *   friendReq 只在 ui.js 三处读取（渲染申请列表、接受、移除），
+   *   chat 只有一处读取（渲染聊天）；没有任何代码往里写数据。
+   * 后果：好友面板 3 个页签里「申请」和「聊天」从上线起永远显示
+   *   「暂无申请」「暂无消息」，两个功能是死的；玩家点进去什么都没有，
+   *   只会以为游戏没做完。
+   * 单机架构下没有真实玩家对端（送体力那条注释已承认这点），
+   * 因此这里按"模拟在线玩家"供给内容，并受每日上限约束，避免刷屏。
+   * ========================================================= */
+  SOCIAL_REQ_MAX: 3,     /* 每日最多新增申请 */
+  SOCIAL_CHAT_MAX: 4,    /* 每日最多新增聊天 */
+  SOCIAL_REQ_KEEP: 6,    /* 待处理申请堆积上限 */
+  SOCIAL_CHAT_KEEP: 20,  /* 聊天记录保留条数 */
+  pumpSocial(p) {
+    if (!p) return;
+    const today = this.dailyKey();
+    if (p.socialDate !== today) { p.socialDate = today; p.socialReqN = 0; p.socialChatN = 0; }
+    p.friendReq = Array.isArray(p.friendReq) ? p.friendReq : [];
+    p.chat = Array.isArray(p.chat) ? p.chat : [];
+    /* 好友申请：待处理的没消化完就不再堆；好友已满则不再产出申请
+     * （否则玩家会看到一堆「接受」按钮，点下去却被上限拦住） */
+    if (p.friendReq.length < this.SOCIAL_REQ_KEEP && (p.socialReqN || 0) < this.SOCIAL_REQ_MAX
+      && (p.friends || []).length < this.FRIEND_MAX) {
+      const n = Math.min(2, this.SOCIAL_REQ_MAX - (p.socialReqN || 0));
+      for (let i = 0; i < n; i++) {
+        p.friendReq.push({
+          id: 'fr' + Date.now().toString(36) + Math.floor(Math.random() * 900 + 100),
+          n: '僵友' + Math.floor(Math.random() * 9000 + 1000),
+          pw: Math.floor(Math.random() * 80000 + 3000),
+        });
+        p.socialReqN = (p.socialReqN || 0) + 1;
+      }
+    }
+    /* 聊天：只有已有好友才会发消息 */
+    const fs = (p.friends || []).filter((f) => f && f.n);
+    if (fs.length && (p.socialChatN || 0) < this.SOCIAL_CHAT_MAX) {
+      const LINES = ['今天打到第 %d 章了，太难了', '刚抽到传说芯片，爽', '组队打 BOSS 吗？',
+        '你战力涨得好快', '无尽模式我到 %d 层', '这关怎么过啊', '送你体力了，记得回',
+        '新皮肤真好看', '军团还招人吗', '晚上一起冲榜'];
+      const n = Math.min(2, this.SOCIAL_CHAT_MAX - (p.socialChatN || 0));
+      for (let i = 0; i < n; i++) {
+        const f = fs[Math.floor(Math.random() * fs.length)];
+        let t = LINES[Math.floor(Math.random() * LINES.length)];
+        t = t.replace('%d', String(Math.floor(Math.random() * 9 + 1)));
+        p.chat.push({ n: f.n, t: t, at: Date.now() });
+        p.socialChatN = (p.socialChatN || 0) + 1;
+      }
+      if (p.chat.length > this.SOCIAL_CHAT_KEEP) p.chat = p.chat.slice(-this.SOCIAL_CHAT_KEEP);
+    }
+  },
+
+  /* 军团属性加成
+   * BUG：军团面板明确写「军团可提供属性加成、军团副本与军团商店」，
+   *   但 p.legion 全项目只在 ui.js 出现，attrs() / power() 从不读它
+   *   → 加不加军团，属性一模一样（实测：加入前后 atk 26 / hp 1060，纹丝不动）。
+   *   玩家花 5000 金币捐一次换 100 贡献，换来的只有商店消费权，
+   *   面板承诺的那份「属性加成」从来不存在。
+   *   现在按军团贡献给加成：每 1000 贡献 +1% 攻击与生命，上限 10%。
+   *   （捐献 5000 金 = 100 贡献，故满加成约需 5 万金币，作为中后期金币出口。） */
+  /* 累计贡献（纯读，用于面板显示；老存档缺失时按当前余额回退一次） */
+  legionContribOf(p) {
+    if (!p) return 0;
+    /* 兜底值同样过 isFinite：后台 GM 把 legionExp 填成极大值/非数字时，
+     * 旧写法会把 Infinity 直接写进 legionContrib 并返回 —— 面板「累计贡献」
+     * 显示 Infinity，且由此算出的军团加成（每 1000 贡献 +1%）也会污染战力。
+     * 这里统一钳到合法区间。 */
+    if (p.legionContrib == null || !isFinite(Number(p.legionContrib))) {
+      const fb = Number(p.legionExp || 0);
+      p.legionContrib = isFinite(fb) ? Math.max(0, Math.floor(fb)) : 0;
+    }
+    const c = Number(p.legionContrib || 0);
+    return isFinite(c) ? Math.max(0, c) : 0;
+  },
+  legionBonus(p) {
+    if (!p.legion) return { atkPct: 0, hpPct: 0 };
+    /* 必须按【累计贡献】算，不能按【当前余额】。
+     * BUG：此前读 p.legionExp，而军团商店消费也扣同一个字段 ——
+     *   玩家捐够 10000 贡献拿到 +10% 攻击/生命后，去商店花掉 360 贡献，
+     *   余额 9640 → 加成立刻掉到 +9%，战力 1346 → 1336、攻击 29.86 → 29.59。
+     *   把贡献花光就等于 +0%，等于白捐 5 万金币，且界面上没有任何提示，
+     *   玩家只会看到「我在军团商店买了点东西，战力怎么掉了」。
+     *   （实测：捐 10000 → 商店消费 6 次 → 战力掉 10、加成 10%→9%）
+     * 现在读 p.legionContrib（累计，只增不减）；老存档该字段缺失时
+     *   用当前余额初始化一次，保证老玩家不会突然掉属性。 */
+    const c = this.legionContribOf(p);
+    const v = Math.min(0.10, Math.floor(c / 1000) * 0.01);
+    return { atkPct: v, hpPct: v };
+  },
+
+  /* 【V1.0.4 社交深化】军团 BOSS 贡献榜
+   * V1.0.3 的军团 BOSS 只有一条个人血条，打完看不到"我在团里排第几"，
+   * 共斗玩法没有横向对比就失去了社交驱动力。
+   * 这里按【本周】生成一份名单：其他成员的伤害由战力 × 确定性系数推算
+   * （同周内固定，刷新不会跳变），本人伤害读 p.lb.dmg 实时累加。
+   * 每周一随 p.lb 一起重置（rk 与 weekKey 比对）。 */
+  lgBossRank(p) {
+    const b = (window.EX && EX.legionBoss) || null;
+    if (!b || !p) return [];
+    const wk = this.weekKey();
+    p.lb = p.lb || {};
+    if (!Array.isArray(p.lb.rank) || p.lb.rk !== wk) {
+      const mem = (p.legion && Array.isArray(p.legion.members)) ? p.legion.members : [];
+      const rank = mem.map((m, i) => ({
+        n: String((m && m.n) || ('成员' + i)),
+        me: i === 0,
+        /* 其他成员：战力 ×（1.2~2.6）×（2~8）次出手，确定性伪随机 */
+        dmg: i === 0 ? 0 : Math.max(1, Math.floor(Number(m && m.pw || 3000) * (1.2 + (i % 5) * 0.35) * (2 + (i % 7)))),
+      }));
+      p.lb.rk = wk;
+      p.lb.rank = rank;
+    }
+    const r = (p.lb.rank || []).filter((x) => x && typeof x === 'object');
+    const me = r.find((x) => x.me);
+    if (me) me.dmg = Math.max(0, Number(p.lb.dmg || 0));
+    return r.slice().sort((a, b2) => Number(b2.dmg || 0) - Number(a.dmg || 0));
+  },
+
+  /* 武器输出当量：把「弹丸数 / 穿透 / 爆炸AOE / 弹匣与换弹」折算成每秒投射强度。
+   * BUG（战力与真实强度倒置，实测）：power() 只取 a.atk，
+   *   而 a.atk 里【不含】pellets / pierce / explode(AOE) / mag / reload ——
+   *   于是「单发高伤 + 极低射速」的武器战力虚高：
+   *     火箭筒 战力 79045（第1）→ 真实持续输出 6095（第7）
+   *     榴弹枪 战力 36525（第7）→ 真实 1722（第18）
+   *     地雷   战力 64801（第3）→ 真实 4165（第9）
+   *   反过来 等离子枪真实第1（13803）战力只排第9、链锯枪真实第3战力第8。
+   *   玩家按战力选枪/判强弱，会一路选到实际最弱的枪，战力榜也因此失真。
+   * 现在按「持续每秒投射当量」加权，并以 W01 突击步枪为基准归一（K=12/5.405），
+   *   保证基准武器的战力数值与改动前保持一致，战力榜不会整体跳变。 */
+  weaponOut(a, g) {
+    const mag = Math.max(1, Number(a.mag) || 1);
+    const rate = Math.max(0.1, Number(a.rate) || 1);
+    const reload = Math.max(0.1, Number(g && g.reload) || 1);
+    const cyc = mag / rate + reload;                 /* 一个弹匣循环的总秒数 */
+    const aoe = 1 + (Number(g && g.explode) || 0) * ((Number(g && g.er) || 0) / 60);
+    const pierceMul = 1 + Math.min(4, Number(a.pierce) || 0) * 0.35;
+    return (Number(a.pellets) || 1) * pierceMul * aoe * (mag / cyc);
+  },
+  power(p) {
+    /* 【战力链缺字段兜底】
+     * 实测：E.power() 全项目 17 处调用（ui.js 14 / main.js 2 / battle.js 1），
+     * 而 ensureDicts 只在 ui.js 里出现 4 次 —— 也就是说 main.js 与 battle.js
+     * 这两条战力链从没走过缺字段兜底。后台 GM 热改档在 session 内删掉
+     * p.talents 时，attrs() 里的 p.talents.t_armor 直接抛 TypeError：
+     *   结算面板 / 战斗内战力显示 → 白屏或卡死。
+     * 这里就地补齐一次（幂等、O(字段数)），一处修住全部 17 个调用点，
+     * 不改动任何调用方。ensureDicts 不回调 power，无递归风险。 */
+    this.ensureDicts(p);
+    /* p 本身不是对象（null / undefined / 字符串）时 ensureDicts 原样返回，
+     * 后续 this.gun(p) 会读 p.gun 抛 TypeError。战力只是展示值，
+     * 返回 0 远比让结算面板白屏好 —— 与 UI 侧 `|| 0` 兜底同口径。 */
+    if (!p || typeof p !== 'object') return 0;
+    const a = this.attrs(p);
+    const gb = this.gemBonus(p);
+    const g = this.gun(p);
+    const eq = p.equip || {};
+    const eqP = Object.values(eq).reduce((s, e) => s + (e.lv || 0) * 45 + (e.adv || 0) * 160, 0);
+    /* BUG修复：a.atk / a.hp 里已经乘过宝石百分比，
+     * 这里再 `(a.atk * gb.atkPct) * 6` 属于重复计算宝石加成。
+     * 同时战力只认攻击/生命，导致镶嵌紫宝石（暴伤+攻速）战力纹丝不动，
+     * 与"战力代表强度"的直觉不符 —— 补上暴击/暴伤/攻速/吸血权重 */
+    /* 攻击项改为「持续输出当量」：a.atk × weaponOut × 2.22（W01 基准归一）。
+     * a.rate * 15 的单列权重随之移除 —— 射速已折进 weaponOut，否则重复计算。 */
+    /* gunLv 必须走与 attrs 相同的钳制：此前直接用 p.gunLv * 60，
+     * 后台改档写入 NaN / 'abc' / {} 时整个战力算成 NaN，面板与排行榜显示 "NaN"。
+     * 实测：gunLv=NaN → 战力 NaN（钳制后应为 1055）。 */
+    const _pwLv = Math.max(1, Math.min(this.GUN_MAX_LV, Number(p.gunLv) || 1));
+    return Math.round(a.atk * this.weaponOut(a, g) * 2.22 + a.hp * 0.6 + _pwLv * 60
+      + Object.keys(p.chips || {}).length * 220
+      + Object.values(p.talents || {}).reduce((s, v) => s + v, 0) * 90
+      + a.crit * 800 + Math.max(0, a.critDmg - 1.5) * 200
+      + a.ls * 500
+      /* 护甲此前既不计入战力、也不参与减伤，属于纯装饰属性 */
+      + a.armor * 10
+      /* V1.1.0 军衔：攻/生命加成已经折进 a.atk / a.hp，这里只补暴击部分
+       * （与暴击项同权重 800/点），避免与 atk 项重复计算。 */
+      + this.realmBonus(p).crit * 800
+      + eqP) * (1 + EX.starBonus(p.charStar));
+  },
+
+  /* =================================================
+   * 关卡结算 / 星级
+   * ================================================ */
+  starsFor(hpRatio) { return hpRatio > 0.6 ? 3 : hpRatio > 0.3 ? 2 : 1; },
+  clearLevel(p, id, hpRatio, diff) {
+    const st = this.starsFor(hpRatio);
+    /* 首次通关判定必须在写入 p.cleared 之前取快照 */
+    const firstEver = Object.keys(p.cleared || {}).length === 0;
+    /* 难度通关记录：p.diffCleared[难度][关卡] = 星级
+     * 只升不降（回头重打打崩了不会把高星洗掉）。 */
+    const did = this.diffDef(diff).id;
+    p.diffCleared = p.diffCleared || {};
+    p.diffCleared[did] = p.diffCleared[did] || {};
+    const firstOfDiff = !p.diffCleared[did][id];
+    p.diffCleared[did][id] = Math.max(p.diffCleared[did][id] || 0, st);
+    p.cleared[id] = Math.max(p.cleared[id] || 0, st);
+    /* 赛季积分：通关关卡（V1.1.0 P-13） */
+    this.addSeasonScore(p, 'level');
+    /* 解锁下一关（关卡表 unlock 链自动生效）
+     * BUG：此处原为无条件 `p.curLevel = nx`，会把进度【打回过去】——
+     *   玩家回头重打低章节关卡（刷材料 / 补星级，非常常见的行为）时，
+     *   nextLevel('1-1') = '1-2'，于是 p.curLevel 从第 10 章被打回 1-2。
+     *   而 p.curLevel 是巡逻收益档位（patrolRateOf）和无尽模式掉落档位
+     *   （battle.js levelDef）的取值依据，实测后果：
+     *     巡逻收益 250/小时 → 16/小时（暴跌 15.6 倍）
+     *     无尽掉落档从第 10 章 → 第 1 章，稀有金属/碎片全部掉不出来
+     *   且 p.ch 因有 max 保护仍显示「第 10 章」，界面显示与实际收益自相矛盾。
+     * 现在只在真正前进时推进。 */
+    const nx = this.nextLevel(id);
+    if (nx && this.levelIdx(nx) > this.levelIdx(p.curLevel || '1-1')) p.curLevel = nx;
+    /* 通关后同步巡逻收益档位（进入新章节时提升） */
+    try { this.syncPatrol(p); } catch (e) {}
+    /* 称号「初出茅庐」（first_clear）
+     * BUG：称号表明确配了"首次通关"这一条，但全项目零发放 ——
+     *      玩家通关 100 关，称号列表里这一格永远是灰的、永远拿不到。
+     *      这里在首次通关时补发（只发一次）。 */
+    if (firstEver) {
+      try { this.grantTitle(p, 'first_clear'); } catch (e) {}
+    }
+    /* 恶魔难度全 100 关通关 → 发限定称号（此前称号表无任何获取途径） */
+    if (did === 'hell') {
+      const all = (EX.levels || []).length;
+      if (all && Object.keys(p.diffCleared.hell || {}).length >= all) {
+        try { this.grantTitle(p, 'hell_clear'); } catch (e) {}
+      }
+    }
+    /* V1.1.0 军衔：通关产出军功（军衔晋升的唯一常规来源）。
+     * 只在实际通关时给，重复刷同一关也能拿（长线养成需要可重复产出），
+     * 但按章节封顶在 1~30 的量级，不会冲击金币/钻石经济。 */
+    let spGain = 0;
+    try {
+      const _ch = Number((this.levelDef ? this.levelDef(id) : {}).ch) || 1;
+      spGain = this.realmSpiritDrop(_ch);
+      const cap = (EX.REALM && EX.REALM.SPIRIT_CAP) || 9999999;
+      p.spirit = Math.min(cap, Math.max(0, Math.floor(Number(p.spirit) || 0)) + spGain);
+    } catch (e) { spGain = 0; }
+    /* 返回对象：调用方要拿 first 判断「首次通关该难度」以发放额外奖励 */
+    return { stars: st, first: firstOfDiff, diff: did, spirit: spGain };
+  },
+  /* 称号/头像框发放（去重，返回是否新获得） */
+  grantTitle(p, id) {
+    if (!id) return false;
+    const known = (EX.titles || []).some((t) => t.id === id);
+    if (!known) return false;
+    p.titles = Array.isArray(p.titles) ? p.titles : [];
+    if (p.titles.indexOf(id) >= 0) return false;
+    p.titles.push(id);
+    return true;
+  },
+  grantFrame(p, id) {
+    if (!id) return false;
+    const known = (EX.frames || []).some((t) => t.id === id);
+    if (!known) return false;
+    p.frames = Array.isArray(p.frames) ? p.frames : [];
+    if (p.frames.indexOf(id) >= 0) return false;
+    p.frames.push(id);
+    return true;
+  },
+  totalStars(p) { return Object.values(p.cleared || {}).reduce((s, v) => s + v, 0); },
+  /* 章节进度：某章在某难度下的通关数与星数。
+   * 主界面「出击」卡与关卡选择页共用，用来把 100 关的内容量呈现出来——
+   * 此前玩家只看到「1-1 废弃街道」一行字，10 章 100 关的体量完全不可感知。 */
+  chapterStat(p, ch, diff) {
+    const d = diff || 'normal';
+    const list = (this.levels ? this.levels() : []).filter((x) => Number(x.ch) === Number(ch));
+    let cleared = 0, stars = 0, unlocked = 0;
+    list.forEach((l) => {
+      const st = this.diffStars ? this.diffStars(p, l.id, d) : 0;
+      if (st) { cleared++; stars += st; }
+      if (this.levelUnlocked ? this.levelUnlocked(p, l.id) : true) unlocked++;
+    });
+    return { total: list.length, cleared: cleared, stars: stars, maxStars: list.length * 3, unlocked: unlocked };
+  },
+  /* 【章节集星奖励】V1.2.0 · P-17
+   * 章节奖励缩放：以第 1 章为基准，取该章关卡金币均值之比。
+   * 这样集星奖励自动跟着现有关卡曲线走，不必手写 15 章数值。 */
+  chapterStarScale(ch) {
+    const all = this.levels ? this.levels() : [];
+    if (!all.length) return 1;
+    const avg = (c) => {
+      const l = all.filter((x) => Number(x.ch) === Number(c));
+      if (!l.length) return 0;
+      return l.reduce((s, x) => s + (Number((x.rw || {}).gold) || 0), 0) / l.length;
+    };
+    const base = avg(1);
+    const cur = avg(ch);
+    if (!base || !cur) return 1;
+    return Math.max(1, Math.round(cur / base));
+  },
+  /* 集星状态：星数 + 三档各自的门槛、奖励（已乘章节与难度倍率）、是否已领、是否可领。
+   * 【按难度独立】每关三档难度各自记录星级，集星也必须分开，
+   * 否则玩家拿普通难度的星去领恶魔档奖励不合理。 */
+  chapterStarState(p, ch, diff) {
+    /* 缺字段就地兜底：脏档 / 后台热改档 cleared 为 null 时 chapterStat 会直接抛错，
+     * 关卡选择页整页白屏。守卫 G1 实测抓出，这里堵住。 */
+    if (this.ensureDicts) this.ensureDicts(p);
+    const st = this.chapterStat(p, ch, diff) || { stars: 0, maxStars: 30 };
+    const tiers = (EX.chapterStarRw || []);
+    const d = this.diffMul(diff);
+    const rwMul = Number(d.rw) || 1;
+    const sc = this.chapterStarScale(ch);
+    const key = String(diff || 'normal') + ':' + Number(ch);
+    p.chStarRw = p.chStarRw || {};
+    const got = Array.isArray(p.chStarRw[key]) ? p.chStarRw[key] : [];
+    return {
+      stars: st.stars, maxStars: st.maxStars,
+      tiers: tiers.map((t, i) => {
+        const rw = {};
+        for (const k in (t.rw || {})) rw[k] = Math.round((Number(t.rw[k]) || 0) * rwMul * sc);
+        return { i: i, star: Number(t.star) || 0, rw: rw, got: !!got[i], can: st.stars >= (Number(t.star) || 0) && !got[i] };
+      }),
+    };
+  },
+  /* 领取某章某难度的第 idx 档集星奖励。
+   * 三重拦截：档位存在 → 未领过 → 星数达标 → 实际发放成功才记已领。
+   * 【为什么先发放再记账】历史 BUG：活动/任务多处"先标记已领、再发放"，
+   *   发放失败时本期永久作废。这里 grant 返回 0（一项都没发出去）就不记账。 */
+  claimChapterStar(p, ch, diff, idx) {
+    if (this.ensureDicts) this.ensureDicts(p);
+    const s = this.chapterStarState(p, ch, diff);
+    const t = s.tiers[Number(idx)];
+    if (!t) return { ok: false, msg: '档位不存在' };
+    if (t.got) return { ok: false, msg: '已领取' };
+    if (s.stars < t.star) return { ok: false, msg: '星数不足' };
+    const got = this.grant(p, t.rw);
+    if (!got) return { ok: false, msg: '奖励无效' };
+    const key = String(diff || 'normal') + ':' + Number(ch);
+    p.chStarRw = p.chStarRw || {};
+    if (!Array.isArray(p.chStarRw[key])) p.chStarRw[key] = [];
+    p.chStarRw[key][Number(idx)] = 1;
+    return { ok: true, rw: t.rw, msg: '★' + t.star + ' 集星奖励已领取' };
+  },
+  /* 体力恢复倒计时：距离回满 / 距离下一点还差多久（毫秒）。
+   * 满体力返回 0（界面据此隐藏倒计时）。 */
+  staminaEta(p) {
+    const max = Number(EX.STAMINA_MAX) || 100;
+    const per = Number(EX.STAMINA_MS) || 300000;
+    const now = Date.now();
+    const st = Math.max(0, Number(p.stamina) || 0);
+    if (st >= max) return { full: true, nextMs: 0, fullMs: 0 };
+    const last = Number(p.staminaAt) || now;
+    /* 回满时 staminaAt 会被重置为 now，故未满状态下 elapsed 恒 < per */
+    const elapsed = Math.max(0, now - last);
+    const nextMs = Math.max(0, per - (elapsed % per));
+    const need = Math.ceil(max - st);
+    const fullMs = nextMs + Math.max(0, need - 1) * per;
+    return { full: false, nextMs: nextMs, fullMs: fullMs };
+  },
+  /* 无尽解锁：读 EX.ENDLESS_UNLOCK（关卡 id）。
+   * 此前该配置项全项目零引用——策划/运营在后台填了也不会生效，是个「配置陷阱」。
+   * 现按同一口径接线：null/空 = 默认解锁（保持 v1.0 行为不变），
+   * 填 '3-5' 则要求通关 3-5 才开放无尽。 */
+  endlessUnlocked(p) {
+    const need = (typeof EX !== 'undefined' && EX) ? EX.ENDLESS_UNLOCK : null;
+    if (!need) return true;                       // 未配置 = 默认解锁
+    return !!(p && p.cleared && p.cleared[need]);
+  },
+  /* 各系统解锁（资料 05 表） */
+  sysUnlocked(p, k) {
+    switch (k) {
+      case 'gun': return !!p.cleared['1-2'];      // 武器养成 通关1-2
+      case 'chip': return !!p.cleared['1-4'];     // 芯片装配 通关1-4
+      case 'talent': return !!p.cleared['1-3'];   // 永久天赋 通关1-3
+      case 'endless': return this.endlessUnlocked(p); // 无尽：与 endlessUnlocked 同口径
+      default: return true;
+    }
+  },
+
+  /* =================================================
+   * 任务（资料任务表：主线3/每日3/每周2/成就4）
+   * ================================================ */
+  /* 把 YYYYMMDD 整数转成时间戳，算出真实相隔天数（跨月/跨年也正确） */
+  ymdToTs(n) {
+    const y = Math.floor(n / 10000), m = Math.floor(n / 100) % 100, d = n % 100;
+    return Date.UTC(y, m - 1, d);
+  },
+  dayDiff(a, b) {
+    if (!a || !b) return 999;
+    return Math.round((this.ymdToTs(b) - this.ymdToTs(a)) / 864e5);
+  },
+  /* 【时区口径统一】
+   * 原 dailyKey / weekKey 用【本地时区】取日历日，
+   * 而 giftKey（礼包限购）、signDay（签到）、bossRaidDate、_perReset 用的是【UTC+8 业务日】。
+   * 同一个项目里两套日历基准：对 UTC+8 玩家无感，
+   * 但海外玩家（如 UTC-5）本地日与 UTC+8 日会错开一天，
+   * 出现「每日任务已刷新、但每日礼包限购还没刷新」的错位窗口
+   * → 在错开的几个小时内，每日限购礼包可以再买一次。
+   * 统一为 UTC+8 业务日（与签到/礼包/BOSS突袭同一基准）。 */
+  /* 权威当前时间（毫秒）
+   * 直接用 Date.now() 时，玩家把手机系统时间往后调一天就能刷新 dailyKey，
+   * 实测可清空 dailyClaimed、重置 patrolFast、刷新礼包 daily 限购（见 net.js SRV 注释）。
+   * 改为优先取 GitHub 响应头校准过的服务器时间；未联网校准时回退 Date.now()。 */
+  now() {
+    try { if (typeof window !== 'undefined' && typeof window.SERVER_NOW === 'function') {
+      const t = window.SERVER_NOW();
+      if (typeof t === 'number' && isFinite(t) && t > 1e12) return t;
+    } } catch (e) {}
+    return Date.now();
+  },
+  dailyKey() { const d = new Date(this.now() + 8 * 36e5); return d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate(); },
+  /* 快速巡逻每日次数上限 */
+  PATROL_FAST_MAX: 3,
+  weekKey() {
+    const d = new Date(this.now() + 8 * 36e5);     /* 权威时间 + UTC+8 业务日 */
+    const day = (d.getUTCDay() + 6) % 7;           /* 周一为 0 */
+    const mon = new Date(d.getTime() - day * 864e5);
+    return mon.getUTCFullYear() + '-' + (mon.getUTCMonth() + 1) + '-' + mon.getUTCDate();
+  },
+  /* ---------- O-03 商业化反作弊：存档完整性哨兵 ---------- */
+  /* 理论上限常数（宁可放宽，绝不误伤真实玩家） */
+  INTEG_LIMIT: {
+    /* 钻石：已知产出源（任务/活动/签到/排行/成就）单日理论上限约 800，
+       累计按「注册天数 × 800 + 1200 缓冲」，再与 999999 取小。 */
+    diamondPerDay: 800, diamondBuffer: 1200,
+    /* 金币：单关掉落上限 × 每日可打关数，放宽 3 倍 */
+    goldPerDay: 300000, goldBuffer: 500000,
+    /* 战力：该等级理论养成上限的 2.5 倍（满配号实测第10章约 6.3e6 级别） */
+    powerRatio: 2.5,
+  },
+  integrityCheck(p) {
+    if (!p) return null;
+    const L = this.INTEG_LIMIT;
+    const dk = this.dailyKey();
+    if (p._integDay === dk) return null;   /* 每日至多一次 */
+    p._integDay = dk;
+    const flags = [];
+    const num = (v) => { const n = Number(v); return isFinite(n) ? n : 0; };
+
+    /* 已注册天数（至少 1 天） */
+    let days = 1;
+    try {
+      const dd = new Date(this.now() + 8 * 36e5);
+      const todayNum = dd.getUTCFullYear() * 10000 + (dd.getUTCMonth() + 1) * 100 + dd.getUTCDate();
+      days = Math.max(1, p.regDay ? (this.dayDiff(p.regDay, todayNum) + 1) : 1);
+    } catch (e) {}
+
+    /* 1) 钻石 */
+    const dCap = Math.min(999999, days * L.diamondPerDay + L.diamondBuffer);
+    if (num(p.diamond) > dCap) flags.push('TAMPER_DIAMOND');
+
+    /* 2) 金币 */
+    const gCap = days * L.goldPerDay + L.goldBuffer;
+    if (num(p.gold) > gCap) flags.push('TAMPER_GOLD');
+
+    /* 3) 战力 / 等级 严重不匹配 */
+    let pw = 0; try { pw = num(this.power(p)); } catch (e) {}
+    const lv = Math.max(1, num(p.lv) || 1);
+    /* 等级理论战力粗模：每级约 6.5e4，取 2.5 倍容差 */
+    const pwCap = lv * 65000 * L.powerRatio;
+    if (pw > pwCap && lv < 60) flags.push('TAMPER_POWER');
+
+    /* 4) 时钟倒退：存档记录的最后在线时间晚于当前 */
+    const lastOn = num(p.lastOnline || p._lastSave || 0);
+    if (lastOn > 0 && this.now() > 0 && lastOn - this.now() > 864e5) flags.push('TAMPER_CLOCK');
+
+    if (flags.length) {
+      p._integFlags = flags;
+      try { if (window.OPS) OPS.track('save_tamper', { f: flags.join(','), lv: lv, d: days }); } catch (e) {}
+    } else {
+      p._integFlags = null;
+    }
+    return flags.length ? flags : null;
+  },
+
+  resetTasks(p) {
+    const dk = this.dailyKey(), wk = this.weekKey();
+    if (p.tasks.dailyDate !== dk) { p.tasks.dailyDate = dk; p.tasks.dailyClaimed = []; p.tasks.dailyProg = {}; }
+    /* 【运营部 BUG 修复 · dau_retention 零调用】
+     * dau_retention 在 TRACK_EVENTS 里被标为 P0、「次日/7日留存」的唯一数据源，
+     * 但全项目零调用 —— 后台「数据埋点 → 转化漏斗」的留存数据永远取不到，
+     * 运营无法证明「留得住人」这个 V1.0.1 核心目标是否达成。
+     * 埋点位置：业务日切换处（每天首次进入触发一次，同日重复进入不会刷）。
+     * 上报字段：d=注册第几天(D1/D3/D7 留存分档)、cont=连续登录天数、lv=当前等级。 */
+    {
+      const dd = new Date(this.now() + 8 * 36e5);
+      const todayNum = dd.getUTCFullYear() * 10000 + (dd.getUTCMonth() + 1) * 100 + dd.getUTCDate();
+      if (p._dauDay !== todayNum) {
+        const cont = (p._dauDay && this.dayDiff(p._dauDay, todayNum) === 1) ? (p._dauCont || 0) + 1 : 1;
+        p._dauDay = todayNum; p._dauCont = cont;
+        const regD = p.regDay ? this.dayDiff(p.regDay, todayNum) + 1 : 0;
+        try { if (window.OPS) OPS.track('dau_retention', { d: regD, cont: cont, lv: p.lv || 1 }); } catch (e) {}
+      }
+    }
+    if (p.tasks.weeklyKey !== wk) { p.tasks.weeklyKey = wk; p.tasks.weeklyClaimed = []; p.tasks.weeklyProg = {}; }
+
+    /* 【运营部 O-03 · 商业化反作弊哨兵】
+     * 背景：令牌在客户端（D-01 未部署 Worker 前），玩家可自改存档；
+     *       排行榜、首充、排行榜奖励因此缺乏公信力，商业化等于送钱。
+     * 这里做【只记录、不阻断】的完整性哨兵：检测 4 类异常并上报审计，
+     * 由运营在后台决定处置（回档/封禁），绝不误伤正常玩家。
+     * 检测项：
+     *   TAMPER_DIAMOND   钻石超出理论上限（充值+所有已知产出都算进去仍超）
+     *   TAMPER_GOLD      金币超出理论上限
+     *   TAMPER_POWER     战力远高于该等级的理论养成上限
+     *   TAMPER_CLOCK     存档时间戳倒退（改系统时间刷体力/签到）
+     * 每天最多上报一次，避免刷屏。 */
+    try { this.integrityCheck(p); } catch (e) {}
+    /* 【快速巡逻次数】每日重置
+     * BUG：p.patrolFast 全项目【只有读取、没有任何赋值】——
+     *      UI 显示 `${p.patrolFast||0}/3`，新号恒为 0；
+     *      点按钮必走 `if ((p.patrolFast||0) <= 0) return toast('次数已用完')`。
+     *      →「⚡ 快速巡逻」这个按钮从上线起就 100% 不可用，
+     *        面板却一直标着「/3」，玩家只会以为是次数被自己用完了。
+     * 【巡逻起始时间】p.patrolT 也从没初始化过：
+     *      newPlayer 里没有该字段 → UI 用 `p.patrolT || 0`
+     *      → now - 0 是天文数字 → hrs 被 min(8,…) 截到 8
+     *      → 刚建号就能白领 8 小时巡逻收益。 */
+    if (p.patrolDay !== dk) { p.patrolDay = dk; p.patrolFast = this.PATROL_FAST_MAX; }
+    if (p.patrolFast == null) p.patrolFast = this.PATROL_FAST_MAX;
+    if (!p.patrolT) p.patrolT = this.now();
+  },
+  /* 各类进度值 */
+  taskVal(p, t) {
+    const st = p.stats || {};
+    const dp = p.tasks.dailyProg || {}, wp = p.tasks.weeklyProg || {};
+    switch (t) {
+      case 'clearLv': return 0;                       // 由具体 id 判断
+      case 'kills': return st.kills || 0;
+      case 'login': return 1;
+      case 'dailyClear': return dp.clear || 0;
+      case 'dailyKill': return dp.kill || 0;
+      /* v1.0 新增三条每日任务的条件读数 */
+      case 'dailyUp': return dp.up || 0;
+      case 'dailySweep': return dp.sweep || 0;
+      case 'dailyEndless': return dp.endless || 0;
+      case 'weekClear': return wp.clear || 0;
+      case 'weekKill': return wp.kill || 0;
+      case 'noHitKill': return st.noHitBest || 0;
+      case 'bossKill': return st.bossKill || 0;
+      case 'endlessTime': return p.endlessTime || 0;
+      default: return 0;
+    }
+  },
+  /* =========================================================
+   * 表35 礼包限购判定
+   * 支持：once 一次性 / daily 每日 / weekly 每周 / monthly 每月
+   *      level 按关卡等级分批 / bossFirst 首杀BOSS后免费领
+   * ========================================================= */
+  giftKey(g) {
+    const t = (g.limit && g.limit.t) || 'once';
+    if (t === 'daily') { const d = new Date(this.now() + 8 * 3600000); return d.toISOString().slice(0, 10); }
+    if (t === 'weekly') {
+      const d = new Date(this.now() + 8 * 3600000);
+      const y = new Date(this.now() + 8 * 3600000);
+      const day = (d.getUTCDay() + 6) % 7;            /* 周一为一周起点 */
+      y.setUTCDate(d.getUTCDate() - day);
+      return y.toISOString().slice(0, 10);
+    }
+    if (t === 'monthly') { const d = new Date(this.now() + 8 * 3600000); return d.toISOString().slice(0, 7); }
+    return 'all';                                      /* once / level / bossFirst */
+  },
+
+  /* 返回 {ok, msg, left} —— ok 表示还能买 */
+  giftCan(p, g) {
+    const L = g.limit || { t: 'once', v: 1 };
+    const rec = this.recObj(p, 'giftBuy')[g.id] || { n: 0, k: '' };
+    const k = this.giftKey(g);
+
+    if (L.t === 'level') {
+      /* 每通关 v 关可领 1 次
+       * 注意：curLevel() 返回的是关卡ID字符串（如 "1-1"），不能直接参与运算，
+       *       此前用它做除法得到 NaN，导致提示"再通 NaN 关解锁" */
+      const lv = Object.keys(p.cleared || {}).length;
+      const allow = Math.floor(lv / (L.v || 5));
+      const left = Math.max(0, allow - rec.n);
+      return left > 0 ? { ok: true, left, msg: '可领 ' + left + ' 次' }
+                      : { ok: false, left: 0, msg: '再通 ' + ((rec.n + 1) * (L.v || 5) - lv) + ' 关解锁' };
+    }
+    if (L.t === 'bossFirst') {
+      const bk = (p.stats && p.stats.bossKill) || 0;
+      if (bk <= 0) return { ok: false, left: 0, msg: '需先击杀 1 个 BOSS' };
+      if (rec.n >= (L.v || 1)) return { ok: false, left: 0, msg: '已领取' };
+      return { ok: true, left: 1, msg: '免费领取' };
+    }
+    /* 周期型：周期 key 变了就重置计数 */
+    const used = (rec.k === k) ? rec.n : 0;
+    const left = Math.max(0, (L.v || 1) - used);
+    const nameMap = { once: '限购', daily: '今日', weekly: '本周', monthly: '本月' };
+    return left > 0 ? { ok: true, left, msg: (nameMap[L.t] || '') + '可买 ' + left + ' 次' }
+                    : { ok: false, left: 0, msg: (nameMap[L.t] || '') + '已售罄' };
+  },
+
+  /* =========================================================
+   * 表22 活动 EV04 首充双倍：首次充值钻石翻倍（仅 1 次）
+   * ========================================================= */
+  firstRechargeUsed(p) { return !!p.firstRech; },
+  /* 是否为「充值档位」——只有这类商品才配得上消耗首充双倍资格。
+   *
+   * BUG（玩家权益被静默吃掉）：此前 b_shop 对【任何 give.diamond 的商品】
+   *   都调 applyFirstRecharge，而含钻石的商品远不止充值档：
+   *     GP02 成长礼包(300钻→返100钻) / GP03 每日特惠(10钻→返10钻) /
+   *     GP04 周礼包(300钻→返200钻) / GP05 月度超值(680钻→返800钻) /
+   *     SH07 战令进阶(680钻→返300钻) / SH09 传说芯片包(980钻→返200钻)
+   *   这些都是「花钻石买礼包、礼包里搭一点钻石」，本质是【消费】不是充值。
+   *   实测（新号，钻石 100000）：
+   *     先买 GP03「每日特惠」10 钻 → 触发首充，得 20 钻（净 +10），资格被消耗；
+   *     再买 SH04「钻石大包」980 钻 → 只拿到配置值 1150（净 +170），不再翻倍；
+   *     而直接买 SH04 → 拿到 2300（净 +1320）。
+   *   即：玩家随手买个 10 钻的每日特惠，就把 1150 钻的权益换成了 10 钻，
+   *   净损失 1140 钻（约 114 元），全程只有一个「🎉 首充双倍」的庆祝提示，
+   *   玩家完全意识不到自己吃亏。GP03 还是每日限购，第一天就会撞上。
+   * 现在只有「直购 tab 里只给钻石、不搭任何其它道具」的档位才算充值
+   * （SH02 钻石小包 / SH03 钻石中包 / SH04 钻石大包）。 */
+  isRechargeGoods(g, tab) {
+    if (tab !== '直购') return false;
+    const gv = (g && g.give) || {};
+    const ks = Object.keys(gv);
+    if (ks.length !== 1 || ks[0] !== 'diamond') return false;
+    return Number(gv.diamond) > 0;
+  },
+  /* 购买钻石类商品时调用，返回实际发放数量 */
+  applyFirstRecharge(p, diamondAmt) {
+    if (p.firstRech) return { amt: diamondAmt, doubled: false };
+    if (diamondAmt <= 0) return { amt: diamondAmt, doubled: false };
+    p.firstRech = 1;
+    return { amt: diamondAmt * 2, doubled: true };
+  },
+
+  /* =========================================================
+   * 表22 活动 EV02 BOSS突袭：每日 3 次挑战
+   * ========================================================= */
+  bossRaidLeft(p) {
+    const d = new Date(this.now() + 8 * 3600000).toISOString().slice(0, 10);
+    if ((p.bossRaidDate || '') !== d) return 3;
+    return Math.max(0, 3 - (p.bossRaidUsed || 0));
+  },
+  bossRaidStart(p) {
+    if (this.bossRaidLeft(p) <= 0) return { ok: false, msg: '今日挑战次数已用完（每日 3 次）' };
+    const d = new Date(this.now() + 8 * 3600000).toISOString().slice(0, 10);
+    if ((p.bossRaidDate || '') !== d) { p.bossRaidDate = d; p.bossRaidUsed = 0; }
+    p.bossRaidUsed = (p.bossRaidUsed || 0) + 1;
+    return { ok: true, msg: 'BOSS突袭开始！剩余 ' + this.bossRaidLeft(p) + ' 次' };
+  },
+  /* BOSS突袭要打的关卡
+   * BUG：调用处写的是 startBattle('boss', null)，而 startBattle 在 mode !== 'endless'
+   *      分支里执行 `id = levelId || E.curLevel(P)` —— levelId 为 null 时退化成
+   *      「当前进度关卡」，也就是玩家下一个该打的普通关（实测 1-5 这类）。
+   *      结果：点「BOSS突袭 → 挑战」进去打的是普通关，一场 BOSS 都不会出，
+   *      每日 3 次额度照样扣掉，活动名不副实。
+   * 现在显式挑 BOSS 关：优先当前进度章节的 BOSS 关，未解锁则退回已解锁的最后一个。 */
+  bossRaidLevel(p) {
+    const list = EX.levels || [];
+    const isBoss = (l) => l.cond === 'boss' || l.cond === 'bossAll' || !!l.boss;
+    const ch = this.progressChapter ? this.progressChapter(p) : this.chapterOf(this.curLevel(p));
+    const cur = String(ch) + '-10';
+    if (list.some((l) => l.id === cur) && this.levelUnlocked(p, cur) && isBoss(list.find((l) => l.id === cur))) return cur;
+    let last = null;
+    for (const l of list) { if (isBoss(l) && this.levelUnlocked(p, l.id)) last = l.id; }
+    return last;
+  },
+
+  /* =========================================================
+   * 表16 消耗品使用（I01 急救包 / I02 护盾发生器 / I03 攻击增幅药剂 / I04 宝箱）
+   * 此前数据在背包里但无任何使用入口（P0/P1 内容缺失）
+   * 战斗中立即生效；战斗外使用则记为「下一场生效」的预置增益
+   * ========================================================= */
+  ITEM_USE: {
+    I01: { n: '急救包', desc: '恢复防线生命 50%', battle: true },
+    I02: { n: '护盾发生器', desc: '获得护盾（吸收伤害）', battle: true },
+    I03: { n: '攻击增幅药剂', desc: '攻击 +30%，持续 30 秒', battle: true },
+    I04: { n: '宝箱', desc: '开启获得材料', battle: false },
+  },
+
+  /* 使用消耗品。返回 {ok,msg} */
+  useItem(p, id) {
+    const def = this.ITEM_USE[id];
+    if (!def) return { ok: false, msg: '该物品不可使用' };
+    if ((p.mat[id] || 0) <= 0) return { ok: false, msg: '数量不足' };
+
+    /* I04 宝箱：直接开（表31 DR11）
+     * BUG：这里先 p.mat[id]-- 一次，openBox() 内部又 p.mat.I04 -= n 一次，
+     * 用 1 个宝箱实际扣 2 个（实测 3→1）；只剩 1 个时更糟——
+     * 扣到 0 后 openBox 的 `if (p.mat.I04 < n) return '宝箱数量不足'` 命中，
+     * 提示「开启宝箱：宝箱数量不足」且宝箱已消失（1→0），玩家白丢一个。
+     * openBox 自带扣减与不足校验，这里不能再扣。 */
+    if (id === 'I04') {
+      if ((p.mat.I04 || 0) < 1) return { ok: false, msg: '宝箱数量不足' };
+      const rw = this.openBox(p, 1);
+      /* openBox 现统一返回 {ok,msg}（与 openChest 同构），不再返回裸字符串 */
+      return rw && rw.ok ? { ok: true, msg: rw.msg } : rw;
+    }
+
+    const inBattle = !!(window.BT && BT.run && !BT.over);
+    if (inBattle) {
+      const r = this.applyItem(p, id);
+      if (!r.ok) return r;
+      p.mat[id]--;
+      return { ok: true, msg: def.n + '：' + def.desc };
+    }
+    /* 战斗外：预置到下一场 */
+    /* BUG：I01 急救包在战斗外预置后，进入战斗时玩家必定是满血，
+     * applyItem 的 heal 会被 Math.min(wallMax, wallHp+heal) 吃掉 → 治疗量恒为 0，
+     * 道具却已被扣除（实测 3 个变 2 个，血量纹丝不动），
+     * 而提示还写着「进入下一场战斗自动生效」。
+     * 恢复类道具只在战斗内残血时才有意义，这里直接拒绝，不扣道具。 */
+    if (id === 'I01') return { ok: false, msg: '急救包需在战斗中使用' };
+    p.mat[id]--;
+    p.pendingItem = p.pendingItem || {};
+    p.pendingItem[id] = (p.pendingItem[id] || 0) + 1;
+    return { ok: true, msg: def.n + ' 已准备，进入下一场战斗自动生效' };
+  },
+
+  /* 实际生效（战斗内调用） */
+  applyItem(p, id) {
+    const r = window.BT && BT.run;
+    if (!r) return { ok: false, msg: '未在战斗中' };
+    if (id === 'I01') {
+      const heal = Math.round((r.wallMax || r.maxHp || 1000) * 0.5);
+      r.wallHp = Math.min((r.wallMax || r.maxHp), (r.wallHp || 0) + heal);
+      r.hp = r.wallHp;
+      return { ok: true, heal };
+    }
+    if (id === 'I02') {
+      const sh = Math.round((r.wallMax || r.maxHp || 1000) * 0.3);
+      r.shield = (r.shield || 0) + sh;
+      r.maxShield = Math.max(r.maxShield || 0, r.shield);
+      /* 与 battle.js 里所有护盾来源同一口径：加完立刻按
+       * 「防线最大血量 × SHIELD_CAP_MUL(1.5)」封顶。
+       * 此前这里没有封顶，是唯一一处绕过上限的护盾来源：
+       *   连吃多个护盾发生器可以把 maxShield 抬到封顶之上，
+       *   下一帧 battle 的 capShield 又会把它夹回封顶值 ——
+       *   玩家看到护盾条先涨后掉，超出部分等于白吃，且无任何提示。
+       *   现在就地封顶，并如实回报实际获得量。 */
+      try { if (window.BT && BT.capShield) BT.capShield(r); } catch (e) {}
+      return { ok: true, shield: sh, now: r.shield };
+    }
+    if (id === 'I03') {
+      /* BUG（同类消耗品口径不一致，多用的那几个白扔）：
+       *   这里原来是【覆盖式】赋值 `r.buffAtk = 0.30; r.buffAtkT = 30`。
+       *   而「战斗外使用 → 下一场自动生效」是【预置多份】的：
+       *     applyPendingItems() 按数量循环调用本函数，每次都覆盖成同一个值，
+       *     pendingItem 却在循环结束后被整体清空。
+       *   实测：预置 3 个 I03 → n=3（3 个全部扣掉、面板显示「已生效」），
+       *         实际 buffAtk 只有 0.30 / buffAtkT 只有 30 秒 —— 2 个纯白扔。
+       *   对照 I02 护盾发生器：`r.shield += sh` 是累加的，
+       *         同样的 3 个正确叠成 900（300×3）——同一批道具两种口径。
+       *   现在改成【时长叠加、幅值取上限】：连吃 3 个 = 90 秒的 +30%，
+       *   而不是把第 2、3 个直接吞掉。幅值不累加（否则 10 个 = +300%，
+       *   数值失控），与道具描述「攻击 +30%，持续 30 秒」一致。 */
+      r.buffAtk = Math.max(Number(r.buffAtk) || 0, 0.30);
+      r.buffAtkT = (Number(r.buffAtkT) || 0) + 30;   /* 30 秒，可叠加 */
+      return { ok: true, atk: r.buffAtk, sec: r.buffAtkT };
+    }
+    return { ok: false, msg: '不可在战斗中使用' };
+  },
+
+  /* 战斗开始时应用预置消耗品 */
+  applyPendingItems(p) {
+    const pd = p.pendingItem || {};
+    let n = 0;
+    const rest = {};
+    /* 满血判定：开局必定满血，此时恢复类道具（I01）治疗量恒为 0。
+     * 老存档里可能还留着修复前预置的 I01，这里不让它们白白蒸发，
+     * 原样保留到玩家真正残血的那一场。 */
+    const r = window.BT && BT.run;
+    const full = !r || (r.wallHp != null ? r.wallHp : r.hp) >= (r.wallMax || r.maxHp || 0);
+    for (const id in pd) {
+      const c = pd[id] || 0;
+      for (let i = 0; i < c; i++) {
+        if (id === 'I01' && full) { rest[id] = (rest[id] || 0) + 1; continue; }
+        if (this.applyItem(p, id).ok) n++;
+      }
+    }
+    p.pendingItem = Object.keys(rest).length ? rest : {};
+    return n;
+  },
+
+  /* I04 开箱（表31 DR11：合金 70% 3-5 个）
+   *
+   * BUG：这里原先【硬编码】0.70 与 3-5，既绕开配置表 DR11，也绕开全局稀缺度
+   *   （DROP_RATE_MUL / DROP_QTY_MUL），而背包「材料」页的 #bagChest1/#bagChest10
+   *   走的是 openChest() → EX.rollDrop()，两处口径完全不同。
+   *   实测 2000 次：本函数每箱期望 2.870 合金，openChest 只有 1.437 ——
+   *   同一颗宝箱，在「消耗」页签点「使用」比在「材料」页签点「开启」多拿一倍。
+   *   而且运营改 DR11 的 rate/min/max、或调全局稀缺度，对这个入口都无效。
+   * 现统一委托给 openChest()，返回 {ok,msg} 与另一个入口完全一致。 */
+  openBox(p, n) {
+    return this.openChest(p, n);
+  },
+
+  /* =========================================================
+   * 表19 月卡（SH05）：购买后 30 天内每日领 钻石50 + 体力60
+   * ========================================================= */
+  monthCardLeft(p) {
+    const mc = p.monthCard;
+    if (!mc || !mc.until) return 0;
+    /* 用权威时间判定到期：此前用设备时钟，玩家把时间往回调
+     * 就能让已过期的月卡「复活」，反复领取每日钻石。 */
+    const _n = this.now();
+    /* 到期时间必须收敛成有限数字：
+     * 后台热改档 / 旧存档可能把 until 写成 'abc'、NaN、Infinity 之类脏值。
+     * 此前直接参与比较与减法——
+     *   until='abc'  → `_n > mc.until` 恒 false → (mc.until - _n) = NaN
+     *                  → Math.ceil(NaN) = NaN → 而 `NaN <= 0` 也是 false，
+     *                    于是「已过期」判定失效，月卡永远可领，
+     *                    提示还显示「剩 NaN 天」（实测可领，钻石照发）。
+     *   until=Infinity → 剩 Infinity 天，等于永久月卡。
+     * 现在脏值一律按 0 天（未开通/已过期）处理，绝不放行。 */
+    const _u = Number(mc.until);
+    if (!isFinite(_u)) return 0;
+    if (_n > _u) return 0;
+    return Math.ceil((_u - _n) / 86400000);
+  },
+  /* 每日领取，返回 {ok,msg} */
+  monthCardClaim(p) {
+    if (this.monthCardLeft(p) <= 0) return { ok: false, msg: '月卡未开通或已过期' };
+    const d = new Date(this.now() + 8 * 3600000).toISOString().slice(0, 10);
+    if (p.monthCard.last === d) return { ok: false, msg: '今日已领取' };
+    p.monthCard.last = d;
+    p.diamond = (p.diamond || 0) + 50;
+    const gs = this.addStamina(p, 60);
+    /* 体力满时 addStamina 会被上限截断，用真实增量提示，避免「说给60实际给0」 */
+    return { ok: true, msg: '月卡奖励：钻石+50 体力+' + gs + '（剩 ' + this.monthCardLeft(p) + ' 天）' };
+  },
+
+  /* =========================================================
+   * 表19 战令（SH06 普通 / SH07 进阶）：按通关关卡数解锁奖励档位
+   * ========================================================= */
+  PASS_TIERS: [
+    { lv: 1, n: '金币×1000', rw: { gold: 1000 } },
+    { lv: 3, n: '金属×30', rw: { M01: 30 } },
+    { lv: 5, n: '钻石×50', rw: { diamond: 50 } },
+    { lv: 10, n: '合金×20', rw: { M02: 20 } },
+    { lv: 15, n: '钻石×100', rw: { diamond: 100 } },
+    { lv: 20, n: '枪械碎片×20', rw: { P01: 20 } },
+    { lv: 30, n: '稀有金属×10', rw: { M03: 10 } },
+    { lv: 40, n: '钻石×200', rw: { diamond: 200 } },
+    { lv: 50, n: '传说芯片×1', rw: { chipL: 1 } },
+  ],
+  passLevel(p) { return Object.keys(p.cleared || {}).length; },
+  /* adv=true 才能领进阶档（含额外钻石） */
+  passClaim(p, lvIdx, adv) {
+    const t = this.PASS_TIERS[lvIdx];
+    if (!t) return { ok: false, msg: '档位不存在' };
+    if (this.passLevel(p) < t.lv) return { ok: false, msg: '通关 ' + t.lv + ' 关解锁' };
+    const key = 'p' + lvIdx + (adv ? 'a' : 'n');
+    /* 就地防御（同 claimTask）：污染成字符串/数字时对它的赋值会静默失败，
+     * 实测同一档战令能【连领 3 次】刷走 3000 金币。 */
+    if (!p.passClaimed || typeof p.passClaimed !== 'object' || Array.isArray(p.passClaimed)) p.passClaimed = {};
+    const got = p.passClaimed[key];
+    if (got) return { ok: false, msg: '已领取' };
+    if (adv && !(p.passAdv)) return { ok: false, msg: '需先购买进阶战令' };
+    /* 同 claimTask：先确认奖励真能发出，再标记已领取。
+     * 旧行为 rw 为 undefined 时照常标已领、金币 0 变化，
+     * 玩家点一次"领取成功"却什么都没拿到，且这一档永久作废。 */
+    if (!this.rwUsable(t.rw)) return { ok: false, msg: '该档位奖励配置异常，暂不可领取' };
+    /* 【严重 BUG 修复】循环末尾 `if (n > 0) _given.mat[k] = …` 里的两个标识符都不存在：
+     *   ① n —— 各分支内是 `const n`，块级作用域，出了 if 分支就访问不到
+     *   ② _given —— passClaim 里【从未定义】（同名变量只存在于 actRwTake 内）
+     * 结果：战令【九档全部】在领完奖励后抛 ReferenceError，函数返回 undefined。
+     *   实测：普通档 Lv1（金币×1000）→ 金币确实 +1000，但
+     *     · UI 层 `this.toast(r.msg)` 不执行 → 玩家点了【完全没有反馈】，
+     *       再点一次才提示「已领取」（passClaimed 已先标记），只会以为按钮坏了
+     *     · `E.save(p)` 不执行 → 不落盘，强关/换设备就丢
+     *     · `this.open/home()` 不执行 → 面板不刷新
+     *     · 进阶档 `p.diamond += 30` 在循环之后 → 【每档少发 30 钻】，九档共 270
+     *       花 680 钻买的进阶战令，额外钻石奖励一次都没发过。
+     * 修法：n 提到循环作用域，_given 就地定义。 */
+    const _given = { gold: 0, diamond: 0, mat: {} };
+    p.passClaimed[key] = 1;
+    for (const k in t.rw) {
+      let n = 0;
+      if (k === 'gold') { n = this.safeAmt(t.rw[k]); if (n > 0) p.gold = (p.gold || 0) + n; }
+      else if (k === 'diamond') { n = this.safeAmt(t.rw[k]); if (n > 0) p.diamond = (p.diamond || 0) + n; }
+      else if (/^chip/.test(k)) {
+        /* 此前硬编码：无论档位配的是 chipN(普通)/chipE(精英)/chipL(传说)，
+         * 一律 rollChipById('l') 且只 push 1 个 —— 品质和数量都被忽略。
+         * 当前 PASS_TIERS 只有 Lv50 的 chipL:1 恰好对上，所以没暴露；
+         * 一旦后台/热更加一档 chipN:3，会发成「1 个传说芯片」。
+         * 而且 catch 是空的：rollChipById 抛错时芯片静默丢失，
+         * 玩家点「领取」提示成功、背包里什么都没有。 */
+        p.bag = p.bag || [];
+        const qmap = { chipN: 'n', chipE: 'e', chipL: 'l', chipRed: 'l', chip: 'n' };
+        const q = qmap[k] || 'n';
+        const cnt = Math.max(1, Math.min(20, this.safeAmt(t.rw[k]) || 1));
+        let ok = 0;
+        for (let i = 0; i < cnt; i++) {
+          try { const c = this.rollChipByQuality(q); if (c) { if (this.pushChip(p, c)) ok++; else break; } }
+          catch (e) {}
+        }
+        /* 全部失败时兜底：折算成稀有金属，避免「领了等于没领」
+         * （背包已满时同样走这条兜底，玩家至少拿到材料而不是空手） */
+        if (!ok) {
+          const m = cnt * 2;
+          p.mat.M03 = (p.mat.M03 || 0) + m;
+          _given.mat.M03 = (_given.mat.M03 || 0) + m;
+        }
+        n = ok;                                  /* 实际入库数（背包满时为 0） */
+      }
+      else { n = this.safeAmt(t.rw[k]); if (n > 0) p.mat[k] = (p.mat[k] || 0) + n; }
+      if (n > 0) _given.mat[k] = (_given.mat[k] || 0) + n;
+    }
+    if (adv) p.diamond = (p.diamond || 0) + 30;         /* 进阶额外奖励 */
+    return { ok: true, msg: '战令 Lv.' + t.lv + '：' + t.n };
+  },
+
+  /* ===== 表24 广告位 AD04 免费抽奖 / AD05 开箱 ===== */
+  /* 免费抽奖：随机产出，稀有度权重固定 */
+  adDraw(p) {
+    const pool = [
+      { w: 40, t: 'gold', v: 800, n: '金币 ×800' },
+      { w: 25, t: 'mat', k: 'M01', v: 20, n: '金属 ×20' },
+      { w: 15, t: 'mat', k: 'M02', v: 10, n: '合金 ×10' },
+      { w: 10, t: 'diamond', v: 20, n: '钻石 ×20' },
+      { w: 7, t: 'mat', k: 'M03', v: 5, n: '稀有金属 ×5' },
+      { w: 3, t: 'chip', v: 1, n: '芯片 ×1' },
+    ];
+    const tot = pool.reduce((a, b) => a + b.w, 0);
+    let r = Math.random() * tot, hit = pool[0];
+    for (const x of pool) { if (r < x.w) { hit = x; break; } r -= x.w; }
+    if (hit.t === 'gold') p.gold = (p.gold || 0) + hit.v;
+    else if (hit.t === 'diamond') p.diamond = (p.diamond || 0) + hit.v;
+    else if (hit.t === 'chip') {
+      p.bag = p.bag || [];
+      /* 抽奖产出精英芯片：同样要走品质入口（此前恒回退白色） */
+      try { const c = this.rollChipByQuality('e'); if (c) { if (!this.pushChip(p, c)) { p.mat.M03 = (p.mat.M03 || 0) + 2; } } }
+      catch (e) { p.mat.M03 = (p.mat.M03 || 0) + 2; }
+    }
+    else p.mat[hit.k] = (p.mat[hit.k] || 0) + hit.v;
+    /* 表04 VO_010 抽奖稀有：台词与合成音效（sfx 'rare'）此前零触发。
+     * 稀有档 = 钻石 / 芯片 / 稀有金属（权重合计 20%），与奖池定义保持一致。 */
+    const rare = hit.t === 'diamond' || hit.t === 'chip' || hit.k === 'M03';
+    return { ok: true, n: hit.n, rare: rare };
+  },
+
+  /* 额外宝箱（AD05）：给宝箱道具，可在背包开启 */
+  adBoxReward(p) {
+    p.mat = p.mat || {};
+    p.mat.I04 = (p.mat.I04 || 0) + 1;          /* I04 = 宝箱，背包可开启 */
+    return { ok: true, n: '宝箱 ×1（背包内开启）' };
+  },
+
+  /* 记录一次购买 */
+  /* =========================================================
+   * 套利守卫（经济安全）
+   * 病根：商城/礼包是后台可热更的配置，改数值时不校验，
+   *       一旦出现「花 X 买回 > X 的同种货币」且无限购，玩家可无限循环刷取，
+   *       几分钟内经济彻底崩坏（金币/钻石不再稀缺，所有养成与付费失去意义）。
+   *       已出现过三例：D1 金币袋（1000金→5000金，实测 12 次刷到 49000）、
+   *       SH03/SH04 钻石包（300→330、980→1150，实测 10 次刷到 2680）。
+   * 这里在购买/兑换路径做统一拦截：只拦「净赚 + 无限购」，
+   * 有限购的（如 GP05 月度超值 680→800，每月 1 次）放行，不影响正常数值设计。
+   * ========================================================= */
+  isArbitrage(g) {
+    if (!g || typeof g !== 'object') return false;
+    const give = g.give || g.rw || {};
+    if (typeof give !== 'object') return false;
+    const cur = g.cur || 'gold';
+    const price = Number(g.price != null ? g.price : g.cost) || 0;
+    const back = Number(cur === 'diamond' ? (give.diamond || 0) : cur === 'gold' ? (give.gold || 0) : 0) || 0;
+    if (back <= price) return false;   /* 不赚 → 正常商品 */
+    if (g.limit) return false;         /* 有限购 → 套利量可控，放行 */
+    return true;
+  },
+
+  giftMark(p, g) {
+    const rec = this.recObj(p, 'giftBuy')[g.id] || { n: 0, k: '' };
+    const k = this.giftKey(g);
+    const L = g.limit || { t: 'once', v: 1 };
+    if (L.t === 'level' || L.t === 'once' || L.t === 'bossFirst') {
+      p.giftBuy[g.id] = { n: rec.n + 1, k: 'all' };
+    } else {
+      p.giftBuy[g.id] = (rec.k === k) ? { n: rec.n + 1, k } : { n: 1, k };
+    }
+  },
+
+  /* 存档保存（转发到 MAIN.save）
+   * 修复：ui.js 中 15 处 E.save(p) 调用此前因方法不存在而抛错，
+   * 导致"提示已雇佣/已加入"但数据实际未保存、后续界面刷新也被中断 */
+  save(p) {
+    try {
+      if (p && window.P === p) P = p;         /* 确保全局引用同步 */
+      if (window.MAIN && typeof MAIN.save === 'function') {
+        const r = MAIN.save();
+        if (r && typeof r.catch === 'function') r.catch(() => {});
+        return true;
+      }
+      /* 兜底：MAIN 不可用时直接写本地 */
+      if (p && window.Net && window.MAIN && MAIN.savePath) {
+        Net.write(MAIN.savePath, p).catch(() => {});
+        return true;
+      }
+      return false;
+    } catch (e) { return false; }
+  },
+
+  /* 防抖落盘：面板按钮高频点击时（武器连点强化、装备连点锻造）
+   * 每次都直接 save 会瞬间打出几十次 API 请求，反而更容易触发配额失败。
+   * 这里做 800ms 尾部防抖：连点只在最后一次真正写一次。
+   * 【为什么需要它】实测 26 处「扣费 / 发奖」按钮只改内存里的 p，不调 save，
+   * 全靠 30 秒一次的自动存档兜底。玩家操作完若在 30 秒内被系统杀进程 /
+   * 强关 App（iOS 上不一定触发 pagehide），或立刻换设备登录，
+   * 这笔扣费与奖励就整体丢失，而界面已经提示「成功」。 */
+  saveSoon(p) {
+    try {
+      clearTimeout(this._saveSoonT);
+      this._saveSoonT = setTimeout(() => {
+        try { if (window.MAIN) MAIN.syncSnap(); } catch (e) {}
+        try { this.save(p || window.P); } catch (e) {}
+      }, 800);
+    } catch (e) {}
+  },
+
+  taskDone(p, t) {
+    if (t.cond.t === 'clearLv') return !!p.cleared[t.cond.v];
+    return this.taskVal(p, t.cond.t) >= t.cond.v;
+  },
+  /* 每日签到（UTC+8 跨天，防改系统时间） */
+  sign(p) {
+    const now = this.now();
+    if (p.signLast && now < p.signLast - 3600000) {
+      return { ok: false, msg: '时间异常，无法签到' };
+    }
+    /* 取「UTC+8 日历日」为 YYYYMMDD 整数
+     * 严重 BUG 修复：原代码先 +8h 再用 getFullYear()/getMonth()/getDate() 读取，
+     *   但这三个是【本地时区】方法，而 +8h 的目的是换算到 UTC+8。
+     *   对中国用户（本身就是 UTC+8）等于又加了一次偏移 → 领先 16 小时
+     *   → 【每天北京时间 16:00 之后签到，日期会被算成第二天】。
+     *   后果：下午4点后签到 → signDay 记为明天；
+     *        第二天早上再签 → 命中 `p.signDay === today` → 提示「今日已签到」，
+     *        玩家白白少签一天，连续签到（7天50钻）直接断掉。
+     *   实测：09-25 15:00 上海 → 20260925 ✔；09-25 16:30 上海 → 20260926 ✘
+     * 现在改用 getUTC* 读取（时间已 +8h，UTC 视图即 UTC+8 日历日），全时区正确。 */
+    const d = new Date(now + 8 * 3600000);
+    const today = d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+    /* 旧存档矫正：若历史 signDay 是超前写入的错误值（>今天），重置掉，
+     * 否则玩家当天会被「今日已签到」锁死。 */
+    if (p.signDay && p.signDay > today) { p.signDay = 0; p.signDays = Math.max(0, (p.signDays || 1) - 1); }
+    if (p.signDay === today) return { ok: false, msg: '今日已签到' };
+    /* 严重 BUG 修复：此前用 YYYYMMDD 两个整数相减是否为 1 判断「连续」。
+     * 9月30日(20260930) → 10月1日(20261001) 差值是 71，不是 1；
+     * 12月31日 → 1月1日 差值是 8870。
+     * 结果：只要签到跨月或跨年，连续天数一律归零 —— 玩家攒的进度凭空消失。
+     * 现在改成按「真实日期差」判断，跨月跨年都能正确延续。 */
+    const cont = (p.signDay && this.dayDiff(p.signDay, today) === 1);
+    const cnt = cont ? p.signDays : 0;
+    /* BUG（签到满 7 天后【每天】白拿 50 钻）：
+     *   此前是 Math.min(7, cnt+1)，signDays 一旦到 7 就永远停在 7，
+     *   而奖励按 signDays 发 → 第 7 天之后的每一天都提示「第7天 🪙700 💎50」。
+     *   实测连续签到 10 次：第 7/8/9/10 次全部是 🪙700 💎50。
+     *   后果：免费签到每天给 50 钻，与 30 元月卡（钻石50+体力60/天）收益等同，
+     *   月卡失去价值；同时「连续签到」永远不可能断（面板 7 格恒亮），
+     *   断签重来的机制形同虚设。
+     * 现在改成 7 天一轮：满 7 后回到第 1 天，每 7 天才拿一次 50 钻。 */
+    const next = (cnt || 0) + 1;
+    p.signDays = next > 7 ? 1 : next;
+    p.signDay = today; p.signLast = now;
+    const rw = { gold: 100 * p.signDays, diamond: p.signDays >= 7 ? 50 : 0 };
+    p.gold += rw.gold; p.diamond += rw.diamond;
+    return { ok: true, msg: '签到成功 第' + p.signDays + '天 🪙' + rw.gold + (rw.diamond ? ' 💎' + rw.diamond : '') };
+  },
+
+  /* =========================================================
+   * 扫荡系统（表29：已通关关卡快速扫荡，消耗体力）
+   * ======================================================== */
+  canSweep(p, lvId) {
+    /* BUG修复：通关记录写在 p.cleared[id]，此前读的是从未赋值的 p.stars，
+     * 导致已通关关卡也判定"需先通关该关卡"，扫荡功能完全不可用 */
+    /* 关卡存在性校验：此前只查 p.cleared[lvId]，任何不存在的 id（''、null、
+     * '99-99'）只要被写进通关记录就能扫荡，而 sweepLvNum 会算出一个荒谬的
+     * 关卡序号（99-99 → 1079），再按该序号的公式发钱 —— 实测单次要发
+     * 8600 金币，而正常的 1-1 只有 2500。这里先确认关卡真的在 levels 表里。 */
+    if (!(EX.levels || []).some((x) => x.id === lvId)) {
+      return { ok: false, msg: '关卡不存在' };
+    }
+    const st = (p.cleared || {})[lvId] || 0;
+    if (!st) return { ok: false, msg: '需先通关该关卡' };
+    const one = this.sweepStamina(lvId, this.sweepDiff(p, lvId));
+    if ((p.stamina || 0) < one) return { ok: false, msg: EX.tip('popup.noStamina', { v: one }) };
+    return { ok: true, cost: one };
+  },
+  /* 扫荡预览：必须与 sweep() 走同一套算法，否则「弹窗显示」与「实际到账」对不上。
+   * BUG：UI 此前直接用 EX.sweepRw（旧独立公式）显示单次产出，而 sweep() 已改为
+   *   按关卡真实奖励发放 —— 弹窗恒显示「金币180 / 金属(M01)5」，实际发的却是
+   *   关卡配置（如 1-1 金币500 + M02×5，后期关卡差几十倍），材料种类也显示错。 */
+  /* 扫荡用：关卡【全局序号】（1~100），供 EX.sweepRw 的兜底公式使用。
+   * 严重 BUG：此前全项目写的是 String(lvId).split('-')[1]，取到的是
+   *   【章内第几关】(1~10) —— 1-5 / 5-5 / 10-5 算出来全是 5，
+   *   于是 ch = floor((5-1)/10)+1 恒等于 1，sweepRw 的 gold/xp/M01
+   *   全部停在第 1 章水平（xp 恒 125），与关卡彻底脱钩。 */
+  sweepLvNum(lvId) {
+    const a = String(lvId || '').split('-');
+    const ch = parseInt(a[0], 10) || 1;
+    const n = parseInt(a[1], 10) || 1;
+    return (ch - 1) * 10 + n;
+  },
+  /* 扫荡经验：必须与【手动通关】同口径（表25 #1）。
+   * 手动结算：xpGain = 击杀累计 killXp × 难度倍率 × 经验加成(xpMul)，
+   *   其中 killXp = Σ(怪物xp × 关卡倍率 rwMul) 且已含天赋经验加成。
+   * 严重 BUG：扫荡此前直接用 EX.sweepRw 的 xp = 80 + ch*45，
+   *   再叠加上面那个恒为第 1 章的 lvNum —— 任何关卡都只发 125 经验：
+   *     1-5   手动 560    扫荡 125   （差 4.5 倍）
+   *     5-5   手动 10585  扫荡 125   （差 84.7 倍）
+   *     10-5  手动 301622 扫荡 125   （差 2413 倍）
+   *   扫荡刷经验完全不可行，而注释却写着「手动通关给什么扫荡就给什么」。
+   * 现在按击杀估算 × 平均怪物xp × rwMul 计算，与手动同量级。 */
+  sweepXp(p, ld, t, dRw) {
+    const rwMul = Math.max(1, Number(ld && (ld.rwMul != null ? ld.rwMul : ld.mul)) || 1);
+    const pool = (ld && ld.pool) || [];
+    let avgXp = 0; let c = 0;
+    pool.forEach((id) => {
+      const z = (EX.zombies || []).find((x) => x.id === id);
+      if (z) { avgXp += Number(z.xp) || 0; c++; }
+    });
+    if (c <= 0 || avgXp <= 0) avgXp = 4; else avgXp = avgXp / c;
+    const per = (ld && ld.per) || [8, 13];
+    const killEst = Math.round((Number(ld && ld.waves) || 20)
+      * (((Number(per[0]) || 8) + (Number(per[1]) || 13)) / 2)) * t;
+    /* 经验加成只能算一次。
+     * BUG（重复计算，实测）：attrs().xpMul 的定义就是
+     *   1 + talentVal(p,'xp') + buildVal(p,'xp')，
+     * 这里却又乘了一遍 (1 + talentVal(p,'xp')) —— 天赋经验加成被叠加两次。
+     *   实测 5-5 单次扫荡：天赋 t_xp 0 级 → 11227；20 级 → 44045（3.923 倍）
+     *   而正确倍率应为 attrsXpMul 之比 2.04 / 1.04 = 1.962 倍 → 应为 22027。
+     *   满级天赋下扫荡经验整整多发一倍，且与本文件开头
+     *   「扫荡经验必须与手动通关同口径」的约定相违背（手动只乘一次）。
+     * 现在只用 attrs().xpMul 一次。 */
+    let xpMul = 1;
+    try { xpMul = (this.attrs(p).xpMul || 1); } catch (e) { xpMul = 1; }
+    /* 校准系数（重构）：
+     * 旧实现用【单个固定常数】SWEEP_XP_K=0.25 一刀切，而击杀率本身随章节
+     * 从 88%(第1章) 降到 36%(第10章)，常数无法同时满足两端 ——
+     *   实测 1-1：手动 874 / 扫荡 273 = 31%
+     *   实测 1-5：手动 820 / 扫荡 273 = 33%
+     * 都远低于注释承诺的「手动的 50%~110%」，扫荡经验实际只有手动三成，
+     * 靠扫荡升级完全不可行（扫荡 3 次才抵手动 1 次）。
+     * 现在改为「章节递减击杀率 × 实战均值修正」两个可配置量相乘：
+     *   sweepKillRate(ch)  —— 刷怪总数里真正被清掉的比例（0.88 → 0.36）
+     *   SWEEP_KILL_YIELD   —— 怪物池算术平均 xp 高于实战均值的修正（实测 0.83）
+     * 第1章实测：210 × 0.88 × 0.85 × 5 ≈ 785，为手动 874 的 90%，落在承诺区间。 */
+    const kr = this.sweepKillRate(Number(ld && ld.ch) || 1);
+    const Y = (EX.SWEEP_KILL_YIELD != null && isFinite(EX.SWEEP_KILL_YIELD)) ? EX.SWEEP_KILL_YIELD : 0.78;
+    const realKills = Math.round(killEst * kr * Y);
+    return { xp: Math.max(1, Math.round(realKills * avgXp * rwMul * (dRw || 1) * xpMul)),
+      killEst: killEst, killReal: realKills };
+  },
+  /* 章节击杀率：第1章 0.88 线性降到第10章 0.36（实测值，见 sweepXp 注释）。
+   * 高章节怪物血厚、波次清不完，击杀率明显低于低章节。 */
+  sweepKillRate(ch) {
+    const c = Math.max(1, Math.min(10, Number(ch) || 1));
+    const hi = (EX.SWEEP_KILL_RATE_HI != null && isFinite(EX.SWEEP_KILL_RATE_HI)) ? EX.SWEEP_KILL_RATE_HI : 0.88;
+    const lo = (EX.SWEEP_KILL_RATE_LO != null && isFinite(EX.SWEEP_KILL_RATE_LO)) ? EX.SWEEP_KILL_RATE_LO : 0.36;
+    return hi + (lo - hi) * ((c - 1) / 9);
+  },
+  /* 扫荡的【局内击杀金币】估算。
+   * 严重 BUG：手动通关金币 = 关卡奖励 + 210 只僵尸的击杀金币，
+   *   而 sweep() 只发关卡表 ld.rw.gold —— 击杀金币整块缺失。
+   *   实测（同账号、天赋 0、普通难度）：
+   *     1-1  手动 1230（关卡500 + 击杀730） / 扫荡 500  → 只有手动的 41%
+   *     1-5  手动 1191（关卡680 + 击杀511） / 扫荡 680  → 只有手动的 57%
+   *   击杀金币占手动总金币的四到六成，扫荡一分不发，
+   *   与本函数顶部「手动通关给什么，扫荡就给什么」的约定直接冲突，
+   *   结果就是扫荡越用越亏、玩家被迫手动刷关，扫荡形同虚设。
+   * 现在按「实际击杀数 × 怪物池平均 gold × 章节强度」估算，与 sweepXp 同口径。 */
+  sweepKillGold(p, ld, t, dRw) {
+    if (!ld) return 0;
+    const pool = (ld && ld.pool) || [];
+    let avgG = 0; let c = 0;
+    pool.forEach((id) => {
+      const z = (EX.zombies || []).find((x) => x.id === id);
+      if (z) { avgG += Number(z.gold) || 0; c++; }
+    });
+    if (c <= 0 || avgG <= 0) avgG = 3; else avgG = avgG / c;
+    const per = (ld && ld.per) || [8, 13];
+    const killEst = Math.round((Number(ld && ld.waves) || 20)
+      * (((Number(per[0]) || 8) + (Number(per[1]) || 13)) / 2)) * (Number(t) || 1);
+    const kr = this.sweepKillRate(Number(ld && ld.ch) || 1);
+    const Y = (EX.SWEEP_KILL_YIELD != null && isFinite(EX.SWEEP_KILL_YIELD)) ? EX.SWEEP_KILL_YIELD : 0.78;
+    /* 不乘 ld.mul / rwMul：手动路径 battle.kill() 的击杀金币是
+     *   z.gold × (1 + 金币天赋)，【不含】章节强度系数 ——
+     * 扫荡若乘了 mul（第10章高达 131.75），击杀金币会被放大两个数量级，
+     * 与「手动给什么扫荡给什么」背道而驰。这里与手动严格同口径。 */
+    let gMul = 1;
+    try { gMul = this.attrs(p).goldMul || 1; } catch (e) { gMul = 1; }
+    return Math.max(0, Math.round(killEst * kr * Y * avgG * (dRw || 1) * gMul));
+  },
+  /* 扫荡的【局内掉落】估算：僵尸掉落 + BOSS 掉落。
+   * 严重 BUG：手动通关时 kill() 走 EX.dropFor(怪物名, 章节) 掉材料/芯片，
+   *   而 sweep() 只发关卡表 ld.rw —— 注释明明写着「手动通关给什么扫荡就给什么」，
+   *   实测 10-10 一局：
+   *     手动  金属245 合金321 火药25 稀有金属66 枪械碎片16 角色碎片4
+   *     扫荡  金属28（其余全部为 0）
+   *   1-10 同样：手动 金属175+火药13，扫荡只有 合金5。
+   *   玩家花体力扫荡刷材料，拿到的只有手动通关的零头；
+   *   BOSS 专属掉落（稀有金属 / 芯片 / 角色碎片）在扫荡这条路上根本不存在，
+   *   而角色碎片是升星唯一来源 —— 等于把升星养成从扫荡玩法里整条砍掉。
+   * 现在按同一张 globalDrops 表、同一套 rate 估算，与手动同口径。
+   * commit=false 时不写 firstBossDrop（预览不能产生副作用）。 */
+  sweepDropEst(p, ld, times, commit) {
+    const out = { mat: {}, chip: {} };
+    if (!ld) return out;
+    /* 次数必须取整：此前 1.5 次会被原样接受，扣 1.5 点体力、发 1.5 倍奖励，
+     * 玩家体力余额会出现 9997.5 这种小数。这里向下取整并兜底到 1。 */
+    const t = Math.max(1, Math.min(EX.SWEEP_MAX, Math.floor(Number(times) || 1)));
+    const ch = Number(ld.ch) || 1;
+    const waves = Number(ld.waves) || 20;
+    const per = ld.per || [8, 13];
+    const spawn = Math.round(waves * (((Number(per[0]) || 8) + (Number(per[1]) || 13)) / 2));
+    const pool = (ld.pool || []).filter(Boolean);
+    if (!pool.length || spawn <= 0) return out;
+    const perType = (spawn * t) / pool.length;
+    /* 掉落表里的芯片写的是品质码 C01/C02/C03（与 battle.pick 同口径） */
+    const qmap = { C01: '白', C02: '蓝', C03: '红' };
+    const add = (item, n) => {
+      n = Math.floor(Number(n) || 0);
+      if (n <= 0) return;
+      if (qmap[item]) out.chip[qmap[item]] = (out.chip[qmap[item]] || 0) + n;
+      else out.mat[item] = (out.mat[item] || 0) + n;
+    };
+    const rollSrc = (srcName, count) => {
+      /* 稀缺度口径必须与手动路径 EX.rollDrop() 一致：
+       * 此前这里裸用 d.rate / d.min / d.max，DROP_RATE_MUL / DROP_QTY_MUL
+       * 对扫荡完全不生效，导致扫荡掉落反超手动 1.5~2.7 倍。 */
+      (EX.dropFor(srcName, ch) || []).forEach((d) => {
+        add(d.item, count * EX.dropRate(d) * EX.dropAvg(d));
+      });
+    };
+    pool.forEach((id) => {
+      const z = (EX.zombies || []).find((x) => x.id === id);
+      if (!z) return;
+      rollSrc(z.n, perType);
+      /* 分裂僵尸死亡后裂出 2 只小僵尸，手动打时这批也掉东西 */
+      const sp = Number(z.split) || 0;
+      if (sp > 0) rollSrc('小僵尸', perType * sp);
+    });
+    /* BOSS：一局只杀一只 → 按【次数】发，不乘击杀数 */
+    if (ld.boss) {
+      /* 双 BOSS 关（3-10 / 8-10）的 boss 字段是数组 ["kaiken","mama"]，
+       * 而这里此前写死字符串比较 x.id === ld.boss → 数组恒不等 → bd 为 undefined
+       * → bn = 'BOSS' → dropFor('BOSS', ch) 返回空数组。
+       * 实测：3-10 扫荡 M03/P01/芯片 全部为 0，8-10 的 C03 红芯片与 P02 同样为 0；
+       * 而手动路径 battle.js 用 Array.isArray 逐个 spawnBoss，两只都刷、都掉。
+       * 扫荡因此比手动少掉两只 BOSS 的全部产出（稀有金属/芯片/角色碎片）。
+       * 现在与手动同口径：统一成数组后逐个结算。 */
+      const bossIds = Array.isArray(ld.boss) ? ld.boss : [ld.boss];
+      bossIds.filter(Boolean).forEach((bid) => {
+        const bd = (EX.bosses || []).find((x) => x.id === bid);
+        const bn = 'BOSS' + ((bd && bd.n) || '');
+        (EX.dropFor(bn, ch) || []).forEach((d) => {
+          const avg = EX.dropAvg(d);
+          const key = bn + d.item;
+          const firstKill = d.first && !(p.firstBossDrop || {})[key];
+          if (firstKill && commit) {
+            p.firstBossDrop = p.firstBossDrop || {};
+            p.firstBossDrop[key] = 1;
+          }
+          /* 首杀必掉（与 battle.kill 同口径）；之后按 rate × 次数。
+           * BUG：此前首杀那一次只发 avg（1 只的量），而玩家付的是 t 次的体力，
+           *   第 2~t 只的掉落被整个吃掉。
+           *   实测 2-10 扫荡 ×10：首杀 M03 仅 4，之后每次 28（差 7 倍）；
+           *   10-10 的红芯片首杀 2，之后每次 9。
+           *   正确口径 = 首杀那 1 只必掉 + 其余 (t-1) 只按概率。 */
+          const n = (firstKill ? 1 : 0) + EX.dropRate(d) * (firstKill ? (t - 1) : t);
+          add(d.item, avg * n);
+        });
+      });
+    }
+    Object.keys(out.mat).forEach((k) => { out.mat[k] = this.safeAmt(out.mat[k]); });
+    return out;
+  },
+  sweepPreview(p, lvId, times) {
+    /* 次数必须取整：此前 1.5 次会被原样接受，扣 1.5 点体力、发 1.5 倍奖励，
+     * 玩家体力余额会出现 9997.5 这种小数。这里向下取整并兜底到 1。 */
+    const t = Math.max(1, Math.min(EX.SWEEP_MAX, Math.floor(Number(times) || 1)));
+    const lvNum = this.sweepLvNum(lvId);
+    const ld = (EX.levels || []).find((x) => x.id === lvId) || null;
+    const fb = EX.sweepRw(lvNum, t);
+    /* 难度倍率：与 sweep() 同源，保证「弹窗显示」=「实际到账」 */
+    const dId = this.sweepDiff(p, lvId);
+    const dRw = (this.diffMul(dId).rw) || 1;
+    /* 与 sweep() 同步走 safeAmt，保证「弹窗显示」=「实际到账」 */
+    /* 金币加成天赋（t_gold）：手动通关在 main.js 结算里乘了 attrs().goldMul，
+     * 扫荡这条路径此前【完全没乘】—— 实测 5-5 单次扫荡：
+     *   天赋 0 级 41800、20 级 41800（倍率 1.000，分文不涨）。
+     * 而天赋描述是「金币获取 +5%」，扫荡却与手动同价不同酬，
+     * 与本函数「弹窗显示 = 实际到账」「与 sweep() 同源」的约定冲突。
+     * 现在补上，sweep() 同步乘，保证预览与实发一致。 */
+    let _pvGMul = 1;
+    try { _pvGMul = this.attrs(p).goldMul || 1; } catch (e) { _pvGMul = 1; }
+    /* 击杀金币：与 sweep() 同源（sweepKillGold），否则「弹窗显示」比「实际到账」少一大截 */
+    const _pvKillGold = this.sweepKillGold(p, ld, t, dRw);
+    const gold = E.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || fb.gold) * t * dRw * _pvGMul + _pvKillGold));
+    const mat = {};
+    const src = (ld && ld.rw) ? ld.rw : { M01: fb.M01 };
+    Object.keys(src).forEach((k) => {
+      if (k === 'gold' || k === 'diamond') return;
+      const n = E.safeAmt(Math.floor((Number(src[k]) || 0) * t * dRw));
+      if (n > 0) mat[k] = n;
+    });
+    /* 局内掉落（僵尸掉落 + BOSS 掉落）：必须与 sweep() 同源，
+     * 否则「弹窗显示」的材料与「实际到账」缺一大截（见 sweepDropEst 注释） */
+    const dr = this.sweepDropEst(p, ld, t, false);
+    Object.keys(dr.mat).forEach((k) => { mat[k] = (mat[k] || 0) + dr.mat[k]; });
+    const xpO = this.sweepXp(p, ld, t, dRw);
+    return { times: t, gold: gold, mat: mat, chip: dr.chip, diff: dId, diffRw: dRw,
+      diamond: (ld && ld.rw && ld.rw.diamond) ? E.safeAmt(Math.floor(ld.rw.diamond * t * dRw)) : 0,
+      xp: xpO.xp, stamina: this.sweepStamina(lvId, dId) * t };
+  },
+  sweep(p, lvId, times) {
+    const lvNum = this.sweepLvNum(lvId);
+    const ck = this.canSweep(p, lvId);
+    if (!ck.ok) return ck;
+    /* 次数必须取整：此前 1.5 次会被原样接受，扣 1.5 点体力、发 1.5 倍奖励，
+     * 玩家体力余额会出现 9997.5 这种小数。这里向下取整并兜底到 1。 */
+    const t = Math.max(1, Math.min(EX.SWEEP_MAX, Math.floor(Number(times) || 1)));
+    const dId0 = this.sweepDiff(p, lvId);
+    const one = this.sweepStamina(lvId, dId0);
+    const cost = one * t;
+    if ((p.stamina || 0) < cost) return { ok: false, msg: EX.tip('popup.noStaminaMax', { v: Math.floor((p.stamina || 0) / one) }) };
+    p.stamina -= cost;
+    /* 严重 BUG 修复：此前的扫荡奖励走 EX.sweepRw 的独立公式
+     *   gold = (120 + ch*60) × times
+     * 第10章单次只有 720 金币，而同一关【手动通关】的关卡奖励是 50090 金币 ——
+     * 差了近 70 倍。而且只发 M01 一种金属，关卡奖励里的 M02/M03/芯片/宝石
+     * 一律没有。玩家花 5 体力扫荡，拿到的还不如手动通关的零头，
+     * 扫荡功能实际上是个「亏本按钮」，没人会点。
+     * 现在改为按【关卡真实奖励】发放，手动通关给什么，扫荡就给什么。 */
+    const ld = (EX.levels || []).find((x) => x.id === lvId) || null;
+    const rw = EX.sweepRw(lvNum, t);
+    /* 实际发放累加器：sweep() 的返回值 rw 此前仍走 EX.sweepRw 旧公式，
+     * 与实际发放（关卡真实奖励 + 局内掉落）对不上：
+     *   1-1  返回 gold 180 / M01 5，实际到账 gold 500 / M01 156
+     *   10-10 返回 gold 720 / M01 23，实际到账 gold 9573500 / M01 354
+     * UI 目前只读 r.msg 不读 r.rw，玩家看不到错误数字；但只要有人
+     * 拿 r.rw 去弹结算页，就会显示「获得金币180」而实际发了 957 万。
+     * 这里让返回值与实际发放严格一致。 */
+    const _given = { gold: 0, diamond: 0, mat: {} };
+    /* 关卡奖励同样过 safeAmt：rw.gold 若被热更写成字符串/NaN/负数，
+     * 旧行为会把 gold 算成 NaN（JSON 里变 null，读回即【金币归零】）
+     * 或按负数倒扣。扫荡一次扣 5 体力，出问题玩家很难自查。 */
+    /* 难度倍率：按该关【已通关的最高难度】放大（扫荡不看难度是 BUG，
+     * 会导致打通恶魔后扫荡只拿 1/6.5） */
+    const dId = this.sweepDiff(p, lvId);
+    const dRw = (this.diffMul(dId).rw) || 1;
+    /* 与 sweepPreview 同口径乘上金币加成天赋（见 sweepPreview 注释）。
+     * 两处必须用同一个 _gMul 读法，否则「弹窗显示」≠「实际到账」。 */
+    let _gMul = 1;
+    try { _gMul = this.attrs(p).goldMul || 1; } catch (e) { _gMul = 1; }
+    /* 击杀金币（手动能捡到的那一份，扫荡此前整块缺失，见 sweepKillGold 注释） */
+    const _killGold = this.sweepKillGold(p, ld, t, dRw);
+    const goldGet = this.safeAmt(Math.floor(((ld && ld.rw && ld.rw.gold) || rw.gold) * t * dRw * _gMul + _killGold));
+    p.gold = (p.gold || 0) + goldGet;
+    _given.gold += goldGet;
+    p.mat = p.mat || {};
+    const matGet = (ld && ld.rw) ? ld.rw : { M01: rw.M01 };
+    Object.keys(matGet).forEach((k) => {
+      if (k === 'gold' || k === 'diamond') return;
+      const n = this.safeAmt(Math.floor((Number(matGet[k]) || 0) * t * dRw));
+      /* 【显示 ≠ 到账】BUG 修复：这里此前只写进 p.mat，没有同步 _given.mat。
+       * 而末尾 `rw` 是用 _given.mat 覆写的 —— 于是【关卡自身的材料奖励】
+       * 被整体漏掉，只保留局内掉落部分。
+       *   实测 3-3（rw: {gold:4630, M04:10}）单次扫荡：
+       *     实际到账 M04 = 10（关卡奖励） + 29（局内掉落） = 39
+       *     r.rw.M04     = 29                        ← 少了关卡奖励那 10
+       *   sweepPreview 的口径是「关卡奖励 + 局内掉落」= 39，与实际到账一致，
+       *   于是「预览 39 / 返回值 29」自相矛盾，违背本函数顶部
+       *   「让返回值与实际发放严格一致」的承诺。
+       * 目前 UI 只读 r.msg 不读 r.rw，暂无玩家可见影响；
+       * 但只要有人拿 r.rw 去弹结算页，就会比预览少一截。
+       * 这里补上同步，使三处（预览 / 实际到账 / 返回值）完全一致。 */
+      if (n > 0) {
+        p.mat[k] = (p.mat[k] || 0) + n;
+        _given.mat[k] = (this.safeAmt(_given.mat[k])) + n;
+      }
+    });
+    if (ld && ld.rw && ld.rw.diamond) {
+      const dn = this.safeAmt(Math.floor(ld.rw.diamond * t * dRw));
+      if (dn > 0) p.diamond = (p.diamond || 0) + dn;
+      _given.diamond += dn;
+    }
+    /* 局内掉落（僵尸掉落 + BOSS 掉落）：手动通关捡得到的东西，扫荡也要给，
+     * 否则扫荡就是个亏本按钮（见 sweepDropEst 注释）。
+     * 芯片走 giveChipByQuality 入 p.bag（与 battle.pick 同口径），
+     * 直接写 p.mat['C01'] 会掉进芯片页读不到的死字段。 */
+    const _dr = this.sweepDropEst(p, ld, t, true);
+    Object.keys(_dr.mat).forEach((k) => {
+      if (_dr.mat[k] > 0) p.mat[k] = (p.mat[k] || 0) + _dr.mat[k];
+      if (_dr.mat[k] > 0) _given.mat[k] = (_given.mat[k] || 0) + _dr.mat[k];
+    });
+    let _chipN = 0;
+    Object.keys(_dr.chip).forEach((q) => {
+      for (let i = 0; i < _dr.chip[q]; i++) {
+        try { if (this.giveChipByQuality) this.giveChipByQuality(p, q); _chipN++; } catch (e) { break; }
+      }
+    });
+    /* 表25 #1：经验走角色等级系统（自动升级）—— 与手动通关同口径 */
+    const _xpO = this.sweepXp(p, ld, t, dRw);
+    const lr = this.addXp(p, _xpO.xp);
+    /* 返回值同步实际发放的经验（rw 来自兜底公式，xp 与实发不是一回事，
+     * 不改的话 UI/结算页显示的是旧公式值，「弹窗显示」≠「实际到账」） */
+    /* 返回值同步实际发放：gold / 材料 / 钻石全部用 _given 覆写，
+     * 使 r.rw 与玩家真正到账的数字一致（此前只有 xp 被同步过）。 */
+    try {
+      if (rw) {
+        rw.xp = _xpO.xp;
+        rw.gold = _given.gold;
+        rw.diamond = _given.diamond;
+        Object.keys(rw).forEach((k) => { if (k !== 'gold' && k !== 'diamond' && k !== 'xp') delete rw[k]; });
+        Object.keys(_given.mat).forEach((k) => { if (_given.mat[k] > 0) rw[k] = _given.mat[k]; });
+      }
+    } catch (e) {}
+    /* 扫荡推进任务计数（表29）
+     * BUG：sweep() 此前只发奖励，从不调用 pushStats ——
+     *   每日任务 D02「通关1次关卡」/ D03「击杀50僵尸」、
+     *   每周任务 W01「通关10关」  / W02「击杀1000只」
+     *   四条全部不推进。玩家每天花体力扫荡刷材料，这四个任务
+     *   永远显示 0/x，成就点一分拿不到，扫荡用得越多亏得越多。
+     * 击杀数按「关卡波次 × 每波怪物数区间均值」估算，与手动通关同量级。 */
+    const _killEst = _xpO.killEst;
+    try {
+      this.pushStats(p, {
+        kills: _killEst,
+        clear: t,
+        boss: (ld && (ld.cond === 'boss' || ld.cond === 'bossAll')) ? t : 0,
+      });
+    } catch (e) {}
+    /* v1.0 每日任务「扫荡3次」进度：按次数累加，与 clear 同理不能 +1 */
+    try {
+      this.resetTasks(p);
+      p.tasks.dailyProg.sweep = (p.tasks.dailyProg.sweep || 0) + t;
+    } catch (e) {}
+    return { ok: true, msg: '扫荡 ' + t + ' 次完成！' + (lr.msg ? ' ' + lr.msg : ''), rw: rw, cost: cost, ups: lr.ups, kills: _killEst };
+  },
+
+  /* =========================================================
+   * 角色升星（表15/42：角色碎片升星，每星 +8% 全属性）
+   * ======================================================== */
+  starUp(p) {
+    /* 星级收口：脏值（{} / 'abc'）下 `p.charStar || 0` 会拿到对象/字符串本身，
+     * 后续 `cur + 1` 变成 "[object Object]1"，写回存档后污染整条链路。
+     * 与 sanitize / starBonus 同一口径：先转有限数字，再钳制 0~STAR_MAX。 */
+    const cur = Math.min(EX.STAR_MAX || 5,
+      Math.max(0, (isFinite(Number(p.charStar)) ? Number(p.charStar) : 0)));
+    if (cur >= EX.STAR_MAX) return { ok: false, msg: '已达最高星级' };
+    const need = EX.starCost[cur + 1] || 999;
+    const have = (p.mat || {}).P02 || 0;
+    if (have < need) return { ok: false, msg: '角色碎片不足（需 ' + need + '，现有 ' + have + '）' };
+    p.mat.P02 = have - need;
+    p.charStar = cur + 1;
+    return { ok: true, msg: '升星成功！当前 ' + p.charStar + ' 星（全属性 +' + Math.round(p.charStar * 8) + '%）' };
+  },
+
+  /* =========================================================
+   * 活动奖励领取（表22：EV01~EV06 + 后台新建 ACTxxx）
+   * 严重 BUG：ui.js 的 actExtraBtn 此前用 isBuiltin(/^EV\d+$/) 把 6 个内置活动
+   *   全部排除 → 配了 rw 的活动（EV01 代币60+芯片、EV02 代币80+M03+钻石20、
+   *   EV03 钻石30+M01、EV06 代币120+传说芯片+限定称号 endless_king）
+   *   【页面上 data-actrw 领奖按钮数为 0】，奖励从上线起一次都没发出去过。
+   * ======================================================== */
+  actOf(id) { return (EX.acts || EX.activities || []).find((x) => x.id === id); },
+  /* UTC+8 日历日（YYYYMMDD 整数），与 sign() 同一基准 */
+  _utc8dayNum() {
+    const d = new Date(this.now() + 8 * 3600000);
+    return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+  },
+
+  /* =================================================
+   * 赛季远征（V1.1.0 冲刺3 · 策划 P-13）
+   * 赛季 = 4 周一期。积分来自 4 个真实结算点，阶梯奖励 5 档。
+   * 赛季切换时按 key 比对自动重置积分与领取记录。
+   * ================================================ */
+  /* 赛季序号：从纪元起算的第几个赛季（0 起） */
+  seasonKey() {
+    const S = (window.EX && EX.SEASON) || null;
+    if (!S) return 0;
+    const ep = Number(String(S.EPOCH || '2027-01-04').replace(/-/g, '')) || 20270104;
+    const days = this.dayDiff(ep, this._utc8dayNum());
+    const per = Math.max(1, (Number(S.WEEKS) || 4) * 7);
+    return Math.max(0, Math.floor(days / per));
+  },
+  /* 面向玩家的赛季编号（第 N 季） */
+  seasonNo() { return this.seasonKey() + 1; },
+  /* 赛季剩余天数（用于面板展示倒计时） */
+  seasonLeftDays() {
+    const S = (window.EX && EX.SEASON) || null;
+    const per = Math.max(1, (Number(S && S.WEEKS) || 4) * 7);
+    const ep = Number(String((S && S.EPOCH) || '2027-01-04').replace(/-/g, '')) || 20270104;
+    const days = this.dayDiff(ep, this._utc8dayNum());
+    return per - (((days % per) + per) % per);
+  },
+  /* 赛季数据：key 变化即重置；脏档就地修复 */
+  seasonOf(p) {
+    if (!p || typeof p !== 'object') return { k: 0, score: 0, got: [] };
+    const k = this.seasonKey();
+    if (!p.season || typeof p.season !== 'object' || Array.isArray(p.season) || p.season.k !== k) {
+      p.season = { k: k, score: 0, got: [] };
+    }
+    if (!Array.isArray(p.season.got)) p.season.got = [];
+    /* 循环奖次数（P-15）：老存档没有该字段 → 按 0 处理，不会凭空多领 */
+    if (!isFinite(Number(p.season.loop)) || Number(p.season.loop) < 0) p.season.loop = 0;
+    /* 脏档守卫：后台改档写入字符串/NaN 会让积分显示异常并污染阶梯判定 */
+    const sc = Number(p.season.score);
+    p.season.score = (isFinite(sc) && sc > 0) ? sc : 0;
+    const S = (window.EX && EX.SEASON) || null;
+    const cap = Number(S && S.SCORE_CAP) || 999999;
+    if (p.season.score > cap) p.season.score = cap;
+    return p.season;
+  },
+  /* 加赛季积分：kind 对应 SEASON.SCORE 的键，未配置则静默忽略（返回 0） */
+  addSeasonScore(p, kind) {
+    const S = (window.EX && EX.SEASON) || null;
+    if (!S || !p || typeof p !== 'object') return 0;
+    const n = this.safeAmt((S.SCORE || {})[kind]);
+    if (!(n > 0)) return 0;
+    const s = this.seasonOf(p);
+    const cap = Number(S.SCORE_CAP) || 999999;
+    const before = s.score;
+    s.score = Math.min(cap, before + n);
+    return s.score - before;
+  },
+  /* 已达成的可领档位 */
+  seasonClaimable(p) {
+    const S = (window.EX && EX.SEASON) || null;
+    if (!S || !p) return [];
+    const s = this.seasonOf(p);
+    return (S.STEP || []).map((x, i) => Object.assign({ i: i }, x))
+      .filter((x) => s.score >= Number(x.need) && s.got.indexOf(x.i) < 0);
+  },
+  seasonClaim(p, i) {
+    const S = (window.EX && EX.SEASON) || null;
+    const st = (S && S.STEP) ? S.STEP[Number(i)] : null;
+    if (!st) return { ok: false, msg: '档位不存在' };
+    const s = this.seasonOf(p);
+    if (s.score < Number(st.need)) return { ok: false, msg: '赛季积分不足 ' + st.need + '（当前 ' + s.score + '）' };
+    if (s.got.indexOf(Number(i)) >= 0) return { ok: false, msg: '本赛季已领取' };
+    /* 与活动/商店同口径：扣发之前先验奖励可发放，避免"提示成功但没到账" */
+    if (!this.validGive(st.rw)) return { ok: false, msg: '奖励配置异常，暂不可领取' };
+    const got = this.grant(p, st.rw);
+    if (!got) return { ok: false, msg: '奖励发放失败' };
+    s.got.push(Number(i));
+    try { this.logAct(p, 'season', '赛季第' + (Number(i) + 1) + '档'); } catch (e) {}
+    return { ok: true, msg: '🏅 赛季奖励领取成功', rw: st.rw, got: got };
+  },
+  /* =========================================================
+   * V1.1.0 部门意见统一改善 · 策划 P-15 / 运营 O-11：赛季后期循环奖励
+   * 问题：5 档阶梯最高 1,500 分，常规节奏约 12~19 天领满，赛季周期却有 28 天
+   *       —— 赛季末 9~16 天玩家没有任何新目标，是长线流失的高发区。
+   * 方案：领满 5 档后，每再累计 SEASON.LOOP.every 分可领一次循环奖，赛季内可重复。
+   * 防重：以 p.season.loop（已领次数）推进门槛，不是"够分就永远可领"。
+   * ========================================================= */
+  /* 循环奖已领次数（脏档守卫：非数字按 0） */
+  seasonLoopTaken(p) {
+    const s = this.seasonOf(p);
+    const n = Math.floor(Number(s.loop) || 0);
+    return (isFinite(n) && n > 0) ? n : 0;
+  },
+  /* 下一档循环奖的门槛积分（null = 未配置循环奖 / 已达上限） */
+  seasonLoopNeed(p) {
+    const S = (window.EX && EX.SEASON) || null;
+    if (!S || !S.LOOP || !S.LOOP.rw) return null;
+    const every = Number(S.LOOP.every) || 0;
+    if (!(every > 0)) return null;
+    const steps = S.STEP || [];
+    const base = steps.length ? Number(steps[steps.length - 1].need) : 0;
+    const taken = this.seasonLoopTaken(p);
+    const maxN = Number(S.LOOP.max) || 99;
+    if (taken >= maxN) return null;
+    return base + (taken + 1) * every;
+  },
+  seasonLoopClaim(p) {
+    const S = (window.EX && EX.SEASON) || null;
+    if (!S || !S.LOOP || !S.LOOP.rw) return { ok: false, msg: '未配置循环奖励' };
+    const need = this.seasonLoopNeed(p);
+    if (need == null) return { ok: false, msg: '循环奖励已达上限' };
+    const s = this.seasonOf(p);
+    if (s.score < need) return { ok: false, msg: '赛季积分不足 ' + need + '（当前 ' + s.score + '）' };
+    if (!this.validGive(S.LOOP.rw)) return { ok: false, msg: '奖励配置异常，暂不可领取' };
+    const got = this.grant(p, S.LOOP.rw);
+    if (!got) return { ok: false, msg: '奖励发放失败' };
+    s.loop = this.seasonLoopTaken(p) + 1;
+    try { this.logAct(p, 'season', '赛季循环奖第' + s.loop + '次'); } catch (e) {}
+    return { ok: true, msg: '🏅 赛季循环奖励领取成功', rw: S.LOOP.rw, got: got, loop: s.loop };
+  },
+  /* 今日是否已签到（与 sign() 同一基准：UTC+8 日历日整数）
+   * 给 UI 做「按钮置灰 / 红点数」用，避免各处分头算导致口径不一致。 */
+  signDone(p) { return !!(p && p.signDay && p.signDay === this._utc8dayNum()); },
+
+  /* =========================================================
+   * 【v1.0 留存系统】新手7日 / 活跃度宝箱 / 回归奖励
+   * ======================================================= */
+
+  /* 注册当天(YYYYMMDD)。老存档没有 regDay 时，用首次登录时间兜底，
+   * 再没有就取今天 —— 老玩家不会凭空获得「第7天」的大奖。 */
+  _regDay(p) {
+    if (p.regDay) return Number(p.regDay);
+    const t = p.createdAt || p.firstLogin || 0;
+    if (!t) return this._utc8dayNum();
+    const d = new Date(Number(t) + 8 * 3600000);
+    return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+  },
+  /* 今天是注册后的第几天（1 起）。不满 1 天算第 1 天。 */
+  newbieDay(p) { return Math.max(1, this.dayDiff(this._regDay(p), this._utc8dayNum()) + 1); },
+  /* 新手7日：某天是否已领 */
+  newbieGot(p, d) { return !!(p.newbie7 && p.newbie7.indexOf(Number(d)) >= 0); },
+  /* 当前可领的天数列表（第 N 天且注册已满 N 天且未领） */
+  newbieClaimable(p) {
+    const out = [];
+    const list = EX.NEWBIE7 || [];
+    const cur = this.newbieDay(p);
+    for (const it of list) {
+      if (cur >= it.d && !this.newbieGot(p, it.d)) out.push(it.d);
+    }
+    return out;
+  },
+  /* 领取新手7日第 d 天 */
+  newbieTake(p, d) {
+    const it = (EX.NEWBIE7 || []).find((x) => x.d === Number(d));
+    if (!it) return { ok: false, msg: '奖励不存在' };
+    if (this.newbieDay(p) < it.d) return { ok: false, msg: '第' + it.d + '天尚未到达' };
+    if (this.newbieGot(p, it.d)) return { ok: false, msg: '第' + it.d + '天已领取' };
+    p.newbie7 = p.newbie7 || [];
+    p.newbie7.push(Number(it.d));
+    const got = this.grant(p, it.rw);
+    this.logAct(p, 'newbie7', '新手7日第' + it.d + '天');
+    return { ok: true, msg: '🎁 ' + it.n + ' 领取成功', rw: it.rw, got: got };
+  },
+
+  /* 今日活跃度：已完成（已领取）的每日任务数 × 每任务活跃点 */
+  dailyActPoint(p) {
+    const done = (p.tasks && p.tasks.dailyClaimed || []).length;
+    return done * (EX.DAILY_ACT_POINT || 20);
+  },
+  /* 活跃宝箱是否已领（按日期重置） */
+  actBoxGot(p, v) {
+    const k = this._utc8dayNum();
+    return !!(p.actBox && p.actBox.k === k && (p.actBox.got || []).indexOf(Number(v)) >= 0);
+  },
+  /* 当前可开的活跃宝箱档位 */
+  actBoxClaimable(p) {
+    const pt = this.dailyActPoint(p);
+    return (EX.DAILY_ACT || []).filter((b) => pt >= b.v && !this.actBoxGot(p, b.v)).map((b) => b);
+  },
+  actBoxTake(p, v) {
+    const b = (EX.DAILY_ACT || []).find((x) => x.v === Number(v));
+    if (!b) return { ok: false, msg: '宝箱不存在' };
+    if (this.dailyActPoint(p) < b.v) return { ok: false, msg: '活跃度不足 ' + b.v + '（当前 ' + this.dailyActPoint(p) + '）' };
+    if (this.actBoxGot(p, b.v)) return { ok: false, msg: '今日已领取' };
+    const k = this._utc8dayNum();
+    if (!p.actBox || p.actBox.k !== k) p.actBox = { k: k, got: [] };
+    p.actBox.got.push(Number(b.v));
+    this.grant(p, b.rw);
+    /* V1.1.0 P-14：活跃宝箱产出军功（此前只在 config 注释里"存在"，代码零实现，
+     * 而军衔面板文案却写着"活动与运营发放"——玩家看到承诺但永远拿不到）。 */
+    let sp = 0;
+    try {
+      const M = (EX.REALM && EX.REALM.ACT_SPIRIT) || null;
+      sp = M ? this.safeAmt(M[String(Number(b.v))]) : 0;
+      if (sp > 0) this.addSpirit(p, sp);
+    } catch (e) { sp = 0; }
+    this.logAct(p, 'actbox', '活跃宝箱 ' + b.v);
+    return { ok: true, msg: '📦 ' + b.n + ' 开启成功', rw: b.rw, spirit: sp };
+  },
+
+  /* 回归：离线天数（按上次登录） */
+  awayDays(p) {
+    const last = p.signLast || p.lastLogin || p.saveT || 0;
+    if (!last) return 0;
+    const ld = new Date(Number(last) + 8 * 3600000);
+    const ldn = ld.getUTCFullYear() * 10000 + (ld.getUTCMonth() + 1) * 100 + ld.getUTCDate();
+    return Math.max(0, this.dayDiff(ldn, this._utc8dayNum()));
+  },
+  /* 是否处于回归状态（离线 ≥ minDays） */
+  comebackOn(p) {
+    const c = EX.COMEBACK; if (!c) return false;
+    if (p.comeback && p.comeback.on) return true;
+    return this.awayDays(p) >= (c.minDays || 3);
+  },
+  comebackGot(p, d) { return !!(p.comeback && (p.comeback.got || []).indexOf(Number(d)) >= 0); },
+  /* 可领的回归天数（每天领 1 档，从第 1 档起）
+   * 「每天 1 档」由 lastDay 保证：今天领过就不再出下一档。
+   * BUG：初版只判「前面几档都领了」，领完第 1 档后第 2 档立刻满足 prevAll，
+   *      于是同一天内可以一口气领完 3 档 —— 与面板上写的
+   *      「连续登录 3 天领取补给」自相矛盾，回归激励被一天吃干。 */
+  comebackClaimable(p) {
+    if (!this.comebackOn(p)) return [];
+    const c = EX.COMEBACK || { days: [] };
+    const got = (p.comeback && p.comeback.got) || [];
+    /* 今天已经领过 → 当日不再出新档 */
+    if (p.comeback && p.comeback.lastDay === this._utc8dayNum()) return [];
+    const out = [];
+    for (const it of c.days) {
+      if (got.indexOf(it.d) >= 0) continue;
+      const prevAll = c.days.filter((x) => x.d < it.d).every((x) => got.indexOf(x.d) >= 0);
+      if (prevAll) { out.push(it.d); break; }
+    }
+    return out;
+  },
+  comebackTake(p, d) {
+    const c = EX.COMEBACK || { days: [] };
+    const it = c.days.find((x) => x.d === Number(d));
+    if (!it) return { ok: false, msg: '奖励不存在' };
+    if (!this.comebackOn(p)) return { ok: false, msg: '未满足回归条件' };
+    if (this.comebackGot(p, it.d)) return { ok: false, msg: '已领取' };
+    /* 强制逐日解锁：必须前面几档都领了才能领这一档。
+     * BUG：此前只在 comebackClaimable（渲染层）做了逐日判断，
+     *      而 comebackTake 本身没判 —— 玩家可以绕过 UI 直接领第 3 档，
+     *      一天领完全部回归礼。渲染与拦截必须同口径。 */
+    const prevAll = c.days.filter((x) => x.d < it.d)
+      .every((x) => this.comebackGot(p, x.d));
+    if (!prevAll) return { ok: false, msg: '需先领取前一天的回归礼' };
+    /* 每天只能领 1 档：与 comebackClaimable 的 lastDay 判断同口径，
+     * 否则玩家可以绕过 UI 在同一天领完全部三档。 */
+    if (p.comeback && p.comeback.lastDay === this._utc8dayNum()) {
+      return { ok: false, msg: '今日已领取，明天再来' };
+    }
+    p.comeback = p.comeback || { on: true, got: [] };
+    p.comeback.on = true;
+    p.comeback.got.push(Number(it.d));
+    p.comeback.lastDay = this._utc8dayNum();
+    this.grant(p, it.rw);
+    this.logAct(p, 'comeback', '回归礼第' + it.d + '天');
+    return { ok: true, msg: '🎁 ' + it.n + ' 领取成功', rw: it.rw };
+  },
+  /* 活动面板里当前真正能领的奖励数（领奖按钮 + 每日签到），
+   * 必须与 r_act 渲染、actRwTake 拦截三者同口径，否则红点会骗人：
+   *   多算 → 玩家看到红点进去一个都领不到（此前修过任务红点同类问题）；
+   *   少算 → 玩家漏领活动奖励。
+   * 这里只数「按钮真的会渲染出来且点得动」的那些。 */
+  actClaimable(p) {
+    let n = 0;
+    if (!p) return 0;
+    try {
+      const now = (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
+      const acts = (EX.acts || EX.activities || []).filter((a) => {
+        if (!a) return false;
+        if (a.status === '强制下架') return false;
+        if (a.endAt && now > a.endAt) return false;
+        if (a.startAt && now < a.startAt - 864e5 * 30) return false;
+        return true;
+      });
+      acts.forEach((a) => {
+        if (!a.rw || !Object.keys(a.rw).length) return;           /* 无奖励 → 不渲染按钮 */
+        if (a.status && a.status !== '运行中') return;             /* 未开始/已结束 → 渲染成灰标签 */
+        if (this.actRwGot(p, a.id)) return;                        /* 已领 → 渲染成「已领」 */
+        /* actRwTake 还会再判一次参与条件（等级/通关数/无尽波次/需先签到），
+         * 条件不满足时点下去会被拒 —— 与红点口径统一，这里一并排除。
+         * 注意：cond.signToday 要求「先签到」，若今天还没签到，
+         * 该活动与签到按钮各算 1，红点合计 2，玩家先签到再回来领，顺序正确。 */
+        const c = this.actCondOk(p, a);
+        if (c && !c.ok) return;
+        n++;
+      });
+    } catch (e) { return 0; }
+    if (!this.signDone(p)) n++;                                    /* 每日签到 */
+    /* v1.0 三项留存：与各自渲染 / 领取拦截同口径，红点才不会骗人 */
+    try {
+      n += (this.newbieClaimable(p) || []).length;
+      n += (this.actBoxClaimable(p) || []).length;
+      n += (this.comebackClaimable(p) || []).length;
+    } catch (e) {}
+    return n;
+  },
+  /* 本期是否已领（带周期重置）。旧档 actRwGot[id] 是数字 1 → 迁移为 {n:1} */
+  actRwGot(p, id) {
+    const a = this.actOf(id);
+    const g = p.actRwGot || (p.actRwGot = {});
+    let r = g[id];
+    if (!r || typeof r !== 'object') {
+      /* 旧档：actRwGot[id] 是数字 1（表示已领）。
+       * BUG：此前写成 { n: 1 } 后直接交给 _perReset —— 而新建记录【没有周期 key】，
+       *   _perReset 判定「周期变了」会立刻把 n 清成 0，
+       *   于是老玩家「已领过」的记录在迁移当场就丢了 → 同一活动可以再领一次。
+       *   （实测：{EV01:1} → actRwGot(EV01) 返回 false，应为 true。）
+       * 修法：先让 _perReset 把周期 key 初始化好，再回填旧值。 */
+      const old = (typeof r === 'number' && r) ? 1 : 0;
+      r = g[id] = { n: 0 };
+      this._perReset(r, (a && a.per) || 'once', a && a.n);
+      if (old > 0) r.n = old;
+      return r.n > 0;
+    }
+    this._perReset(r, (a && a.per) || 'once', a && a.n);
+    return r.n > 0;
+  },
+  /* 参与条件校验：内置活动各有门槛，避免无条件白拿 */
+  actCondOk(p, a) {
+    const c = (a && a.cond) || {};
+    if (c.lvMin && (p.lv || 1) < c.lvMin) return { ok: false, msg: '等级不足（需 Lv.' + c.lvMin + '）' };
+    if (c.clearedMin && Object.keys(p.cleared || {}).length < c.clearedMin) {
+      return { ok: false, msg: '需通关 ' + c.clearedMin + ' 关' };
+    }
+    if (c.endlessMin && (p.endlessBest || 0) < c.endlessMin) {
+      return { ok: false, msg: '需无尽模式达到 ' + c.endlessMin + ' 波' };
+    }
+    if (c.raidToday && !(p.bossRaidUsed > 0 && (p.bossRaidDate || '') === new Date(this.now() + 8 * 3600000).toISOString().slice(0, 10))) {
+      return { ok: false, msg: '需今日先挑战一次 BOSS 突袭' };
+    }
+    if (c.signToday && p.signDay !== this._utc8dayNum()) return { ok: false, msg: '需先完成今日签到' };
+    return { ok: true };
+  },
+  actRwTake(p, id) {
+    const a = this.actOf(id);
+    if (!a || !a.rw || !Object.keys(a.rw).length) return { ok: false, msg: '该活动无奖励' };
+    /* 此前只校验「有奖励 / 未领过 / 条件满足」，完全不看活动是否在运行中：
+     * 后台把开始时间定在 3 天后，面板照样渲染出「领奖」按钮，照样发奖。
+     * 内置 EV01~EV06 在 config.js 里没有 status 字段（常驻），不受影响。 */
+    if (a.status && a.status !== '运行中') {
+      const w = a.status === '待开启' ? '尚未开始' : a.status === '强制下架' ? '已下架' : '已结束';
+      return { ok: false, msg: '该活动' + w };
+    }
+    if (this.actRwGot(p, id)) return { ok: false, msg: '本期奖励已领取' };
+    /* 发得出去才允许标记已领。
+     * 旧行为先打已领标记、再 grant —— 奖励键写错时 grant 一项都发不出去，
+     * 却照样返回"已领取"，而 actRwGot 已置位 → 本期永久领不到，
+     * 运营改好配置也补不回来（与 claimTask 的 rwUsable 同一道防线）。 */
+    if (!this.validGive(a.rw)) return { ok: false, msg: '该活动奖励配置异常，暂不可领取' };
+    const c = this.actCondOk(p, a);
+    if (!c.ok) return c;
+    const g = p.actRwGot || (p.actRwGot = {});
+    if (!g[id] || typeof g[id] !== 'object') g[id] = { n: 0 };
+    g[id].n = 1; g[id].t = Date.now();
+    this.grant(p, a.rw);
+    return { ok: true, msg: '已领取「' + (a.n || '活动') + '」奖励' };
+  },
+
+  /* =========================================================
+   * 成就商店（表42：消耗成就点，限购按 日/周/月/终身）
+   * ======================================================== */
+  achShopKey(id) { return 'as_' + id; },
+  achShopBought(p, id) {
+    const b = p.achShopBuy || (p.achShopBuy = {});
+    const it = (EX.achShop || []).find((x) => x.id === id);
+    if (!it) return 0;
+    const k = this.achShopKey(id);
+    const rec = b[k] || { n: 0, t: 0 };
+    if (!this._perReset(rec, it.per)) return rec.n;
+    return rec.n;
+  },
+  /* 限购周期重置
+   * 严重 BUG 修复：此前用「距上次购买超过 24 小时」判断，是滚动计时。
+   * 玩家今晚 23:00 买满，明早 00:30 再来买，只过了 1.5 小时 → 仍判定为同一天，
+   * 限购不刷新，玩家白白少一天额度。运营意义上的「每日限购」应按自然日跨天算。
+   * 周 / 月同理，改为按自然周、自然月（周一为周起点）。 */
+  _perReset(rec, per, evName) {
+    const now = this.now();
+    /* 【时区严重 BUG 修复】
+     * 原代码：先 new Date(now + 8h) 构造「UTC+8 业务日」，
+     *         却用 getFullYear()/getMonth()/getDate()【本地时区方法】读取。
+     *         → 在 UTC+8 机器上等于又加了 8 小时，实际按 UTC+16 算。
+     * 后果（北京时间，覆盖全部中国玩家）：
+     *   每天 16:00 之后，day key 就翻到【第二天】
+     *   → 限购被提前重置，同一天能买满【两次】；
+     *   → 而真正的第二天，key 已经是「明天」不再变化 → 【反而买不了】。
+     *   实测（限购 2）：9/26 15:00 买 2、9/26 16:30 又买 2、9/27 10:00 买 0。
+     * 月末同理：9/30 16:00 之后 month key 变成 202610 → 每月限购一个月能买两次。
+     * 修法：既然已经 +8h 构造，就必须用 getUTC* 系列读取，才是真正的 UTC+8 业务日。 */
+    const d = new Date(now + 8 * 36e5);          /* UTC+8 业务日 */
+    /* 【周期 key 缺失时的兜底】
+     * 旧写法只看「周期 key 是否等于今天」——记录里没有 key 就一律判定
+     * 「周期变了」，把已购次数 n 清零。正常流程里记录都是买完当场写的、
+     * 一定带 key，所以看不出问题；但存档在本机 localStorage，玩家可以直接
+     * 把 dk / wk / mk 字段删掉：
+     *   实测：achShopBuy={'as_AS01':{n:99}}（限购 10）→ achShopBought() 返回 0，
+     *   兑换【成功】，n 被重置成 1 —— 限购形同虚设，可无限刷。
+     * 修法：key 缺失时改用记录的最后修改时间 rec.t 反推它属于哪一周期；
+     *   t 算出来仍是本期 → 说明这就是本期的记录，保留 n、只补 key；
+     *   t 算出来是上一期 → 确实是新周期，正常清零；
+     *   t 也缺失或落在未来（改钟/手改存档）→ 无法证明已过期，【保留 n】，
+     *   宁可少给额度也不放开通刷。新建记录恒带 t 且 n=0，不受影响。 */
+    const _t = Number(rec && rec.t);
+    const _tOk = isFinite(_t) && _t > 0 && _t <= now + 864e5;
+    const _rd = _tOk ? new Date(_t + 8 * 36e5) : d;
+    if (per === 'day') {
+      const key = d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+      if (rec.dk !== key) {
+        if (_tOk && (_rd.getUTCFullYear() * 10000 + (_rd.getUTCMonth() + 1) * 100 + _rd.getUTCDate()) === key) rec.dk = key;
+        else if (!_tOk) rec.dk = key;
+        else { rec.n = 0; rec.dk = key; rec.t = now; }
+      }
+    } else if (per === 'week') {
+      /* 自然周：以周一为起点 */
+      const _wk = (x) => { const dd = (x.getUTCDay() + 6) % 7; const m = new Date(x.getTime() - dd * 864e5);
+        return m.getUTCFullYear() * 10000 + (m.getUTCMonth() + 1) * 100 + m.getUTCDate(); };
+      const key = _wk(d);
+      if (rec.wk !== key) {
+        if (_tOk && _wk(_rd) === key) rec.wk = key;
+        else if (!_tOk) rec.wk = key;
+        else { rec.n = 0; rec.wk = key; rec.t = now; }
+      }
+    } else if (per === 'month') {
+      const key = d.getUTCFullYear() * 100 + (d.getUTCMonth() + 1);
+      if (rec.mk !== key) {
+        if (_tOk && (_rd.getUTCFullYear() * 100 + (_rd.getUTCMonth() + 1)) === key) rec.mk = key;
+        else if (!_tOk) rec.mk = key;
+        else { rec.n = 0; rec.mk = key; rec.t = now; }
+      }
+    } else if (per === 'once') { /* 终身 */ }
+    /* per: 'ev'（活动期间限购）
+     * BUG：此前 'ev' 不进任何分支 → 计数【永不重置】。
+     *   活动商店 ES05/ES07/ES08/ES09/ES10/ES12 都是 per:'ev'。
+     *   运营的活动是【周期性重开】的（EV02「BOSS突袭」每月1-3日、
+     *   ES09/ES12「节日活动」每逢节日重开），但玩家第一轮买满后
+     *   计数永久锁死 —— 第二轮、第三轮活动再开，老玩家【一件都买不了】，
+     *   攒的活动代币再次变成废纸（代币本身此前也是零产出，已修）。
+     * 修法：① 活动名变了立刻重置（后台改活动/换节日）；
+     *       ② 按自然月兜底重置（配置里 per:'ev' 的活动都是每月/每季重开）。
+     * 注：单机架构拿不到服务端「活动期数」，只能用这两个信号近似，
+     *     若运营改为每周重开同名活动，需把下面改成按自然周。 */
+    else if (per === 'ev') {
+      const mk2 = d.getUTCFullYear() * 100 + (d.getUTCMonth() + 1);
+      if (rec.ev != null && rec.ev !== (evName || '')) { rec.n = 0; rec.t = now; }
+      if (rec.mk !== mk2) {
+        /* 同上：mk 被删掉时不能无条件清零，先用 t 判断是不是本月内的记录 */
+        if (_tOk && (_rd.getUTCFullYear() * 100 + (_rd.getUTCMonth() + 1)) === mk2) rec.mk = mk2;
+        else if (!_tOk) rec.mk = mk2;
+        else { rec.n = 0; rec.mk = mk2; rec.t = now; }
+      }
+      rec.ev = evName || '';
+    }
+    return true;
+  },
+  /* 后台热更 / 运营编辑商品时漏填字段的兜底
+   * 实测三类事故（旧行为）：
+   *   cost 缺失 → `p.ach -= undefined` → 玩家成就点变【NaN】，此后一切购买失效
+   *   cost 负数 → `p.ach -= -100` → 玩家买东西还【倒赚 100 点】，可无限刷
+   *   limit 缺失 → `b[k].n >= undefined` 恒为 false → 【无限购买】
+   * 故价格/限购/奖励三处统一在此收紧。 */
+  safePrice(v) { const n = Number(v); return (isFinite(n) && n >= 0) ? n : null; },
+  safeLimit(v, dft) {
+    const n = Number(v);
+    return (isFinite(n) && n > 0) ? n : (dft == null ? 1 : dft);
+  },
+  validGive(g) {
+    if (!g || typeof g !== 'object' || Array.isArray(g)) return false;
+    const K = Object.keys(g);
+    if (!K.length) return false;
+    /* 收紧：必须【至少有一项能真正发出去】。
+     * 旧实现只判"非空对象"——后台把 item 写成中文名或拼错键时照样放行，
+     * 于是扣完成就点/活动代币，奖励全部掉进 grant 的兜底分支变成垃圾材料键，
+     * 玩家一分没拿到，界面还提示"兑换成功"。这是最伤玩家的一类账实不符。
+     * 这里按 grant 的分发口径逐键判定，全部不可发放时在【扣费之前】拒绝。 */
+    const STR = { title: 1, skin: 1, frame: 1, gem: 1 };
+    /* spirit（军功）：V1.1.0 P-14 起运营活动/补发可发军功，必须进白名单，
+     * 否则后台配了 spirit 奖励会被判"配置异常"而整档拒绝（含同档的金币也拿不到）。 */
+    const RES = { gold: 1, diamond: 1, stamina: 1, ach: 1, evToken: 1, ev: 1, spirit: 1 };
+    const CHIP = /^(chipN|chipE|chipL|chipRed|C0[123]|U0[12])$/;
+    for (let i = 0; i < K.length; i++) {
+      const k = K[i];
+      if (STR[k]) { if (g[k]) return true; continue; }
+      if (RES[k]) { if (this.safeAmt(g[k]) > 0) return true; continue; }
+      if (CHIP.test(k)) { if (this.safeAmt(g[k]) > 0) return true; continue; }
+      if (this.grantKindOf(k)) return true;
+      if (this.matKeyOk(k) && this.safeAmt(g[k]) > 0) return true;
+    }
+    return false;
+  },
+  /* 奖励数量校验（上一轮只收紧了【商店价格】，奖励侧漏了）
+   * 实测三类脏数据（旧行为，p.gold += v 裸加）：
+   *   rw:{gold:'100'}      → gold 由 1000 变成字符串 "1000100"
+   *                          JSON 存档里是 "1000100"，读回来一切算术全 NaN
+   *   rw:{gold:NaN}        → gold = NaN → JSON.stringify 写成 null → 读回 0
+   *                          【玩家金币静默归零】
+   *   rw:{gold:-500}       → 领任务【倒扣 500 金币】
+   *   rw:{gold:Infinity}   → 同上，归零
+   * 后台/热更编辑奖励表时填错类型就会中招，且玩家全程看到"领取成功"。
+   * 规则：非有限值、<=0、字符串数字、对象 → 一律按 0 处理（不发也不扣）；
+   *       超大值封顶 1e12（防 1e21 之类撑爆存档与显示）。 */
+  safeAmt(v) {
+    const n = Number(v);
+    if (!isFinite(n) || n <= 0) return 0;
+    return Math.min(Math.floor(n), 1e12);
+  },
+  /* 奖励表是否有【至少一项】能真正发出去的东西
+   * 用途：claimTask / passClaim 在标记"已领取"【之前】先判一次，
+   *       否则 rw 缺失时任务被永久标记为已领、奖励却一分没发，
+   *       运营修好配置后玩家也再也领不到。 */
+  /* 取一个「必须是对象」的存档字段，污染了就重置
+   * 统一入口，供所有"已领取/已购买"记录字段使用。 */
+  recObj(p, k) {
+    if (!p[k] || typeof p[k] !== 'object' || Array.isArray(p[k])) p[k] = {};
+    return p[k];
+  },
+  rwUsable(rw) {
+    if (!rw || typeof rw !== 'object' || Array.isArray(rw)) return false;
+    const K = Object.keys(rw);
+    if (!K.length) return false;
+    const STR = { title: 1, skin: 1, frame: 1, gem: 1 };
+    for (const k of K) {
+      if (STR[k]) { if (rw[k]) return true; continue; }
+      if (this.safeAmt(rw[k]) > 0) return true;
+    }
+    return false;
+  },
+  /* 唯一性奖励「是否已拥有」校验（成就商店 / 活动商店 / 直购共用）
+   *
+   * BUG（白花货币）：这些入口都是「先扣费、后 grant」，而 grant 内部
+   *   对 skin / title / frame 是 indexOf 判重 —— 已拥有就跳过入库，
+   *   但货币早已扣掉，返回值仍是 ok:true +「兑换成功」。
+   *   实测（成就点 / 活动代币都是玩家肝出来的）：
+   *     已拥有 ach_100 称号 → 买 AS12：扣 500 成就点，称号数 0 变化；
+   *     已拥有 sk_c03c 皮肤 → 买 ES09：扣 1500 代币，皮肤数 0 变化；
+   *     已拥有 ev_frame 头像框 → 买 ES12：扣 800 代币，框数 0 变化。
+   *   三处都提示「兑换成功」，玩家以为买到了，实际什么都没多。
+   * 现在在扣费前拒绝。附带校验芯片背包容量，满了同样不扣费。 */
+  ownedGiveMsg(p, give) {
+    const gv = give || {};
+    if (typeof gv !== 'object' || Array.isArray(gv)) return '';
+    if (gv.skin && (p.skins || []).indexOf(gv.skin) >= 0) return '已拥有该皮肤，无需重复兑换';
+    if (gv.title && (p.titles || []).indexOf(gv.title) >= 0) return '已拥有该称号，无需重复兑换';
+    if (gv.frame && (p.frames || []).indexOf(gv.frame) >= 0) return '已拥有该头像框，无需重复兑换';
+    const hasChip = Object.keys(gv).some((k) => /^chip/.test(k) || /^C0[123]$/.test(k));
+    if (hasChip && this.BAG_MAX && (p.bag || []).length >= this.BAG_MAX) {
+      return '芯片背包已满（' + this.BAG_MAX + ' 颗），请先分解或合成';
+    }
+    return '';
+  },
+  achShopBuyItem(p, id) {
+    const it = (EX.achShop || []).find((x) => x.id === id);
+    if (!it) return { ok: false, msg: '商品不存在' };
+    /* 就地防御：污染成数组/非对象时记录写不进去 → 限购失效，可无限刷 */
+    if (!p.achShopBuy || typeof p.achShopBuy !== 'object' || Array.isArray(p.achShopBuy)) p.achShopBuy = {};
+    const b = p.achShopBuy;
+    const k = this.achShopKey(id);
+    if (!b[k]) b[k] = { n: 0, t: Date.now() };
+    this._perReset(b[k], it.per, it.ev);
+    /* 解锁条件（后台「解锁条件」配的「通关10关」）
+     * 此前 need 恒为 0 且从不校验 —— 运营设了门槛，新玩家照样能直接兑换。 */
+    if (it.need > 0 && Object.keys(p.cleared || {}).length < it.need) {
+      return { ok: false, msg: '需先通关 ' + it.need + ' 关' };
+    }
+    const cost = this.safePrice(it.cost);
+    if (cost === null) return { ok: false, msg: '商品价格配置异常，暂不可兑换' };
+    if (!this.validGive(it.give)) return { ok: false, msg: '商品奖励配置异常，暂不可兑换' };
+    const lim = this.safeLimit(it.limit, 1);
+    if (b[k].n >= lim) return { ok: false, msg: '已达限购次数（' + lim + '）' };
+    /* 已拥有 / 芯片背包满：必须在扣成就点之前拦截（见 ownedGiveMsg 注释） */
+    const ownA = this.ownedGiveMsg(p, it.give);
+    if (ownA) return { ok: false, msg: ownA };
+    if ((p.ach || 0) < cost) return { ok: false, msg: '成就点不足（需 ' + cost + '）' };
+    p.ach -= cost;
+    b[k].n++; b[k].t = Date.now();
+    this.grant(p, it.give);
+    return { ok: true, msg: '兑换成功：' + it.n };
+  },
+  /* 芯片背包容量上限
+   * 存档里「只增不减」的容器此前已逐个封顶：mail 40 / mailGot 300 /
+   * cdkGot 200 / logs 60 / opsDone 300 / noticeRead 200 / chat 与 friendReq
+   * 也有 KEEP 上限。唯独 p.bag（芯片背包）【没有任何上限】：
+   *   战令发、广告抽奖发、关卡掉落发、商店礼包发、兑换码发、GM 后台发，
+   *   全部直接 push，从不判断容量，也从不截断。
+   * 长线玩家每关都掉芯片，bag 只增不减 → 存档持续膨胀，
+   *   且芯片面板按 bag 全量渲染（无分页），堆积后列表越来越长。
+   * 这里统一在「净新增」入口封顶；装备/卸下/合成属于守恒或净减少，不受限制。 */
+  BAG_MAX: 500,
+  /* 统一的芯片入库口：满了返回 false，调用方据此提示玩家先清理 */
+  pushChip(p, c) {
+    if (!c) return false;
+    p.bag = Array.isArray(p.bag) ? p.bag : [];
+    if (p.bag.length >= this.BAG_MAX) return false;
+    p.bag.push(c);
+    return true;
+  },
+  /* 按品质随机产出一颗芯片并放入背包
+   * 白=普通(CH01~03) / 蓝=精英(CH04~05) / 红=传说(CH06~08) */
+  giveChipByQuality(p, q) {
+    const pool = (EX.chips || []).filter((c) => c.q === q);
+    if (!pool.length) return null;
+    const d = pool[Math.floor(Math.random() * pool.length)];
+    const c = this.rollChipById(d.id);
+    p.bag = p.bag || [];
+    if (p.bag.length >= this.BAG_MAX) return null;
+    p.bag.push(c);
+    return c;
+  },
+  /* =========================================================
+   * 称号 / 头像框（此前 grant 写入 p.titles / p.frames 但全项目零读取）
+   * ======================================================== */
+  titleDef(id) { return (EX.titles || []).find((t) => t.id === id) || null; },
+  frameDef(id) { return (EX.frames || []).find((t) => t.id === id) || null; },
+  titleName(id) { const t = this.titleDef(id); return t ? t.n : (id || ''); },
+  frameName(id) { const t = this.frameDef(id); return t ? t.n : (id || ''); },
+  equipTitle(p, id) {
+    if (id && (p.titles || []).indexOf(id) < 0) return { ok: false, msg: '未拥有该称号' };
+    p.title = id || '';
+    return { ok: true, msg: id ? ('已装备称号：' + this.titleName(id)) : '已卸下称号' };
+  },
+  equipFrame(p, id) {
+    if (id && (p.frames || []).indexOf(id) < 0) return { ok: false, msg: '未拥有该头像框' };
+    p.frame = id || '';
+    return { ok: true, msg: id ? ('已装备头像框：' + this.frameName(id)) : '已卸下头像框' };
+  },
+  /* 皮肤购买
+   * BUG：皮肤表 11 款里有 7 款是付费皮肤（680~980 钻），
+   *      但全项目只有 sk_c01b 在「直购」SH08 有入口，
+   *      sk_c03c 在活动商店 ES09、sk_c04b 在排行榜 RK08 ——
+   *      剩下 4 款（sk_c02b 战术套装 / sk_c03b 装甲骑士 /
+   *      sk_c01c 沙漠突击 / sk_c02c 防化服）一个购买入口都没有。
+   *      角色→皮肤页签里它们标着「未拥有」，玩家点上去只会提示
+   *      "尚未拥有"，却根本没地方买 —— 皮肤系统的主要付费内容形同虚设。
+   *      这里补上按皮肤表 price 用钻石购买的入口。 */
+  buySkin(p, id) {
+    const sk = (EX.skins || []).find((x) => x.id === id);
+    if (!sk) return { ok: false, msg: '皮肤不存在' };
+    p.skins = Array.isArray(p.skins) ? p.skins : [];
+    if (p.skins.indexOf(id) >= 0) return { ok: false, msg: '已拥有该皮肤' };
+    /* 角色归属检查（同名覆盖丢失的逻辑）
+     * BUG：本方法与上方 325 行的 buySkin 同名，重复键【后定义生效】，
+     *      而本版本漏了 charUnlocked 检查 —— 结果新号（只解锁 C01）
+     *      能直接买走 C03 的「装甲骑士」680 钻，买完 p.char 仍是 C01、
+     *      p.skin 却是 sk_c03b：外观穿错角色，而皮肤加成却照常生效
+     *      （实测护甲 0 → 4），等于花一份钱拿到不属于本角色的属性。
+     * 现在补回归属检查并给出明确提示。 */
+    if (sk.char && !this.charUnlocked(p, sk.char)) {
+      const c = EX.chars.find((x) => x.id === sk.char);
+      return { ok: false, msg: '需先解锁角色「' + (c ? c.n : sk.char) + '」' };
+    }
+    const price = Number(sk.price) || 0;
+    if (price <= 0) return { ok: false, msg: '该皮肤无法购买' };
+    if ((p.diamond || 0) < price) return { ok: false, msg: '钻石不足（需 ' + price + '）' };
+    p.diamond -= price;
+    p.skins.push(id);
+    /* 买的是别的角色的皮肤时【不自动改穿】：否则 C01 身上会出现
+     * sk_c03b 的立绘（外观穿错角色），而皮肤加成照常生效。
+     * 只入库存，切到该角色时由 switchChar 自动穿上。 */
+    if (!sk.char || sk.char === p.char) this.setSkin(p, id);
+    /* 同步图鉴（此前靠 codexBackfill 在读档时补，购买后即时补上） */
+    try { this.codexUnlock(p, 'skin', id); } catch (e) {}
+    if (sk.char && sk.char !== p.char) {
+      const c = EX.chars.find((x) => x.id === sk.char);
+      return { ok: true, msg: '已购买「' + sk.n + '」，切换到「' + (c ? c.n : sk.char) + '」后自动穿戴' };
+    }
+    return { ok: true, msg: '已购买并穿戴「' + sk.n + '」' };
+  },
+
+  /* 通用发放 */
+  /* 反查一个裸 id 属于哪张外观表：皮肤 / 宝石 / 称号 / 头像框。
+   * 返回 grant 认识的分发键（'skin'/'gem'/'title'/'frame'），不属于则返回 ''。
+   * 后台运营发放与热更配置都可能直接写裸 id，靠这里兜住。 */
+  grantKindOf(id) {
+    if (!id || typeof id !== 'string') return '';
+    const has = (arr) => Array.isArray(arr) && arr.some((x) => x && x.id === id);
+    if (has(EX.skins)) return 'skin';
+    if (has(EX.gems)) return 'gem';
+    if (has(EX.titles)) return 'title';
+    if (has(EX.frames)) return 'frame';
+    return '';
+  },
+  /* 一个键是否为"真实可发放的物品"
+   * 用于 grant 兜底分支的白名单，以及兑换前的奖励合法性校验。
+   * EX.items 为空（配置尚未加载 / 拉取失败）时一律放行，避免误伤正常发放。 */
+  matKeyOk(k) {
+    if (!k || typeof k !== 'string') return false;
+    const items = EX.items || [], chips = EX.chips || [];
+    if (!items.length && !chips.length) return true;
+    for (let i = 0; i < items.length; i++) if (items[i] && items[i].id === k) return true;
+    for (let i = 0; i < chips.length; i++) if (chips[i] && chips[i].id === k) return true;
+    /* 皮肤 / 宝石 / 称号 / 头像框的裸 id */
+    if (this.grantKindOf(k)) return true;
+    return false;
+  },
+  grant(p, give) {
+    if (!give) return 0;
+    /* 类型守卫
+     * BUG（会写脏数据）：表22 活动表里 rw 是【描述字符串】如 '活动代币 + 芯片'。
+     * Object.keys('活动代币 + 芯片') 返回 ['0','1','2'...]，
+     * 于是 grant 会走进 else 分支执行 p.mat['0'] = '活'、p.mat['1'] = '动'……
+     * 结果：点领奖什么也拿不到，还往材料背包里塞进一堆汉字垃圾键。
+     * 活动表已把描述改到 rwDesc、真正奖励改为 rw 对象；这里再加一层防御。 */
+    if (typeof give !== 'object' || Array.isArray(give)) return 0;
+    p.mat = p.mat || {};
+    /* 返回本次【实际】发出的总量（0 = 一项都没发出去）。
+     * 调用方可用它判断"是否真的发到了"，避免"提示成功但什么都没给"。 */
+    let _got = 0;
+    Object.keys(give).forEach((k) => {
+      if (k === 'gold') { const n = this.safeAmt(give[k]); if (n > 0) { p.gold = (p.gold || 0) + n; _got += n; } }
+      else if (k === 'diamond') { const n = this.safeAmt(give[k]); if (n > 0) { p.diamond = (p.diamond || 0) + n; _got += n; } }
+      /* 体力（唯一有上限的资源）
+       * BUG：此处原写 `_got += n` 无条件累加，而体力被 STAMINA_MAX(100) 钳制。
+       *   实测：满体力 100/100 时 grant({stamina:30}) → 体力纹丝不动，却返回 30；
+       *         90/100 时发 30 → 实际只入账 10，同样返回 30。
+       *   后果：邮件、运营补发、兑换码、活动奖励、任务奖励、成就商店等所有
+       *         经 grant 发体力的入口，对体力已满的玩家都会提示"领取成功"，
+       *         而玩家一点体力都没拿到（活动商店已单独前置拦截，其余入口全中）。
+       *   现在按【实际入账】计数，返回值语义恢复正确。 */
+      else if (k === 'stamina') {
+        const n = this.safeAmt(give[k]);
+        if (n > 0) {
+          const _b = Number(p.stamina) || 0;
+          p.stamina = Math.min(EX.STAMINA_MAX, _b + n);
+          _got += (p.stamina - _b);
+        }
+      }
+      /* 成就点（表33）
+       * BUG：claimTask 里单独处理了 ach，但 grant() 没有该分支，
+       *      于是图鉴解锁奖励 codexRw { gold:100, ach:5 } 经 grant 发放时，
+       *      ach 掉进 else 写进 p.mat['ach'] —— 而成就商店读的是 p.ach。
+       * 结果：界面写着「解锁奖励 +5 成就点」，实际成就点一分没加。 */
+      else if (k === 'ach') { const n = this.safeAmt(give[k]); if (n > 0) { p.ach = (p.ach || 0) + n; _got += n; } }
+      /* 军功（V1.1.0 P-14）：运营活动/补发/任务奖励可发军功。
+       * 此前 grant 无此分支 → spirit 掉进 else 写进 p.mat['spirit']，
+       * 而军衔读的是 p.spirit，玩家一分拿不到、界面却提示"领取成功"。 */
+      else if (k === 'spirit') { const n = this.addSpirit(p, give[k]); _got += n; }
+      /* 活动代币（表43 活动商店的唯一货币）
+       * BUG：evToken 全项目只有扣减（活动商店消费 engine.js:1180），
+       *      从来没有任何一个地方发放 → 玩家代币恒为 0，
+       *      表43 十二项商品（含传说芯片、限定皮肤、钻石、体力）一件都买不了。
+       * 同时累计到 p.evScore 作为「活动冲榜」积分：
+       *      p.evScore 此前从未赋值 → 活动冲榜排名恒 0
+       *      → 表33 的 RK08/RK09/RK10 三个奖励（第1名皮肤、传说芯片、钻石）
+       *        判定 inRank 恒为 false，玩家一次都领不到。 */
+      else if (k === 'evToken' || k === 'ev') {
+        const n = this.safeAmt(give[k]);
+        if (n > 0) { p.evToken = (p.evToken || 0) + n; p.evScore = (p.evScore || 0) + n; _got += n; }
+      }
+      /* 消耗品别名兼容（防御）
+       * 表16 文档里用 U01/U02 编号，而物品表真实 ID 是 I01/I02（急救包/护盾发生器）。
+       * 成就商店 AS05/AS06 曾配成 give:{U01:1}/{U02:1}，兑换提示"成功"，
+       * 实际写进 p.mat['U01']，而消耗品使用与背包只读 I01/I02
+       * → 花 80/100 成就点兑换，背包消耗页永远 ×0，点了提示"数量不足"。
+       * 配置已改为 I01/I02，这里再加一层别名映射，防止后台/热更再写回 U0x。 */
+      else if (k === 'U01' || k === 'U02') {
+        const real = 'I' + k.slice(1);
+        const n = this.safeAmt(give[k]);
+        if (n > 0) { p.mat[real] = (p.mat[real] || 0) + n; _got += n; }
+      }
+      else if (k === 'title') { const v = give[k]; if (typeof v === 'string' && v) { p.titles = p.titles || []; if (p.titles.indexOf(v) < 0) p.titles.push(v); _got++; } }
+      /* 皮肤
+       * BUG（会崩溃）：此处原写 `p.skin = p.skin || []; p.skin.push(...)`。
+       * 但 p.skin 是【当前穿戴皮肤 ID】的字符串（newPlayer 里 'sk_c01a'），
+       * 拥有的列表才叫 p.skins（数组）。字符串没有 .push，
+       * → 一旦奖励里带 skin 就抛 "p.skin.push is not a function"，
+       *   不仅皮肤拿不到，Object.keys(give).forEach 整个中断，
+       *   同一份奖励里的其他物品也全部丢失。
+       * 例如商城 SH08「废土战甲皮肤」(68元) 购买即崩。
+       * 现在写入 p.skins 并自动穿戴。 */
+      else if (k === 'skin') {
+        const sid = give[k];
+        if (typeof sid === 'string' && sid) {
+          p.skins = p.skins || [];
+          if (p.skins.indexOf(sid) < 0) p.skins.push(sid);
+          /* 同上：发放的皮肤若不属于当前角色，只入库不改穿 */
+          const gsk = (EX.skins || []).find((x) => x.id === sid);
+          if (!gsk || !gsk.char || gsk.char === p.char) this.setSkin(p, sid);
+          _got++;
+        }
+      }
+      /* 头像框：走 grantFrame（已知性校验 + 去重），不再裸 push。
+       * BUG：此前这里直接 p.frames.push(v)，只判非空字符串、不校验 id 是否存在，
+       *   后台把 frame 配错（如填中文名或拼错 id）会写进 p.frames，
+       *   玩家头像框列表里出现一格永远渲染不出来的垃圾数据，且无法删除。
+       *   —— 与 V1.0.2 给 grant() 加奖励键白名单同源，那次管的是键名 k，
+       *     这次补的是 frame 的取值 v。
+       *   grantFrame 已含校验但此前【零调用】（死代码），这里接上。 */
+      else if (k === 'frame') { if (this.grantFrame(p, give[k])) _got++; }
+      /* 武器直发（v1.0 新手7日 D7 送 W02 散弹）
+       * 走 unlockGun 而不是直接塞 gunOwn：unlockGun 内部会做图鉴解锁，
+       * 否则玩家拿到武器但图鉴里那一格永远是问号。 */
+      else if (k === 'gun') {
+        const gid = give[k];
+        if (typeof gid === 'string' && gid) {
+          try {
+            const r = this.unlockGun(p, gid);
+            if (r && r.ok) { _got++; try { this.codexUnlock(p, 'gun', gid); } catch (e) {} }
+          } catch (e) {}
+        }
+      }
+      /* 可镶嵌宝石：give: { gem: 'G_R' } → p.gems['G_R'] += 1
+       * 修复：此前商城「红宝石/蓝宝石/绿宝石/紫宝石」发放的是 M05 材料，
+       *       买了之后在宝石页永远显示数量 0，镶嵌/合成功能完全用不了 */
+      else if (k === 'gem') {
+        const gid = give[k];
+        if (typeof gid === 'string' && gid) { p.gems = p.gems || {}; p.gems[gid] = (p.gems[gid] || 0) + 1; _got++; }
+      }
+      /* 芯片包（表32/表35）：chipN 普通 / chipE 精英 / chipL·chipRed 传说
+       * BUG：这四个 key 此前会掉进 else 分支写进 p.mat['chipE']，
+       *       而芯片真实存放在 p.bag（物品对象数组），芯片面板只读 p.bag。
+       * 结果：周礼包(300钻)、月度超值(680钻)、BOSS首杀、传说芯片包(98元)、
+       *       战令50级 给的芯片全部"到账"但芯片页永远显示 0，无法装备/合成。
+       * 现在按品质随机roll出真实芯片对象推进 p.bag。 */
+      /* 品质码芯片（表33 排名奖励 / BOSS 掉落）：C01 白 / C02 蓝 / C03 红
+       * BUG：这三个 key 此前掉进 else 写进 p.mat['C03']，
+       *      而芯片真实存放在 p.bag → 领了排名奖励，芯片页永远 0 颗。
+       * 注意 C01~C04 同时也是【角色 ID】，但角色不会通过 grant 发放
+       * （角色靠通关解锁），此处按芯片品质码处理是安全的。 */
+      else if (k === 'C01' || k === 'C02' || k === 'C03') {
+        const q = k === 'C01' ? '白' : k === 'C02' ? '蓝' : '红';
+        const n = Math.max(1, Math.min(50, this.safeAmt(give[k]) || 1));
+        /* 按【实际入库】计数：giveChipByQuality 在背包满时返回 null，
+         * 此前 _got += n 无条件累加 —— 实测满 500 时 grant({chipL:3}) 返回 3，
+         *   背包仍是 500，调用方据此认为"3 颗已到账"，提示成功但一颗没给。 */
+        let gotC = 0;
+        for (let i = 0; i < n; i++) if (this.giveChipByQuality(p, q)) gotC++;
+        _got += gotC;
+      }
+      else if (k === 'chipN' || k === 'chipE' || k === 'chipL' || k === 'chipRed') {
+        const q = (k === 'chipN') ? '白' : (k === 'chipE') ? '蓝' : '红';
+        const n = Math.max(1, Math.min(50, this.safeAmt(give[k]) || 1));
+        let gotC = 0;
+        for (let i = 0; i < n; i++) if (this.giveChipByQuality(p, q)) gotC++;
+        _got += gotC;
+      }
+      /* 皮肤 / 宝石 / 称号 / 头像框 的【裸 id 形态】
+       * BUG：后台「运营发放」的下拉里，皮肤、宝石、称号、头像框是以它们自己的
+       * id 作为发放键的（U.itemList() 直接把 s.id / g.id / t.id / f.id 列为 item）。
+       * 而 applyOp 的构造是 `g[op.item] = op.n` → grant({ 'sk_c01b': 1 })，
+       * 这四个键都不匹配上面的 skin/gem/title/frame 分支，直接掉进通用材料分支：
+       *   实测发放「皮肤 sk_c01b」→ p.skins 仍为空，却多出 p.mat['sk_c01b'] = 1；
+       *   宝石 G_R / 称号 ach_100 / 头像框 ev_frame 同理全部变成垃圾材料键。
+       * 后果：运营点了发放、后台提示成功、玩家什么都没收到，背包还被污染。
+       * 这里按 id 反查归属表，路由到正确的分支（n 视为数量，限 1~50）。 */
+      else if (this.grantKindOf(k)) {
+        const kind = this.grantKindOf(k);
+        const n = Math.max(1, Math.min(50, this.safeAmt(give[k]) || 1));
+        for (let i = 0; i < n; i++) {
+          const one = {}; one[kind] = k;
+          _got += this.grant(p, one) ? 1 : 0;
+        }
+      }
+      /* 通用材料：同样先过 safeAmt。
+       * 旧行为 p.mat[k] += give[k]，字符串会拼成 "1000abc"、NaN 会毁掉整个背包。 */
+      else {
+        const n = this.safeAmt(give[k]);
+        if (n > 0) {
+          /* 【未知键白名单拦截】
+           * 此前任何键都会无条件写进 p.mat —— 配置里写个中文名或拼错的键
+           * （如 { '钻石': 100 }、{ 'diamon': 100 }），就会往材料背包塞一个
+           * 垃圾键：p.mat['钻石']=100。玩家在背包里永远看不到它、也用不了，
+           * 而发放方（成就商店/活动商店/排名奖励/运营补发）照样提示"兑换成功"。
+           * 实测：花 400 成就点兑换，成就点照扣，p.ach -400，到账的是 p.mat 里
+           * 一个没人认识的键 —— 纯粹的白扣。
+           * 现在只对"物品表里真实存在"的键放行，其余一律跳过且【不计入 _got】，
+           * 调用方据此能拿到 0，从而不再谎报成功。
+           * 注意：EX.items 为空（配置未加载）时不做拦截，避免误伤正常发放。 */
+          if (!this.matKeyOk(k)) { console.warn('[grant] 忽略未知物品键：' + k); return; }
+          p.mat[k] = (p.mat[k] || 0) + n; _got += n;
+        }
+      }
+    });
+    return _got;
+  },
+
+  /* =========================================================
+   * 活动商店（表43：消耗活动代币）
+   * ======================================================== */
+  eventShopBuy(p, id) {
+    const it = (EX.eventShop || []).find((x) => x.id === id);
+    if (!it) return { ok: false, msg: '商品不存在' };
+    /* 体力类商品满体力拦截（ES11「体力x30」60 代币）
+     * BUG：grant() 里体力走 addStamina，被 STAMINA_MAX(100) 钳制。
+     *   实测体力 100/100 时兑换 ES11：代币 999→939 照扣，
+     *   体力 100→100 一点没加，还弹「兑换成功：体力x30」。
+     *   玩家花 60 代币换来一句假成功 —— 与「战斗外用急救包」同一类白扣。
+     *   修法：兑换前先判满，满了直接拒绝并说明原因（代币不扣）。 */
+    if (it.give && it.give.stamina && this.staminaFull(p)) {
+      return { ok: false, msg: '体力已满（' + EX.STAMINA_MAX + '），无需兑换' };
+    }
+    const b = this.recObj(p, 'evShopBuy');
+    const k = 'es_' + id;
+    if (!b[k]) b[k] = { n: 0, t: Date.now() };
+    this._perReset(b[k], it.per, it.ev);
+    /* 同 achShopBuyItem：后台漏填 cost/limit/give 会分别导致
+     * 货币变 NaN / 无限购买 / 扣了代币却什么都没发。 */
+    const cost = this.safePrice(it.cost);
+    if (cost === null) return { ok: false, msg: '商品价格配置异常，暂不可兑换' };
+    if (!this.validGive(it.give)) return { ok: false, msg: '商品奖励配置异常，暂不可兑换' };
+    const lim = this.safeLimit(it.limit, 1);
+    if (b[k].n >= lim) return { ok: false, msg: '已达限购次数（' + lim + '）' };
+    /* 同上：扣代币之前拦截，避免已拥有的皮肤/头像框重复扣费 */
+    const ownE = this.ownedGiveMsg(p, it.give);
+    if (ownE) return { ok: false, msg: ownE };
+    if ((p.evToken || 0) < cost) return { ok: false, msg: '活动代币不足（需 ' + cost + '）' };
+    p.evToken -= cost;
+    b[k].n++; b[k].t = Date.now();
+    this.grant(p, it.give);
+    return { ok: true, msg: '兑换成功：' + it.n };
+  },
+
+  /* =========================================================
+   * 排行榜奖励（表33：按排名发奖到邮件）
+   * ======================================================== */
+  rankRewardFor(board, rank) {
+    const list = (EX.rankRewards || []).filter((x) => x.board === board);
+    const hit = list.find((x) => rank >= x.lo && rank <= x.hi);
+    return hit || null;
+  },
+  /* 小时 key（UTC+8，与 dailyKey/weekKey 同一业务日基准） */
+  hourKey() {
+    const d = new Date(this.now() + 8 * 36e5);
+    return d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate() + '-' + d.getUTCHours();
+  },
+  /* 【排行榜奖励周期 key】
+   * 严重 BUG 修复：表33 明确写了 cyc='每小时' / '每日' / '活动结束'，
+   * 但领取记录 key 只有 `rk_榜名_奖励id`，完全没有周期维度 ——
+   * cyc 此前只用于显示（「每小时结算」），实际能不能领全看这条一次性标记。
+   * 后果：
+   *   「每小时」结算 → 玩家一天只能领 1 次（而不是每小时 1 次）
+   *   「每日」结算   → 领过一次后永久不能再领，第二天也不会刷新
+   * 「活动结束 / 每期」游戏端无期数概念，保守保持领一次（pk='all'）。
+   * 现在把周期序号拼进 key，到新周期即可重新领取。 */
+  rankRwKey(p, board, rw) {
+    const cyc = String((rw && rw.cyc) || '每期');
+    let pk;
+    if (cyc.indexOf('每小时') >= 0) pk = 'h' + this.hourKey();
+    else if (cyc.indexOf('每日') >= 0 || /^1\s*天$/.test(cyc)) pk = 'd' + this.dailyKey();
+    else if (cyc.indexOf('每周') >= 0) pk = 'w' + this.weekKey();
+    else if (/^(\d+)\s*天$/.test(cyc)) {
+      const n = Number(RegExp.$1) || 1;
+      pk = 'n' + Math.floor((this.now() + 8 * 36e5) / 864e5 / n);
+    } else pk = 'all';   /* 活动结束 / 每期：不区分周期 */
+    return 'rk_' + board + '_' + rw.id + '_' + pk;
+  },
+  claimRankRw(p, board, rank) {
+    const rw = this.rankRewardFor(board, rank);
+    if (!rw) return { ok: false, msg: '该名次无奖励' };
+    const key = this.rankRwKey(p, board, rw);
+    /* 就地防御：污染成字符串/数字时赋值失效 → 排名奖励可重复领取 */
+    if (!p.rankRwGot || typeof p.rankRwGot !== 'object' || Array.isArray(p.rankRwGot)) p.rankRwGot = {};
+    if (p.rankRwGot[key]) return { ok: false, msg: '本期已领取过该奖励' };
+    /* 同上：奖励键无效时不要先记已领，否则本期名额白白作废 */
+    if (!this.validGive(rw.rw)) return { ok: false, msg: '该名次奖励配置异常，暂不可领取' };
+    /* 清理同一奖励的旧周期记录：避免 rankRwGot 随天数/小时无限膨胀 */
+    const prefix = 'rk_' + board + '_' + rw.id + '_';
+    Object.keys(p.rankRwGot).forEach((k) => {
+      if (k.indexOf(prefix) === 0 && k !== key) delete p.rankRwGot[k];
+    });
+    p.rankRwGot[key] = 1;
+    this.grant(p, rw.rw);
+    return { ok: true, msg: '领取 ' + board + ' ' + rw.rank + ' 奖励成功！' };
+  },
+
+  /* =========================================================
+   * 图鉴收集（表29：首次解锁领奖）
+   * ======================================================== */
+  /* 图鉴回填：玩家已拥有但历史未记账的武器/皮肤，一次性补录
+   * 修复：此前只有怪物击杀会解锁图鉴，武器(10条)/皮肤(11条)永远为 0 */
+  codexBackfill(p) {
+    if (!p.codex || typeof p.codex !== 'object') p.codex = {};
+    let n = 0;
+    const add = (kind, id) => {
+      if (!id) return;
+      /* 就地防御：sanitize 只在登录时跑，后台 GM 热改档会绕过它把子项写成
+       * 0 / {} 之类，这里直接归数组，避免 indexOf 抛异常让回填静默失效。 */
+      if (!Array.isArray(p.codex[kind])) p.codex[kind] = [];
+      if (p.codex[kind].indexOf(id) < 0) { p.codex[kind].push(id); n++; }
+    };
+    (p.gunOwn || []).forEach((g) => add('gun', g));
+    (p.skins || []).forEach((sk) => add('skin', sk));
+    return n;
+  },
+  /* 图鉴解锁条件提示
+   * BUG：图鉴面板此前给「未解锁」格子挂了 data-cdx，点击直接调 codexUnlock
+   *      解锁并发奖。新号可把三个图鉴共 30 个未解锁条目一口气点完，
+   *      白拿 5900 金币 + 295 成就点（初始金币才 2000、成就点 0），
+   *      收集系统与成就商店经济全部失衡。
+   * 现在未解锁格子只提示真实解锁途径，不再发放任何奖励。 */
+  codexHint(p, kind, id) {
+    if (kind === 'zombie') return '❔ 击败该怪物后自动解锁图鉴';
+    if (kind === 'gun') return '❔ 装备该武器后自动解锁图鉴';
+    if (kind === 'skin') return '❔ 获得该皮肤后自动解锁图鉴';
+    return '❔ 未解锁';
+  },
+  /* 只允许由真实获得途径调用（击杀 / 装备武器 / 获得皮肤），
+   * 不得由面板点击直接调用，否则图鉴奖励等于无限白嫖。 */
+  codexUnlock(p, kind, id) {
+    if (!p.codex || typeof p.codex !== 'object') p.codex = {};
+    /* 同上：就地归一，避免热改档写入非数组后 push/indexOf 抛异常 */
+    if (!Array.isArray(p.codex[kind])) p.codex[kind] = [];
+    if (p.codex[kind].indexOf(id) >= 0) return { ok: false, msg: '', already: true };
+    p.codex[kind].push(id);
+    const rw = (EX.codexRw || {})[kind] || {};
+    this.grant(p, rw);
+    return { ok: true, msg: '图鉴解锁！+' + (rw.gold || 0) + ' 金币', rw: rw };
+  },
+  codexCount(p) {
+    const c = (p && typeof p.codex === 'object' && p.codex) || {};
+    let got = 0, all = 0;
+    (EX.codexKinds || []).forEach((k) => {
+      const list = EX.codexOf(k.k) || [];
+      all += list.length;
+      /* 非数组子项（历史脏档的 0 / {}）按 0 计，绝不能让 got 累加出 NaN
+       * —— 这个值是游戏端与后台共用的唯一真源，NaN 会一路污染到后台页面 */
+      const arr = Array.isArray(c[k.k]) ? c[k.k] : [];
+      got += arr.length;
+    });
+    return { got: got, all: all };
+  },
+
+  /* =========================================================
+   * 统一统计口径（游戏端与后台的唯一真源）
+   *
+   * 此前两端各算各的，同一名玩家在两边看到的数字对不上：
+   *   · 通关进度：游戏端按星级累加（E.totalStars），
+   *     后台按 Object.keys(p.cleared).length（关卡数）→ 完全两个数
+   *   · 皮肤数：游戏端 (p.skins||[]).length，历史存档被写成 {id:1} 对象时
+   *     直接抛 ".map is not a function" 让后台整页白屏
+   *   · 图鉴完成度 / 连续签到天数：游戏端有，后台压根不显示
+   *   · 榜单行：游戏端上传 10 个键，后台"重建榜单"只写 4~5 个键，
+   *     重建后游戏端读不到 eb / pw → 全服无尽层数显示 0（严重）
+   *
+   * 现在统一由 E.stats() / E.rankRow() 产出，两端一律调用这两个方法，
+   * 任何一端再加"自己算一遍"的分支都会重新引入口径分裂。
+   * ========================================================= */
+
+  /* p.skins 兼容三种形态：正常数组 / 历史脏档对象 {id:1} / 缺失 */
+  skinArr(p) {
+    const v = p && p.skins;
+    if (Array.isArray(v)) return v;
+    if (v && typeof v === 'object') return Object.keys(v).filter((k) => v[k]);
+    return [];
+  },
+
+  stats(p) {
+    p = p || {};
+    const st = p.stats || {};
+    const cc = this.codexCount(p);
+    return {
+      power: this.power(p),
+      lv: this.curLevel(p),
+      endlessBest: Number(p.endlessBest || 0),
+      /* 通关进度：关卡数与星级是两个口径，同时给出，任一端不得自行换算 */
+      clearedCount: Object.keys(p.cleared || {}).length,
+      totalStars: this.totalStars(p),
+      skinCount: this.skinArr(p).length,
+      skinAll: (EX.skins || []).length,
+      codexGot: cc.got, codexAll: cc.all,
+      signDays: Number(p.signDays || 0),
+      signDay: Number(p.signDay || 0),
+      kills: Number(st.kills || 0),
+      bossKill: Number(st.bossKill || 0),
+      runs: Number(st.runs || 0),
+      titleCount: (Array.isArray(p.titles) ? p.titles : []).length,
+      evScore: Number(p.evScore || 0),
+      gunLv: Number(p.gunLv || 1),
+      gunAdv: Number(p.gunAdv || 0),
+      chipCount: Object.keys(p.chips || {}).length,
+      gold: Number(p.gold || 0),
+      diamond: Number(p.diamond || 0),
+      ach: Number(p.ach || 0),
+    };
+  },
+
+  /* 榜单行合并：只增字段取大值（历史最佳），展示字段取较新的一份。
+   * 两端共用：游戏端上传用它做"旧快照不回退别人成绩"，
+   * 后台重建榜单用它做"读不到存档的玩家不被除名"。 */
+  mergeRankRow(old, row) {
+    if (!old || typeof old !== 'object') return row;
+    const oAt = Number(old.at || 0), nAt = Number(row.at || 0);
+    const newer = nAt >= oAt ? row : old;
+    const mx = (a, b) => Math.max(Number(a || 0), Number(b || 0));
+    return {
+      uid: row.uid || old.uid, u: row.uid || old.uid,
+      name: newer.name != null ? newer.name : old.name,
+      n: newer.n != null ? newer.n : old.n,
+      lv: newer.lv != null ? newer.lv : old.lv,
+      pw: newer.pw != null ? newer.pw : old.pw,
+      eb: mx(old.eb, row.eb), t: mx(old.t, row.t),
+      ev: mx(old.ev, row.ev),
+      at: Math.max(oAt, nAt),
+    };
+  },
+
+  /* 榜单行：一次写全套键，兼容两端各自的读取习惯。
+   * 游戏端面板读 u / n / eb / pw / ev / lv，后台读 uid / name / t / pw。
+   * 只写半套键的后果是"重建榜单后另一端读到 undefined 显示为 0"。 */
+  rankRow(p) {
+    p = p || {};
+    const pwv = this.power(p), ebv = Number(p.endlessBest || 0), evv = Number(p.evScore || 0);
+    const lvv = this.curLevel(p), at = Date.now();
+    return {
+      uid: p.uid, u: p.uid,
+      name: p.name, n: p.name,
+      lv: lvv, pw: pwv,
+      eb: ebv, t: ebv,
+      ev: evv, at: at,
+    };
+  },
+
+  /* =========================================================
+   * 武器词条（表30 武器词条池 AF01~AF12）
+   * 进阶解锁词条槽，可消耗钻石洗练
+   * ======================================================== */
+  /* 词条槽位 = 武器自带槽位(表44 slots) + 进阶加成
+   * BUG修复：此前只读 gunAdvance[白阶].slot = 0，与生成词条所用的
+   *          gunSlots(武器表 slots=2) 不一致，导致明明有 2 条词条却
+   *          提示"需先进阶武器才解锁词条槽"，洗练功能完全不可用 */
+  gunAffixSlots(p, gunId) {
+    const base = this.gunSlots(p);                    /* 武器自带槽位 */
+    const adv = clamp(4, 0, p.gunAdv || 0);
+    const row = (EX.gunAdvance || [])[adv];
+    const byAdv = row ? (row.slot || 0) : 0;
+    return Math.max(base, byAdv);
+  },
+  rollGunAffix(p, gunId) {
+    const pool = EX.gunStats || [];
+    /* 按品质加权：蓝 60% / 紫 30% / 红 10% */
+    const r = Math.random();
+    const q = r < 0.60 ? '蓝' : r < 0.90 ? '紫' : '红';
+    const cand = pool.filter((x) => x.q === q);
+    const list = cand.length ? cand : pool;
+    const a = list[Math.floor(Math.random() * list.length)];
+    return { id: a.id, k: a.k, n: a.n, q: a.q, v: a.base };
+  },
+  gunAffixBonus(p) {
+    const out = { dmg: 0, rate: 0, crit: 0, critDmg: 0, pierce: 0, lifesteal: 0,
+      mag: 0, reload: 0, blastR: 0, pierce2: 0, double: 0, extraB: 0 };
+    const gid = p.gunId || 'W01';
+    const aff = (p.gunAffix || {})[gid] || [];
+    aff.forEach((a) => { if (a && out[a.k] != null) out[a.k] += a.v; });
+    return out;
+  },
+  /* 洗练：消耗钻石重随机全部词条 */
+  /* 旧入口：此前写入 p.gunStats，而属性计算 gunAffixBonus 读的是
+   *          p.gunAffix[gid] —— 两套存储导致洗练后属性完全不变。
+  /* 【BUG修复三连】此前本函数转发到 rerollAffix(p,false)，造成三个错位：
+   *   ① 按钮标「💎20（钻石）」，实际扣的是 EX.AFFIX_REROLL_GOLD = 5000 金币
+   *   ② 本按钮位于【进阶词条】卡片内、操作对象应是 p.gunStats，
+   *      实际改写的却是 p.gunAffix（普通词条）→ 玩家看到那一栏纹丝不动
+   *   ③ 面板说明「按品质加权 蓝60%/紫30%/红10%」，而 rollAffixOne(false)
+   *      直接排除红品质（实测 蓝38%/紫62%/红0%）→ 永远洗不出红
+   * 现改为：洗【已解锁的进阶词条槽】，扣钻石 REROLL_GUN_COST，
+   * 品质加权走 rollGunAffix（真正的 60/30/10）。 */
+  rerollGun(p, gunId) {
+    const gid = gunId || p.gun || 'W01';
+    /* 只重随机【已解锁】的槽位；未进阶时 gunStats 为空，直接拒绝，
+     * 避免花掉资源却什么都没洗出来（此前 slots 恒 ≥2 使按钮永不禁用）。 */
+    const unlocked = Object.keys(p.gunStats || {}).filter((k) => p.gunStats[k]);
+    if (!unlocked.length) return { ok: false, msg: '需先进阶武器才解锁词条槽' };
+    const cost = EX.REROLL_GUN_COST || 20;
+    if ((p.diamond || 0) < cost) return { ok: false, msg: EX.tip('popup.noDiamond', { v: cost }) };
+    p.diamond -= cost;
+    const adv = this.advOf(p.gunLv);
+    const names = [];
+    unlocked.forEach((k) => {
+      const st = this.rollGunAffix(p, gid);
+      p.gunStats[k] = { id: st.id, k: st.k, n: st.n, q: st.q, v: +(st.v * (1 + adv * 0.5)).toFixed(4) };
+      names.push(st.n);
+    });
+    try { this.logAct(p, 'gun', '洗练进阶词条：' + names.join('、')); } catch (e) {}
+    return { ok: true, msg: '洗练完成！' + names.join('、') };
+  },
+  rerollGunOld(p, gunId) {
+    const gid = gunId || p.gun || 'W01';
+    const slots = this.gunAffixSlots(p, gid);
+    if (slots <= 0) return { ok: false, msg: '需先进阶武器才解锁词条槽' };
+    const cost = EX.REROLL_GUN_COST || 20;
+    if ((p.diamond || 0) < cost) return { ok: false, msg: EX.tip('popup.noDiamond', { v: cost }) };
+    p.diamond -= cost;
+    p.gunStats = p.gunStats || {};
+    /* 与进阶解锁保持同一套 key：s1 ~ s{slot} */
+    const names = [];
+    for (let i = 1; i <= slots; i++) {
+      const st = this.rollGunAffix(p, gid);
+      const adv = this.advOf(p.gunLv);
+      p.gunStats['s' + i] = { id: st.id, k: st.k, n: st.n, q: st.q, v: +(st.v * (1 + adv * 0.5)).toFixed(4) };
+      names.push(st.n);
+    }
+    return { ok: true, msg: '洗练成功！获得 ' + names.join('、') };
+  },
+  /* 进阶时自动补齐新解锁槽位的词条 */
+  fillGunAffix(p, gunId) {
+    const slots = this.gunAffixSlots(p, gunId);
+    p.gunAffix = p.gunAffix || {};
+    const cur = p.gunAffix[gunId] || [];
+    while (cur.length < slots) cur.push(this.rollGunAffix(p, gunId));
+    cur.length = slots;
+    p.gunAffix[gunId] = cur;
+    return cur;
+  },
+
+  /* =========================================================
+   * 新手引导（表21：12 个引导节点）
+   * ======================================================== */
+  guideDone(p, id) {
+    p.guide = p.guide || {};
+    if (p.guide[id]) return false;
+    p.guide[id] = 1;
+    return true;
+  },
+  guideNext(p) {
+    /* 返回下一个未完成且已满足触发条件的强制引导 */
+    const g = (EX.guides || []).find((x) => x.must && !(p.guide || {})[x.id]);
+    return g || null;
+  },
+
+  /* =========================================================
+   * 武器词条系统（表30 AF01~AF12 + 表44 词条槽位）
+   * ======================================================== */
+  /* =========================================================
+   * 宝箱开箱 / 活动掉落（表31 DR11 / DR12）
+   * ======================================================== */
+  /* =========================================================
+   * 背包碎片分解（表05 第9项：分解碎片 → 金币）
+   * ======================================================== */
+  DISMANTLE_RATE: { P01: 60, P02: 120, C01: 200, C02: 500, C03: 1200 },
+  canDismantle(id) { return !!this.DISMANTLE_RATE[id]; },
+  dismantleMat(p, id, n) {
+    const rate = this.DISMANTLE_RATE[id];
+    if (!rate) return { ok: false, msg: '该物品无法分解' };
+    const have = (p.mat || {})[id] || 0;
+    if (have < 1) return { ok: false, msg: '数量不足' };
+    const t = Math.max(1, Math.min(have, n || 1));
+    p.mat[id] = have - t;
+    const gold = rate * t;
+    p.gold = (p.gold || 0) + gold;
+    return { ok: true, msg: '分解 ' + this.itemName(id) + '×' + t + ' → 金币 +' + this.fmt(gold), gold: gold };
+  },
+  /* 分解【背包里的芯片】
+   * BUG：分解面板硬编码列出 P01/P02/C01/C02/C03，全部读 p.mat[id]。
+   *   但 C01/C02/C03 是【角色 ID】（幸存者-杰克 / 医疗兵-艾拉 / 重装兵-雷），
+   *   芯片真实存放在 p.bag —— p.mat 里永远不会有 C0x。
+   *   结果：① 三行显示的是三个【角色名】而不是芯片，玩家会以为能分解角色；
+   *        ② 数量恒为 0 → 三个「分解」按钮【永远灰色不可点】；
+   *        ③ 一行「一键分解全部」里也混着这三个死条目。
+   * 现在改为按品质分解背包芯片（白200 / 蓝500 / 红1200 金币），
+   * 优先分解该品质里主属性数值最低的一颗（最不心疼）。 */
+  chipCountByQ(p, q) { return (p.bag || []).filter((c) => c.q === q).length; },
+  dismantleChip(p, q) {
+    const rate = ({ '白': 200, '蓝': 500, '红': 1200 })[q];
+    if (!rate) return { ok: false, msg: '未知芯片品质' };
+    const list = (p.bag || []).filter((c) => c.q === q);
+    if (!list.length) return { ok: false, msg: '背包里没有' + q + '色芯片' };
+    /* 挑主属性数值最低的一颗 */
+    list.sort((a, b) => (a.main && a.main.v || 0) - (b.main && b.main.v || 0));
+    const c = list[0];
+    const i = (p.bag || []).findIndex((x) => x.id === c.id);
+    if (i < 0) return { ok: false, msg: '未找到该芯片' };
+    p.bag.splice(i, 1);
+    p.gold = (p.gold || 0) + rate;
+    return { ok: true, msg: '分解' + q + '色芯片 → 金币 +' + this.fmt(rate), gold: rate };
+  },
+  /* 分解预演：一键分解前先把「将要分解什么、得多少金币」算出来给玩家看。
+   * 为什么要加这个：dismantleAll 遍历 DISMANTLE_RATE = {P01,P02,C01,C02,C03}，
+   * 其中 C01/C02/C03 是【普通/精英/传说芯片】，并不是「碎片」。
+   * 面板的芯片区显示的是 p.bag 的另一套存储（实测 chipCountByQ 为 0、按钮 disabled），
+   * 于是玩家看到「芯片 ×0」，一点「一键分解全部碎片」却把 p.mat 里的
+   * 传说芯片（C03，1200 金币/个）全部清空换成金币，且没有任何确认 —— 不可逆。 */
+  /* 一键分解的扫描范围：碎片走 p.mat，芯片走 p.bag。
+   *
+   * BUG：DISMANTLE_RATE 里的 C01/C02/C03 【不是芯片而是角色 ID】
+   *   （C01 幸存者-杰克 / C02 医疗兵-艾拉 / C03 重装兵-雷），芯片真实存放
+   *   在 p.bag 数组里，p.mat 中永远不会有 C0x。于是这两个函数扫描的
+   *   p.mat['C01'..'C03'] 恒为 0 —— 玩家背包里几十颗芯片，点「一键分解
+   *   （碎片 + 芯片）」一颗都分解不掉，金币也没多，而确认弹窗白纸黑字写着
+   *   「注意：芯片类（含传说芯片）也会一并分解，此操作不可撤销」。
+   *   实测：p.bag 有 1 颗芯片 + p.mat.C01=5，分解后 bagLen 仍为 1、芯片纹丝不动。
+   *   面板上那三个「按品质分解」按钮走 dismantleChip(p,q) 能正常分解 p.bag，
+   *   唯独一键分解漏了 —— 属于「提示成功但没做」的假按钮。
+   *
+   * 已装备的芯片在 equipChip 里已从 p.bag 移出到 p.chips[slot]，
+   * 所以扫 p.bag 不会误伤身上的装备。 */
+  CHIP_DIS_RATE: { '白': 200, '蓝': 500, '红': 1200 },
+  dismantlePreview(p) {
+    const lines = [];
+    let gold = 0, cnt = 0;
+    Object.keys(this.DISMANTLE_RATE).forEach((id) => {
+      if (/^C0/.test(id)) return;                 /* C0x 是角色 ID，不是芯片 */
+      const have = this.safeAmt((p.mat || {})[id]);
+      if (have > 0) {
+        const g = this.DISMANTLE_RATE[id] * have;
+        gold += g; cnt += have;
+        lines.push('· ' + this.itemName(id) + ' ×' + have + ' → ' + this.fmt(g) + ' 金币');
+      }
+    });
+    Object.keys(this.CHIP_DIS_RATE).forEach((q) => {
+      const n = this.chipCountByQ(p, q);
+      if (n > 0) {
+        const g = this.CHIP_DIS_RATE[q] * n;
+        gold += g; cnt += n;
+        lines.push('· ' + q + '色芯片 ×' + n + ' → ' + this.fmt(g) + ' 金币');
+      }
+    });
+    return { cnt: cnt, gold: gold, lines: lines };
+  },
+  dismantleAll(p) {
+    let gold = 0, cnt = 0;
+    const mat = p.mat || {};
+    Object.keys(this.DISMANTLE_RATE).forEach((id) => {
+      if (/^C0/.test(id)) return;
+      const have = this.safeAmt(mat[id]);
+      if (have > 0) { gold += this.DISMANTLE_RATE[id] * have; cnt += have; mat[id] = 0; }
+    });
+    /* 芯片：按品质从 p.bag 移除（已装备的在 p.chips 里，不受影响） */
+    Object.keys(this.CHIP_DIS_RATE).forEach((q) => {
+      const keep = [], drop = [];
+      (p.bag || []).forEach((c) => { (c && c.q === q ? drop : keep).push(c); });
+      if (drop.length) {
+        gold += this.CHIP_DIS_RATE[q] * drop.length; cnt += drop.length;
+        p.bag = keep;
+      }
+    });
+    if (!cnt) return { ok: false, msg: '没有可分解的物品' };
+    p.gold = (p.gold || 0) + gold;
+    return { ok: true, msg: '分解 ' + cnt + ' 个 → 金币 +' + this.fmt(gold), gold: gold };
+  },
+
+  openChest(p, times) {
+    /* 入参收紧：times 非数字时 `Math.min(10,'CH01')` 得 NaN，
+     * 而下面的守卫写的是 `if (have < t)` —— NaN 参与比较恒为 false，
+     * 于是检查【永远通过】，紧接着 `p.mat.I04 = have - t` 把宝箱数量写成 NaN。
+     * 实测：宝箱数变 NaN 后再点开箱，守卫依旧放行（NaN<NaN 也为 false），
+     * 每次都弹「开启 N 个宝箱」却什么也开不出来，宝箱道具彻底报废。
+     * 这里统一按 1~10 取整，非法值按 1 次处理。 */
+    const t = Math.max(1, Math.min(10, this.safeAmt(times) || 1));
+    const have = this.safeAmt((p.mat || {}).I04);   /* 宝箱道具 I04 */
+    if (have < t) return { ok: false, msg: '宝箱不足（现有 ' + have + '）' };
+    p.mat.I04 = have - t;
+    const got = {};
+    for (let i = 0; i < t; i++) {
+      const list = EX.dropBySrc('宝箱开箱') || [];
+      const r = EX.rollDrop(list);
+      r.forEach((g) => { got[g.item] = (got[g.item] || 0) + g.n; });
+    }
+    this.grantByMap(p, got);
+    const txt = Object.keys(got).map((k) => this.itemName(k) + '×' + got[k]).join('、') || '（本次未出货）';
+    return { ok: true, msg: '开启 ' + t + ' 个宝箱：' + txt };
+  },
+  /* 活动掉落结算（表31 DR12：精英芯片 30%） */
+  eventDropRoll(p) {
+    const list = EX.dropBySrc('活动掉落') || [];
+    const r = EX.rollDrop(list);
+    r.forEach((g) => { p.mat = p.mat || {}; p.mat[g.item] = (p.mat[g.item] || 0) + g.n; });
+    return r;
+  },
+  grantByMap(p, map) {
+    /* 类型守卫：与 grant() 同一类坑。Object.keys('CH01') 返回 ['0','1',...]，
+     * 会把字符串逐字符写进 p.mat（实测 p.mat['0']='C'、p.mat['1']='H'），
+     * 往材料背包里塞垃圾键。当前调用点只传对象，但 grant() 之前正是
+     * 被表22 的 rw 描述字符串击穿过，这里补上同一道防线。 */
+    if (!map || typeof map !== 'object' || Array.isArray(map)) return 0;
+    p.mat = p.mat || {};
+    Object.keys(map).forEach((k) => {
+      if (k === 'gold') p.gold = (p.gold || 0) + this.safeAmt(map[k]);
+      else if (k === 'diamond') p.diamond = (p.diamond || 0) + this.safeAmt(map[k]);
+      else p.mat[k] = (this.safeAmt(p.mat[k])) + this.safeAmt(map[k]);
+    });
+  },
+
+  /* 玩家行为日志（后台「日志查询 → 玩家操作」读取，只保留最近 60 条） */
+  logAct(p, t, d) {
+    if (!p) return;
+    p.logs = p.logs || [];
+    p.logs.unshift({ t: t, d: d || '', at: Date.now() });
+    if (p.logs.length > 60) p.logs.length = 60;
+  },
+
+  gunSlots(p) {
+    const g = this.gun(p); return (g && g.slots) || 2;
+  },
+  /* 当前武器的词条列表 */
+  gunAffixes(p) {
+    p.gunAffix = p.gunAffix || {};
+    const gid = p.gunId || (this.gun(p) || {}).id || 'W01';
+    /* 结构兜底：必须是数组。
+     * 若存档里的 gunAffix[gid] 被写成对象（旧档残留 / 后台改档 / 传输截断），
+     * 下面 .length / .push / .forEach 会直接抛错 ——
+     * 实测会连带 role(装备/宝石/皮肤) / gun(强化) / legion 共 5 个面板
+     * 渲染时整体抛异常、界面一片空白，且没有任何提示。
+     * 非数组时直接重置为空数组并重新生成，不让一个坏字段拖垮整个面板。 */
+    if (!Array.isArray(p.gunAffix[gid])) p.gunAffix[gid] = [];
+    /* 清掉无效条目（null / 无 id）。
+     * EX.affixes 被清空时 rollAffixOne 会返回 null，push 进去后
+     * affixBonus 里 af.id 直接抛错 —— 实测连带 role(装备/宝石/皮肤)、
+     * gun(强化)、chip(芯片)、legion 共 6 个面板白屏。这里先过滤。 */
+    p.gunAffix[gid] = p.gunAffix[gid].filter((x) => x && x.id);
+    const sl = this.gunSlots(p);
+    /* 槽位变化时补齐/裁剪 */
+    let guard = 0;
+    while (p.gunAffix[gid].length < sl && guard++ < 64) {
+      const one = EX.rollAffixOne && EX.rollAffixOne(false);
+      if (!one || !one.id) break;                    /* 词条表为空：不再硬塞 null */
+      p.gunAffix[gid].push(one);
+    }
+    if (p.gunAffix[gid].length > sl) p.gunAffix[gid].length = sl;
+    return p.gunAffix[gid];
+  },
+  /* 词条加成汇总
+   * 严重BUG：项目里有【两套并行的词条容器】，而属性计算只认了其中一套的一半。
+   *   ① p.gunAffix —— 普通词条（洗练/掉落），走 EX.affixes 表，affixBonus 已覆盖
+   *   ② p.gunStats —— 进阶词条（每 5 级进阶解锁），走 EX.gunStats 表
+   * 进阶词条此前只有 5 个 k 被 attrs 通过 gunStatVal() 读取
+   * （dmg/crit/mag/pierce/rate），其余 7 条【完全无效】：
+   *   AF04 暴伤 / AF06 吸血 / AF08 换弹 / AF09 爆炸范围 / AF10 穿透强化 /
+   *   AF11 双倍伤害 / AF12 额外子弹
+   * 红色品质（AF09~AF12，10% 概率）100% 是废词条 —— 玩家把武器升到 15/20 级
+   * 花掉大量材料，提示「解锁词条：双倍伤害」，实测属性纹丝不动。
+   * 现在把 gunStats 合并进同一份汇总表（k 名做映射），attrs 里已有的
+   * af.xxx 消费点即可全部生效。 */
+  affixBonus(p) {
+    const b = { dmg: 0, rate: 0, crit: 0, critDmg: 0, pierce: 0, lifesteal: 0,
+      mag: 0, reload: 0, er: 0, double: 0, extra: 0 };
+    this.gunAffixes(p).forEach((af) => {
+      if (!af || !af.id) return;
+      const a = EX.affixOf(af.id); if (!a || !b.hasOwnProperty(a.k)) return;
+      if (a.stack) b[a.k] += af.v; else b[a.k] = Math.max(b[a.k], af.v);
+    });
+    /* 进阶词条：EX.gunStats 的 k 名与 EX.affixes 不一致，这里做映射后累加 */
+    const GK = { blastR: 'er', extraB: 'extra', pierce2: 'pierce' };
+    const gs = p.gunStats || {};
+    for (const s in gs) {
+      const st = gs[s]; if (!st) continue;
+      const k = GK[st.k] || st.k;
+      if (!Object.prototype.hasOwnProperty.call(b, k)) continue;
+      /* 换弹：EX.gunStats 用 -0.2 表示「换弹时间 -0.2 秒」，
+       * 而 attrs→battle 的 reloadCut 约定是正数表示减少的秒数
+       * （_rt = max(0.3, _rt - reloadCut)）。取绝对值统一符号，
+       * 否则进阶抽到 AF08 会让换弹【变慢】0.2 秒，与描述相反。 */
+      const v = k === 'reload' ? Math.abs(+st.v || 0) : (+st.v || 0);
+      b[k] += v;
+    }
+    return b;
+  },
+  /* 洗练：普通消耗金币，传说消耗钻石 */
+  rerollAffix(p, legend) {
+    const gid = p.gunId || (this.gun(p) || {}).id || 'W01';
+    /* 【原子性】容器初始化必须放在扣费判定【之后】。
+     * 旧写法在读到价格之前就 `p.gunAffix = p.gunAffix || {}` 并给槽位建空数组，
+     * 于是「钻石/金币不够 → 返回失败」这条路径上存档照样被改写 ——
+     * 界面上什么都没发生，存档却多出一个空的词条槽，save 后即为脏数据。
+     * 实测：洗练前 gunAffix 为 {}，洗练失败后变成 {"W01":[]}。 */
+    if (legend) {
+      const c = EX.AFFIX_REROLL_LEGEND_DIA;
+      if ((p.diamond || 0) < c) return { ok: false, msg: EX.tip('popup.noDiamond', { v: c }) };
+      p.diamond -= c;
+      p.gunAffix = p.gunAffix || {};
+      p.gunAffix[gid] = [EX.rollAffixOne(true), EX.rollAffixOne(true)].slice(0, this.gunSlots(p));
+    } else {
+      const c = EX.AFFIX_REROLL_GOLD;
+      if ((p.gold || 0) < c) return { ok: false, msg: EX.tip('popup.noCoin', { v: this.fmt(c) }) };
+      p.gold -= c;
+      p.gunAffix = p.gunAffix || {};
+      p.gunAffix[gid] = [];
+      for (let i = 0; i < this.gunSlots(p); i++) p.gunAffix[gid].push(EX.rollAffixOne(false));
+    }
+    return { ok: true, msg: '洗练完成！' };
+  },
+
+  /* 宝石合成：3 颗同级 → 1 颗高一级（截图「宝石合成」） */
+  gemFuse(p, id) {
+    const need = 3;
+    /* BUG（满级后每次点合成白吞 2 颗宝石）：
+     *   满级校验此前写在【扣减之后】——先 `- need + 1` 把宝石扣掉，
+     *   再 return「宝石已达最高等级」。等于：操作失败了，材料却已经吃掉。
+     *   实测：满级红宝石 3 颗点合成 → 剩 1 颗，提示「已达最高等级 Lv.10」；
+     *        连点 5 次 → 15 颗只剩 5 颗，白白蒸发 10 颗。
+     *   而 UI 上这个按钮没有任何 disabled 判断，玩家真的点得到。
+     *   红宝石商店 200 钻一颗，10 颗 ≈ 2000 钻。
+     * 现在所有校验都提到扣减之前，与商店「扣款前校验」同一口径。 */
+    /* 生效档位 = 合成次数 + 1，最高 GEM_MAX_LV 档 → 最多合成 GEM_MAX_LV-1 次 */
+    if (this.gemLvOf(p, id) >= this.GEM_MAX_LV - 1) return { ok: false, msg: '宝石已达最高等级 Lv.' + this.GEM_MAX_LV };
+    if (!((p.gems || {})[id] >= need)) return { ok: false, msg: '需要 ' + need + ' 颗同色宝石' };
+    /* BUG：注释与面板都写「3 颗 → 1 颗高一级」，代码却只 `p.gems[id] -= 3`
+     * 从不把合成出来的那 1 颗还回来。实测：3 颗合成后剩 0 颗、9 颗连合三次也剩 0 颗。
+     * 后果是宝石被整个吞掉——等级涨了，但数量为 0 既不能镶嵌（提示数量不足）
+     * 也不能继续合成，玩家花掉的宝石一分不剩。现在按 3 换 1 扣减。 */
+    p.gems[id] = (p.gems[id] || 0) - need + 1;
+    /* BUG修复：等级此前是全局单一数字 p.gemLv，4 种宝石共享。
+     * 用最便宜的红宝石（200 钻）合成，最贵的紫宝石（300 钻）也跟着升级，
+     * 宝石之间的成本差异形同虚设。改为每种宝石各自记等级。 */
+    const lv = this.gemLvOf(p, id) + 1;
+    this.setGemLv(p, id, lv);
+    try { this.logAct(p, 'chip', '宝石合成 ' + id + ' → Lv.' + (lv + 1)); } catch (e) {}
+    return { ok: true, msg: '合成成功！宝石等级提升至 Lv.' + (lv + 1) };
+  },
+  /* 宝石等级：按种类分别记录（旧档 p.gemLv 是数字，迁移到当前镶嵌的种类上） */
+  gemLvOf(p, id) {
+    const m = p.gemLv;
+    if (m && typeof m === 'object') return m[id] || 0;
+    /* 旧档：单一数字，视为当前镶嵌宝石的等级 */
+    if (typeof m === 'number') return id && id === p.gemOn ? m : 0;
+    return 0;
+  },
+  setGemLv(p, id, v) {
+    if (!p.gemLv || typeof p.gemLv !== 'object') {
+      const old = typeof p.gemLv === 'number' ? p.gemLv : 0;
+      p.gemLv = {};
+      if (old > 0 && p.gemOn) p.gemLv[p.gemOn] = old;
+    }
+    p.gemLv[id] = clamp(this.GEM_MAX_LV, 0, v);
+  },
+  /* 宝石生效档位（1 ~ GEM_MAX_LV）= 合成次数 + 1
+   * BUG：此前把【合成次数】直接当档位用，未合成时 clamp 到 1、合成 1 次 clamp 后还是 1
+   * → 第一次合成（花 3 颗宝石）加成一动不动：红宝石攻击始终 +6%，白花 3 颗。
+   * （面板显示 Lv.0 却拿 Lv.1 的加成，同样是这一处错位造成的。）
+   * 现在档位与显示统一：未合成 = Lv.1 基础档，每合成一次 +1 档。 */
+  gemTier(p, id) {
+    return Math.max(1, Math.min(this.GEM_MAX_LV, this.gemLvOf(p, id) + 1));
+  },
+  /* 镶嵌 / 卸下宝石（统一入口）
+   * 此前两处逻辑不一致：角色页镶嵌【不扣】数量、宝石页镶嵌【扣 1 颗】，
+   * 且两处卸下都不返还 —— 反复镶嵌卸下会让宝石凭空蒸发（实测 10 次蒸发 10 颗）。
+   * 现统一为：镶嵌占用 1 颗（背包 -1），卸下/更换时完整返还。 */
+  setGem(p, id) {
+    const prev = p.gemOn;
+    /* 【一颗宝石无限镶嵌 BUG 修复】
+     * 旧逻辑：先无条件把已镶嵌宝石【退回背包】，再扣 1 颗重新镶嵌。
+     * 于是当 id === prev（同一颗）时：退回 +1 → 再扣 -1，数量永远守恒，
+     * 每次都返回 ok —— 玩家手里只有 1 颗宝石，却可以【永远点下去】，
+     * 每次都弹"镶嵌成功"，看起来像在无限镶嵌。
+     * 现在同颗重复镶嵌直接拒绝，并给出明确提示。 */
+    if (id && prev === id) return { ok: false, msg: '该宝石已经镶嵌在装备上' };
+    if (prev) { p.gems = p.gems || {}; p.gems[prev] = (p.gems[prev] || 0) + 1; p.gemOn = null; }
+    if (!id) { E.save && E.save(p); return { ok: true, msg: '已卸下宝石' }; }
+    if (!((p.gems || {})[id] > 0)) return { ok: false, msg: '该宝石数量不足' };
+    p.gems[id] -= 1;
+    p.gemOn = id;
+    const g = (EX.gems || []).find((x) => x.id === id);
+    try { this.logAct(p, 'gem', '镶嵌 ' + (g ? g.n : id)); } catch (e) {}
+    /* 镶嵌必须落盘（与上方卸下分支同一口径）。
+     * BUG：此前只有卸下分支 save、镶嵌分支不 save。宝石页入口在调用后自行 save 所以没事，
+     *   但角色页「镶嵌」入口（ui.js b_role [data-gemon]）调用后只 open+home、没有 save，
+     *   实测镶嵌后强退 / 换设备登录：宝石数量回滚（+1）、p.gemOn 仍为空，
+     *   属性加成也没留下 —— 等于白镶嵌一次。这里补上，让所有入口都受益。 */
+    E.save && E.save(p);
+    return { ok: true, msg: '已镶嵌 ' + (g ? g.n : id) };
+  },
+  /* 宝石属性加成
+   * BUG修复（两处）：
+   *  1) 此前只读 p.gemLv（合成等级），镶嵌写入的 p.gemOn 完全不参与计算
+   *     → 玩家镶嵌红宝石后攻击 +0，镶嵌功能形同虚设
+   *  2) 加成不分种类，红/蓝/绿/紫一律给 攻击+1200 生命+2000 暴击+15%
+   *     → 与宝石表 desc 完全不符
+   * 现按表：镶嵌种类决定加成类型，合成等级决定倍率 */
+  /* 宝石加成（改为百分比，每级数值）
+   * 原表给的固定值（攻击+1200 等）是按满级武器设计的终值，
+   * 直接套在新手身上会 +4600% 攻击、战力从 1011 飙到 22611 —— 完全失衡。
+   * 改为百分比后自动适配全期：前期温和，后期随属性增长。
+   * Lv.10 时等效强度 ≈ 原表终值区间（攻击 +60% ≈ 满级武器 +1600 攻击）。 */
+  /* 宝石加成改为「百分比」，且只与宝石合成等级有关，
+   * 与角色等级、武器等级完全无关（避免前期一颗宝石秒天秒地）
+   *
+   * 阶梯 = base + (Lv-1) * step，最高 GEM_MAX_LV 级
+   *
+   *  等级   红宝石(攻击)  蓝宝石(生命/暴击)  绿宝石(生命/吸血)  紫宝石(暴伤/攻速)
+   *  Lv1       +6%          +8% / +1%          +5% / +0.5%        +8% / +1.5%
+   *  Lv2      +10%         +13% / +2%          +8% / +1.0%       +14% / +2.5%
+   *  Lv3      +14%         +18% / +3%         +11% / +1.5%       +20% / +3.5%
+   *  Lv4      +18%         +23% / +4%         +14% / +2.0%       +26% / +4.5%
+   *  Lv5      +22%         +28% / +5%         +17% / +2.5%       +32% / +5.5%
+   *  ...     每级 +4%       +5% / +1%          +3% / +0.5%        +6% / +1%
+   *  Lv10     +42%         +53% / +10%        +32% / +5.0%       +62% / +10.5%
+   */
+  GEM_MAX_LV: 10,
+  GEM_BASE: {
+    G_R: { atkPct: 0.06, hpPct: 0,    crit: 0,    critDmg: 0,   ls: 0,     ratePct: 0 },
+    G_B: { atkPct: 0,    hpPct: 0.08, crit: 0.01, critDmg: 0,   ls: 0,     ratePct: 0 },
+    G_G: { atkPct: 0,    hpPct: 0.05, crit: 0,    critDmg: 0,   ls: 0.005, ratePct: 0 },
+    G_P: { atkPct: 0,    hpPct: 0,    crit: 0,    critDmg: 0.08, ls: 0,    ratePct: 0.015 },
+  },
+  GEM_STEP: {
+    G_R: { atkPct: 0.04, hpPct: 0,    crit: 0,    critDmg: 0,   ls: 0,     ratePct: 0 },
+    G_B: { atkPct: 0,    hpPct: 0.05, crit: 0.01, critDmg: 0,   ls: 0,     ratePct: 0 },
+    G_G: { atkPct: 0,    hpPct: 0.03, crit: 0,    critDmg: 0,   ls: 0.005, ratePct: 0 },
+    G_P: { atkPct: 0,    hpPct: 0,    crit: 0,    critDmg: 0.06, ls: 0,    ratePct: 0.01 },
+  },
+  /* 面板展示用：把百分比换算成当前属性上的绝对值 */
+  GEM_TXT: { atkPct: '攻击', hpPct: '生命', critDmg: '暴伤', ratePct: '攻速', ls: '吸血', crit: '暴击' },
+  gemBonus(p) {
+    const zero = { atkPct: 0, hpPct: 0, crit: 0, critDmg: 0, ls: 0, ratePct: 0 };
+    const id = p.gemOn;
+    if (!id) return zero;
+    const base = this.GEM_BASE[id], step = this.GEM_STEP[id];
+    if (!base) return zero;
+    const lv = this.gemTier(p, id);
+    const out = {};
+    for (const k in zero) {
+      const b = base[k] || 0, st = (step && step[k]) || 0;
+      out[k] = b + st * (lv - 1);
+    }
+    return out;
+  },
+  /* 指定宝石在当前合成等级下的加成文案（用于列表逐行展示） */
+  gemBonusOf(p, id) {
+    const base = this.GEM_BASE[id], step = this.GEM_STEP[id];
+    if (!base) return '—';
+    const lv = this.gemTier(p, id);
+    const parts = [];
+    ['atkPct', 'hpPct', 'critDmg', 'ratePct', 'ls', 'crit'].forEach((k) => {
+      const v = (base[k] || 0) + ((step && step[k]) || 0) * (lv - 1);
+      if (v > 0) parts.push(this.GEM_TXT[k] + ' +' + (v * 100).toFixed(v < 0.02 ? 1 : 0) + '%');
+    });
+    return parts.length ? parts.join(' · ') : '—';
+  },
+  /* 面板展示：返回人类可读的加成文案（如「攻击 +6% · 暴击 +1%」） */
+  gemBonusTxt(p) {
+    const gb = this.gemBonus(p);
+    const parts = [];
+    const pctKeys = ['atkPct', 'hpPct', 'critDmg', 'ratePct', 'ls', 'crit'];
+    pctKeys.forEach((k) => {
+      const v = gb[k] || 0;
+      if (v > 0) parts.push(this.GEM_TXT[k] + ' +' + (v * 100).toFixed(v < 0.02 ? 1 : 0) + '%');
+    });
+    return parts.length ? parts.join(' · ') : '无加成';
+  },
+  /* 宝石加成的绝对数值（仅用于面板展示） */
+  gemBonusFlat(p) {
+    const a = this.attrs(p), gb = this.gemBonus(p);
+    return { atk: Math.round(a.atk - a.atk / (1 + gb.atkPct || 1)),
+      hp: Math.round(a.hp - a.hp / (1 + (gb.hpPct || 0))) };
+  },
+  /* 装备锻造：强化 + 进阶（截图「装备设造 / 装备锻造」） */
+  forgeEquip(p, slot) {
+    const eq = p.equip || (p.equip = {});
+    const cur = eq[slot] || { lv: 0 };
+    /* 满级判定要在金币判定之前：否则满级且金币不足时，
+     * 玩家看到的是「金币不足，需要 6200」，而真正的原因是已经满级，
+     * 会以为再攒点钱还能继续强化。 */
+    if (cur.lv >= 20) return { ok: false, msg: '已达最高强化等级' };
+    const cost = 500 + cur.lv * 300;
+    if ((p.gold || 0) < cost) return { ok: false, msg: '金币不足，需要 ' + cost };
+    p.gold -= cost;
+    cur.lv = (cur.lv || 0) + 1;
+    /* 每 5 级进阶一次 */
+    if (cur.lv % 5 === 0) cur.adv = (cur.adv || 0) + 1;
+    eq[slot] = cur;
+    /* BUG（提示文案露出内部键）：这里直接拼 slot，而 slot 是装备槽的英文键
+     * （equipSlots 里的 k：head / cloth / weapon / ring / boot / fabao / neck / brace）。
+     * 实测点击头盔强化，玩家看到的提示是「强化成功！head Lv.1」——
+     * 一串英文键摆在中文界面里，与全站文案风格不一致。
+     * 面板按钮上显示的是中文名（sl.n），提示也应取同一个名字。 */
+    const _sd = ((typeof EX !== 'undefined' && EX.equipSlots) || []).find((x) => x && x.k === slot);
+    const _sn = (_sd && _sd.n) || slot;
+    return { ok: true, msg: '强化成功！' + _sn + ' Lv.' + cur.lv + (cur.lv % 5 === 0 ? ' · 进阶 +1' : '') };
+  },
+
+  taskProg(p, t) {
+    if (t.cond.t === 'clearLv') return p.cleared[t.cond.v] ? 1 : 0;
+    return Math.min(this.taskVal(p, t.cond.t), t.cond.v);
+  },
+  claimTask(p, type, id) {
+    const list = (EX.tasks[type] || []);
+    const t = list.find((x) => x.id === id); if (!t) return { ok: false, msg: '任务不存在' };
+    if (!this.taskDone(p, t)) return { ok: false, msg: '尚未完成' };
+    const key = { main: 'mainClaimed', daily: 'dailyClaimed', weekly: 'weeklyClaimed', achieve: 'achieveClaimed' }[type];
+    /* 就地防御：sanitize 只在登录时跑，后台 GM 改档/热更覆盖后可能已把
+     * mainClaimed 写成非数组。这里再兜一次，避免点「领取」直接崩 JS。 */
+    p.tasks[key] = Array.isArray(p.tasks[key]) ? p.tasks[key] : [];
+    if (p.tasks[key].indexOf(id) >= 0) return { ok: false, msg: '已领取' };
+    /* 奖励表兜底（上一轮只收紧了商店价格，这里漏了）
+     * 旧行为：先 push 进 claimed 再发奖 → rw 缺失/全非法时
+     *   任务被【永久标记已领取】、金币一分没加，
+     *   运营改好配置后玩家也再也领不到（界面永远显示"已领取"）。
+     * 现在：确认这份奖励真能发出东西，才允许标记已领取。 */
+    if (!this.rwUsable(t.rw)) return { ok: false, msg: '该任务奖励配置异常，暂不可领取' };
+    p.tasks[key].push(id);
+    let txt = [];
+    for (const k in t.rw) {
+      const v = t.rw[k];
+      /* 与 rwUsable 保持同一口径：'100' 这类字符串数字按 100 正常发放
+       * （后台表单偶尔把数字存成字符串，直接跳过会变成"领了没东西"）。 */
+      const n = this.safeAmt(v);
+      if (n <= 0) continue;
+      /* 非数值型奖励键（称号/皮肤/头像框/宝石）不走 p.mat，交给 grant 语义 */
+      if (k === 'title' || k === 'skin' || k === 'frame' || k === 'gem') { this.grant(p, { [k]: v }); continue; }
+      if (k === 'gold') p.gold = (p.gold || 0) + n;
+      else if (k === 'diamond') p.diamond = (p.diamond || 0) + n;
+      else if (k === 'ach') p.ach = (p.ach || 0) + n;
+      else p.mat[k] = (p.mat[k] || 0) + n;
+      txt.push(this.itemName(k) + '+' + n);
+    }
+    return { ok: true, msg: '✅ ' + t.n + '：' + txt.join(' ') };
+  },
+  /* 战斗后推进任务计数 */
+  pushStats(p, { kills, clear, boss, noHit, endlessSec }) {
+    const st = p.stats;
+    st.kills = (st.kills || 0) + (kills || 0);
+    if (boss) {
+      const hadBoss = (st.bossKill || 0) > 0;
+      st.bossKill = (st.bossKill || 0) + boss;
+      /* 称号「屠龙者」（boss_slayer）
+       * BUG：称号表配了"首次击杀 BOSS"，但全项目零发放 ——
+       *      玩家 BOSS 关打了无数次，这一格永远拿不到。
+       *      这里在首次击杀 BOSS 时补发。 */
+      if (!hadBoss) { try { this.grantTitle(p, 'boss_slayer'); } catch (e) {} }
+    }
+    if (noHit) st.noHitBest = Math.max(st.noHitBest || 0, noHit);
+    if (endlessSec) p.endlessTime = Math.max(p.endlessTime || 0, Math.floor(endlessSec));
+    this.resetTasks(p);
+    const dp = p.tasks.dailyProg, wp = p.tasks.weeklyProg;
+    /* v1.0 每日任务「参与无尽 1 次」：一场无尽记 1 次，不看时长 */
+    if (endlessSec) dp.endless = (dp.endless || 0) + 1;
+    /* 赛季积分：无尽模式结算 */
+    if (endlessSec) this.addSeasonScore(p, 'endless');
+    /* clear 是「次數」不是布尔：手动通关传 1，扫荡传次数 t。
+     * 此前写成 +1，导致一次扫荡 5 次只记 1 次通关。 */
+    const cn = Number(clear) || 0;
+    if (cn) { dp.clear = (dp.clear || 0) + cn; wp.clear = (wp.clear || 0) + cn; }
+    dp.kill = (dp.kill || 0) + (kills || 0);
+    wp.kill = (wp.kill || 0) + (kills || 0);
+    this.syncAch(p);
+  },
+  /* 成就达成标记
+   * BUG：UI 用 p.achGot 显示「已完成 x/4」，但 achGot 全项目从未被赋值
+   * → 玩家成就全部做完领完，顶部仍显示 0/4，永远看不到进度。
+   * 现在在每次战斗结算推进统计后同步一次。 */
+  syncAch(p) {
+    p.achGot = p.achGot || {};
+    for (const a of (EX.tasks.achieve || [])) {
+      if (this.taskDone(p, a)) p.achGot[a.id] = Date.now();
+    }
+    return p.achGot;
+  },
+
+  /* =================================================
+   * 广告（资料广告位：每日上限）
+   * ================================================ */
+  /* =========================================================
+   * 挑战次数：纯体力制，不再有「每日 3 次」上限
+   * 此前体力之外还叠了一道每日次数闸门，与关卡面板标注的「体力 1」
+   * 自相矛盾：玩家体力满格却被「今日挑战次数已用完（每日 3 次）」拦住。
+   * 现在能否挑战只由体力决定（普通 1 / BOSS 3 / 无尽 2）。
+   * ========================================================= */
+  RUN_DAILY: 0, /* 0 = 不限每日次数，保留字段以兼容旧存档与后台读取 */
+  runLeft(p) {
+    this.tickStamina(p);
+    return Math.max(0, Math.floor(p.stamina || 0));
+  },
+  /* 体力已在 spendStamina 中扣除，这里不再重复计数；
+   * 保留方法以兼容可能的历史调用点。 */
+  useRun(p) { return { ok: true, msg: 'ok' }; },
+
+  adLeft(p, adId) {
+    this.resetTasks(p);
+    const d = EX.ads.find((x) => x.id === adId); if (!d) return 0;
+    p.adUsed = p.adUsed || {};
+    if (p.adDate !== this.dailyKey()) { p.adDate = this.dailyKey(); p.adUsed = {}; }
+    return Math.max(0, d.limit - (p.adUsed[adId] || 0));
+  },
+  useAd(p, adId) {
+    if (this.adLeft(p, adId) <= 0) return { ok: false, msg: '今日次数已用完' };
+    p.adUsed[adId] = (p.adUsed[adId] || 0) + 1;
+    /* 累计观看次数（不清零）
+     * BUG：后台「广告统计」标称「总观看次数 / 人均观看」，
+     * 读的却是 p.adUsed —— 而 adUsed 每天会被清空（见 adLeft 里的 dailyKey 判断）。
+     * 结果后台看到的永远是【今日】数据，标签却写着「总」，
+     * 运营据此做广告变现分析会严重低估。
+     * 这里新增不清零的 adTotal 供后台统计累计值。 */
+    p.adTotal = p.adTotal || {};
+    p.adTotal[adId] = (p.adTotal[adId] || 0) + 1;
+    return { ok: true };
   },
 };
 
 window.E = E;
+
+
+/* =========================================================
+ * 数值钳制归一
+ * ---------------------------------------------------------
+ * 此前全项目散落 ~30 处 Math.max(0, Math.min(x, cap)) 的重复钳制写法，
+ * 语义完全一致但每次都要读两遍才知道"这是在把 x 限制在 [0, cap]"。
+ * 这里提供具名封装，消除重复、标明意图；实现与原写法逐字等价
+ * （仍走 Math.max/Math.min，NaN / undefined 等边界行为完全不变）。
+ * ========================================================= */
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(v, hi)); }
