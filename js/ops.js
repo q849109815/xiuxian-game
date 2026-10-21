@@ -109,13 +109,47 @@
       return EX.txt(id, 'zh');
     },
 
-    /* ---------------- 版本排期（表38） ---------------- */
-    versions() { return (window.EX && EX.VERSIONS) || []; },
+    /* ---------------- 版本排期（表38 / 后台可在线维护） ----------------
+     * 排期来源优先级：云端 roadmap.json（后台维护）> config.js 内置 VERSIONS。
+     * 后台「热更新 / 版本排期」页可增删改并下发，游戏端无需发版即可更新预告。 */
+    versions() {
+      const rm = (window.EX && EX.ROADMAP) || null;
+      if (Array.isArray(rm) && rm.length) return rm;
+      return (window.EX && EX.VERSIONS) || [];
+    },
     /* 当前游戏版本：取最后一个已完成版本 */
     curVersion() {
       const v = this.versions();
       const done = v.filter((x) => x.done);
       return done.length ? done[done.length - 1] : v[0] || null;
+    },
+    /* 当前版本号字符串：优先取 HOT_UPDATE.version（与 index.html 的 ?v= 同步），
+     * 排期表里没这一版时再回退到排期表最后一条已完成版本。 */
+    curVerNum() {
+      const hv = (window.EX && EX.HOT_UPDATE && EX.HOT_UPDATE.version) || '';
+      if (hv) return 'V' + String(hv).replace(/^v/i, '');
+      const c = this.curVersion();
+      return c ? String(c.v || '') : '';
+    },
+    /* 玩家可见的已发布历史（pub 为真），按版本倒序，最多 n 条 */
+    pubDone(n) {
+      return this.versions()
+        .filter((x) => x && x.done && x.pub !== false)
+        .slice(-(n || 20)).reverse();
+    },
+    /* 玩家可见的未来预告（pub 为真且未发布），按排期正序 */
+    pubNext() {
+      return this.versions().filter((x) => x && !x.done && x.pub !== false);
+    },
+    /* 版本号比较：1.2.10 > 1.2.9（逐段数字比，避免字符串比较把 10 排到 2 前面） */
+    cmpVer(a, b) {
+      const pa = String(a || '').replace(/^v/i, '').split('.').map(Number);
+      const pb = String(b || '').replace(/^v/i, '').split('.').map(Number);
+      for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const x = pa[i] || 0, y = pb[i] || 0;
+        if (x !== y) return x - y;
+      }
+      return 0;
     },
   };
 
