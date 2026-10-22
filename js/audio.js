@@ -229,6 +229,67 @@ const SND = {
     }
   },
 
+  /* ---------- 角色专属登场音效（音频部 V1.3.1） ----------
+   * 此前 16 个角色切换时播的都是通用 pickup 音：换谁都一个声，
+   * 角色的定位差异（医疗 / 重装 / 狙击 / 工程 / 爆破…）只有文字描述，
+   * 没有任何听觉反馈，"换角色"这件事在体验上等于没发生。
+   * 现在按定位分 10 类音色，同类再用 sfxBend 做基频偏移（×1.18）：
+   * 既保证 16 个角色两两可辨，又保留族系感，不会碎成 16 种毫无关联的噪声。
+   * 未配 sfx 的角色回退 pickup，行为与改动前完全一致。 */
+  charSfx(charId) {
+    if (!this.ctx || !this.sfxOn) return;
+    const list = (typeof EX !== 'undefined' && EX.chars) ? EX.chars : [];
+    const c = list.find((x) => x.id === charId);
+    const t = (c && c.sfx) || '';
+    const k = ((c && c.sfxBend) ? 1.18 : 1);
+    if (!t) { this.play('pickup'); return; }
+    switch (t) {
+      case 'balanced':                    // 均衡：温和双音确认
+        this.tone(520 * k, 0.09, { type: 'triangle', vol: 0.14 });
+        setTimeout(() => this.tone(690 * k, 0.13, { type: 'triangle', vol: 0.15 }), 95);
+        break;
+      case 'medic':                       // 医疗：柔和上行带余韵
+        this.tone(600 * k, 0.12, { type: 'sine', to: 880 * k, vol: 0.13 });
+        setTimeout(() => this.tone(990 * k, 0.18, { type: 'sine', vol: 0.11 }), 120);
+        break;
+      case 'tank':                        // 重装：低沉厚重
+        this.tone(110 * k, 0.22, { type: 'square', to: 70, vol: 0.18 });
+        this.noise(0.14, { freq: 320, freqTo: 90, vol: 0.12 });
+        break;
+      case 'sniper':                      // 狙击：尖锐短促
+        this.tone(1500 * k, 0.07, { type: 'square', to: 900 * k, vol: 0.16 });
+        this.noise(0.05, { freq: 3600, freqTo: 1200, vol: 0.1 });
+        break;
+      case 'engineer':                    // 工程：机械咔哒三连
+        this.tone(880 * k, 0.05, { type: 'square', vol: 0.12 });
+        setTimeout(() => this.tone(600 * k, 0.07, { type: 'square', vol: 0.12 }), 110);
+        setTimeout(() => this.tone(420 * k, 0.09, { type: 'square', vol: 0.1 }), 210);
+        break;
+      case 'demo':                        // 爆破：低频爆响
+        this.noise(0.26, { freq: 700, freqTo: 70, vol: 0.24 });
+        this.tone(80, 0.24, { type: 'sine', to: 40, vol: 0.16 });
+        break;
+      case 'hunter':                      // 猎手：快速三连点
+        this.tone(1200 * k, 0.04, { type: 'triangle', vol: 0.12 });
+        setTimeout(() => this.tone(1400 * k, 0.04, { type: 'triangle', vol: 0.12 }), 60);
+        setTimeout(() => this.tone(1650 * k, 0.07, { type: 'triangle', vol: 0.14 }), 120);
+        break;
+      case 'trader':                      // 商人：清脆金属叮
+        this.tone(1320 * k, 0.1, { type: 'triangle', vol: 0.13 });
+        setTimeout(() => this.tone(1760 * k, 0.14, { type: 'triangle', vol: 0.11 }), 80);
+        break;
+      case 'electric':                    // 电工：电流嘶嘶
+        this.noise(0.2, { freq: 2400, freqTo: 600, vol: 0.16, filter: 'bandpass' });
+        this.tone(300 * k, 0.16, { type: 'sawtooth', to: 900 * k, vol: 0.1 });
+        break;
+      case 'scav':                        // 拾荒：轻快短促
+        this.tone(760 * k, 0.05, { type: 'square', vol: 0.11 });
+        setTimeout(() => this.tone(1020 * k, 0.08, { type: 'square', vol: 0.12 }), 70);
+        break;
+      default: this.play('pickup'); break;
+    }
+  },
+
   /* ---------- BGM：程序化循环 ---------- */
   /* 末日风格：小调低音 + 不和谐音程，营造压抑感 */
   bgm(name) {
