@@ -44,6 +44,19 @@
     SHAKE_BLAST: 9.0, SHAKE_BOSS: 18.0, SHAKE_MILE: 7.0,
     /* 慢镜头 */
     SLOW_BOSS: { d: 0.55, s: 0.28 },
+    /* 【V1.3.2 · 低机型性能降级】
+     * 画质档位 2=高 / 1=中 / 0=低。仅削减表现层（震屏/全屏闪/DOM 刷新频率），
+     * 绝不改变战斗逻辑与返回的缩放系数 k——降级后玩法与高画质完全一致。 */
+    PERF: {
+      auto: true,      /* 是否自动降级 */
+      win: 90,         /* 采样窗口帧数 */
+      lowFps: 45,      /* 低于此值降一档 */
+      critFps: 30,     /* 低于此值直接降到最低档 */
+      minFrames: 30,   /* 至少攒够多少帧才开始判定，避免开局抖动误判 */
+      shakeMul: [0.40, 0.70, 1.00],  /* 按档位缩放震屏幅度：低/中/高 */
+      paintEvery: [2, 1, 1],         /* 按档位：每 N 帧刷一次 DOM */
+      flashOn: [false, true, true],  /* 低画质关闭全屏闪（最耗的一项） */
+    },
   };
 
   /* 连杀分级：颜色 + 称号。分级只影响观感，不影响倍率。 */
@@ -72,6 +85,9 @@
     /* --- 连杀 --- */
     combo: 0, comboT: 0, comboBest: 0, comboTier: 0, comboPop: 0,
 
+    /* --- 画质档位（低机型降级）--- */
+    q: 2, autoQ: true, _fs: [], _pN: 0, _qLog: 0,
+
     /* --- DOM 缓存 --- */
     _dom: null, _flash: null, _shown: -1, _cls: '', _mulTxt: '',
 
@@ -82,7 +98,38 @@
       this.flT = 0; this.flDur = 0; this.flA = 0;
       this.combo = 0; this.comboT = 0; this.comboBest = 0; this.comboTier = 0; this.comboPop = 0;
       this._shown = -1; this._cls = ''; this._mulTxt = '';
+      this._fs.length = 0;      /* 画质档位本身不重置：它是设备级设定 */
       this._paint(true);
+    },
+
+    /* ================= 画质档位（低机型降级）=================
+     * 只削表现层，不改战斗逻辑。frame() 返回的缩放系数 k 与档位无关。 */
+    getQ() { return this.q; },
+    /** 强制设定档位 0/1/2，并关闭自动降级（后台或玩家手动指定时） */
+    setQ(n, keepAuto) {
+      n = Math.max(0, Math.min(2, n | 0));
+      this.q = n;
+      if (!keepAuto) this.autoQ = false;
+      this._fs.length = 0;
+      return n;
+    },
+    /** 根据采样窗口内的真实帧间隔自动降档。只降不升，避免档位反复横跳。 */
+    _autoQ(d) {
+      if (!this.autoQ || !CFG.PERF.auto) return;
+      if (!(d > 0)) return;
+      var W = CFG.PERF;
+      var fs = this._fs;
+      fs.push(d);
+      if (fs.length > W.win) fs.shift();
+      if (fs.length < W.minFrames || this.q === 0) return;
+      var sum = 0;
+      for (var i = 0; i < fs.length; i++) sum += fs[i];
+      var fps = fs.length / sum;
+      if (fps < W.critFps) {
+        this.q = 0; this._fs.length = 0;
+      } else if (fps < W.lowFps) {
+        this.q = Math.max(0, this.q - 1); this._fs.length = 0;
+      }
     },
 
     /* ================= 时间控制 ================= */
@@ -108,12 +155,14 @@
     shake(mag, dur) {
       if (!this.enabled) return;
       if (!(mag > 0)) return;
-      if (mag > this.shMag) this.shMag = mag;
+      var m = mag * (CFG.PERF.shakeMul[this.q] || 1);
+      if (m > this.shMag) this.shMag = m;
       if (dur > this.shT) { this.shT = dur; this.shDur = dur; }
     },
-    /** 全屏闪：col 为 "r,g,b" 字符串 */
+    /** 全屏闪：col 为 "r,g,b" 字符串。低画质档直接跳过（全屏重绘最耗） */
     flash(col, a, dur) {
       if (!this.enabled) return;
+      if (!CFG.PERF.flashOn[this.q]) return;
       if (a <= this.flA && this.flT > 0) return;
       this.flCol = col || '255,255,255';
       this.flA = a; this.flT = dur || 0.16; this.flDur = this.flT;
@@ -125,6 +174,9 @@
     frame(dtReal) {
       try {
         var d = Math.min(0.05, Math.max(0, dtReal || 0));
+
+        /* 【V1.3.2】低机型自动降档：只削表现层，k 的计算在下方，不受影响 */
+        this._autoQ(d);
 
         if (this._tsGap > 0) this._tsGap = Math.max(0, this._tsGap - d);
 
@@ -143,7 +195,8 @@
         } else { this.shX = 0; this.shY = 0; }
 
         /* 全屏闪 */
-        if (this.flT > 0) { this.flT = Math.max(0, this.flT - d); if (this.flT <= 0) this.flA = 0; }
+        var flEnd = false;
+        if (this.flT > 0) { this.flT = Math.max(0, this.flT - d); if (this.flT <= 0) { this.flA = 0; flEnd = true; } }
 
         /* 连杀窗口 */
         if (this.comboT > 0) {
@@ -151,7 +204,10 @@
           if (this.comboT <= 0) { this.combo = 0; this.comboTier = 0; }
         }
 
-        this._paint(false);
+        /* 低画质档降频刷 DOM；但闪光结束那一帧必须刷一次，否则残留半透明遮罩 */
+        this._pN++;
+        var every = CFG.PERF.paintEvery[this.q] || 1;
+        if (flEnd || this._pN % every === 0) this._paint(false);
         return k;
       } catch (e) {
         return 1;                       /* 兜底：绝不因表现层异常卡住战斗 */
