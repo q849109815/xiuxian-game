@@ -738,6 +738,9 @@ const BT = {
     if (r.efx && r.efx.length < 90) r.efx.push({ t: 'roar', x: z.x, y: z.y, r: 130, life: 0.9, max: 0.9 });
     /* 表04 VO_003 BOSS出现：此前 BOSS 出场只有画面变化，没有任何语音/字幕提示 */
     try { if (window.VO) VO.say('VO_003'); } catch (e) {}
+    /* 【V1.3.0】BOSS 登场字幕走提示文案表：此前只有语音+画面，没有文字警告，
+     * 玩家在嘈杂环境/静音状态下完全不知道 BOSS 来了。运营可热改 sys.bossIn。 */
+    try { if (window.JUICE && JUICE.enabled && JUICE._say) JUICE._say(EX.tip('sys.bossIn')); } catch (e) {}
   },
 
   mkZ(d, mul, hpOverride) {
