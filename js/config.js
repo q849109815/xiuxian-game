@@ -935,19 +935,19 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '1.2.5',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '1.3.0',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/tokens.css', ver:'1.2.5', size: 0 },
-      { p: 'css/style.css', ver:'1.2.5', size: 0 },
-      { p: 'js/net.js', ver:'1.2.5', size: 0 },
-      { p: 'js/config.js', ver:'1.2.5', size: 0 },
-      { p: 'js/engine.js', ver:'1.2.5', size: 0 },
-      { p: 'js/juice.js', ver:'1.2.5', size: 0 },
-      { p: 'js/battle.js', ver:'1.2.5', size: 0 },
-      { p: 'js/ui.js', ver:'1.2.5', size: 0 },
-      { p: 'js/main.js', ver:'1.2.5', size: 0 },
-      { p: 'js/audio.js', ver:'1.2.5', size: 0 },
+      { p: 'css/tokens.css', ver:'1.3.0', size: 0 },
+      { p: 'css/style.css', ver:'1.3.0', size: 0 },
+      { p: 'js/net.js', ver:'1.3.0', size: 0 },
+      { p: 'js/config.js', ver:'1.3.0', size: 0 },
+      { p: 'js/engine.js', ver:'1.3.0', size: 0 },
+      { p: 'js/juice.js', ver:'1.3.0', size: 0 },
+      { p: 'js/battle.js', ver:'1.3.0', size: 0 },
+      { p: 'js/ui.js', ver:'1.3.0', size: 0 },
+      { p: 'js/main.js', ver:'1.3.0', size: 0 },
+      { p: 'js/audio.js', ver:'1.3.0', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -2243,10 +2243,26 @@ const EX = {
   /* =====================================================
    * 【提示文本表】资料 02 表第 14 项（飘字/弹窗/系统/报错）
    * =================================================== */
+  /* 【V1.3.0 · 提示文案统一层】运营热改覆盖
+   * 运营在云端/后台配 TIP_OVERRIDE = { 'popup.noCoin':'金币不够啦（还差 {v}）', ... }
+   * 即可热改全站提示文案，不需要发版。默认 {} 时恒取下表，行为与接线前完全一致。
+   * 安全约束：只接受非空字符串，其它类型一律忽略回退默认值 —— 防止后台表单填错
+   * （填数字 / null / 空格）把界面刷成 undefined 或空白。 */
+  TIP_OVERRIDE: {},
+
   /* 取文案：EX.tip('popup.noCoin', {v: 300})
    * 支持 {v} 占位符；查不到就原样返回 key，绝不因为文案缺失而崩。 */
   tip(path, vars) {
-    const seg = String(path || '').split('.');
+    const key = String(path || '');
+    const ov = this.TIP_OVERRIDE && this.TIP_OVERRIDE[key];
+    if (typeof ov === 'string' && ov.trim()) {
+      let s = ov;
+      if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
+      return s.replace(/\{[^}]+\}/g, '')
+        .replace(/[（(]\s*(?:需|共|剩余)?\s*[）)]/g, '')
+        .replace(/\s{2,}/g, ' ').trim();
+    }
+    const seg = key.split('.');
     let v = (EX.tips || {});
     for (const k of seg) { v = (v && typeof v === 'object') ? v[k] : null; }
     if (typeof v !== 'string') return seg[seg.length - 1] || path;
