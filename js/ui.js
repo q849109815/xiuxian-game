@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.0';
+const IMG_V = '1.3.1';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -1716,7 +1716,9 @@ r_tavern(p, tab) {
        * BUG：E.switchChar 会改写 p.char / p.skin / p.skinByChar，内部不 save，
        *   这里此前也只 open + home —— 实测切换角色后强退 / 换设备登录会读回旧角色，
        *   而皮肤（p.skinByChar 记忆）也一并丢失。补立即保存。 */
-      if (r.ok) { if (window.SND) SND.play('pickup'); E.save(p); this.open('role', '装备'); this.home(); }
+      /* 换角色播该角色的专属登场音（此前 16 个角色共用 pickup，听不出区别）。
+       * charSfx 缺失时回退 pickup，行为与改动前一致。 */
+      if (r.ok) { if (window.SND) { if (SND.charSfx) SND.charSfx(el.dataset.chsel); else SND.play('pickup'); } E.save(p); this.open('role', '装备'); this.home(); }
     }; });
     $$('#pnBody [data-gemon]').forEach((b) => { b.onclick = () => {
       const g = (EX.gems || []).find((x) => x.id === b.dataset.gemon);
