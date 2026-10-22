@@ -693,7 +693,7 @@ const MAIN = {
       P._saveFailAt = now;
       if (now - (this._offAt || 0) > 300000) {
         this._offAt = now;
-        try { UI.toast('⚠️ 网络异常，进度暂存在本机，恢复网络后会自动同步', 'err'); } catch (e) {}
+        try { UI.toast('⚠️ ' + (window.EX && EX.tip ? EX.tip('err.netErr') : '网络异常，请检查连接') + '，进度暂存在本机，恢复网络后会自动同步', 'err'); } catch (e) {}
       }
     }
     this.uploadRank();
