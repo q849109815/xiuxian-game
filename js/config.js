@@ -32,9 +32,9 @@ const EX = {
    * 移速 6.0 → 按 ×22 映射为像素速度 132
    * =================================================== */
   chars: [
-    { id: 'C01', n: '幸存者-杰克', icon: '🧑‍🚀', img: 'assets/char/c01_jack.jpg', hp: 1000, spd: 6.0, armor: 0, crit: 0.05,
+    { id: 'C01', sfx: 'balanced', sfxBend: 0, n: '幸存者-杰克', icon: '🧑‍🚀', img: 'assets/char/c01_jack.jpg', hp: 1000, spd: 6.0, armor: 0, crit: 0.05,
       unlockLv: 0, unlockTxt: '初始解锁', desc: '均衡型先锋官，无短板' },
-    { id: 'C02', n: '医疗兵-艾拉', icon: '👩‍⚕️', img: 'assets/char/c02_aila.jpg', hp: 900, spd: 6.5, armor: 5, crit: 0.05,
+    { id: 'C02', sfx: 'medic', sfxBend: 0, n: '医疗兵-艾拉', icon: '👩‍⚕️', img: 'assets/char/c02_aila.jpg', hp: 900, spd: 6.5, armor: 5, crit: 0.05,
       /* desc 原写「高移速轻护甲，灵活游走」—— 移速是死属性（战斗中角色不移动），
          改成与实际生效属性一致的描述 */
       /* 战地急救（角色天赋）：desc 承诺的「治疗天赋」此前全项目零实装 ——
@@ -45,25 +45,25 @@ const EX = {
        * 只够体现「医疗兵」的定位，不会把难度拉回从前。 */
       talent: { n: '战地急救', heal: 0.012, cd: 8, desc: '每 8 秒回复防线最大血量 1.2%' },
       unlockLv: '1-3', unlockTxt: '通关 1-3 解锁', desc: '轻装上阵，自带护甲与治疗天赋' },
-    { id: 'C03', n: '重装兵-雷', icon: '🧑‍🏭', img: 'assets/char/c03_lei.jpg', hp: 1200, spd: 5.0, armor: 15, crit: 0.03,
+    { id: 'C03', sfx: 'tank', sfxBend: 0, n: '重装兵-雷', icon: '🧑‍🏭', img: 'assets/char/c03_lei.jpg', hp: 1200, spd: 5.0, armor: 15, crit: 0.03,
       unlockLv: '2-3', unlockTxt: '通关 2-3 解锁', desc: '厚血高护甲，正面硬扛' },
-    { id: 'C04', n: '狙击手-妮可', icon: '🕵️‍♀️', img: 'assets/char/c04_nike.jpg', hp: 850, spd: 6.0, armor: 3, crit: 0.08,
+    { id: 'C04', sfx: 'sniper', sfxBend: 0, n: '狙击手-妮可', icon: '🕵️‍♀️', img: 'assets/char/c04_nike.jpg', hp: 850, spd: 6.0, armor: 3, crit: 0.08,
       unlockLv: '3-3', unlockTxt: '通关 3-3 解锁', desc: '高暴击脆皮，爆发输出' },
     /* ---- V1.0.2 内容扩充：角色 4 → 8 ----
      * 补齐策划部 P-02 / 美术部 A-01。四名新角色各有明确定位与一条
      * 专属流派，覆盖此前的空白：炮台流、爆炸流、攻速流、资源流。
      * 天赋字段（tower/explode/rate/gold）与 C02 的 heal 一样，
      * 全部在 battle.js 有真实消费点，杜绝"写了不实装"。 */
-    { id: 'C05', n: '工程兵-老陈', icon: '👷', img: 'assets/char/c05_chen.jpg', hp: 1050, spd: 5.8, armor: 8, crit: 0.04,
+    { id: 'C05', sfx: 'engineer', sfxBend: 0, n: '工程兵-老陈', icon: '👷', img: 'assets/char/c05_chen.jpg', hp: 1050, spd: 5.8, armor: 8, crit: 0.04,
       talent: { n: '炮台专精', tower: 0.12, desc: '炮台伤害 +12%' },
       unlockLv: '4-3', unlockTxt: '通关 4-3 解锁', desc: '炮台流核心，阵地战最强' },
-    { id: 'C06', n: '爆破手-凯恩', icon: '🧨', img: 'assets/char/c06_kane.jpg', hp: 950, spd: 5.6, armor: 4, crit: 0.06,
+    { id: 'C06', sfx: 'demo', sfxBend: 0, n: '爆破手-凯恩', icon: '🧨', img: 'assets/char/c06_kane.jpg', hp: 950, spd: 5.6, armor: 4, crit: 0.06,
       talent: { n: '爆破专精', explode: 0.15, desc: '爆炸伤害 +15%' },
       unlockLv: '5-3', unlockTxt: '通关 5-3 解锁', desc: '爆炸流核心，清场能力顶尖' },
-    { id: 'C07', n: '猎手-影', icon: '🥷', img: 'assets/char/c07_ying.jpg', hp: 880, spd: 6.8, armor: 2, crit: 0.12,
+    { id: 'C07', sfx: 'hunter', sfxBend: 0, n: '猎手-影', icon: '🥷', img: 'assets/char/c07_ying.jpg', hp: 880, spd: 6.8, armor: 2, crit: 0.12,
       talent: { n: '疾速连击', rate: 0.08, desc: '攻速 +8%' },
       unlockLv: '6-3', unlockTxt: '通关 6-3 解锁', desc: '高攻速高暴击，持续输出' },
-    { id: 'C08', n: '指挥官-凛', icon: '🎖️', img: 'assets/char/c08_lin.jpg', hp: 1100, spd: 5.9, armor: 10, crit: 0.05,
+    { id: 'C08', sfx: 'balanced', sfxBend: 1, n: '指挥官-凛', icon: '🎖️', img: 'assets/char/c08_lin.jpg', hp: 1100, spd: 5.9, armor: 10, crit: 0.05,
       talent: { n: '战地指挥', gold: 0.10, desc: '金币收益 +10%' },
       unlockLv: '7-3', unlockTxt: '通关 7-3 解锁', desc: '增益与资源型，养成加速' },
     /* ---- V1.0.3 内容扩充：角色 8 → 12 ----
@@ -71,16 +71,16 @@ const EX = {
      * 「天赋字段必须有真实消费点」的铁律：rate / heal / tower / gold
      * 四个键在 battle.js applyCharTalent 与回血逻辑中均已实装，
      * 不允许出现介绍写了天赋、战斗里零生效。 */
-    { id: 'C09', n: '特工-零', icon: '🕶️', img: 'assets/char/c09_zero.jpg', hp: 920, spd: 6.6, armor: 3, crit: 0.10,
+    { id: 'C09', sfx: 'hunter', sfxBend: 1, n: '特工-零', icon: '🕶️', img: 'assets/char/c09_zero.jpg', hp: 920, spd: 6.6, armor: 3, crit: 0.10,
       talent: { n: '暗杀专精', rate: 0.06, desc: '攻速 +6%' },
       unlockLv: '8-3', unlockTxt: '通关 8-3 解锁', desc: '隐秘行动专家，出手极快' },
-    { id: 'C10', n: '医师-白', icon: '💉', img: 'assets/char/c10_bai.jpg', hp: 880, spd: 6.2, armor: 6, crit: 0.04,
+    { id: 'C10', sfx: 'medic', sfxBend: 1, n: '医师-白', icon: '💉', img: 'assets/char/c10_bai.jpg', hp: 880, spd: 6.2, armor: 6, crit: 0.04,
       talent: { n: '急救专精', heal: 0.010, cd: 7, desc: '每 7 秒回复防线最大血量 1.0%' },
       unlockLv: '9-3', unlockTxt: '通关 9-3 解锁', desc: '持续治疗，续航能力顶尖' },
-    { id: 'C11', n: '炮手-钢', icon: '🔧', img: 'assets/char/c11_gang.jpg', hp: 1150, spd: 5.4, armor: 12, crit: 0.03,
+    { id: 'C11', sfx: 'engineer', sfxBend: 1, n: '炮手-钢', icon: '🔧', img: 'assets/char/c11_gang.jpg', hp: 1150, spd: 5.4, armor: 12, crit: 0.03,
       talent: { n: '重炮专精', tower: 0.10, desc: '炮台伤害 +10%' },
       unlockLv: '10-3', unlockTxt: '通关 10-3 解锁', desc: '重装炮台流，火力覆盖' },
-    { id: 'C12', n: '商人-金', icon: '💰', img: 'assets/char/c12_jin.jpg', hp: 1000, spd: 6.0, armor: 5, crit: 0.06,
+    { id: 'C12', sfx: 'trader', sfxBend: 0, n: '商人-金', icon: '💰', img: 'assets/char/c12_jin.jpg', hp: 1000, spd: 6.0, armor: 5, crit: 0.06,
       talent: { n: '资源专精', gold: 0.08, desc: '金币收益 +8%' },
       unlockLv: '10-5', unlockTxt: '通关 10-5 解锁', desc: '资源增益，养成速度更快' },
     /* ---- V1.0.4 内容续作：角色 12 → 16 ----
@@ -88,16 +88,16 @@ const EX = {
      * 沿用铁律：天赋键（rate / explode / heal / gold）在 battle.js
      * applyCharTalent 与回血逻辑中均有真实消费点，不允许"写了不生效"。
      * C13 是首个双天赋角色（rate + explode），两个键由两条独立分支各自累加。 */
-    { id: 'C13', n: '电工-弧', icon: '⚡', img: 'assets/char/c13_hu.jpg', hp: 940, spd: 6.4, armor: 4, crit: 0.09,
+    { id: 'C13', sfx: 'electric', sfxBend: 0, n: '电工-弧', icon: '⚡', img: 'assets/char/c13_hu.jpg', hp: 940, spd: 6.4, armor: 4, crit: 0.09,
       talent: { n: '过载电弧', rate: 0.05, explode: 0.08, desc: '攻速 +5%，爆炸伤害 +8%' },
       unlockLv: '10-7', unlockTxt: '通关 10-7 解锁', desc: '电弧与爆破双修，清场极快' },
-    { id: 'C14', n: '盾卫-铁壁', icon: '🛡️', img: 'assets/char/c14_tiebi.jpg', hp: 1300, spd: 4.8, armor: 20, crit: 0.02,
+    { id: 'C14', sfx: 'tank', sfxBend: 1, n: '盾卫-铁壁', icon: '🛡️', img: 'assets/char/c14_tiebi.jpg', hp: 1300, spd: 4.8, armor: 20, crit: 0.02,
       talent: { n: '铁壁愈合', heal: 0.018, cd: 10, desc: '每 10 秒回复防线最大血量 1.8%' },
       unlockLv: '10-8', unlockTxt: '通关 10-8 解锁', desc: '最硬的前排，护甲与续航拉满' },
-    { id: 'C15', n: '拾荒者-鼠', icon: '🎒', img: 'assets/char/c15_shu.jpg', hp: 900, spd: 6.8, armor: 2, crit: 0.07,
+    { id: 'C15', sfx: 'scav', sfxBend: 0, n: '拾荒者-鼠', icon: '🎒', img: 'assets/char/c15_shu.jpg', hp: 900, spd: 6.8, armor: 2, crit: 0.07,
       talent: { n: '拾荒本能', gold: 0.12, rate: 0.03, desc: '金币收益 +12%，攻速 +3%' },
       unlockLv: '10-9', unlockTxt: '通关 10-9 解锁', desc: '资源收益最高，养成最快' },
-    { id: 'C16', n: '死神-镰', icon: '⚔️', img: 'assets/char/c16_lian.jpg', hp: 820, spd: 6.2, armor: 0, crit: 0.14,
+    { id: 'C16', sfx: 'sniper', sfxBend: 1, n: '死神-镰', icon: '⚔️', img: 'assets/char/c16_lian.jpg', hp: 820, spd: 6.2, armor: 0, crit: 0.14,
       talent: { n: '收割', explode: 0.20, desc: '爆炸伤害 +20%' },
       unlockLv: '10-10', unlockTxt: '通关 10-10 解锁', desc: '极致爆发，脆皮但输出天花板' },
   ],
@@ -935,19 +935,19 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '1.3.0',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '1.3.1',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/tokens.css', ver:'1.3.0', size: 0 },
-      { p: 'css/style.css', ver:'1.3.0', size: 0 },
-      { p: 'js/net.js', ver:'1.3.0', size: 0 },
-      { p: 'js/config.js', ver:'1.3.0', size: 0 },
-      { p: 'js/engine.js', ver:'1.3.0', size: 0 },
-      { p: 'js/juice.js', ver:'1.3.0', size: 0 },
-      { p: 'js/battle.js', ver:'1.3.0', size: 0 },
-      { p: 'js/ui.js', ver:'1.3.0', size: 0 },
-      { p: 'js/main.js', ver:'1.3.0', size: 0 },
-      { p: 'js/audio.js', ver:'1.3.0', size: 0 },
+      { p: 'css/tokens.css', ver:'1.3.1', size: 0 },
+      { p: 'css/style.css', ver:'1.3.1', size: 0 },
+      { p: 'js/net.js', ver:'1.3.1', size: 0 },
+      { p: 'js/config.js', ver:'1.3.1', size: 0 },
+      { p: 'js/engine.js', ver:'1.3.1', size: 0 },
+      { p: 'js/juice.js', ver:'1.3.1', size: 0 },
+      { p: 'js/battle.js', ver:'1.3.1', size: 0 },
+      { p: 'js/ui.js', ver:'1.3.1', size: 0 },
+      { p: 'js/main.js', ver:'1.3.1', size: 0 },
+      { p: 'js/audio.js', ver:'1.3.1', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
