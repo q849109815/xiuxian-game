@@ -254,7 +254,7 @@
         this.flash('255,150,60', 0.22, 0.26);
         /* 【AU-02】波次推进补 wave 音效（每波一次，无需节流） */
         this._snd('wave');
-        this._say('第 ' + n + ' 波');
+        this._say((window.EX && EX.tip ? EX.tip('sys.waveIn', { v: n }) : ('第 ' + n + ' 波')));
       } catch (e) {}
     },
 
