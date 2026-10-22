@@ -935,19 +935,19 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '1.3.3',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '1.3.4',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/tokens.css', ver:'1.3.3', size: 0 },
-      { p: 'css/style.css', ver:'1.3.3', size: 0 },
-      { p: 'js/net.js', ver:'1.3.3', size: 0 },
-      { p: 'js/config.js', ver:'1.3.3', size: 0 },
-      { p: 'js/engine.js', ver:'1.3.3', size: 0 },
-      { p: 'js/juice.js', ver:'1.3.3', size: 0 },
-      { p: 'js/battle.js', ver:'1.3.3', size: 0 },
-      { p: 'js/ui.js', ver:'1.3.3', size: 0 },
-      { p: 'js/main.js', ver:'1.3.3', size: 0 },
-      { p: 'js/audio.js', ver:'1.3.3', size: 0 },
+      { p: 'css/tokens.css', ver:'1.3.4', size: 0 },
+      { p: 'css/style.css', ver:'1.3.4', size: 0 },
+      { p: 'js/net.js', ver:'1.3.4', size: 0 },
+      { p: 'js/config.js', ver:'1.3.4', size: 0 },
+      { p: 'js/engine.js', ver:'1.3.4', size: 0 },
+      { p: 'js/juice.js', ver:'1.3.4', size: 0 },
+      { p: 'js/battle.js', ver:'1.3.4', size: 0 },
+      { p: 'js/ui.js', ver:'1.3.4', size: 0 },
+      { p: 'js/main.js', ver:'1.3.4', size: 0 },
+      { p: 'js/audio.js', ver:'1.3.4', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -2307,7 +2307,7 @@ const EX = {
       reload: '换弹中…',
       waveIn: '第 {v} 波来袭',
       bossIn: '警告：BOSS 出现',
-      newWave: '新一波尸潮接近',
+      /* V1.3.4 策划清理：sys.newWave（'新一波尸潮接近'）与 sys.waveIn 语义重复、且从未接线，已删除，由 waveIn 统一覆盖 */
     },
     /* 报错文本 */
     err: {
