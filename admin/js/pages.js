@@ -1737,7 +1737,7 @@ const PAGES = {
                  <button class="btn sm d" data-a="rmDel" data-i="${i}">删除</button>`]))
             : this.empty('排期为空，点「新增版本」或「恢复内置排期」')}
             <div class="hint">下发后写入 data/zb/roadmap.json，玩家重启游戏即可看到最新路线图。</div>`;
-                } else {
+                } else if (t === 'lang') {
           const L = (EX && EX.LANGS) || [{ k: 'zh', n: '中文' }];
           const cur = (window.OPS && OPS.getLang) ? OPS.getLang() : 'zh';
           /* 真文案表是 EX.I18N，结构是 { TXT_001: { zh,en,zhTW,ja,ru } }
@@ -1754,10 +1754,36 @@ const PAGES = {
               keys.map((k) => [U.esc(k)].concat(L.map((x) => U.esc(String((I18N[k] || {})[x.k] || ''))))
                 .concat([`<button class="btn sm" data-a="txEdit" data-id="${U.esc(k)}">编辑</button>`])))
               : this.empty('EX.I18N 文案表为空')}`;
+        } else if (t === 'tip') {
+          /* V1.3.4：提示文案热改表单。
+           * 此前运营只能在「热更新」页手写裸 JSON（{"TIP_OVERRIDE":{...}}）才能改提示，
+           * 本页把全部提示列成表，改完写进 cfg.json 的 TIP_OVERRIDE ——
+           * 游戏端 applyCloudCfg 的 cfg 分支会覆盖 EX.TIP_OVERRIDE，玩家下次登录生效。 */
+          const OV = (EX && EX.TIP_OVERRIDE) || {};
+          const flat = [];
+          const walk = (o, pre) => {
+            Object.keys(o || {}).forEach((k) => {
+              const v = o[k];
+              if (v && typeof v === 'object' && !Array.isArray(v)) walk(v, pre ? pre + '.' + k : k);
+              else if (typeof v === 'string') flat.push([pre ? pre + '.' + k : k, v]);
+            });
+          };
+          walk((EX && EX.tips) || {}, '');
+          body = `<div class="hint">改的是游戏内提示文案（金币不足 / BOSS 警告 / 波次播报等）。留空即恢复默认。保存后写入 cfg.json 的 <b>TIP_OVERRIDE</b>，玩家下次登录生效。</div>
+            ${flat.length ? this.table(['键', '默认文案', '当前生效', '操作'],
+              flat.map((row) => {
+                const k = row[0], defv = row[1];
+                const ovv = OV[k];
+                const eff = (typeof ovv === 'string' && ovv.trim()) ? ovv : defv;
+                return [U.esc(k), U.esc(defv),
+                  (typeof ovv === 'string' && ovv.trim()) ? '<span class="bd y">' + U.esc(eff) + '</span>' : U.esc(eff),
+                  `<button class="btn sm" data-a="tpEdit" data-id="${U.esc(k)}">改</button>`];
+              })) : this.empty('EX.tips 提示表为空')}
+            <div class="btns" style="margin-top:10px"><button class="btn warn" data-a="tpClear">🗑 清空全部覆盖</button></div>`;
         }
         return `<div class="card">
           <h3>热更新 / 版本 / 多语言</h3>
-          <div class="seg" style="margin-bottom:10px">${seg('hot', '热更新')}${seg('ver', '版本排期')}${seg('lang', '多语言')}</div>
+          <div class="seg" style="margin-bottom:10px">${seg('hot', '热更新')}${seg('ver', '版本排期')}${seg('lang', '多语言')}${seg('tip', '提示文案')}</div>
           ${body}</div>`;
       },
       acts: {
@@ -1938,6 +1964,44 @@ const PAGES = {
               }
             },
           });
+        },
+        /* V1.3.4：提示文案热改 —— 写进 cfg.json 的 TIP_OVERRIDE，
+         * 游戏端 applyCloudCfg 的 cfg 分支会覆盖 EX.TIP_OVERRIDE（该键已存在）。 */
+        tpEdit(t) {
+          const id = t.dataset.id;
+          const OV = (EX && EX.TIP_OVERRIDE) || {};
+          const cur = OV[id];
+          let o = (EX && EX.tips) || {}; let defv = '';
+          try { id.split('.').forEach((p) => { o = o && o[p]; }); if (typeof o === 'string') defv = o; } catch (e) {}
+          this.openModal(`<h3>改提示文案 · ${U.esc(id)}</h3>
+            <div class="fr"><label class="wide">默认文案</label><input id="tp_def" value="${U.esc(defv)}" disabled></div>
+            <div class="fr"><label class="wide">覆盖文案（留空=恢复默认）</label><input id="tp_v" value="${U.esc(typeof cur === 'string' ? cur : '')}" placeholder="${U.esc(defv)}"></div>
+            <div class="btns"><button class="btn pri" data-m="ok">保存并下发</button><button class="btn" data-m="close">取消</button></div>`, {
+            ok: async () => {
+              const v = this.str('#tp_v');
+              const c = await DB.reload(DBP.cfg);
+              const ov = Object.assign({}, (c.TIP_OVERRIDE || (EX && EX.TIP_OVERRIDE) || {}));
+              if (v && v.trim()) ov[id] = v.trim(); else delete ov[id];
+              c.TIP_OVERRIDE = ov;
+              if (await DB.set(DBP.cfg, c, '提示文案 ' + id)) {
+                try { if (window.EX) { EX.TIP_OVERRIDE = ov; } } catch (err) {}
+                AUDIT.log('改提示文案', id, v);
+                this.toast('已下发（玩家下次登录生效）', 'ok');
+                this.closeModal();
+                this.render();
+              }
+            },
+          });
+        },
+        async tpClear() {
+          const c = await DB.reload(DBP.cfg);
+          c.TIP_OVERRIDE = {};
+          if (await DB.set(DBP.cfg, c, '清空提示文案覆盖')) {
+            try { if (window.EX) { EX.TIP_OVERRIDE = {}; } } catch (err) {}
+            AUDIT.log('清空提示文案覆盖', '', '');
+            this.toast('已清空全部覆盖', 'ok');
+            this.render();
+          }
         },
       },
       /* 进入本页时拉一次云端排期：否则运营改完下发后，
