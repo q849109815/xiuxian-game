@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.2.5';
+const IMG_V = '1.3.0';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -1124,7 +1124,7 @@ r_tavern(p, tab) {
         /* 防御：按钮已置灰，但旧档/热更后仍可能点到 —— 给一句明确提示，
          * 不再静默 return（与 r_tavern 的 disabled 一起保证「点了必有反馈」） */
         if ((p.mercs || []).indexOf(id) >= 0) return this.toast(m.n + ' 已在阵容中', 'err');
-        if (p.gold < m.cost) return this.toast('金币不足', 'err');
+        if (p.gold < m.cost) return this.toast(EX.tip('popup.noCoin', { v: E.fmt(m.cost) }), 'err');
         p.gold -= m.cost;
         (p.mercs || (p.mercs = [])).push(id);
         E.save(p); this.toast('已雇佣 ' + m.n, 'ok');
@@ -1302,7 +1302,7 @@ r_tavern(p, tab) {
     }; });
     const cb = $('#lgCreate');
     if (cb) cb.onclick = () => {
-      if (p.gold < 20000) return this.toast('金币不足', 'err');
+      if (p.gold < 20000) return this.toast(EX.tip('popup.noCoin', { v: E.fmt(20000) }), 'err');
       p.gold -= 20000;
       p.legion = { id: 'my', n: p.name + '的军团', lv: 1, cap: 50,
         members: this.mkLegionMembers(p, 6, '团长') };
@@ -1315,7 +1315,7 @@ r_tavern(p, tab) {
       const LC = (window.EX && EX.legionCfg) || {};
       const cost = Number(LC.donateCost) || 5000;
       const ctb = Number(LC.donateContrib) || 100;
-      if (p.gold < cost) return this.toast('金币不足（需 ' + E.fmt(cost) + '）', 'err');
+      if (p.gold < cost) return this.toast(EX.tip('popup.noCoin', { v: E.fmt(cost) }), 'err');
       p.gold -= cost; p.legionExp = (p.legionExp || 0) + ctb;
       /* 累计贡献同步增加：属性加成按累计算，否则花掉贡献就会掉属性 */
       p.legionContrib = (p.legionContrib || 0) + ctb;
@@ -1327,7 +1327,7 @@ r_tavern(p, tab) {
     if (bb) bb.onclick = () => {
       const b = EX.legionBoss; if (!b) return;
       if (!p.legion) return this.toast('请先加入军团', 'err');
-      if ((p.stamina || 0) < b.cost) return this.toast('体力不足', 'err');
+      if ((p.stamina || 0) < b.cost) return this.toast(EX.tip('popup.noStamina', { v: b.cost }), 'err');
       p.stamina -= b.cost;
       const wk = E.weekKey();
       p.lb = p.lb || {};
@@ -1377,7 +1377,7 @@ r_tavern(p, tab) {
         }).join('')}`);
       $$('[data-lact]').forEach((b) => { b.onclick = () => {
         const a = (EX.legionActs || []).find((x) => x.id === b.dataset.lact); if (!a) return;
-        if ((p.stamina || 0) < a.cost) return this.toast('体力不足', 'err');
+        if ((p.stamina || 0) < a.cost) return this.toast(EX.tip('popup.noStamina', { v: a.cost }), 'err');
         if (E.power(p) < a.need) return this.toast('战力不足', 'err');
         p.stamina -= a.cost;
         p.gold = (p.gold || 0) + a.gold;
@@ -1515,7 +1515,7 @@ r_tavern(p, tab) {
   b_exped(p, tab) {
     $$('#pnBody [data-exped]').forEach((b) => { b.onclick = () => {
       const e = EX.expeds.find((x) => x.id === b.dataset.exped); if (!e) return;
-      if ((p.stamina || 0) < e.cost) return this.toast('体力不足', 'err');
+      if ((p.stamina || 0) < e.cost) return this.toast(EX.tip('popup.noStamina', { v: e.cost }), 'err');
       p.stamina -= e.cost;
       /* 按副本配置的 mats 精确产出（此前 M0x 全随机，与 desc 对不上） */
       const txt = ['金币+' + e.gold];
@@ -1964,7 +1964,7 @@ r_tavern(p, tab) {
 
   /* ---------- 芯片 ---------- */
   r_chip(p, tab) {
-    if (!E.chipUnlocked(p)) return '<div class="empty"><span class="ic">🔲</span>芯片系统未解锁<br><span style="font-size:var(--fs-xs)">通关 1-4 后开启</span></div>';
+    if (!E.chipUnlocked(p)) return '<div class="empty"><span class="ic">🔲</span>芯片系统未解锁<br><span style="font-size:var(--fs-xs)">' + EX.tip('popup.lvLocked', { v: '1-4' }) + '</span></div>';
     if (tab === '背包') {
       const bag = p.bag || [];
       if (!bag.length) return '<div class="empty"><span class="ic">🔲</span>暂无芯片<br><span style="font-size:var(--fs-xs)">BOSS 关掉落 / 活动获取</span></div>';
@@ -2110,7 +2110,7 @@ r_tavern(p, tab) {
 
   /* ---------- 天赋 ---------- */
   r_talent(p) {
-    if (!E.sysUnlocked(p, 'talent')) return '<div class="empty"><span class="ic">⭐</span>天赋系统未解锁<br><span style="font-size:var(--fs-xs)">通关 1-3 后开启</span></div>';
+    if (!E.sysUnlocked(p, 'talent')) return '<div class="empty"><span class="ic">⭐</span>天赋系统未解锁<br><span style="font-size:var(--fs-xs)">' + EX.tip('popup.lvLocked', { v: '1-3' }) + '</span></div>';
     return `<div class="card"><div class="card-t">永久天赋 <span class="sub">全局生效，不随关卡重置</span></div>
     ${EX.talents.map((t) => {
       const cur = p.talents[t.id] || 0;
@@ -2121,7 +2121,7 @@ r_tavern(p, tab) {
         <div class="info"><div class="nm">${t.n} <span class="tag y">Lv.${cur}/${t.max}</span></div>
         <div class="sub">${t.desc}</div>
         <div class="bar"><i style="width:${t.max > 0 ? clamp((+cur || 0) / t.max * 100, 0, 100) : 0}%"></i></div>
-        ${lock ? `<div class="sub" style="color:var(--c-red-300)">需通关 ${t.unlock} 解锁</div>` : ''}</div>
+        ${lock ? `<div class="sub" style="color:var(--c-red-300)">${EX.tip('popup.lvLocked', { v: t.unlock })}</div>` : ''}</div>
         <div class="act">${full ? '<span class="tag g">已满</span>' : lock ? '<span class="tag r">未解锁</span>'
           : `<button class="btn ${p.gold >= cost ? 'c' : ''} sm" data-tal="${t.id}" ${p.gold < cost ? 'disabled' : ''}>${E.fmt(cost)}</button>`}</div></div>`;
     }).join('')}</div>`;
@@ -2804,7 +2804,7 @@ r_tavern(p, tab) {
         if (byName) { try { E.unlockGun(p, byName.id); } catch (e) {} }
       }
       if (g.limit) { try { E.giftMark(p, g); } catch (e) {} }
-      E.save(p); if (!g.monthly && !g.pass) this.toast('购买成功', 'ok');
+      E.save(p); if (!g.monthly && !g.pass) this.toast(EX.tip('popup.buyOk'), 'ok');
       if (window.SND) SND.play('get');
       /* 买完不再"钉"在屏幕上：
        * 此前无论这件商品还能不能买，一律 this.open('shop', tab) 重新把面板铺开，
@@ -3628,7 +3628,7 @@ r_tavern(p, tab) {
         const _eOpen = E.endlessUnlocked ? E.endlessUnlocked(p) : true;
         const _eNeed = (EX && EX.ENDLESS_UNLOCK) ? String(EX.ENDLESS_UNLOCK) : '';
         return `<div class="kv"><span>最佳层数</span><b>${p.endlessBest || 0}</b></div>
-         <div class="sub">${_eOpen ? '已解锁 · 掉落/收益随进度章节提升' : '需先通关 ' + _eNeed}</div>
+         <div class="sub">${_eOpen ? '已解锁 · 掉落/收益随进度章节提升' : EX.tip('popup.lvLocked', { v: _eNeed })}</div>
          ${_eOpen
            ? '<button class="btn c blk" data-lv="endless" data-df="normal">进入无尽（体力 2）</button>'
            : '<span class="tag r">未解锁</span>'}`;
