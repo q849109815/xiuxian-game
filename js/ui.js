@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.5';
+const IMG_V = '1.3.6';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -2376,7 +2376,12 @@ r_tavern(p, tab) {
       </div>
       <button class="btn o" id="goChip" style="width:100%;margin-top:8px">🔲 前往芯片系统</button>`;
     }
-    /* 材料 */
+    /* 材料
+     * V1.3.6：分解区改由 E.dismantleList() 驱动（此前硬编码 ['P01','P02']，
+     * 后台加减可分解材料界面不跟；且 canDismantle 零调用，不可分解的物品也会列出来、
+     * 按钮可点却分解不掉）。同时兜住 rate 缺失：后台配错时不显示「单价 undefined」。
+     * 注意：说明性注释必须写在模板字符串之外，写在里面会被渲染进页面。
+     */
     return `<div class="card"><div class="card-t">材料</div>
       <div class="grid4">${EX.items.filter((x) => x.type === '材料' || x.type === '碎片').map((it) => {
         const n = (p.mat || {})[it.id] || 0;
@@ -2385,9 +2390,10 @@ r_tavern(p, tab) {
           <div class="gn">${it.n}</div>${n ? `<span class="gq">${n > 9999 ? (n / 1000).toFixed(1) + 'k' : n}</span>` : ''}${this.tempTag(p, it.id)}</div>`;
       }).join('')}</div></div>
       <div class="card"><div class="card-t">分解 <span class="sub">碎片/芯片 → 金币</span></div>
-        ${['P01', 'P02'].map((id) => {
+        ${E.dismantleList().map((id) => {
           const n = (p.mat || {})[id] || 0;
           const rate = E.DISMANTLE_RATE[id];
+          if (!rate) return '';
           return `<div class="zrow"><div class="zav">🧩</div>
             <div class="zi"><b>${E.itemName(id)}</b><span>×${n} · 单价 ${rate} 金币</span></div>
             <button class="btn sm ${n ? '' : 'd'}" data-dec2="${id}" ${n ? '' : 'disabled'}>分解</button></div>`;
