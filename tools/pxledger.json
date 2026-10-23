@@ -1,0 +1,164 @@
+{
+  "_rule": "玩家可感知交叉验证台账。每条交付必须声明：玩家从哪个入口进来(entry)、能看到什么(expect)、代码锚点(proofs)。五证缺一不可，见 pxcheck.cjs 头部。",
+  "_items": [
+    {
+      "ver": "1.3.0",
+      "name": "提示文案统一层",
+      "kind": "visible",
+      "entry": "shop",
+      "expect": "购买成功/体力不足/金币不足时提示文案统一",
+      "proofs": [
+        {
+          "file": "js/config.js",
+          "anchor": "TIP_OVERRIDE"
+        },
+        {
+          "file": "js/ui.js",
+          "anchor": "EX.tip("
+        }
+      ]
+    },
+    {
+      "ver": "1.3.0",
+      "name": "BOSS登场文字警告",
+      "kind": "visible",
+      "entry": "battle",
+      "expect": "BOSS出现时屏幕上方出现一行文字警告（静音也能看到）",
+      "proofs": [
+        {
+          "file": "js/battle.js",
+          "anchor": "EX.tip('sys.bossIn')"
+        },
+        {
+          "file": "js/config.js",
+          "anchor": "bossIn:"
+        }
+      ]
+    },
+    {
+      "ver": "1.3.1",
+      "name": "角色专属登场音效",
+      "kind": "visible",
+      "entry": "role",
+      "expect": "切换角色时能听到各角色不同的登场音",
+      "proofs": [
+        {
+          "file": "js/audio.js",
+          "anchor": "charSfx"
+        },
+        {
+          "file": "js/ui.js",
+          "anchor": "SND.charSfx"
+        }
+      ]
+    },
+    {
+      "ver": "1.3.2",
+      "name": "低机型性能降级",
+      "kind": "visible",
+      "entry": "set",
+      "expect": "低端机自动降画质，帧率达标",
+      "proofs": [
+        {
+          "file": "js/juice.js",
+          "anchor": "_autoQ(d) {"
+        },
+        {
+          "file": "js/juice.js",
+          "anchor": "PERF: {"
+        }
+      ]
+    },
+    {
+      "ver": "1.3.4",
+      "name": "后台提示文案热改表单",
+      "kind": "ops",
+      "entry": "admin",
+      "expect": "运营在后台可视化改提示文案，不必手写JSON",
+      "proofs": [
+        {
+          "file": "admin/js/pages.js",
+          "anchor": "TIP_OVERRIDE"
+        }
+      ]
+    },
+    {
+      "ver": "1.3.5",
+      "name": "版本排期与未来三轮方向",
+      "kind": "visible",
+      "entry": "set",
+      "expect": "设置→前瞻页能看到已发布历史与未来版本预告、各部门分工",
+      "proofs": [
+        {
+          "file": "js/config.js",
+          "anchor": "V2.0.0"
+        },
+        {
+          "file": "js/ui.js",
+          "anchor": "前瞻"
+        }
+      ]
+    },
+    {
+      "ver": "1.3.6",
+      "name": "关卡扩容铁律（一次只加一章10关）",
+      "kind": "visible",
+      "entry": "set",
+      "expect": "前瞻页里V1.5.0起每个版本只加一章10关",
+      "proofs": [
+        {
+          "file": "js/config.js",
+          "anchor": "一次只加一章"
+        }
+      ]
+    },
+    {
+      "ver": "1.3.7",
+      "name": "运营日历日期修正",
+      "kind": "invisible",
+      "entry": "ops",
+      "expect": "运营照日历排活不会排错月份",
+      "proofs": [
+        {
+          "file": "运营日历_V1.0.2.md",
+          "anchor": "2027-09"
+        }
+      ],
+      "cur": false,
+      "retracted": true,
+      "why": "实测不存在：功能/文件均未在代码库中找到，属空报，已撤销并留档"
+    },
+    {
+      "ver": "1.3.7",
+      "name": "皮肤页全部装备按钮可用",
+      "kind": "visible",
+      "entry": "role",
+      "expect": "皮肤页点全部装备能批量穿上",
+      "proofs": [
+        {
+          "file": "js/ui.js",
+          "anchor": "全部装备"
+        }
+      ],
+      "cur": false,
+      "retracted": true,
+      "why": "实测不存在：功能/文件均未在代码库中找到，属空报，已撤销并留档"
+    },
+    {
+      "ver": "1.3.7",
+      "name": "邮件全部领取二次确认",
+      "kind": "visible",
+      "entry": "mail",
+      "expect": "点全部领取会先弹确认，防误触",
+      "proofs": [
+        {
+          "file": "js/ui.js",
+          "anchor": "全部领取"
+        }
+      ],
+      "cur": false,
+      "retracted": true,
+      "why": "实测不存在：功能/文件均未在代码库中找到，属空报，已撤销并留档"
+    }
+  ]
+}
