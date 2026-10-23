@@ -4459,7 +4459,27 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
    * 背包碎片分解（表05 第9项：分解碎片 → 金币）
    * ======================================================== */
   DISMANTLE_RATE: { P01: 60, P02: 120, C01: 200, C02: 500, C03: 1200 },
-  canDismantle(id) { return !!this.DISMANTLE_RATE[id]; },
+  /* V1.3.6 背包分解按钮校验。
+   *
+   * 起因：面板此前【硬编码 ['P01','P02']】列出可分解材料，而 canDismantle()
+   * 定义了却零调用。后果有两头：
+   *   ① 后台往 DISMANTLE_RATE 加新材料（如 config 里标了 src='关卡/分解' 的
+   *      M04 火药），面板不会显示 —— 配置改了界面不跟，玩家分解不了；
+   *   ② 后台把某个 id 从表里删掉，面板照样列出，按钮可点，点了弹
+   *      「该物品无法分解」—— 典型的「按钮骗人」。
+   * 另外 C01/C02/C03 是【角色 ID】不是材料（C01 幸存者-杰克…），是历史误放
+   * 进来的；此前 dismantlePreview / dismantleAll 各自写了一遍 /^C0/ 正则来绕开，
+   * 属于三处重复的隐性约定，改一处漏两处就会复现。
+   *
+   * 现在收成单一事实来源：dismantleList() 给出「真正可分解的材料」，
+   * 面板 / 预演 / 执行 三处全部走它，不再各写各的正则。 */
+  dismantleList() {
+    return Object.keys(this.DISMANTLE_RATE)
+      .filter((id) => !/^C0/.test(id) && this.DISMANTLE_RATE[id] > 0);
+  },
+  canDismantle(id) {
+    return this.dismantleList().indexOf(id) >= 0;
+  },
   dismantleMat(p, id, n) {
     const rate = this.DISMANTLE_RATE[id];
     if (!rate) return { ok: false, msg: '该物品无法分解' };
@@ -4520,7 +4540,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     const lines = [];
     let gold = 0, cnt = 0;
     Object.keys(this.DISMANTLE_RATE).forEach((id) => {
-      if (/^C0/.test(id)) return;                 /* C0x 是角色 ID，不是芯片 */
+      if (!this.canDismantle(id)) return;         /* 走单一事实来源，不再各写正则 */
       const have = this.safeAmt((p.mat || {})[id]);
       if (have > 0) {
         const g = this.DISMANTLE_RATE[id] * have;
@@ -4542,7 +4562,7 @@ return { ok: true, msg: '🔫 ' + this.gun(p).n + ' → Lv.' + p.gunLv + extra }
     let gold = 0, cnt = 0;
     const mat = p.mat || {};
     Object.keys(this.DISMANTLE_RATE).forEach((id) => {
-      if (/^C0/.test(id)) return;
+      if (!this.canDismantle(id)) return;
       const have = this.safeAmt(mat[id]);
       if (have > 0) { gold += this.DISMANTLE_RATE[id] * have; cnt += have; mat[id] = 0; }
     });
