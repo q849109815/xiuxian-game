@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.71';
+const IMG_V = '1.3.73';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -4080,11 +4080,27 @@ r_tavern(p, tab) {
 
       <div class="card"><div class="card-t">版本</div>
         <div class="kv"><span>当前版本</span><b style="color:var(--green)">${cv ? cv.v + ' ' + cv.n : '-'}</b></div>
-        <div class="kv"><span>排期条数</span><b>${(window.OPS ? OPS.versions() : []).length} 条</b></div>
+        <div class="kv"><span>排期条数</span><b>${(window.OPS ? OPS.versions() : (EX.VERSIONS || [])).filter(function (x) { return x && x.pub !== false; }).length} 条</b></div>
         <div class="sub">后台「热更新 / 版本排期」可在线维护本表；玩家请在「前瞻」页查看。</div>
-        ${(window.OPS ? OPS.versions() : (EX.VERSIONS || [])).map((v) => `<div class="zrow"><div class="zav">${v.done ? '✔' : '○'}</div>
-          <div class="zi"><b>${v.v} ${v.n}</b><span>${v.wk} · ${v.c}</span></div>
-          <span class="st ${v.done ? 'on' : 'off'}">${v.done ? '已完成' : '开发中'}</span></div>`).join('')}
+        ${(function () {
+          /* V1.3.72：运营页排期此前直接渲染全量 versions() 并外显内部字段 c，
+           * 三个问题：① 内部规划（pub:false，如 V0.1~V0.7 原型期）玩家可见
+           * ② c/ok 是内部内容与验收口径，不该给玩家看（前瞻页只给 hi）
+           * ③ 后台自由文本未转义，带标签会打乱面板结构
+           * 口径统一对齐「前瞻」页：只列 pub 为真的版本，只显示玩家亮点 hi。 */
+          const E8 = (x) => String(x == null ? '' : x).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+          const cut = (s, n) => { const t = String(s || '').trim(); return t.length > n ? t.slice(0, n) + '…' : t; };
+          const all = window.OPS ? OPS.versions() : (EX.VERSIONS || []);
+          const vis = all.filter(function (x) { return x && x.pub !== false; });
+          if (!vis.length) return '<div class="lbl">暂无可展示排期</div>';
+          return vis.map((v) => {
+            const hi = (v.hi || []).filter(Boolean).slice(0, 2);
+            const txt = hi.length ? hi.join(' / ') : (v.n || '');
+            return '<div class="zrow"><div class="zav">' + (v.done ? '✔' : '○') + '</div>'
+              + '<div class="zi"><b>' + E8(v.v) + ' ' + E8(v.n || '') + '</b><span>' + E8(cut(txt, 20)) + '</span></div>'
+              + '<span class="st ' + (v.done ? 'on' : 'off') + '">' + (v.done ? '已完成' : '开发中') + '</span></div>';
+          }).join('');
+        })()}
       </div>
 
       <div class="card"><div class="card-t">数据埋点 <span class="sub">共 ${window.OPS ? OPS.trackBuf().length : 0} 条</span></div>
