@@ -457,6 +457,11 @@ const PERM = {
     /* 多语言文案「编辑并下发」：写进 cfg.json 的 I18N 推给全体玩家，
      * 与运营配置同级，此前漏映射 */
     txEdit: 'config.edit',
+    /* 提示文案热改表单（V1.3.4 新增）：tpEdit 改单条、tpClear 清空全部覆盖。
+     * 两者都写进 cfg.json 的 TIP_OVERRIDE 推给全体玩家，与 txEdit 同属配置级。
+     * 【V1.3.8 体检发现】admperm 基线 FAIL：这两个动作会写数据却无映射，
+     * canAct 一律放行 —— 任何后台账号都能改全站提示文案，属越权。 */
+    tpEdit: 'config.edit', tpClear: 'config.edit',
   },
   /* 该动作当前角色是否可做（未映射的动作放行） */
   canAct(a) {
