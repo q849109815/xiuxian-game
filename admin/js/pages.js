@@ -2391,11 +2391,11 @@ const PAGES = {
 
     /* 残留文件判定：与人工清理口径一致（模块级，供 cleanup 页使用） */
     const isJunkFile = (p) => {
-      if (/^data\/frxx\//.test(p)) return '修仙版遗留';
+      if (/^data\/frxx\//.test(p)) return '历史遗留';
       if (/backup_\d+\.json$/.test(p)) return '历史备份';
-      /* 修仙模板遗留的空壳 json（现游戏读的是 data/zb/*） */
+      /* 历史模板遗留的空壳 json（现游戏读的是 data/zb/*） */
       if (p === 'data/arena_rank.json' || p === 'data/chat.json'
-        || p === 'data/market.json' || p === 'data/sects.json') return '修仙版遗留';
+        || p === 'data/market.json' || p === 'data/sects.json') return '历史遗留';
       return '';
     };
 
@@ -2467,7 +2467,7 @@ const PAGES = {
             row('玩家索引', s.idx.del, s.idx.keep, '指向已删除存档的幽灵条目'),
             row('战力榜', s.rank.del, s.rank.keep, '测试号条目，清完名次重排'),
             row('无尽榜', s.endless.del, s.endless.keep, '同上'),
-            row('残留文件', s.junk.length, '—', '修仙版遗留配置与历史备份'),
+            row('残留文件', s.junk.length, '—', '历史遗留配置与历史备份'),
           ])}
           ${s.junk.length ? `<div class="lbl" style="margin-top:8px">残留文件：${s.junk.slice(0, 8).map((x) => U.esc(x.path)).join('、')}${s.junk.length > 8 ? ' 等' : ''}</div>` : ''}
           <div class="btns" style="margin-top:12px">
