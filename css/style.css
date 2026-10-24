@@ -448,8 +448,8 @@ html[data-kb] #login{justify-content:flex-start;padding:var(--sp-3)}
   padding: 2px 4px;border-radius:8px;font-weight:var(--fw-medium);font-style:normal;z-index:2}
 .ccard .ci{flex:1;min-width:0}
 .ccard .cn{font-size:var(--fs-md);font-weight:var(--fw-semibold);display:flex;align-items:center;gap:var(--sp-1)}
-.ccard .cd2{font-size:var(--fs-xs);color:var(--txt2;display:-webkit-box;-webkit-line-clamp:3;
-  -webkit-box-orient:vertical;overflow:hidden;line-height:1.35);margin:var(--sp-1);line-height:1.5}
+.ccard .cd2{font-size:var(--fs-xs);color:var(--txt2);display:-webkit-box;-webkit-line-clamp:3;
+  -webkit-box-orient:vertical;overflow:hidden;line-height:1.35;margin:var(--sp-1)}
 .ccard .cl{font-size:var(--fs-xs);color:var(--gold);margin: var(--sp-half)}
 .ccard:active{transform:scale(.97)}
 .ch-refresh{width:100%;margin:var(--sp-3);padding:var(--sp-2);border-radius:10px;font-size:var(--fs-sm);
@@ -578,9 +578,15 @@ html[data-kb] #login{justify-content:flex-start;padding:var(--sp-3)}
 /* 基地建筑：原 2 列网格占 281px（33% 屏高），把下方功能菜单挤到需要滚动才能看到「设置」。
  * 改为横向滑动单行卡片（≈96px），省出约 180px 给菜单，21 个入口一屏装下。 */
 /* flex:0 0 auto：防止父级 flex 把建筑行压扁（实测曾压缩到 77px 导致卡片内容被裁 17px） */
-.hm-base{flex:0 0 auto;display:flex;gap:var(--sp-2);padding:0 12px 8px;overflow-x:auto;overflow-y:hidden;
-  scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.hm-base::-webkit-scrollbar{display:none}
+/* 严重布局BUG：4 张卡 × 96px + 3 × 8px 间距 + 24px 内边距 = 432px，
+ * 在 360 宽的手机上第 4 张卡（仓库）起点 x=324、右边缘 420 —— 整整 60px 在屏幕外，
+ * 320 宽下更是超到 100px，玩家只看到一条被切断的卡片边缘。
+ * 而滚动条被 ::-webkit-scrollbar{display:none} 隐藏，界面上没有任何「还能往右滑」的提示，
+ * 玩家看到的就是「画面跑出屏幕」，且不知道能滑、也不知道右边还有东西。
+ * 现改为 4 列等宽网格：四张建筑卡一屏装下，不需要横向滑动，也不再有内容出屏。 */
+.hm-base{flex:0 0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-1);
+  padding:0 10px 8px;overflow:hidden}
+.hm-base .bs{width:auto;min-width:0}
 .bs{flex:0 0 auto;width:96px;padding:var(--sp-1) 6px 8px;border-radius:10px;background:rgba(38, 27, 19, .85);
   border:1px solid var(--line);position:relative;text-align:center}
 .bs i{font-size:var(--fs-xl);font-style:normal}
