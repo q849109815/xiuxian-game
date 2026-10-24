@@ -2035,7 +2035,7 @@ r_tavern(p, tab) {
   },
   b_chip(p, tab) {
     const ce = $('#chipEquip');
-    if (ce) ce.onclick = () => { if (window.__MUT) return;
+    if (ce) ce.onclick = () => {
       const bag = p.bag || [];
       if (!bag.length) return this.toast('背包内暂无芯片', 'err');
       const free = EX.chipSlots.find((s) => !p.chips[s.k]);
