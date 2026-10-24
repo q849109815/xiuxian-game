@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.7';
+const IMG_V = '1.3.71';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -1268,7 +1268,7 @@ r_tavern(p, tab) {
           })()}
         </div>`;
       })()}
-      <div class="card" style="margin-top:8px"><div class="card-t"><img class="ei" src="assets/icon/contrib.jpg" style="width:17px;height:17px;border-radius:4px;object-fit:contain;vertical-align:-3px;margin-right:4px">军团贡献
+      <div class="card" style="margin-top:8px"><div class="card-t"><img class="ei" src="${EX.resUrl('assets/icon/contrib.jpg')}" style="width:17px;height:17px;border-radius:4px;object-fit:contain;vertical-align:-3px;margin-right:4px">军团贡献
         <span class="sub">捐献获得，可在军团商店消费</span></div>
         <div class="kv"><span>当前贡献</span><b>${E.fmt(p.legionExp || 0)}</b></div>
         <div class="kv"><span>累计贡献</span><b>${E.fmt(E.legionContribOf(p))}</b></div>
@@ -1973,7 +1973,7 @@ r_tavern(p, tab) {
       return `<div class="card"><div class="card-t">芯片背包 <span class="sub">${bag.length} 块</span></div>
       ${bag.map((c) => `<div class="item">
         <div class="ic" style="border:1.5px solid ${EX.qColor[c.q]}">
-          <img src="assets/icon/i_chip.jpg" style="width:30px;height:30px;border-radius:6px;object-fit:cover"
+          <img src="${EX.resUrl('assets/icon/i_chip.jpg')}" style="width:30px;height:30px;border-radius:6px;object-fit:cover"
                onerror="this.outerHTML='🔲'"></div>
         <div class="info"><div class="nm" style="color:${EX.qColor[c.q]}">${E.chipName(c)}</div>
         <div class="sub">${(E.chipDef(c.def) || {}).src || ''}</div></div>
@@ -2008,7 +2008,7 @@ r_tavern(p, tab) {
       <div class="card"><div class="card-t">可装备芯片</div>
       ${(p.bag || []).length ? (p.bag || []).filter((c) => c && c.id).map((c) => `<div class="item">
         <div class="ic" style="border:1.5px solid ${EX.qColor[this.chipQ(c)] || '#b9c4d4'}">
-          <img src="assets/icon/i_chip.jpg" style="width:30px;height:30px;border-radius:6px;object-fit:cover"
+          <img src="${EX.resUrl('assets/icon/i_chip.jpg')}" style="width:30px;height:30px;border-radius:6px;object-fit:cover"
                onerror="this.outerHTML='🔲'"></div>
         <div class="info"><div class="nm" style="color:${EX.qColor[this.chipQ(c)]}">${E.chipName(c)}</div></div>
         <div class="act"><button class="btn c sm" data-wear="${c.id}">装上</button></div></div>`).join('')
