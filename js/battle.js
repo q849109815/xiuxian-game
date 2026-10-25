@@ -7387,8 +7387,16 @@ const BT = {
       this.drawAmbient(c, W, H, r.time || 0, _dt);
     }
 
-    /* 屏幕震动收尾：与 draw() 开头的 save/translate 配对 */
-    if (_shk) c.restore();
+    /* 屏幕震动收尾：与 draw() 开头的 save/translate 配对。
+     * 【V1.3.72111111 线上事故修复】
+     *   开头是 if (_shk || _jsh) 才 save，这里原写 if (_shk) 才 restore——
+     *   当只有 JUICE 震屏（暴击/击杀/受伤/BOSS登场，_jsh=1）而无开火后坐力（_shk=0）时，
+     *   save 不配对：变换栈逐帧累积，translate 残留到下一帧继续叠加。
+     *   实测每帧 (8,-6) 叠加，10 帧后画面整体偏移 80,-60 —— 玩家看到的就是
+     *   「战斗画面打着打着往一个方向漂，最后整个跑出屏幕」。
+     *   战斗里暴击/击杀极频繁，故该漂移必然发生，且打越久偏得越多。
+     *   必须与开头的 save 条件完全一致，否则同样的 bug 会再次出现。 */
+    if (_shk || _jsh) c.restore();
   },
 };
 
