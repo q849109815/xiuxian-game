@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.72111111';
+const IMG_V = '1.3.721111111';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -597,10 +597,10 @@ const UI = {
     try {
       p = p || window.P || {};
       const cells = [];
-      /* 1) 体力：满则显示「已满」，否则显示回满倒计时 */
+      /* 1) 体力：满则只显示「当前/上限」（数值自明，不再叠「已满」字样），否则显示回满倒计时 */
       const eta = E.staminaEta ? E.staminaEta(p) : null;
       const stc = Math.floor(p.stamina || 0);
-      cells.push({ k: '体力', v: eta && eta.full ? stc + '/' + EX.STAMINA_MAX + ' 已满'
+      cells.push({ k: '体力', v: eta && eta.full ? stc + '/' + EX.STAMINA_MAX
         : stc + '/' + EX.STAMINA_MAX + ' · ' + this.msTxt(eta ? eta.fullMs : 0) + '回满', go: () => this.open('base') });
       /* 2) 今日任务：已完成 / 总数 */
       let done = 0, totalN = 0;
@@ -614,7 +614,7 @@ const UI = {
           }
         });
       } catch (e) {}
-      cells.push({ k: '今日任务', v: totalN ? (done + '/' + totalN + (done >= totalN ? ' 已完成' : '')) : '—', go: () => this.open('task', '日常') });
+      cells.push({ k: '今日任务', v: totalN ? (done + '/' + totalN) : '—', go: () => this.open('task', '日常') });
       /* 3) 主线总进度：10 章 100 关 */
       let cleared = 0;
       try { cleared = Object.keys(p.cleared || {}).filter((k) => (p.cleared[k] || 0) > 0 && /^\d+-\d+$/.test(k)).length; } catch (e) {}
@@ -3438,7 +3438,6 @@ r_tavern(p, tab) {
     if (!E.comebackOn(p)) return '';
     const can = E.comebackClaimable(p);
     return `<div class="card"><div class="card-t">回归礼包 <span class="sub">离线 ${E.awayDays(p)} 天</span></div>
-      <div style="font-size:var(--fs-xs);color:var(--txt3);margin-bottom:6px">欢迎回来！连续登录 3 天领取补给</div>
       ${c.days.map((it) => {
         const g = E.comebackGot(p, it.d);
         const ok = can.indexOf(it.d) >= 0;
@@ -3993,7 +3992,6 @@ r_tavern(p, tab) {
         <div class="kv"><span>音效音量</span><b style="color:var(--yel)">${Math.round(vs * 100)}%</b></div>
         <input type="range" id="volS" min="0" max="100" value="${Math.round(vs * 100)}"
           style="width:100%;margin:6px 0">
-        <div class="sub">拖动调节，设置会自动保存。</div>
       </div>`;
     }
     /* ---------- 多语言（表39） ---------- */
@@ -4007,7 +4005,6 @@ r_tavern(p, tab) {
           <div class="zi"><b>${only.n}</b><span>${only.k}</span></div>
           <span class="st on">使用中</span>
         </div>
-        <div class="sub">本游戏仅支持简体中文，无需切换。</div>
       </div>
       <div class="card"><div class="card-t">文本预览 <span class="sub">共 ${Object.keys(EX.I18N || {}).length} 条</span></div>
         ${Object.keys(EX.I18N || {}).map((id) => `<div class="kv">
@@ -4044,7 +4041,7 @@ r_tavern(p, tab) {
       };
       return '<div class="card"><div class="card-t">当前版本</div>'
         + '<div class="kv"><span>版本号</span><b style="color:var(--green)">' + E9(cur) + '</b></div>'
-        + '<div class="sub">路线图由运营实时维护，重启游戏即可看到最新排期。</div></div>'
+        + '</div>'
         + '<div class="card"><div class="card-t">即将到来 <span class="sub">' + next.length + ' 个</span></div>'
         + (next.length ? next.map((v) => row(v, true)).join('')
             : '<div class="lbl">暂无预告 &#8212;&#8212; 当前排期已全部发布</div>')
@@ -4076,12 +4073,11 @@ r_tavern(p, tab) {
       return `<div class="card"><div class="card-t">热更新</div>
         <div class="kv"><span>资源版本号</span><b style="color:var(--yel)">${mi.ver}</b></div>
         <div class="kv"><span>清单条目</span><b>${mi.n} 个</b></div>
-        <div class="sub">启动时比对版本，不一致自动刷新缓存并提示。</div></div>
+</div>
 
       <div class="card"><div class="card-t">版本</div>
         <div class="kv"><span>当前版本</span><b style="color:var(--green)">${cv ? cv.v + ' ' + cv.n : '-'}</b></div>
         <div class="kv"><span>排期条数</span><b>${(window.OPS ? OPS.versions() : (EX.VERSIONS || [])).filter(function (x) { return x && x.pub !== false; }).length} 条</b></div>
-        <div class="sub">后台「热更新 / 版本排期」可在线维护本表；玩家请在「前瞻」页查看。</div>
         ${(function () {
           /* V1.3.72：运营页排期此前直接渲染全量 versions() 并外显内部字段 c，
            * 三个问题：① 内部规划（pub:false，如 V0.1~V0.7 原型期）玩家可见
@@ -4130,7 +4126,6 @@ r_tavern(p, tab) {
           <input id="cdInput" placeholder="请输入 CDKEY" style="width:100%;text-transform:uppercase"
             autocomplete="off"></div>
         <button class="btn blk" id="cdGo">🎁 立即兑换</button>
-        <div id="cdTip" class="lbl">兑换码由后台「礼包码 → 生成兑换码」产出</div>
       </div>
       <div class="card"><div class="card-t">说明</div>
         <div class="lbl" style="text-align:left;line-height:1.7">
@@ -4185,7 +4180,7 @@ r_tavern(p, tab) {
       <div class="fld"><label>输入密码确认</label><input id="spDel" type="password" placeholder="当前密码"></div>
       <button class="btn d blk" id="spDelGo">🗑 确认注销</button></div>
     <div class="card"><div class="card-t" style="color:var(--c-red-450)">永久删除账号 <span class="sub">物理删除 · 不可恢复</span></div>
-      <div class="lbl" style="text-align:left;color:var(--c-red-300)">与「注销」不同：<b>注销</b>只是停用并保留账号记录（可在后台找回）；<b>永久删除</b>会把账号、存档、索引、榜单条目全部物理删除，删除后任何界面都不再显示，且无法恢复。仅在你确定不再需要该账号时使用。</div>
+      <div class="lbl" style="text-align:left;color:var(--c-red-300)">与「注销」不同：<b>注销</b>只是停用并保留账号记录；<b>永久删除</b>会把账号、存档、索引、榜单条目全部物理删除，删除后任何界面都不再显示，且无法恢复。仅在你确定不再需要该账号时使用。</div>
       <div class="fld"><label>输入密码确认</label><input id="spPurge" type="password" placeholder="当前密码"></div>
       <button class="btn d blk" id="spPurgeGo">🔥 永久删除</button>
       <div class="lbl" id="spPurgeTip"></div></div>
@@ -4381,7 +4376,6 @@ r_tavern(p, tab) {
      * 不会真的切到其它语种。 */
     $$('#pnBody [data-lang]').forEach((b) => { b.onclick = () => {
       if (window.OPS) OPS.setLang('zh');
-      this.toast('本游戏仅支持简体中文', 'warn');
       this.open('set', '语言'); this.home();
     }; });
     /* 表37 清空埋点 */
@@ -4670,7 +4664,7 @@ r_tavern(p, tab) {
     const esc = (v) => String(v == null ? '' : v).replace(/</g, '&lt;').replace(/>/g, '&gt;');
     if (!list.length) {
       return '<div class="card"><div class="empty">暂无公告</div>' +
-        '<div class="lbl">运营在后台「公告管理」发布后，这里会显示。</div></div>';
+'</div>';
     }
     const KIND = { info: ['📢', '普通', '#7fd0ff'], warn: ['⚠️', '重要', '#ffb74d'], hot: ['🎉', '活动', '#ff6fae'] };
     return '<div class="card"><div class="card-t">公告<span class="sub">共 ' + list.length + ' 条</span></div>' +
