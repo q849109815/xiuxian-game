@@ -303,6 +303,7 @@ FILES = [
     'tools/hr.cjs',
     'tools/dash.cjs',
     'tools/mutate_pushcov.cjs',
+    'tools/mutate_ver.cjs',
     'tools/pushcov.cjs',
     'tools/mutguard.cjs',
     '制作人周报_V1.3.7211111111_主菜单重做与选中态修正.md',
