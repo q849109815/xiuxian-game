@@ -31,7 +31,7 @@ const antiCheat=/antiCheat|cheat|哨兵|anomaly/i.test(R('js/main.js')+cfg);
 const adm=R('admin/index.html')+R('admin/js/core.js')+R('admin/js/pages.js');
 const funnel=/funnel|漏斗|dau_retention|留存/i.test(adm);
 
-const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs'];
+const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs'];
 const tOk=tools.filter(t=>ex('tools/'+t)).length;
 
 /* 【玩家可感知交叉验证】—— 进度表固定项，每轮必跑
@@ -152,6 +152,14 @@ A('测试','战斗布局守卫',bt&&bt.f===0?`PASS${bt.p}/0(含B8漂移)`:bt?`�
 const ux=(()=>{try{const r=require('child_process').spawnSync('node',['tools/ux3.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
   const m=(r.stdout||'').match(/RESULT: PASS (\d+) \/ FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
 A('测试','三体验守卫UX/DX/AX',ux&&ux.f===0?`PASS${ux.p}/0`:`未过${ux?ux.f:'未跑'}项`);
+/* 【后台三体验守卫】—— 进度表固定项
+ * 立规原因：后台曾出现「✅ 已接入游戏端（CFG_FILES）——…」整句在商城/社交逐字复制、
+ * 多语言页用 disabled 下拉 + 一行说明解释它、版本号页放着「记得手动同步」的长教训。
+ * 这些都是布局/实现缺陷的文字补丁：控件自己说不清，就写一段话去补。 */
+const ax=(()=>{try{const r=require('child_process').spawnSync('node',['tools/adminux.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
+ const t=String(r.stdout||'');const m=t.match(/PASS (\d+) \/ FAIL (\d+)/);
+ return m?{p:+m[1],f:+m[2]}:{p:0,f:r.status===0?0:1};}catch(e){return {p:0,f:1};}})();
+A('测试','后台三体验守卫',ax.f===0?`PASS${ax.p}/0`:`未过${ax.f}项`);
 /* 【错题本 · 复发错误提醒】—— 进度表固定项（本轮新增）
  * 管理要求：老是犯错的部门多提醒，别重复犯错。
  * 所以把历史错题按部门建台账，复发（×2及以上）的错误必须有守卫覆盖；
