@@ -305,6 +305,8 @@ FILES = [
     'tools/v11fix.cjs',
     'tools/adminux.cjs',
     'tools/mutate_adminux.cjs',
+    'tools/shopux.cjs',
+    'tools/mutate_shopux.cjs',
     'tools/pxcheck.cjs',
     'tools/pxledger.json',
 
