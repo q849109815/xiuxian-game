@@ -97,6 +97,28 @@ function syncConfig(v) {
   /* manifest 每一项的 ver */
   s = s.replace(/(ver\s*:\s*')[\w.\-]+(')/g, (m, a, b) => { n++; return a + v + b; });
   if (s !== s0) fs.writeFileSync(fp, s);
+  /* 【同步回读校验】—— 事故：bump1 打印「config.js 版本字段同步 14 处」后，
+     实测 config.js 里新版本号出现 0 次（version 字段与 13 项 manifest ver 全是旧值），
+     结果玩家缓存不刷新、拿到旧文件 —— 而当时没有任何一条报错，
+     直到 cacheguard C2/C4 与 releaseguard R2 报红才被发现。
+     这里强制回读：同步后新版本号必须真实出现在 config.js 中，
+     且 version 字段必须等于新版本，否则直接中止发布。 */
+  const chk = fs.readFileSync(fp, 'utf8');
+  const hits = (chk.match(new RegExp(v.replace(/\./g, '\\.'), 'g')) || []).length;
+  const mv = chk.match(/version:\s*'([^']+)'/);
+  /* manifest 每一项的 ver 也必须同步 —— 只校验 version 字段是不够的：
+     manifest ver 是热更引擎判断「要不要拉新文件」的依据，
+     它停在旧值 => 引擎认为玩家已是最新 => 新代码永远下发不下去。 */
+  const vers = [...chk.matchAll(/ver\s*:\s*'([^']+)'/g)].map(x => x[1]);
+  const badV = vers.filter(x => x !== v);
+  const cond = hits === 0 || !mv || mv[1] !== v || vers.length === 0 || badV.length > 0;
+  if (cond) {
+    if (badV.length > 0) console.error('[FAIL] manifest 有 ' + badV.length + ' 项 ver 未同步（如 ' + badV[0] + '），期望 ' + v);
+    console.error('[FAIL] config.js 版本同步回读校验未通过：新版本号出现 ' + hits +
+                  ' 次，version 字段=' + (mv ? mv[1] : '未读到') + '，期望 ' + v);
+    console.error('       版本不同步 => 玩家缓存不刷新 => 修了等于没修 => 投诉');
+    process.exit(2);
+  }
   return n;
 }
 
