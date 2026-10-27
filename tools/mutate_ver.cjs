@@ -8,8 +8,18 @@
  */
 const fs = require('fs'), path = require('path'), cp = require('child_process'), crypto = require('crypto');
 const ROOT = path.join(__dirname, '..');
-const REL = ['js/config.js', 'tools/ver.cjs', 'tools/.version.json', 'index.html',
-             'js/ui.js', 'admin/js/core.js', 'CHANGELOG.md'];
+/* 备份清单必须覆盖 ver.cjs 会改动的所有文件。
+   事故（本轮自建脚本首跑即踩）：初版漏了 admin/index.html，
+   变异用例跑 bump1 时把后台 ?v= 推到 1.3.721111111111（多一位），
+   还原时没覆盖它 => 污染留在工作区并被上传到线上，被 cacheguard C7 抓出。
+   这里改为从 ver.cjs 的 TARGETS 动态解析，杜绝以后新增目标再次漏备份。 */
+const REL = (() => {
+  const vs = fs.readFileSync(path.join(__dirname, 'ver.cjs'), 'utf8');
+  const m = vs.match(/const TARGETS\s*=\s*\[([\s\S]*?)\]/);
+  const tg = m ? [...m[1].matchAll(/f:\s*'([^']+)'/g)].map(x => x[1]) : [];
+  return [...new Set([...tg, 'js/config.js', 'js/ui.js', 'admin/js/core.js',
+                      'admin/index.html', 'tools/ver.cjs', 'tools/.version.json', 'CHANGELOG.md'])];
+})();
 const md5 = b => crypto.createHash('md5').update(b).digest('hex').slice(0, 12);
 const snap = {};
 for (const f of REL) { const p = path.join(ROOT, f); snap[f] = fs.existsSync(p) ? md5(fs.readFileSync(p)) : null; }
