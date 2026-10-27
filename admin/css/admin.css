@@ -170,6 +170,9 @@ select{appearance:none;padding-right:30px;
   background-image:linear-gradient(45deg,transparent 50%,var(--tx3) 50%),linear-gradient(135deg,var(--tx3) 50%,transparent 50%);
   background-position:calc(100% - 16px) 17px,calc(100% - 11px) 17px;background-size:5px 5px;background-repeat:no-repeat}
 .hint{color:var(--tx3);font-size:11.5px;line-height:1.7;margin:-2px 0 10px 108px}
+/* 已接入徽章：替代此前三处各写一遍的整句说明，仅在有额外影响时带一句 */
+.wired{color:#7ee08a;font-size:11.5px;line-height:1.7;margin:8px 0}
+.wired.warn{color:var(--wn)}
 
 /* ================= 按钮：主操作实心，其余描边 ================= */
 .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
