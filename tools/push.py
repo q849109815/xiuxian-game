@@ -8,6 +8,7 @@
   python3 push.py push 备注  # 自定义 commit 信息
 """
 import json, urllib.request, base64, hashlib, sys, os
+from urllib.parse import quote
 
 # .../zombie/tools/push.py -> 上三级 = /data/workspace
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -255,7 +256,68 @@ FILES = [
     'tools/pxcheck.cjs',
     'tools/pxledger.json',
 
+    # 【上传清单覆盖守卫 pushcov】—— 事故：绩效工具 tools/kpi.cjs 修好缺陷后
+    # 因不在清单里，修复永远留在本地、线上仍跑旧版，与 char/scene/roadmap 同类。
+    # 这里把 dash.cjs 登记 + 实际调用的常驻工具全部纳入，缺一即守卫报红。
+    # 中文文件名同时验证 percent-encoding 真实生效（E1）。
+    'tools/gate.cjs',
+    'tools/static.cjs',
+    'tools/archguard.cjs',
+    'tools/layout.cjs',
+    'tools/compat.cjs',
+    'tools/dirty.cjs',
+    'tools/fuzz.cjs',
+    'tools/ausnd.cjs',
+    'tools/admperm.cjs',
+    'tools/assetguard.cjs',
+    'tools/deadcfg.cjs',
+    'tools/offline.cjs',
+    'tools/curve.cjs',
+    'tools/vistate.cjs',
+    'tools/flip.cjs',
+    'tools/v110.cjs',
+    'tools/ch1115.cjs',
+    'tools/season.cjs',
+    'tools/v110all.cjs',
+    'tools/txtwire.cjs',
+    'tools/realm.cjs',
+    'tools/powerguard.cjs',
+    'tools/sceneTheme.cjs',
+    'tools/v121.cjs',
+    'tools/ver.cjs',
+    'tools/v123.cjs',
+    'tools/chapterStar.cjs',
+    'tools/synccheck.py',
+    'tools/compat2.cjs',
+    'tools/fullscan.cjs',
+    'tools/toolaudit.cjs',
+    'tools/cacheguard.cjs',
+    'tools/releaseguard.cjs',
+    'tools/layoutguard.cjs',
+    'tools/btlayout.cjs',
+    'tools/ux3.cjs',
+    'tools/mistakes.cjs',
+    'tools/themeguard.cjs',
+    'tools/mistmut.cjs',
+    'tools/kpi.cjs',
+    'tools/hr.cjs',
+    'tools/dash.cjs',
+    'tools/mutate_pushcov.cjs',
+    'tools/pushcov.cjs',
+    'tools/mutguard.cjs',
+    '制作人周报_V1.3.7211111111_主菜单重做与选中态修正.md',
 ]
+
+
+def apipath(path):
+    """把仓库内路径转成 GitHub contents API 可用的 URL 片段。
+
+    事故背景：中文文件名（如制作人周报_*.md）直接拼进 URL，
+    API 返回 404/读不到，导致「报告写完却传不上去」，
+    而流程上没有任何告警——改了等于没改。
+    这里统一做 percent-encoding，保留 / 分隔符。
+    """
+    return quote(path, safe='/')
 
 
 def blobsha(b):
@@ -279,7 +341,7 @@ def api(m, p, b=None):
 
 
 def online_meta(path):
-    c = api('GET', 'contents/%s?ref=main' % path)
+    c = api('GET', 'contents/%s?ref=main' % apipath(path))
     if not isinstance(c, dict) or '_err' in c or 'sha' not in c:
         return None
     return c
@@ -335,12 +397,70 @@ def syntax_gate(bad):
     return True
 
 
+def version_gate():
+    """上传前版本号闸门。
+
+    事故背景：改动上传了但版本号没变 -> 玩家本地缓存命中旧 ?v= ->
+    拿到的是旧文件（甚至是上上轮被污染的旧文件），表现为「明明修了还是坏的」，
+    直接导致玩家投诉。
+
+    铁律：只要本次有文件改动要上传，版本号必须已经变化。
+    未升版直接上传 = 缓存不刷新 = 白修，一律中止。
+    """
+    import json
+    vf = os.path.join(ROOT, 'zombie', 'tools', '.version.json')
+    rf = os.path.join(ROOT, 'zombie', 'tools', '.lastrelease.json')
+    cur = None
+    if os.path.exists(vf):
+        try:
+            cur = json.load(open(vf, encoding='utf-8')).get('v')
+        except Exception:
+            cur = None
+    if not cur:
+        print('[版本闸门] 未读到当前版本号，跳过（请确认 tools/.version.json）')
+        return True
+    last = None
+    if os.path.exists(rf):
+        try:
+            last = json.load(open(rf, encoding='utf-8')).get('v')
+        except Exception:
+            last = None
+    if last is None:
+        print('[版本闸门] 首次记录基线 V%s（无上次发布记录，放行）' % cur)
+        return True
+    if str(cur) == str(last):
+        print('\n[中止] 版本号闸门未通过：本次有改动要上传，但版本号仍是 V%s（与上次发布相同）' % cur)
+        print('       版本号不变 -> 玩家缓存不刷新 -> 修了等于没修 -> 投诉')
+        print('       请先执行： node tools/ver.cjs bump1 "变更说明"')
+        return False
+    print('版本闸门通过： V%s -> V%s（版本号已变化，缓存会刷新）' % (last, cur))
+    return True
+
+
+def mark_released():
+    """上传成功后记录本次发布版本，作为下次的版本号闸门基线。"""
+    import json
+    vf = os.path.join(ROOT, 'zombie', 'tools', '.version.json')
+    rf = os.path.join(ROOT, 'zombie', 'tools', '.lastrelease.json')
+    if not os.path.exists(vf):
+        return
+    try:
+        v = json.load(open(vf, encoding='utf-8')).get('v')
+    except Exception:
+        return
+    json.dump({'v': v, 'at': __import__('datetime').datetime.now().isoformat()},
+              open(rf, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+    print('[版本闸门] 已记录本次发布基线 V%s' % v)
+
+
 def push(msg):
     bad = check()
     if not bad:
         print('\n全部一致，无需上传')
         return
     if not syntax_gate(bad):
+        return
+    if not version_gate():
         return
     print('\n开始上传 %d 个文件...' % len(bad))
     fail = []
@@ -351,7 +471,7 @@ def push(msg):
         body = {'message': msg, 'content': base64.b64encode(data).decode(), 'branch': 'main'}
         if cur:
             body['sha'] = cur['sha']
-        res = api('PUT', 'contents/' + f, body)
+        res = api('PUT', 'contents/' + apipath(f), body)
         if 'commit' not in res:
             print('%-26s 上传失败 %s' % (f, str(res.get('message', res))[:90]))
             fail.append(f)
@@ -363,6 +483,8 @@ def push(msg):
         if not ok:
             fail.append(f)
     print('\n上传完成：成功 %d，失败 %d' % (len(bad) - len(fail), len(fail)))
+    if not fail:
+        mark_released()
     if fail:
         print('失败文件:', fail)
     # 发布后强制全量复核（维护轮2）
