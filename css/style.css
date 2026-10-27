@@ -318,6 +318,13 @@ html[data-kb] #login{justify-content:flex-start;padding:var(--sp-3)}
 .card-t{font-size:var(--fs-sm);font-weight:var(--fw-semibold);letter-spacing:1px;margin:var(--sp-2);
   display:flex;justify-content:space-between;align-items:center}
 .card-t .sub{font-size:var(--fs-xs);color:var(--txt3);font-weight:var(--fw-regular)}
+/* ct-n：卡片标题数值徽章（V1.3.7211111111 重做）
+ * 立规原因：原先标题右侧挂 .sub 灰色小字，玩家分不清"这是数据"还是"这是说明"，
+ *         于是界面上堆了大量解释性文字。现在数值一律用 ct-n：高亮、加粗、与标题同排右对齐，
+ *         靠视觉层级（而非文字说明）表达"这是当前数值"。 */
+.card-t .ct-n{font-size:var(--fs-xs);color:var(--gold);font-weight:var(--fw-semibold);
+  letter-spacing:0;background:rgba(255,196,80,.10);border:1px solid rgba(255,196,80,.28);
+  border-radius:9px;padding:1px 6px;white-space:nowrap}
 .kv{display:flex;justify-content:space-between;align-items:center;padding:var(--sp-1) 0;font-size:var(--fs-sm);
   border-bottom:1px dashed rgba(51, 47, 41, .12)}
 .kv:last-child{border-bottom:none}
@@ -1597,6 +1604,10 @@ html,body,button,input,select,textarea{
   color:var(--q-y2);text-shadow:0 2px 0 var(--q-ink);
 }
 .card-t .sub{color:var(--q-txt2) !important}
+.card-t .ct-n{color:var(--q-y2) !important;font-weight:var(--fw-semibold) !important;
+  background:rgba(0,0,0,.18) !important;border:2px solid var(--q-ink) !important;
+  border-radius:var(--r-btn) !important;padding:0 6px !important;
+  letter-spacing:0;white-space:nowrap}
 /* 列表行 */
 .item,.zrow,.mc-card{
   border-radius:16px !important;
