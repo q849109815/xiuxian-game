@@ -23,6 +23,9 @@ const PAGES = {
     /* V1.2.3：六部门分工。后台排期可逐部门填写「这个版本该部门负责什么」，
      * 游戏端「设置→前瞻」以「各部门进度」形式展示给玩家。 */
     const DEPS = ['策划', '美术', '程序', '音频', '测试', '运营'];
+    /* 已接入徽章：三处页面曾各写一遍「✅ 已接入游戏端（CFG_FILES）——…会生效」整句，
+     * 既重复又把 CFG_FILES 这种内部实现名暴露给运营。统一为紧凑徽章，只在有额外影响时加一句。 */
+    const wired = (extra) => `<div class="wired">✅ 已接入游戏端${extra ? ' · ' + U.esc(extra) : ''}</div>`;
     const rmDp = (v) => (v && v.dp && typeof v.dp === 'object') ? v.dp : {};
     /* 六部门分工表单（新增/编辑共用）。id 用下标而非中文，避免选择器兼容问题。 */
     const dpForm = (v) => {
@@ -198,7 +201,7 @@ const PAGES = {
               <option value="7天">7 天</option><option value="30天">30 天</option><option value="自定义">自定义天数</option></select></div>
             <div class="fr" id="bk_dw" style="display:none"><label>天数</label><input id="bk_d" type="number" min="1" max="3650" placeholder="如 15"></div>
             <div class="fr"><label>理由</label><input id="bk_r" placeholder="如：使用外挂（玩家可见）"></div>
-            <div class="hint">时限封禁到期后自动解封，无需手工操作；理由会显示在玩家登录界面</div>
+            <div class="hint">时限封禁到期后自动解封，无需手工操作</div>
             <div class="btns">
               <button class="btn err" data-m="ok">确认封禁</button>
               <button class="btn" data-m="close">取消</button>
@@ -322,8 +325,7 @@ const PAGES = {
             <div class="fr"><label class="wide">武器等级</label><input id="e_gunlv" type="number" value="${this.SEL.gunLv || 1}" data-o="${this.SEL.gunLv || 1}"></div>
             <div class="fr"><label class="wide">无尽最佳</label><input id="e_eb" type="number" value="${this.SEL.endlessBest || 0}" data-o="${this.SEL.endlessBest || 0}"></div>
             <div class="fr"><label class="wide">当前关卡</label><input id="e_cur" value="${U.esc(this.SEL.curLevel || '')}" data-o="${U.esc(this.SEL.curLevel || '')}"></div>
-            <div class="fr"><label class="wide">已解锁枪械</label><input id="e_gunown" value="${U.esc((this.SEL.gunOwn || []).join(','))}" data-o="${U.esc((this.SEL.gunOwn || []).join(','))}"></div>
-            <div class="hint">多项用英文逗号分隔，如 W01,W02</div>
+            <div class="fr"><label class="wide">已解锁枪械</label><input id="e_gunown" value="${U.esc((this.SEL.gunOwn || []).join(','))}" data-o="${U.esc((this.SEL.gunOwn || []).join(','))}" placeholder="多项用英文逗号分隔，如 W01,W02"></div>
             <div class="btns">
               <button class="btn pri" data-a="saveEdit">💾 保存修改</button>
               <button class="btn" data-a="backup">📦 立即备份</button>
@@ -863,7 +865,6 @@ const PAGES = {
               <input id="m_lvmax" type="number" placeholder="最高" style="max-width:80px"></div>
             <div class="fr"><label class="wide">战力≥</label><input id="m_pwmin" type="number" placeholder="按战力筛 UID" style="max-width:120px"></div>
             <div class="fr"><label class="wide">注册于</label><input id="m_reg" type="date" style="max-width:150px"> 之后</div>
-            <div class="hint">战力/注册条件会先在本地筛出 UID 列表再写入，兼容前端筛选</div>
           </div>
           <div class="fr"><label class="wide">标题</label><input id="m_t" placeholder="邮件标题"></div>
           <div class="fr"><label class="wide">正文</label><textarea id="m_b" placeholder="邮件内容"></textarea></div>
@@ -1121,7 +1122,7 @@ const PAGES = {
           if (await DB.set(DBP.cdkey, d, '生成兑换码 ' + n)) {
             AUDIT.log('生成兑换码', tpl.n, n + ' 个' + (bind ? ' 绑定' + bind : ''));
             const box = D('#gkBox');
-            if (box) box.innerHTML = `<div class="hint">已生成 ${n} 个：</div><pre class="json">${U.esc(made.join('\n'))}</pre>`;
+            if (box) box.innerHTML = `<pre class="json">${U.esc(made.join('\n'))}</pre>`;
             this.toast('已生成 ' + n + ' 个', 'ok');
           }
         },
@@ -1339,8 +1340,7 @@ const PAGES = {
               l.map((x) => [U.esc(x.board), (x.a || x.from) + '~' + (x.b || x.to), U.itemName(x.item) + '×' + x.n,
                 `<button class="btn sm err" data-a="rrDel" data-id="${U.esc(x.id)}">删除</button>`]))
             : this.empty('还没配置排名奖励')}
-            <h3 style="margin:16px 0 8px;font-size:13px">数值热更（cfg.json）</h3>
-            <div class="hint" style="margin-bottom:6px">只能改游戏配置里【已存在】的数值键，填错键名会静默不生效（保存时会提示）</div>
+            <h3 style="margin:16px 0 8px;font-size:13px">数值热更</h3>
             <div class="fr"><label class="wide">键</label><input id="cf_k" list="cfKeys" placeholder="如 STAMINA_MAX">
               <datalist id="cfKeys">${(window.EX ? Object.keys(EX).filter((k) => {
                 const v = EX[k]; return typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean';
@@ -1603,8 +1603,11 @@ const PAGES = {
           }).concat(Object.keys(g).filter((k) => !defs.find((d) => d.id === k))
             .map((k) => [U.esc(g[k].n), '<span class="bd n">自定义</span>', String(g[k].c), String(Object.keys(g[k].u).length), U.dt(g[k].last)]));
           const withBi = plist.filter((p) => (p._bi || []).length).length;
-          box.innerHTML = `<div class="hint">本地缓冲 ${local.length} 条（最多 500）· 事件定义 ${defs.length} 个
-            · 全服上报 ${total} 条（${withBi}/${plist.length} 名玩家存档中带有埋点）</div>` +
+          box.innerHTML = `<div class="kpis">
+            <div class="kpi"><div class="v">${local.length}</div><div class="k">本地缓冲（最多 500）</div></div>
+            <div class="kpi"><div class="v">${defs.length}</div><div class="k">事件定义</div></div>
+            <div class="kpi"><div class="v">${total}</div><div class="k">全服上报（${withBi}/${plist.length} 名玩家有埋点）</div></div>
+          </div>` +
             '<h3 style="font-size:12px;margin:10px 0 6px">全服埋点（玩家存档上报，去重后）</h3>' +
             this.table(['事件', '优先级', '次数', '覆盖人数', '最近'], grows) +
             '<h3 style="font-size:12px;margin:14px 0 6px">本机本地缓冲（仅运营自己打开游戏产生）</h3>' +
@@ -1689,7 +1692,8 @@ const PAGES = {
               <div class="kpi"><div class="v">${((H.manifest) || []).length}</div><div class="k">清单条目</div></div>
               <div class="kpi"><div class="v">${H.enabled ? '开' : '关'}</div><div class="k">开关</div></div>
             </div>
-            <div class="hint">改版本号需同步改 index.html 里的 ?v= 与 config.js 的 HOT_UPDATE.version，否则玩家拿不到新代码</div>
+            ${(() => { const mv = (H.manifest || []).filter((m) => m.ver && H.version && m.ver !== H.version).length;
+              return mv ? `<div class="wired warn">⚠ ${mv} 个清单条目版本与「${U.esc(H.version || '')}」不一致，玩家会拿到旧文件</div>` : ''; })()}
             <div class="fr"><label class="wide">新版本号</label><input id="hv_v" value="${U.esc(H.version || '')}"></div>
             <div class="btns">
               <button class="btn pri" data-a="hvSave">💾 记录版本号</button>
@@ -1712,13 +1716,12 @@ const PAGES = {
               <div class="kpi"><div class="v">${RM.length - done}</div><div class="k">预告中</div></div>
               <div class="kpi"><div class="v">${pub}</div><div class="k">玩家可见</div></div>
             </div>
-            <div class="hint">「玩家可见」= 出现在游戏内「设置 → 前瞻」；取消勾选即为内部规划，玩家端完全看不到。只有「亮点」会展示给玩家，内容与验收标准仅后台可见。</div>
             <div class="btns" style="margin:8px 0">
               <button class="btn pri" data-a="rmAdd">➕ 新增版本</button>
               <button class="btn" data-a="rmPush">📤 下发到云端</button>
               <button class="btn d" data-a="rmReset">↩ 恢复内置排期</button>
             </div>
-            ${RM.length ? this.table(['版本', '名称', '类型', '上线', '内容 / 亮点', '六部门分工', '状态', '玩家可见', '操作'],
+            ${RM.length ? this.table(['版本', '名称', '类型', '上线', '内容 / 亮点（玩家只看亮点）', '六部门分工', '状态', '玩家端', '操作'],
               RM.map((v, i) => [U.esc(v.v || ''), U.esc(v.n || ''),
                 U.esc(TP[v.tp] || '小更新'), U.esc(v.eta || v.wk || '—'),
                 U.esc((v.c || '—') + (((v.hi || []).length) ? ' ｜ 亮点：' + v.hi.join('；') : '')),
@@ -1730,13 +1733,13 @@ const PAGES = {
                     : `<div style="opacity:.45"><span class="bd b">${k}</span> 未排</div>`;
                 }).join(''),
                 v.done ? '<span class="bd g">已发布</span>' : '<span class="bd y">排期中</span>',
-                (v.pub === false ? '<span class="bd b">内部</span>' : '<span class="bd g">公开</span>'),
+                (v.pub === false ? '<span class="bd b">仅内部</span>' : '<span class="bd g">玩家可见</span>'),
                 `<button class="btn sm" data-a="rmEdit" data-i="${i}">编辑</button>
                  <button class="btn sm" data-a="rmPub" data-i="${i}">${v.pub === false ? '公开' : '隐藏'}</button>
                  <button class="btn sm" data-a="rmDone" data-i="${i}">${v.done ? '撤回' : '标记发布'}</button>
                  <button class="btn sm d" data-a="rmDel" data-i="${i}">删除</button>`]))
             : this.empty('排期为空，点「新增版本」或「恢复内置排期」')}
-            <div class="hint">下发后写入 data/zb/roadmap.json，玩家重启游戏即可看到最新路线图。</div>`;
+`;
                 } else if (t === 'lang') {
           const L = (EX && EX.LANGS) || [{ k: 'zh', n: '中文' }];
           const cur = (window.OPS && OPS.getLang) ? OPS.getLang() : 'zh';
@@ -1745,13 +1748,21 @@ const PAGES = {
            * 于是「文案表」永远渲染成一张空表，运营进来什么都看不到。 */
           const I18N = (EX && EX.I18N) || {};
           const keys = Object.keys(I18N);
-          body = `<div class="fr"><label class="wide">当前语言</label><select id="lg_s" disabled>
+          /* 单语种时不再渲染「当前语言」下拉 + 「仅支持中文」说明：
+           * 只有一个语种，下拉恒为禁用、列头恒为中文 —— 控件与说明都是噪音，
+           * 且禁用的下拉本身就是布局缺陷（看着能选，实际不能）。
+           * 多语种（LANGS > 1）时自动恢复下拉与逐语种列，不改行为。 */
+          const multi = L.length > 1;
+          const langSel = multi ? `<div class="fr"><label class="wide">当前语言</label><select id="lg_s">
               ${L.map((x) => `<option value="${U.esc(x.k)}"${x.k === cur ? ' selected' : ''}>${U.esc(x.n || x.k)}</option>`).join('')}
-            </select></div>
-            <div class="hint">本游戏仅支持简体中文（其它语种已下线），下方文案表只维护中文。</div>
-            <h3 style="font-size:13px;margin:16px 0 8px">文案表<span class="tag">${keys.length} 条 · 改完点「保存并下发」实时生效</span></h3>
-            ${keys.length ? this.table(['ID'].concat(L.map((x) => x.n || x.k)).concat(['操作']),
-              keys.map((k) => [U.esc(k)].concat(L.map((x) => U.esc(String((I18N[k] || {})[x.k] || ''))))
+            </select></div>` : '';
+          const colHead = multi ? L.map((x) => x.n || x.k) : ['文案'];
+          const colVal = (k) => multi ? L.map((x) => U.esc(String((I18N[k] || {})[x.k] || '')))
+            : [U.esc(String((I18N[k] || {}).zh || (I18N[k] || {})[L[0].k] || ''))];
+          body = `${langSel}
+            <h3 style="font-size:13px;margin:16px 0 8px">文案表<span class="tag">${keys.length} 条</span></h3>
+            ${keys.length ? this.table(['ID'].concat(colHead).concat(['操作']),
+              keys.map((k) => [U.esc(k)].concat(colVal(k))
                 .concat([`<button class="btn sm" data-a="txEdit" data-id="${U.esc(k)}">编辑</button>`])))
               : this.empty('EX.I18N 文案表为空')}`;
         } else if (t === 'tip') {
@@ -1769,7 +1780,7 @@ const PAGES = {
             });
           };
           walk((EX && EX.tips) || {}, '');
-          body = `<div class="hint">改的是游戏内提示文案（金币不足 / BOSS 警告 / 波次播报等）。留空即恢复默认。保存后写入 cfg.json 的 <b>TIP_OVERRIDE</b>，玩家下次登录生效。</div>
+          body = `<div class="hint">游戏内提示文案（金币不足 / BOSS 警告 / 波次播报等），留空即恢复默认。</div>
             ${flat.length ? this.table(['键', '默认文案', '当前生效', '操作'],
               flat.map((row) => {
                 const k = row[0], defv = row[1];
@@ -1792,7 +1803,7 @@ const PAGES = {
           const v = this.str('#hv_v');
           try { localStorage.setItem('z_hot_ver', v); } catch (e) {}
           AUDIT.log('记录热更版本', v, '');
-          this.toast('已记录（需同步改前端代码才生效）', 'ok');
+          this.toast('已记录版本号', 'ok');
         },
         async hvPush() {
           const v = this.str('#hv_v');
@@ -1800,7 +1811,7 @@ const PAGES = {
           d.ver = v; d.pushedAt = Date.now(); d.by = 'admin';
           if (await DB.set(DBP.hotfix, d, '推送热更版本 ' + v)) {
             AUDIT.log('推送热更版本', v, '');
-            this.toast('已推送到云端 hotfix.json', 'ok');
+            this.toast('已推送到云端', 'ok');
           }
         },
         /* ---------------- 版本排期维护（V1.2.2） ---------------- */
@@ -1914,7 +1925,7 @@ const PAGES = {
           d.list = L2; d.updatedAt = Date.now(); d.by = 'admin';
           if (await DB.set(DBP.roadmap, d, '下发版本排期 ' + L2.length + ' 条')) {
             AUDIT.log('下发版本排期', L2.length + ' 条', '');
-            this.toast('已下发 roadmap.json（玩家重启游戏生效）', 'ok');
+            this.toast('已下发（玩家重启游戏生效）', 'ok');
           }
         },
         async rmReset() {
@@ -1924,10 +1935,13 @@ const PAGES = {
           this.toast('已恢复内置（点下发生效）', 'ok'); this.render();
         },
         lgSave() {
-          /* 单语言版本：语言选择器已禁用，这里只做兜底提示 */
-          if (window.OPS && OPS.setLang) OPS.setLang('zh');
-          AUDIT.log('切换语言', 'zh', '');
-          this.toast('本游戏仅支持简体中文', 'warn');
+          /* 单语种时语言选择器不再渲染（禁用控件靠说明解释是布局缺陷），
+           * 这里兜底为 zh 且不弹提示；多语种时按选择切换并给出结果。 */
+          const sel = document.getElementById('lg_s');
+          const k = sel ? sel.value : 'zh';
+          if (window.OPS && OPS.setLang) OPS.setLang(k);
+          AUDIT.log('切换语言', k, '');
+          if (sel) this.toast('已切换：' + k, 'ok');
         },
         txEdit(t) {
           const id = t.dataset.id;
@@ -2017,7 +2031,7 @@ const PAGES = {
       render() {
         const t = tab('shop', 'goods');
         /* 已接入：游戏端 CFG_FILES 已包含 shop / ad / social，这里配的内容会真正生效 */
-        const NOT_READ = '<div class="hint" style="margin:8px 0;color:#7ee08a">✅ 已接入游戏端（CFG_FILES）—— 这里保存的配置会在玩家下次登录时生效。</div>';
+        const NOT_READ = wired();
         const seg = (k, n) => `<button class="${t === k ? 'on' : ''}" data-a="tab" data-k="${k}">${n}</button>`;
         const body = t === 'goods'
           ? `<div class="btns"><button class="btn" data-a="shpReload">⟳ 刷新商品</button></div>
@@ -2173,8 +2187,8 @@ const PAGES = {
       n: '广告', i: '📺', g: '运营', perm: 'ad.cfg',
       render() {
         return `<div class="card">
-          <h3>广告位配置<span class="tag">每日次数 / 奖励</span></h3>
-          <div class="hint" style="margin:8px 0;color:#7ee08a">✅ 已接入游戏端（ad.json 在 CFG_FILES 内）——「每日上限」会覆盖玩家每日可看广告次数，玩家下次登录生效。</div>
+          <h3>广告位配置</h3>
+          ${wired('「每日上限」覆盖玩家每日可看次数')}
           <div class="fr"><label class="wide">广告位</label><select id="ad_id">
             ${(EX.ads || [{ id: 'AD01', n: '复活' }, { id: 'AD02', n: '双倍收益' }, { id: 'AD03', n: '体力' }])
               .map((a) => `<option value="${U.esc(a.id)}">${U.esc(a.n || a.id)}</option>`).join('')}
@@ -2252,7 +2266,7 @@ const PAGES = {
       render() {
         const t = tab('social', 'friend');
         /* 已接入：游戏端 CFG_FILES 已包含 shop / ad / social，这里配的内容会真正生效 */
-        const NOT_READ = '<div class="hint" style="margin:8px 0;color:#7ee08a">✅ 已接入游戏端（CFG_FILES）—— 这里保存的配置会在玩家下次登录时生效。</div>';
+        const NOT_READ = wired();
         const seg = (k, n) => `<button class="${t === k ? 'on' : ''}" data-a="tab" data-k="${k}">${n}</button>`;
         const body = t === 'friend'
           ? `<div class="btns"><button class="btn" data-a="scStat">📈 在线状态统计</button></div>
@@ -2313,7 +2327,7 @@ const PAGES = {
           const box = D('#lgBox'); if (!box) return;
           const P = this.PLIST.filter((p) => !p._noSave && !p._broken);
           const withLg = P.filter((p) => p.legion);
-          box.innerHTML = `<div class="hint">共 ${withLg.length} 名玩家加入了军团</div>` +
+          box.innerHTML = `<div class="kpis"><div class="kpi"><div class="v">${withLg.length}</div><div class="k">已加入军团</div></div></div>` +
             (withLg.length ? this.table(['玩家', '军团', '贡献', 'UID'],
               withLg.map((p) => {
                 const l = p.legion || {};
