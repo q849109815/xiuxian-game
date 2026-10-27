@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.721111111111';
+const IMG_V = '1.3.7211111111111';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -895,7 +895,7 @@ const UI = {
   },
   render(key, tab) {
     const p = this.P; if (!p) return '<div class="empty">无数据</div>';
-    const f = this['r_' + key]; return f ? f.call(this, p, tab) : '<div class="empty">待开发</div>';
+    const f = this['r_' + key]; return f ? f.call(this, p, tab) : '<div class="empty">内容建设中</div>';
   },
   bind(key, tab) {
     const p = this.P; if (!p) return;
@@ -2531,6 +2531,13 @@ r_tavern(p, tab) {
      * 这里兜底取该面板的第一个页签。 */
     tab = tab || ((this.PANELS.shop && this.PANELS.shop[1] && this.PANELS.shop[1][0]) || '每日');
     const goods = (EX.shopGoods || {})[tab] || [];
+    /* 月卡 / 战令的状态卡与下方商品卡此前是两块割裂的 UI：
+     * 状态卡未开通时只给一句「在上方购买…」的说明，而月卡商品实际渲染在【下方】——
+     * 指引方向是错的，且状态卡里根本没有按钮，玩家得自己滚下去找。
+     * 现在状态卡内直接给购买入口（价格取商品表，不硬编码）。 */
+    const _dg = (EX.shopGoods || {})['直购'] || [];
+    const _mc = _dg.find(g => g && g.monthly) || {};
+    const _pa = _dg.find(g => g && g.pass === 'adv') || {};
     return `<div class="card"><div class="card-t">${tab}
       <b class="ct-n">🪙 ${E.fmt(p.gold)} · 💎 ${E.fmt(p.diamond)}</b></div>
       <div class="grid3" style="grid-template-columns:repeat(2,1fr)">${(tab === '直购') ? `
@@ -2539,10 +2546,11 @@ r_tavern(p, tab) {
             <div class="kv"><span>剩余天数</span><b>${E.monthCardLeft(p)} 天</b></div>
             <div class="kv"><span>今日状态</span><b>${(p.monthCard && p.monthCard.last === new Date((typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now())+8*3600000).toISOString().slice(0,10)) ? '已领取' : '待领取'}</b></div>
             <button class="btn blk" id="shMcClaim" style="margin-top:6px">📅 领取今日（钻石50+体力60）</button>`
-            : `<div class="lbl">未开通 · 在上方购买「月卡」后 30 天内每日可领</div>`}
+            : `<div class="kv"><span>状态</span><b>未开通</b></div>
+              <button class="btn blk" data-buy="${_mc.id || 'SH05'}" style="margin-top:6px">📅 开通月卡（💎${_mc.price || 300}）</button>`}
         </div>
         <div class="card" style="grid-column:1/-1"><div class="card-t">战令 <b class="ct-n">${p.passAdv ? '进阶版' : '普通版'} · 当前 ${E.passLevel(p)} 关</b></div>
-          <div class="lbl" style="text-align:left;margin-bottom:5px">按通关关卡数解锁，${p.passAdv ? '可领进阶档（额外钻石30）' : '购买「战令(进阶)」解锁高级奖励'}</div>
+          ${p.passAdv ? '' : `<button class="btn sm blk" data-buy="${_pa.id || 'SH07'}" style="margin-bottom:5px">🎖️ 升级进阶（💎${_pa.price || 680}）</button>`}
           ${E.PASS_TIERS.map((t, i) => {
             const un = E.passLevel(p) >= t.lv;
             const gn = (p.passClaimed || {})['p' + i + 'n'];
@@ -2962,7 +2970,7 @@ r_tavern(p, tab) {
         ${/* V1.0.3 好友助战：设为助战后进战斗 +3% 攻击 */ ''}
         <button class="btn sm ${p.assist === fid ? 'd' : 'g'}" data-assist="${UI.esc(fid)}">${p.assist === fid ? '助战中' : '设为助战'}</button>
         <span class="st ${f.online ? 'on' : 'off'}">${f.online ? '在线' : '离线'}</span>
-      </div>`; }).join('') : '<div class="lbl">还没有好友，点击下方添加</div>'}
+      </div>`; }).join('') : '<div class="lbl">暂无好友</div>'}
       <button class="btn" id="addFriend" style="width:100%;margin-top:8px">添加好友</button>
     </div>`;
   },
@@ -4034,7 +4042,7 @@ r_tavern(p, tab) {
         + '</div>'
         + '<div class="card"><div class="card-t">即将到来 <b class="ct-n">' + next.length + ' 个</b></div>'
         + (next.length ? next.map((v) => row(v, true)).join('')
-            : '<div class="lbl">暂无预告 &#8212;&#8212; 当前排期已全部发布</div>')
+            : '<div class="lbl">暂无预告</div>')
         + '</div>'
         /* V1.2.3：各部门进度 —— 下一个版本六部门各自在做什么。
          * 玩家看得见"这游戏在被认真做"，运营也多一个预期管理入口。
