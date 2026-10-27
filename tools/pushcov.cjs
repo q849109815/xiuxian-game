@@ -54,6 +54,16 @@ const miss = need.filter(f => !LIST.has(f));
 ok('U2-上传清单全覆盖', miss.length === 0,
    miss.length + ' 个文件改动永远传不上线: ' + miss.slice(0, 8).join(', '));
 
+/* --- U3 本地所有工具都必须在清单里（U2 只覆盖"已被 dash 登记"的，
+ *     新建工具尚未登记时 U2 照样全绿 —— 这正是 adminux.cjs 漏登记的成因） --- */
+/* 下划线开头的是一次性诊断脚本（_btdump / _audit 等），不属于常驻工具，不要求上传 */
+const ONDISK = fs.readdirSync(path.join(ROOT, 'tools'))
+  .filter((f) => (f.endsWith('.cjs') || f.endsWith('.py')) && !f.startsWith('_'))
+  .map((f) => 'tools/' + f);
+const missDisk = ONDISK.filter((f) => !LIST.has(f));
+ok('U3-本地工具全部登记', missDisk.length === 0,
+   missDisk.length + ' 个本地工具不在清单，改动永远传不上线: ' + missDisk.slice(0, 10).join(', '));
+
 /* --- N1 清单内文件必须真实存在（占位符/拼错会让 check 静默跳过） --- */
 const ghost = [...LIST].filter(f => !fs.existsSync(path.join(ROOT, f)));
 ok('N1-清单无幽灵路径', ghost.length === 0, '本地不存在却被登记: ' + ghost.slice(0, 5).join(', '));
