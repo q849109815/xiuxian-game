@@ -4,10 +4,11 @@
  *
  * 用法：
  *   node tools/ver.cjs              # 显示当前版本与规范说明
- *   node tools/ver.cjs patch        # 修 BUG / 小幅优化  1.2.0 -> 1.2.1
- *   node tools/ver.cjs minor        # 新增玩法/系统/内容 1.2.x -> 1.3.0
+ *   node tools/ver.cjs patch        # 修 BUG / 小幅优化  1.3.72 -> 1.3.73
+ *   node tools/ver.cjs minor        # 新增玩法/系统/内容 1.3.x -> 1.4.0
  *   node tools/ver.cjs major        # 大版本（题材/架构级）1.x.x -> 2.0.0
  *   node tools/ver.cjs patch "说明" # 带变更说明，自动写进 CHANGELOG
+ *   node tools/ver.cjs reset 1.3.73 # 基线重设（仅用于把已膨胀的畸形版本号拉回规范区间）
  *
  * 一条命令完成 5 件事（历史上全靠手改，导致版本号分叉）：
  *   1. index.html  全部 ?v= 戳
@@ -17,12 +18,34 @@
  *   5. CHANGELOG.md 追加记录
  *
  * 版本号语义（MAJOR.MINOR.PATCH）：
- *   PATCH 第三位 —— 修 BUG、小幅体验优化。可累加超过 9（1.2.1 ... 1.2.11）
+ *   PATCH 第三位 —— 修 BUG、小幅体验优化。0..99，满 99 进位 MINOR（1.3.99 -> 1.4.0）
  *   MINOR 第二位 —— 新玩法 / 新系统 / 大体量内容
  *   MAJOR 第一位 —— 题材或架构级变更
+ *
+ * 【V1.3.73 版本规范整改 —— 废弃 bump1】
+ *   历史做法：每次发布在版本号末尾追加一位 1（1.3.72 -> 1.3.721 -> 1.3.7211 ...）。
+ *   初衷是对的——保证版本号字符串必变，?v= 缓存戳必变，玩家必拿到新文件。
+ *   但代价是版本号一路膨胀到 1.3.72111111111111（14 个 1），
+ *   而这个字符串玩家在「设置 → 前瞻」里看得见，既不可读也不专业。
+ *   整改：PATCH 改为正常十进制 +1（1.3.72 -> 1.3.73）。
+ *   字符串同样每次必变，缓存冲刷效果完全等价，版本号保持可读。
+ *   reset 命令用于把已膨胀的畸形版本号一次性拉回规范区间。
  * ========================================================================== */
 const fs = require('fs');
 const path = require('path');
+
+/* PATCH 段上限：超过即进位 MINOR。
+ * 背景：旧的「末尾追加 1」做法让版本号膨胀到 1.3.72111111111111（14 个 1），
+ * 玩家可见却完全不可读。这里给出硬上限，配合 releaseguard R6 双重拦截。 */
+const MAX_PATCH = 99;
+
+/* 畸形版本号判定：PATCH 段超过 MAX_PATCH，即「追加 1」膨胀产物 */
+function isMalformed(v) {
+  const seg = String(v || '').split('.');
+  if (seg.length !== 3) return true;
+  const n = Number(seg[2]);
+  return !Number.isFinite(n) || n > MAX_PATCH;
+}
 
 const ROOT = path.resolve(__dirname, '..');
 const VER_FILE = path.join(ROOT, 'tools', '.version.json');
@@ -46,14 +69,18 @@ function bump(v, kind) {
   const p = String(v).split('.').map(Number);
   while (p.length < 3) p.push(0);
   if (kind === 'bump1') {
-    /* 【制作人铁律】每次发布必定在版本号末尾追加一位 1。
-       目的：版本号字符串必定变化 -> 所有 ?v= 缓存戳必定变化 -> 玩家必定拿到新文件。
-       历史教训：复用版本号或改动不升版，玩家缓存拿到旧/被污染的文件，被投诉。 */
-    return String(v) + '1';
+    /* 【已废弃 V1.3.73】末尾追加 1 会让版本号无限膨胀（1.3.72 -> 1.3.721 -> ... 14 个 1），
+       玩家在「设置 → 前瞻」看得见，不可读。改用 patch 十进制 +1，同样保证字符串必变。 */
+    console.error('[FAIL] bump1 已废弃（版本号会膨胀成 1.3.72111111111111）。请用 patch 代替。');
+    process.exit(2);
   }
   if (kind === 'major') { p[0]++; p[1] = 0; p[2] = 0; }
   else if (kind === 'minor') { p[1]++; p[2] = 0; }
-  else p[2]++;                    /* patch：第三位可超过 9，按制作人要求 */
+  else {
+    p[2]++;
+    /* PATCH 上限 99：满 99 进位 MINOR，杜绝再次膨胀成超长串 */
+    if (p[2] > MAX_PATCH) { p[2] = 0; p[1]++; }
+  }
   return p.join('.');
 }
 
@@ -67,6 +94,16 @@ function cmpVer(a, b) {
   }
   return 0;
 }
+/* 规范性校验：新版本号必须落在 MAJOR.MINOR.PATCH(0..99) 规范区间。
+ * 防止有人绕过 reset 又写出 1.3.72111111111111 这类畸形串。 */
+function assertNorm(v) {
+  if (!/^\d+\.\d+\.\d+$/.test(String(v)) || isMalformed(v)) {
+    console.error('[FAIL] 版本号不规范：V' + v + '（必须是 MAJOR.MINOR.PATCH，且 PATCH <= ' + MAX_PATCH + '）');
+    console.error('       畸形版本号玩家可见却不可读，禁止发布。');
+    process.exit(2);
+  }
+}
+
 function assertInc(cur, next) {
   if (cmpVer(next, cur) <= 0) {
     console.error('[FAIL] 版本号未递增：V' + cur + ' -> V' + next + '（等于/小于当前版本 = 玩家缓存不会刷新，禁止发布）');
@@ -156,7 +193,7 @@ function syncAImgV(v) {
 function changelog(from, to, kind, note) {
   const d = new Date();
   const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const kn = { patch: '修 BUG / 小幅优化', minor: '新玩法 / 新系统 / 大内容', major: '大版本', bump1: '修 BUG / 小幅优化（版本号末尾+1，强制冲刷缓存）' }[kind];
+  const kn = { patch: '修 BUG / 小幅优化', minor: '新玩法 / 新系统 / 大内容', major: '大版本', bump1: '（已废弃）', reset: '版本规范整改 / 基线重设' }[kind];
   const head = `\n## V${to}（${kn}） · ${ds}\n`;
   const body = (note && note.trim()) ? note.trim().split('\n').map(x => (x.startsWith('-') ? x : '- ' + x)).join('\n') + '\n'
     : '- （待补充）\n';
@@ -165,22 +202,49 @@ function changelog(from, to, kind, note) {
 }
 
 const kind = (process.argv[2] || '').toLowerCase();
-const note = process.argv.slice(3).join(' ');
+const raw = process.argv[3] || '';
 const cur = readVer();
 
-if (!['patch', 'minor', 'major', 'bump1'].includes(kind)) {
+if (!['patch', 'minor', 'major', 'bump1', 'reset'].includes(kind)) {
   console.log('=== 当前版本 V' + cur + ' ===');
-  console.log('用法： node tools/ver.cjs  patch|minor|major|bump1  "变更说明"');
-  console.log('  bump1 —— 【默认发布方式】版本号末尾追加一位 1（1.3.72 -> 1.3.721）');
-  console.log('           铁律：任何一次发布都必须让版本号字符串变化，否则玩家缓存不刷新');
-  console.log('  patch 第三位 —— 修 BUG / 小幅优化（1.2.1 ... 1.2.11 可累加）');
+  console.log('用法： node tools/ver.cjs  patch|minor|major|reset  "变更说明"');
+  console.log('  patch 第三位 —— 【默认】修 BUG / 小幅优化（1.3.72 -> 1.3.73，满 99 进位）');
+  console.log('                  铁律：每次发布版本号必须变化，否则玩家缓存不刷新');
   console.log('  minor 第二位 —— 新玩法 / 新系统 / 大体量内容');
   console.log('  major 第一位 —— 题材或架构级变更');
+  console.log('  reset <版本号> —— 基线重设，仅允许从畸形版本号（PATCH>99）拉回规范区间');
+  console.log('                   例： node tools/ver.cjs reset 1.3.73 "版本号规范整改"');
   process.exit(0);
 }
 
-const next = bump(cur, kind);
-assertInc(cur, next);
+let next;
+if (kind === 'reset') {
+  /* 基线重设：只允许从「追加 1」膨胀出的畸形版本号拉回规范区间。
+   * 硬约束（每一条都是为了防止本命令被滥用成随意回退）：
+   *   1. 目标版本号必须规范（PATCH <= 99）
+   *   2. 当前版本号必须畸形（否则就是普通的版本回退，禁止）
+   *   3. 目标字符串必须不同于当前（保证 ?v= 变化、缓存必刷新）
+   */
+  const target = String(raw || '').trim();
+  assertNorm(target);
+  if (!isMalformed(cur)) {
+    console.error('[FAIL] 当前版本 V' + cur + ' 已是规范版本号，不允许 reset。');
+    console.error('       reset 仅用于修正「末尾追加 1」膨胀出的畸形版本号。');
+    console.error('       正常的升版请用 patch / minor / major。');
+    process.exit(2);
+  }
+  if (target === String(cur)) {
+    console.error('[FAIL] 目标版本与当前相同（V' + target + '），版本号不变 = 玩家缓存不刷新。');
+    process.exit(2);
+  }
+  next = target;
+  console.log('[基线重设] V' + cur + ' -> V' + next + '（畸形版本号拉回规范区间，字符串已变化 = 缓存必刷新）');
+} else {
+  next = bump(cur, kind);
+  assertNorm(next);
+  assertInc(cur, next);
+}
+const note = (kind === 'reset') ? process.argv.slice(4).join(' ') : raw;
 const a = syncHtml(next);
 const b = syncConfig(next);
 const c = syncImgV(next);
