@@ -307,6 +307,8 @@ FILES = [
     'tools/mutate_adminux.cjs',
     'tools/shopux.cjs',
     'tools/mutate_shopux.cjs',
+    'tools/biguard.cjs',
+    'tools/mutate_biguard.cjs',
     'tools/pxcheck.cjs',
     'tools/pxledger.json',
 
