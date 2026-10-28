@@ -31,7 +31,7 @@ const antiCheat=/antiCheat|cheat|哨兵|anomaly/i.test(R('js/main.js')+cfg);
 const adm=R('admin/index.html')+R('admin/js/core.js')+R('admin/js/pages.js');
 const funnel=/funnel|漏斗|dau_retention|留存/i.test(adm);
 
-const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs'];
+const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs'];
 const tOk=tools.filter(t=>ex('tools/'+t)).length;
 
 /* 【玩家可感知交叉验证】—— 进度表固定项，每轮必跑
@@ -40,7 +40,7 @@ const tOk=tools.filter(t=>ex('tools/'+t)).length;
  * 立规原因：V1.3.7 四项交付实测全为假（文件没动、功能不存在、版本没发），
  *   而当时所有守卫都报绿——因为没有一条规则要求"玩家真的能体验到"。 */
 const px=(()=>{try{return JSON.parse(fs.readFileSync('tools/.pxlast.json','utf8'))}catch(e){return null}})();
-const pxTxt=px?(px.fail?`FAIL${px.fail}`:`PASS${px.pass}`):'未跑';
+const pxTxt=px?(px.fail?`FAIL${px.fail}`:`PASS${px.pass}`):'未跑通✗';
 
 const D=[];const A=(d,k,v)=>D.push({d,k,v});
 A('策划','角色',nChar); A('策划','皮肤',nSkin); A('策划','活动',nEv);
@@ -97,28 +97,39 @@ const taFresh=(()=>{
   }catch(e){return false}
   return true;
 })();
-A('测试','检测工具体检',!ta?'未跑':(!taFresh?'已过期←需重跑':`可信${ta.trust}/${ta.total}`+(ta.bad?` 不可信${ta.bad}`:'')+(ta.skipN?` 跳过${ta.skipN}`:'')));
+A('测试','检测工具体检',!ta?'未跑通✗':(!taFresh?'已过期←需重跑':`可信${ta.trust}/${ta.total}`+(ta.bad?` 不可信${ta.bad}`:'')+(ta.skipN?` 跳过${ta.skipN}`:'')));
 /* 【变异验证覆盖】—— 进度表固定项
  * 铁律：抓不住缺陷的断言等于不存在。只报「工具有多少条断言」没意义，
  * 必须报「多少条被证明过抓得住」。数字取最近一次实测轮次，未跑则显式写未验证，
  * 绝不允许用「注册了」冒充「验证过」。 */
 const mr=(()=>{try{return JSON.parse(fs.readFileSync('tools/_mutround.json','utf8'))}catch(e){return null}})();
-A('测试','变异验证',mr&&mr.captured===mr.cases?`捕获${mr.captured}/${mr.cases}`:`未验证(${mr?mr.captured+'/'+mr.cases:'未跑'})`);
+A('测试','变异验证',mr&&mr.captured===mr.cases?`捕获${mr.captured}/${mr.cases}`:`未验证(${mr?mr.captured+'/'+mr.cases:'未跑通✗'})`);
 /* 【缓存冲刷守卫】—— 进度表固定项（V1.3.71 新增）
  * 立规原因：线上污染清除后，若全站资源 ?v= 未统一升版，已缓存旧文件的玩家
  * 仍会拿到带污染的代码。本项每轮必跑：任一资源漏带 ?v= 或版本号不同步，
  * 看板直接显示未过，不允许把「我记得改过了」当成交付。 */
 const cg=(()=>{try{const r=require('child_process').spawnSync('node',['tools/cacheguard.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
   const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
-A('测试','缓存冲刷守卫',cg&&cg.f===0?`PASS${cg.p}/0`:`未过${cg?cg.f:'未跑'}项`);
+A('测试','缓存冲刷守卫',cg&&cg.f===0?`PASS${cg.p}/0`:`未过${cg?cg.f:'未跑通✗'}项`);
 /* 【发布流程守卫】—— 进度表固定项（V1.3.721 新增）
  * 铁律：每次发布版本号必须在末尾 +1（1.3.72 -> 1.3.721），否则玩家缓存不刷新，
  * 表现为「明明修了还是坏的」直接招投诉。本项每轮必跑：
  * 版本单调 / 全站版本戳统一 / 相对上次发布已升版 / manifest 全覆盖 / 流程固化未被删。
  * 任一项不过，看板直接显示未过，禁止发版。 */
+/* 【版本规范守卫】—— 进度表固定项（V1.3.73 新增）
+ * 立规原因：「末尾追加 1」的旧做法把版本号膨胀到 1.3.72111111111111（14 个 1），
+ * 而该字符串玩家在「设置 → 前瞻」看得见。本项跑 mutate_vernorm.cjs，
+ * 证明 reset 防滥用（规范版本禁止重设、目标缺失/畸形均拒绝）与
+ * PATCH 十进制递增 / 满 99 进位真的生效。任一用例漏网，看板直接显示未过。 */
+const vn=(()=>{try{const r=require('child_process').spawnSync('node',['tools/mutate_vernorm.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:180000});
+  /* 保留完整输出供排查：看板里报「未过 N 项」时必须能立刻看到是哪一条、为什么，
+     不能只给一个数字让人猜（历史教训：断言缩水 242->241 只给数字，查了半天） */
+  try{fs.writeFileSync('tools/.vnlast.txt', (r.stdout||'')+(r.stderr||'')+'\n[exit='+r.status+']\n');}catch(e){}
+  const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','版本规范守卫',vn&&vn.f===0?`PASS${vn.p}/0`:`未过${vn?vn.f:'未跑通✗'}项`);
 const rg=(()=>{try{const r=require('child_process').spawnSync('node',['tools/releaseguard.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
   const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
-A('测试','发布流程守卫',rg&&rg.f===0?`PASS${rg.p}/0`:`未过${rg?rg.f:'未跑'}项`);
+A('测试','发布流程守卫',rg&&rg.f===0?`PASS${rg.p}/0`:`未过${rg?rg.f:'未跑通✗'}项`);
 /* 【上传清单覆盖守卫】—— 进度表固定项（本轮新增）
  * 事故：绩效工具 tools/kpi.cjs 修好「换人台账对不上」的缺陷后，因不在
  * push.py 的上传清单里，这份修复永远留在本地、线上仍跑旧版 —— 报告却写着已修。
@@ -127,7 +138,7 @@ A('测试','发布流程守卫',rg&&rg.f===0?`PASS${rg.p}/0`:`未过${rg?rg.f:'�
  * 必须全部在上传清单内；另查幽灵路径与中文路径 percent-encoding。 */
 const pc=(()=>{try{const r=require('child_process').spawnSync('node',['tools/pushcov.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
   const m=(r.stdout||'').match(/PASS (\d+) \/ FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
-A('测试','上传清单覆盖',pc&&pc.f===0?`PASS${pc.p}/0`:`未过${pc?pc.f:'未跑'}项`);
+A('测试','上传清单覆盖',pc&&pc.f===0?`PASS${pc.p}/0`:`未过${pc?pc.f:'未跑通✗'}项`);
 /* 【布局越界守卫】—— 进度表固定项（V1.3.7211 新增，源自玩家实机投诉）
  * 事故：玩家反馈「按技能选技能时整个画面跑出屏幕」。复盘发现既有闸门只查
  * 「面板能否打开 / 有无异常 / 按钮有无反应」，没有任何一条断言问过
@@ -136,14 +147,29 @@ A('测试','上传清单覆盖',pc&&pc.f===0?`PASS${pc.p}/0`:`未过${pc?pc.f:'�
  * 越界即报红；并强制三选一描述必须截断为 3 行。 */
 const lg=(()=>{try{const r=require('child_process').spawnSync('node',['tools/layoutguard.cjs','360'],{cwd:__dirname+'/..',encoding:'utf8',timeout:300000});
   const m=(r.stdout||'').match(/\[layoutguard\] PASS (\d+) \/ FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
-A('测试','布局越界守卫',lg&&lg.f===0?`PASS${lg.p}/0`:`未过${lg?lg.f:'未跑'}项`);
+A('测试','布局越界守卫',lg&&lg.f===0?`PASS${lg.p}/0`:`未过${lg?lg.f:'未跑通✗'}项`);
 /* 【战斗布局守卫】—— 进度表固定项（V1.3.72111111 事故后新增）
  * 玩家连续两轮反馈「战斗界面打着打着出屏幕」，而既有守卫只覆盖主界面/面板/三选一，
  * 战斗态长期是盲区。本项每轮必跑：战斗中 HUD / 三选一 / 视口变化 / 画布比例，
  * 以及 B8 震屏变换逐帧归零（事故本源：save/restore 不配对导致画面漂移）。 */
 const bt=(()=>{try{const r=require('child_process').spawnSync('node',['tools/btlayout.cjs','360x640'],{cwd:__dirname+'/..',encoding:'utf8',timeout:420000});
-  const m=(r.stdout||'').match(/\[btlayout\] PASS (\d+) \/ FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
-A('测试','战斗布局守卫',bt&&bt.f===0?`PASS${bt.p}/0(含B8漂移)`:bt?`未过${bt.f}项`:'未跑');
+  const m=(r.stdout||'').match(/\[btlayout\] PASS (\d+) \/ FAIL (\d+) \/ PREREQ (\d+)/);
+  /* 无输出 = 崩溃/超时：按铁律判失败，不得回落成中性词 */
+  if(!m) return {p:0,f:1,q:0,run:false};
+  return {p:+m[1],f:+m[2],q:+m[3],run:true}}catch(e){return {p:0,f:1,q:0,run:false}}})();
+/* 三态显示：真缺陷(未过N项) / 前提未就绪(环境问题，需重跑) / 未跑通(工具故障，判失败)
+ * 立规原因：此前 B0「未能进入战斗」B2「三选一无法弹出」这类【前提类】断言在负载高时
+ * 偶发失败，被记进 FAIL，看板显示「未过 2 项」——把环境问题报成游戏缺陷。
+ * 反复误报会让看板使用者对「未过」脱敏，真正的越界失败反而被淹没。 */
+A('测试','战斗布局守卫',!bt.run?'未跑通✗(判失败)':bt.f?`未过${bt.f}项✗`:bt.q?`PASS${bt.p}/0·前提未就绪${bt.q}项(需重跑)`:`PASS${bt.p}/0(含B8漂移)`);
+/* 【前提类断言守卫】—— 进度表固定项（V1.3.74 新增）
+ * 守的是上一条规则本身：前提类断言（B0 进战斗 / B2 弹三选一）衡量的是
+ *「测试环境有没有准备好」，不得混进缺陷计数。混入的后果是看板偶发
+ *「未过 2 项」而单独复跑全绿 —— 假失败会让人对「未过」脱敏，
+ * 真正的越界失败（V1.3.72111111 画面漂移那种）反而被淹没。 */
+const bq=(()=>{try{const r=require('child_process').spawnSync('node',['tools/btprereq.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
+ const m=(r.stdout||'').match(/\[btprereq\] PASS (\d+) \/ FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','前提类断言守卫',bq&&bq.f===0?`PASS${bq.p}/0`:`未过${bq?bq.f:'未跑通✗'}项`);
 /* 【三体验守卫】—— 进度表固定项（三体验规则落地）
  * 管理要求：每次修改都要兼顾用户体验 / 开发体验 / AI Agent 体验，三者都要变好，
  * 且不能破坏现有功能。本项每轮必跑：U1~U4 玩家界面干净（无后台视角文案、
@@ -151,7 +177,7 @@ A('测试','战斗布局守卫',bt&&bt.f===0?`PASS${bt.p}/0(含B8漂移)`:bt?`�
  * A2~A3 守卫自述头与退出码语义，保证 Agent 能可靠判断改动是否生效。 */
 const ux=(()=>{try{const r=require('child_process').spawnSync('node',['tools/ux3.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
   const m=(r.stdout||'').match(/RESULT: PASS (\d+) \/ FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
-A('测试','三体验守卫UX/DX/AX',ux&&ux.f===0?`PASS${ux.p}/0`:`未过${ux?ux.f:'未跑'}项`);
+A('测试','三体验守卫UX/DX/AX',ux&&ux.f===0?`PASS${ux.p}/0`:`未过${ux?ux.f:'未跑通✗'}项`);
 /* 【后台三体验守卫】—— 进度表固定项
  * 立规原因：后台曾出现「✅ 已接入游戏端（CFG_FILES）——…」整句在商城/社交逐字复制、
  * 多语言页用 disabled 下拉 + 一行说明解释它、版本号页放着「记得手动同步」的长教训。
@@ -166,7 +192,7 @@ A('测试','后台三体验守卫',ax.f===0?`PASS${ax.p}/0`:`未过${ax.f}项`);
  * 现在状态卡内直接给购买入口（id/价格一律取商品表，禁止硬编码）。 */
 const su=(()=>{try{const r=require('child_process').spawnSync('node',['tools/shopux.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
  const m=(r.stdout||'').match(/RESULT: PASS (\d+) \/ FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
-A('测试','商城购买入口守卫',su&&su.f===0?`PASS${su.p}/0`:`未过${su?su.f:'未跑'}项`);
+A('测试','商城购买入口守卫',su&&su.f===0?`PASS${su.p}/0`:`未过${su?su.f:'未跑通✗'}项`);
 /* 【埋点数据链路守卫】—— 进度表固定项
  * 立规原因：boot() 里的 game_start 在【登录读档之前】触发，此时 window.P 为 null，
  * 写入存档那一段被整个跳过 —— 事件只落在玩家自己浏览器里，后台永远看不到启动量。
@@ -174,7 +200,7 @@ A('测试','商城购买入口守卫',su&&su.f===0?`PASS${su.p}/0`:`未过${su?s
  * 现在登录前事件先进暂存区，登录完成后由 flushBI 补写进存档。 */
 const bg=(()=>{try{const r=require('child_process').spawnSync('node',['tools/biguard.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
  const m=(r.stdout||'').match(/biguard: PASS (\d+) FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
-A('测试','埋点数据链路守卫',bg&&bg.f===0?`PASS${bg.p}/0`:`未过${bg?bg.f:'未跑'}项`);
+A('测试','埋点数据链路守卫',bg&&bg.f===0?`PASS${bg.p}/0`:`未过${bg?bg.f:'未跑通✗'}项`);
 /* 【错题本 · 复发错误提醒】—— 进度表固定项（本轮新增）
  * 管理要求：老是犯错的部门多提醒，别重复犯错。
  * 所以把历史错题按部门建台账，复发（×2及以上）的错误必须有守卫覆盖；
@@ -183,7 +209,7 @@ const mk=(()=>{try{const r=require('child_process').spawnSync('node',['tools/mis
   const rec=(r.stdout||'').match(/复发错题（×2及以上）共 (\d+) 条/);
   const unc=(r.stdout||'').match(/其中无守卫覆盖 (\d+) 条/);
   return {rec:rec?+rec[1]:0,unc:unc?+unc[1]:-1}}catch(e){return null}})();
-A('测试','错题本复发提醒',mk&&mk.unc===0?`复发${mk.rec}条全覆盖✓`:`未覆盖${mk?mk.unc:'未跑'}条✗`);
+A('测试','错题本复发提醒',mk&&mk.unc===0?`复发${mk.rec}条全覆盖✓`:`未覆盖${mk?mk.unc:'未跑通✗'}条✗`);
 /* 【题材铁律守卫】—— 进度表固定项（本轮新增）
  * V1.1.0 把末日废土误做成修仙题材，是全项目最严重的 P0，但长期没有守卫，
  * 同类事故完全可以再犯。代码/界面零容忍，16 条禁用词，已变异验证。 */
@@ -197,8 +223,8 @@ const tg=(()=>{try{const r=require('child_process').spawnSync('node',['tools/the
 const mm=(()=>{try{const r=require('child_process').spawnSync('node',['tools/mistmut.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:600000});
   const o=(r.stdout||'');const n=(o.match(/本轮验证 (\d+) 条，捕获 (\d+)\//)||[]);
   return n[1]&&n[1]===n[2]?{ok:1,t:n[2]}:{ok:0,t:n[2]||0}}catch(e){return null}})();
-A('测试','错题复发捕获',mm?(mm.ok?`捕获${mm.t}/${mm.t}✓`:`未捕获✗`):'未跑');
-A('策划','题材铁律守卫',tg&&tg.f===0?`PASS${tg.p}/0`:`未过${tg?tg.f:'未跑'}项`);
+A('测试','错题复发捕获',mm?(mm.ok?`捕获${mm.t}/${mm.t}✓`:`未捕获✗`):'未跑通✗');
+A('策划','题材铁律守卫',tg&&tg.f===0?`PASS${tg.p}/0`:`未过${tg?tg.f:'未跑通✗'}项`);
 A('运营','后台漏斗',funnel?'✓':'✗'); A('运营','反作弊',antiCheat?'✓':'✗');
 A('运营','活动日历',ex('运营日历_V1.0.2.md')?'✓':'✗'); A('运营','赛季排期',ex('赛季排期日历_V1.1.0.md')?'✓':'✗'); A('运营','脏订单','已清(5条)');
 
