@@ -72,14 +72,24 @@ const dpBad = V.filter((x) => x.pub !== false)
   .filter((x) => !(x.dp && DP6.every((k) => !!String((x.dp[k] || '')).trim())));
 ok(dpBad.length === 0, 'G1-8f 全表排期六部门分工齐全（防"建了字段不填"复发）',
   dpBad.map((x) => x.v + ':' + (x.dp ? DP6.filter((k) => !String(x.dp[k] || '').trim()).join('/') : '无dp')).join(' | '));
-/* 排期表整体按版本号升序（玩家端前瞻依赖顺序） */
+/* 排期表按版本号升序（玩家端前瞻依赖顺序）。
+ * 语义修正 V1.3.73：基线重设后「数值顺序」不再等于「发布顺序」——
+ * 重设点之前的补丁版是 1.3.721...（数值极大但已归档 pub:false），
+ * 重设后的 1.3.73 数值反而更小。因此只对【玩家可见】条目校验升序，
+ * 并对归档的畸形版本号单独校验「必须全部 pub:false」。 */
 const num = (s) => String(s).replace(/^V/, '').split('.').map((n) => parseInt(n, 10) || 0);
-let asc2 = true;
-for (let i = 1; i < V.length; i++) {
-  const a = num(V[i - 1].v), b = num(V[i].v);
-  for (let j = 0; j < 3; j++) { if (a[j] !== b[j]) { if (a[j] > b[j]) asc2 = false; break; } }
+const isMal = (v) => { const g = num(v); return g.length === 3 && g[2] > 99; };
+const pubV = V.filter((x) => x.pub !== false);
+let asc2 = true, badAt9 = '';
+for (let i = 1; i < pubV.length; i++) {
+  const a = num(pubV[i - 1].v), b = num(pubV[i].v);
+  for (let j = 0; j < 3; j++) { if (a[j] !== b[j]) { if (a[j] > b[j]) { asc2 = false; badAt9 = pubV[i - 1].v + ' -> ' + pubV[i].v; } break; } }
 }
-ok(asc2, 'G1-9 排期表按版本号升序');
+ok(asc2, 'G1-9 玩家可见排期按版本号升序', asc2 ? pubV.length + ' 条' : badAt9);
+/* 畸形版本号（末尾追加 1 膨胀产物）一律不得对玩家可见 */
+const malPub = V.filter((x) => isMal(x.v) && x.pub !== false).map((x) => x.v);
+ok(malPub.length === 0, 'G1-9b 畸形版本号全部归档（pub:false）',
+  malPub.length ? '仍对玩家可见：' + malPub.join(',') : V.filter((x) => isMal(x.v)).length + ' 条已归档');
 /* 早期 V0.x 属内部过程版本，不对玩家公开 */
 const v0 = V.filter((x) => /^V0\./.test(String(x.v)));
 ok(v0.length > 0 && v0.every((x) => x.pub === false), 'G1-4 V0.x 全部标记 pub:false（不外泄）');
