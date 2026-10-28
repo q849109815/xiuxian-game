@@ -195,6 +195,9 @@ const MAIN = {
       p.unbanAt = Date.now(); p.unbanOp = 'auto-expire';
     }
     P = p; window.P = p; UI.P = p;
+    /* 补写登录前（boot 阶段）产生的埋点：game_start 等在 window.P 就绪前
+     * 就触发过，此前整段被跳过、永远进不了存档，运营后台启动量缺一层。 */
+    try { if (window.OPS && OPS.flushBI) OPS.flushBI(p); } catch (e) {}
     /* 旧档兼容：offBase（离线结算基准）是新字段，老存档没有。
      * 必须在【startSave 启动之前】用云端记录的 offlineAt 初始化 ——
      * 一旦自动存档跑过一轮，offlineAt 就会被刷成当前时间，
