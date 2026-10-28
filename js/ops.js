@@ -8,6 +8,15 @@
   const KEY_TRACK = 'z_track_buf';
   const KEY_LANG = 'z_lang';
 
+  /* 登录前产生的埋点暂存区。
+   * 数据链路 BUG：写入存档这一段要求 window.P 已就绪，但 boot() 里的
+   * game_start 在【登录读档之前】就触发了 —— window.P 此时是 null，
+   * p._bi 那一段整个被跳过，事件只落进浏览器 localStorage。
+   * 后果：运营在后台「数据埋点」看到的启动量永远缺 game_start，
+   * 而它恰恰是表37 里唯一的 P0 启动事件，漏斗最上面那一层是空的。
+   * 这里先暂存，等 setP 之后由 flushBI 补写进存档。上限与 p._bi 一致。 */
+  const BI_PENDING = [];
+
   const OPS = {
     /* ---------------- 热更新（表02 第15项 / 表23 第9项） ---------------- */
     curVer() {
@@ -64,8 +73,23 @@
           if (!Array.isArray(p._bi)) p._bi = [];
           p._bi.push({ ev: ev, n: def ? def.n : ev, t: Date.now(), pr: def ? def.pr : 'P2' });
           if (p._bi.length > 30) p._bi = p._bi.slice(-30);
+        } else {
+          /* 登录前：暂存，flushBI 时补写。不丢事件。 */
+          BI_PENDING.push({ ev: ev, n: def ? def.n : ev, t: Date.now(), pr: def ? def.pr : 'P2' });
+          if (BI_PENDING.length > 30) BI_PENDING.splice(0, BI_PENDING.length - 30);
         }
       } catch (e) {}
+    },
+    /* 登录读档完成后调用：把登录前暂存的埋点补写进玩家存档。
+     * 不在这里重复写 localStorage —— 那段在 track() 里已经落过了。 */
+    flushBI(p) {
+      try {
+        if (!p || !p.uid || !BI_PENDING.length) return 0;
+        if (!Array.isArray(p._bi)) p._bi = [];
+        while (BI_PENDING.length) p._bi.push(BI_PENDING.shift());
+        if (p._bi.length > 30) p._bi = p._bi.slice(-30);
+        return p._bi.length;
+      } catch (e) { return 0; }
     },
     trackBuf() {
       try { return JSON.parse(localStorage.getItem(KEY_TRACK) || '[]'); } catch (e) { return []; }
