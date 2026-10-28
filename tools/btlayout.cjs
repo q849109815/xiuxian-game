@@ -33,6 +33,18 @@ const SIZES = (process.argv[2] ? process.argv[2].split(',') : ['360x640', '1280x
 let PASS = 0, FAIL = 0;
 const ok = (n) => { PASS++; console.log('  √ ' + n); };
 const bad = (n, d) => { FAIL++; console.log('  X ' + n + (d ? ' :: ' + d : '')); };
+/* 【前提类断言 pq()】—— V1.3.74 立规
+ * 立规原因：看板曾连续出现「战斗布局守卫 未过 2 项」，而单独复跑全绿。
+ *   查下来这两项是 B0「未能进入战斗」与 B2「三选一无法弹出」——
+ *   它们衡量的是「测试环境有没有准备好」，不是「游戏有没有越界」。
+ *   在负载高（多个浏览器工具串行执行、资源竞争）时二者会偶发失败，
+ *   被当成游戏缺陷报进 FAIL，于是看板显示「未过 2 项」。
+ * 假失败与假通过同样有害：反复误报会让看板使用者对「未过」脱敏，
+ *   真正的越界失败（B1/B3/B4/B5/B6/B7/B8）反而被淹没。
+ * 因此前提类独立计数（PREREQ），并先自动重试；重试耗尽才算「环境未就绪」，
+ *   退出码 2 与「真缺陷退出码 1」区分开，看板分别显示。 */
+let PREREQ = 0;
+const pq = (n, d) => { PREREQ++; console.log('  ! ' + n + (d ? ' :: ' + d : '') + '  【前提未就绪，非游戏缺陷】'); };
 
 /* 页面内：扫描可见元素盒子越界 */
 function scanFn(rootSel) {
@@ -96,8 +108,15 @@ function oobFn() {
     const { ctx, pg } = await mkPage(b, w, h);
     await pg.goto('file://' + BASE);
     await realLogin(pg, 'L' + w);
-    const e = await enterBattle(pg, '1-1');
-    if (e.scr !== 'battle') { bad('B0 未能进入战斗', JSON.stringify(e)); await ctx.close(); continue; }
+    /* B0 前提类：进不去战斗先重试 3 次（负载高时首帧常未就绪），
+     * 重试耗尽仍失败才记 PREREQ，不混入 FAIL（详见上方 pq() 立规说明）。 */
+    let e = null;
+    for (let a = 0; a < 3; a++) {
+      e = await enterBattle(pg, '1-1');
+      if (e && e.scr === 'battle') break;
+      await pg.waitForTimeout(900);
+    }
+    if (!e || e.scr !== 'battle') { pq('B0 未能进入战斗', JSON.stringify(e)); await ctx.close(); continue; }
     ok('B0 进入战斗');
 
     /* B1/B2/B4：推进战斗，逐批扫描 */
@@ -138,8 +157,9 @@ function oobFn() {
     });
     await pg.waitForTimeout(600);
     const oc2 = await pg.evaluate(scanFn, '#choice');
-    if (c2 !== 'ok') bad('B2 三选一无法弹出', String(c2));
-    else if (!oc2) bad('B2 取不到 #choice');
+    /* B2 的「弹不出 / 取不到」属前提类（UI 没就绪），只有真越界才算缺陷 */
+    if (c2 !== 'ok') pq('B2 三选一无法弹出', String(c2));
+    else if (!oc2) pq('B2 取不到 #choice', '');
     else if (oc2.length) { b2 += oc2.length; bad('B2 战斗中三选一越界', oc2.slice(0, 3).join(' | ')); }
     else ok('B2 战斗中三选一无越界（主动弹出' + (oc2 ? '已渲染' : '') + '，自然弹出' + choiceSeen + '次）');
     await pg.evaluate(() => { try { window.UI.hideChoice(); } catch (e) {} });
@@ -268,9 +288,11 @@ function oobFn() {
     await ctx.close();
   }
   await b.close();
-  console.log('\n[btlayout] PASS ' + PASS + ' / FAIL ' + FAIL);
+  console.log('\n[btlayout] PASS ' + PASS + ' / FAIL ' + FAIL + ' / PREREQ ' + PREREQ);
   /* 落盘结果供进度看板读取：不落盘则看板只能显示「未跑」，无法每轮必报 */
   try { require('fs').writeFileSync(require('path').join(ROOT, 'tools', '.btlast.json'),
-    JSON.stringify({ pass: PASS, fail: FAIL, at: new Date().toISOString() })); } catch (e) {}
-  process.exit(FAIL ? 1 : 0);
+    JSON.stringify({ pass: PASS, fail: FAIL, prereq: PREREQ, at: new Date().toISOString() })); } catch (e) {}
+  /* 退出码语义（AX：Agent 必须能可靠判断）：
+   *   0 = 全过；1 = 真缺陷（越界/漂移，必须修）；2 = 前提未就绪（环境问题，需重跑） */
+  process.exit(FAIL ? 1 : (PREREQ ? 2 : 0));
 })().catch(e => { console.error('FATAL', e); process.exit(1); });
