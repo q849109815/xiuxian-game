@@ -24,8 +24,14 @@ def api(url, data=None, method=None):
         return {'_err': e.code, '_body': e.read().decode()[:200]}
 
 
+# 中文文件名（如中文周报）必须做 URL 编码，否则 http.client 用 ascii 编码 URL 直接抛
+# UnicodeEncodeError —— 历史上表现为「中文报告永远传不上线」。
+from urllib.parse import quote
+def _url(rel):
+    return quote(rel, safe='/')
+
 def get_sha(rel, br):
-    j = api(f'https://api.github.com/repos/{REPO}/contents/{rel}?ref={br}')
+    j = api(f'https://api.github.com/repos/{REPO}/contents/{_url(rel)}?ref={br}')
     return j.get('sha') if isinstance(j, dict) and 'sha' in j else None
 
 
@@ -39,10 +45,10 @@ def push(rel, msg):
     d = {'message': msg, 'content': base64.b64encode(body).decode(), 'branch': br}
     if sha:
         d['sha'] = sha
-    r = api(f'https://api.github.com/repos/{REPO}/contents/{rel}', d, 'PUT')
+    r = api(f'https://api.github.com/repos/{REPO}/contents/{_url(rel)}', d, 'PUT')
     if isinstance(r, dict) and r.get('content'):
         # 复核：拉回线上比对 sha1
-        j = api(f'https://api.github.com/repos/{REPO}/contents/{rel}?ref={br}')
+        j = api(f'https://api.github.com/repos/{REPO}/contents/{_url(rel)}?ref={br}')
         remote = base64.b64decode(j['content'].replace('\n', '')).decode('utf-8', 'replace')
         ok = remote == body.decode('utf-8', 'replace')
         print(f'  {"√" if ok else "×"} {rel} [{br}] 复核{"一致" if ok else "不一致"}')
