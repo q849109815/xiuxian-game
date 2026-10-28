@@ -351,6 +351,10 @@ FILES = [
     'tools/releaseguard.cjs',
     'tools/layoutguard.cjs',
     'tools/btlayout.cjs',
+    # 【前提类断言守卫 btprereq】—— 事故：看板偶发「未过 2 项」而单独复跑全绿，
+    # 实为 B0/B2 前提类断言在负载高时失败被当成游戏缺陷。不登记则改了传不上线。
+    'tools/btprereq.cjs',
+    'tools/mutate_btprereq.cjs',
     'tools/ux3.cjs',
     'tools/mistakes.cjs',
     'tools/themeguard.cjs',
@@ -360,6 +364,7 @@ FILES = [
     'tools/dash.cjs',
     'tools/mutate_pushcov.cjs',
     'tools/mutate_ver.cjs',
+    'tools/mutate_vernorm.cjs',
     'tools/pushcov.cjs',
     'tools/mutguard.cjs',
     '制作人周报_V1.3.7211111111_主菜单重做与选中态修正.md',
