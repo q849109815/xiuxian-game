@@ -66,7 +66,7 @@ async function pwdOK(pwd) {
  * 做法与前端 ui.js 的 emojify 相同：渲染后遍历文本节点就地换成 <img class="ai">。
  * 未收录的 emoji 原样保留（不会变空白、不会报错），所以是渐进式的。
  * =================================================================== */
-const AIMG_V = '1.3.7211111111111';
+const AIMG_V = '1.3.72111111111111';
 const AICON = {
   '💰': 'i_gold.jpg', '💎': 'i_diamond.jpg', '⚡': 'i_stamina.jpg',
   '🏆': 'nav_rank.png', '🎁': 'sh01_gift.jpg', '📦': 'd3_box.jpg',
