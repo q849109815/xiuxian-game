@@ -30,6 +30,22 @@ function cmpVer(a, b) {
   return 0;
 }
 
+/* 版本号规范性：PATCH <= 99。
+ * 背景：旧「末尾追加 1」让版本号膨胀到 1.3.72111111111111（14 个 1），玩家可见却不可读。
+ * V1.3.73 起 PATCH 改为十进制递增并在满 99 时进位 MINOR，这里守住不再膨胀。 */
+const MAX_PATCH = 99;
+function isMalformed(v) {
+  const seg = String(v || '').split('.');
+  if (seg.length !== 3) return true;
+  const n = Number(seg[2]);
+  return !Number.isFinite(n) || n > MAX_PATCH;
+}
+/* 合法重设点判定：前一条畸形 + 当前条规范 = 「膨胀版本号拉回规范区间」，
+   这是 V1.3.73 一次性整改，不属于版本回退，必须放行但单独标注。 */
+function isResetPoint(prev, cur, tag) {
+  return isMalformed(prev) && !isMalformed(cur) && /基线重设/.test(tag || '');
+}
+
 console.log('=== 发布流程守卫 ===');
 const V = curVer();
 if (!V) { console.log('  ✗ 读不到当前版本号'); process.exit(1); }
@@ -38,12 +54,17 @@ console.log('  当前版本 V' + V + '\n');
 /* R1 CHANGELOG 版本号序列严格递增 */
 console.log('— R1 版本单调：CHANGELOG 中版本号必须严格递增 —');
 const cl = fs.existsSync(CHANGELOG) ? fs.readFileSync(CHANGELOG, 'utf8') : '';
-const vs = [...cl.matchAll(/^##\s*V?([\d.]+)/gm)].map(m => m[1]);
-let mono = true, badAt = '';
+const ents = [...cl.matchAll(/^##\s*V?([\d.]+)（([^）]*)）[^\n]*/gm)].map(m => ({ v: m[1], tag: m[2] }));
+const vs = ents.map(e => e.v);
+let mono = true, badAt = '', resets = 0;
 for (let i = 1; i < vs.length; i++) {
-  if (cmpVer(vs[i], vs[i - 1]) <= 0) { mono = false; badAt = vs[i - 1] + ' -> ' + vs[i]; break; }
+  if (cmpVer(vs[i], vs[i - 1]) > 0) continue;
+  /* 重设点：畸形版本号拉回规范区间（V1.3.73 一次性整改），不计入递增违规 */
+  if (isResetPoint(vs[i - 1], vs[i], ents[i].tag)) { resets++; continue; }
+  mono = false; badAt = vs[i - 1] + ' -> ' + vs[i]; break;
 }
-mono ? ok('R1 版本序列递增', vs.length + ' 条，最新 V' + (vs[vs.length - 1] || '-'))
+mono ? ok('R1 版本序列递增', vs.length + ' 条，最新 V' + (vs[vs.length - 1] || '-') +
+          (resets ? '（含 ' + resets + ' 个基线重设点，已单独放行）' : ''))
      : no('R1 版本序列未递增', badAt);
 
 /* R2 全站版本戳统一 */
@@ -70,6 +91,7 @@ if (fs.existsSync(REL_FILE)) {
      本项真正要拦的是「版本回退」（有人把版本号改小 = 缓存可能被判为旧版）。
      「有改动但没升版」的拦截交给 push.py 的 version_gate —— 它只在真有文件要上传时才拦。 */
   if (cmpVer(V, last) >= 0) ok('R3 版本未回退', 'V' + last + ' -> V' + V + (V === last ? '（已发布状态）' : '（已升版）'));
+  else if (isMalformed(last) && !isMalformed(V)) ok('R3 基线重设（畸形版本拉回规范区间）', 'V' + last + ' -> V' + V);
   else no('R3 版本回退', 'V' + last + ' -> V' + V + '（版本号变小，判定异常）');
 } else {
   ok('R3 无基线记录（首次，放行）', 'V' + V);
@@ -95,14 +117,26 @@ console.log('— R5 流程固化：bump1 与版本闸门必须存在 —');
 const ver = fs.readFileSync(path.join(ROOT, 'tools', 'ver.cjs'), 'utf8');
 /* 判据收紧：只查 'bump1' 字样不够（改名成 __bump1_x 仍能子串匹配到）。
    必须同时验证 bump1 分支的真实实现（末尾追加 '1'）存在。 */
-(/kind === 'bump1'/.test(ver) && /String\(v\)\s*\+\s*'1'/.test(ver))
-  ? ok('R5 ver.cjs bump1 实现完整') : no('R5 ver.cjs bump1 实现缺失');
+/MAX_PATCH/.test(ver) ? ok('R5 ver.cjs 有 PATCH 上限（防膨胀）') : no('R5 ver.cjs 缺 PATCH 上限');
+/function\s+assertNorm/.test(ver) ? ok('R5 ver.cjs 有版本号规范性校验') : no('R5 ver.cjs 缺规范性校验');
+/kind === 'reset'/.test(ver) ? ok('R5 ver.cjs 有 reset 基线重设') : no('R5 ver.cjs 缺 reset');
+/* 必须拦住 bump1：旧做法会让版本号无限追加 1，已废弃，调用即报错退出 */
+/process\.exit\(2\);/.test(ver) && /bump1 已废弃/.test(ver)
+  ? ok('R5 bump1 已废弃并拦截') : no('R5 bump1 未被拦截（版本号会膨胀）');
 /assertInc/.test(ver) ? ok('R5 ver.cjs 有递增校验') : no('R5 ver.cjs 缺递增校验');
 const py = fs.readFileSync(path.join(ROOT, 'tools', 'push.py'), 'utf8');
 /def version_gate/.test(py) ? ok('R5 push.py 有版本闸门') : no('R5 push.py 缺版本闸门');
 /def mark_released/.test(py) ? ok('R5 push.py 记录发布基线') : no('R5 push.py 缺基线记录');
 const dashc = fs.existsSync(path.join(ROOT, 'tools', 'dash.cjs')) ? fs.readFileSync(path.join(ROOT, 'tools', 'dash.cjs'), 'utf8') : '';
 /releaseguard/.test(dashc) ? ok('R5 dash.cjs 已接入本守卫') : no('R5 dash.cjs 未接入本守卫');
+
+/* R6 版本号规范性：当前版本 + 最新一条 CHANGELOG 都不得是畸形串 */
+console.log('— R6 版本号规范：不得再出现 1.3.72111111111111 这类膨胀串 —');
+isMalformed(V) ? no('R6 当前版本号畸形', 'V' + V + '（PATCH 段 > ' + MAX_PATCH + '，玩家可见却不可读）')
+               : ok('R6 当前版本号规范', 'V' + V + '（PATCH <= ' + MAX_PATCH + '）');
+const lastV = vs[vs.length - 1];
+isMalformed(lastV) ? no('R6 CHANGELOG 最新版本号畸形', 'V' + lastV)
+                   : ok('R6 CHANGELOG 最新版本号规范', 'V' + lastV);
 
 console.log('\n==========================================================');
 console.log('RESULT: PASS=' + PASS + ' FAIL=' + FAIL);
