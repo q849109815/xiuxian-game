@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.75';
+const IMG_V = '1.3.76';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -4946,7 +4946,7 @@ r_tavern(p, tab) {
           ${L ? `<span class="tag y">Lv.${L}→${L + 1}</span>`
               : (isNew ? '' : '<span class="tag g">未学习</span>')}</div>
           <div class="cd2">${s.desc}</div>
-          <div class="cl">${isNew ? '<b style="color:var(--c-red-450)">学习' + s.n + '</b>' : kindTxt} · ${s.up}</div>
+          <div class="cl">${kindTxt} · ${s.up}</div>
         </div>
         <div class="ch-arrow">▼</div></button>`;
     }).join('');
