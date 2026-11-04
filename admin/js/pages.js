@@ -5,6 +5,13 @@
  * =================================================================== */
 'use strict';
 
+/* 公告状态判定：纯函数，不依赖 DOM/APP，供 uxdel 守卫真实执行断言调用。
+ * 立规：状态靠列表列呈现，不靠一句说明文字；这句函数是布局的一部分。 */
+const noticeState = (x, now) => {
+  if (!x || !x.endAt) return '长期';
+  return Number(x.endAt) >= Number(now) ? '生效中' : '已过期';
+};
+
 const PAGES = {
   register() {
     const A = APP.pages;
@@ -2349,10 +2356,7 @@ const PAGES = {
       n: '公告管理', i: '📢', g: '运营', perm: 'notice.view',
       render() {
         return `<div class="card">
-          <h3>公告管理<span class="tag">已接入前端</span></h3>
-          <div class="lbl">当前状态：<span class="bd g">已接入</span>
-            —— 发布后玩家登录即弹窗提示（未读才弹），并可在主页「📢 公告」随时回看。
-            过期（展示至日期已过）的公告不会显示。</div>
+          <h3>公告管理</h3>
           <div class="fr"><label class="wide">公告标题</label><input id="nt_t" placeholder="如：版本更新公告"></div>
           <div class="fr"><label class="wide">内容</label><textarea id="nt_b" placeholder="公告正文"></textarea></div>
           <div class="fr"><label class="wide">类型</label><select id="nt_k">
@@ -2387,9 +2391,17 @@ const PAGES = {
           const box = D('#ntBox'); if (!box) return;
           const d = await DB.reload(DBP.notice);
           const l = (d && d.list) || [];
-          box.innerHTML = l.length ? this.table(['时间', '类型', '标题', '操作'],
-            l.map((x) => [U.dt(x.at), U.esc(x.kind), U.esc(x.title),
-              `<button class="btn sm err" data-a="ntDel" data-id="${U.esc(x.id)}">删除</button>`]))
+          /* 状态由列表列直接呈现，替代原来那段「过期公告不会显示」的说明文字：
+           * 删了说明还看得懂，靠的是布局本身把状态画出来，而不是再写一句话。 */
+          const _now = Date.now();
+          box.innerHTML = l.length ? this.table(['时间', '类型', '标题', '展示至', '状态', '操作'],
+            l.map((x) => {
+              const st = noticeState(x, _now);
+              return [U.dt(x.at), U.esc(x.kind), U.esc(x.title),
+                x.endAt ? U.dt(x.endAt) : '长期',
+                `<span class="bd ${st === '已过期' ? '' : 'g'}">${st}</span>`,
+                `<button class="btn sm err" data-a="ntDel" data-id="${U.esc(x.id)}">删除</button>`];
+            }))
             : this.empty('暂无公告');
         },
         async ntDel(t) {
