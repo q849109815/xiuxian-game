@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.74';
+const IMG_V = '1.3.75';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -392,7 +392,6 @@ const UI = {
         <div class="avp-grid">
           ${this.AVATARS.map((a) => `<button class="avp-c${p.avatar === a ? ' on' : ''}" data-av="${a}">${this.avHTML(a, 'avp-img')}</button>`).join('')}
         </div>
-        <div class="lbl" style="text-align:center;margin-top:8px">点选即换，自动保存</div>
       </div>`;
     document.body.appendChild(box);
     const close = () => { const e = document.getElementById('avPick'); if (e) e.remove(); };
@@ -3195,7 +3194,7 @@ r_tavern(p, tab) {
         if (board === '战力榜') lb.sort((a, b) => (b.pw || 0) - (a.pw || 0));
         else if (board === '活动冲榜') lb.sort((a, b) => (b.ev || 0) - (a.ev || 0));
         else lb.sort((a, b) => (b.eb || 0) - (a.eb || 0) || (b.pw || 0) - (a.pw || 0));
-        if (!lb.length) return '<div class="lbl">暂无排行数据，通关后自动上传</div>';
+        if (!lb.length) return '<div class="lbl">暂无排行数据</div>';
         /* 榜单昵称来自云端 leaderboard.json，是别人填的 —— 必须转义。
          * 不转义的话，谁把昵称设成 <img src=x onerror=...> 并上传成绩，
          * 所有打开排行榜的玩家都会执行那段脚本（存储型 XSS）。 */
@@ -4166,7 +4165,7 @@ r_tavern(p, tab) {
       <div class="kv"><span>账号名</span><b>${this.esc(ac.name || '—')}</b></div>
       <div class="kv"><span>账号 ID</span><b style="font-size:var(--fs-xs)">${this.esc(ac.uid || '—')}</b></div>
       <div class="kv"><span>下次登录</span><b style="font-size:var(--fs-xs)">${ac.name ? '需输入密码（已记住账号名）' : '需重新输入'}</b></div>
-      <div class="lbl" style="text-align:left;margin-top:6px">换设备时用同一账号名+密码登录，存档自动继承</div></div>
+      </div>
     <div class="card"><div class="card-t">修改密码</div>
       <div class="fld"><label>原密码</label><input id="spOld" type="password" placeholder="原密码"></div>
       <div class="fld"><label>新密码</label><input id="spNew" type="password" placeholder="新密码（至少6位）"></div>
