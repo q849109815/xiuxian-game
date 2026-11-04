@@ -124,7 +124,7 @@ for (const g of guards) {
 /* A2：历史守卫分批补，不一次性判死 —— 否则守卫永远红着，等于没上线。
  *    做法：新建守卫（本轮起登记在 NEW_GUARDS 里的）必须有自述头，判失败；
  *    历史遗留只报数量与清单，判 WARN，随每轮整改逐批收敛。 */
-const NEW_GUARDS = ['ux3.cjs'];
+const NEW_GUARDS = ['ux3.cjs', 'uxdel.cjs'];
 const missingNew = NEW_GUARDS.filter((g) => {
   try { return read(path.join('tools', g)).slice(0, 1200).indexOf('立规原因') < 0; } catch (e) { return true; }
 });
