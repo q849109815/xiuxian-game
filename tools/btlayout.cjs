@@ -83,16 +83,21 @@ function scanFn(rootSel) {
 function oobFn() {
   const B = window.BT; if (!B || !B.run) return null;
   const W = B.W, H = B.H, r = B.run, out = [];
-  const chk = (arr, name) => {
+  /* topPad：仅【飘字】放宽上边界。飘字从命中点向上飘，合法地短时越过画布上缘，
+   * canvas 会自动裁剪，玩家看不到但不影响玩法；-60 会把正常伤害数字误判成实体越界
+   * （V1.3.75 重复测试实测 y=-61/-87 偶发报红，同一份代码另两次全绿）。
+   * 左右 / 下边界仍严格 -60 与 H+60；僵尸、子弹、炮台等玩法实体口径完全不变。 */
+  const chk = (arr, name, topPad) => {
     if (!arr) return;
+    const pad = topPad || 60;
     arr.forEach((o) => {
       const x = o.x, y = o.y;
       if (!isFinite(x) || !isFinite(y)) { out.push(name + '坐标NaN'); return; }
-      if (x < -60 || x > W + 60 || y < -60 || y > H + 60)
+      if (x < -60 || x > W + 60 || y < -pad || y > H + 60)
         out.push(name + ' x=' + Math.round(x) + ' y=' + Math.round(y) + '(W=' + Math.round(W) + ',H=' + Math.round(H) + ')');
     });
   };
-  chk(r.zombies, '僵尸'); chk(r.bullets, '子弹'); chk(r.floats, '飘字');
+  chk(r.zombies, '僵尸'); chk(r.bullets, '子弹'); chk(r.floats, '飘字', 200);
   chk(r.turrets, '炮台'); chk(r.mercs, '佣兵'); chk(r.obstacles, '掩体'); chk(r.barrels, '油桶');
   return out;
 }
@@ -205,6 +210,29 @@ function oobFn() {
     }
     if (!b3) ok('B3 视口变化无越界');
 
+    /* 【B5/B7 测量前提】量真实盒子前先确认战斗态与画布尺寸。
+     * V1.3.74 只把 B0/B2 归为前提类，本轮重复测试发现同款在 B5/B7 复发：
+     * 同一份代码连跑三次，一次 18/0、一次「可见0 / 画布高0」假失败、一次飘字瞬态。
+     * 战斗推进 14 批后可能已结束（screen 切走、canvas dh=0），此时量不到盒子是
+     * 页面状态，不是游戏缺陷。未就绪等待重试，仍不就绪记 PREREQ（exit=2），
+     * 绝不把「没量到」记成 FAIL；真越界（sk.bad / 比例偏差 / 防线出屏）仍走 bad()。 */
+    let ready = false, readyInfo = '';
+    for (let a = 0; a < 3; a++) {
+      readyInfo = await pg.evaluate(() => {
+        const on = document.querySelector('.screen.on');
+        const cv = document.getElementById('C');
+        const r = cv ? cv.getBoundingClientRect() : { height: 0 };
+        return (on && on.id === 'battle' ? 'battle' : 'scr=' + (on && on.id)) + '|dh=' + Math.round(r.height);
+      });
+      if (/^battle\|dh=[1-9]/.test(readyInfo)) { ready = true; break; }
+      /* 推进 14 批后战斗可能已结束回主界面（实测 3 次里 1 次 scr=home|dh=0）。
+       * 先尝试重新进战斗恢复测量态，而不是直接记 PREREQ —— 重复测试应尽量自愈。
+       * 仍救不回来才判前提未就绪，由看板提示重跑。 */
+      try { await enterBattle(pg, '1-1'); } catch (e) {}
+      await pg.waitForTimeout(700);
+    }
+    if (!ready) pq('B5/B7 测量前提未就绪（战斗态或画布尺寸）', readyInfo);
+
     /* B5 技能栏塞满 8 个技能（技能随升级增加，最多可能换行挤压） */
     const sk = await pg.evaluate(() => {
       const box = document.getElementById('btSkills');
@@ -225,7 +253,8 @@ function oobFn() {
       box.innerHTML = keep;
       return res;
     });
-    if (!sk) bad('B5 取不到技能栏');
+    if (!ready) { /* 前提未就绪已由 pq 记数，跳过测量类判定，不制造假 FAIL */ }
+    else if (!sk) bad('B5 取不到技能栏');
     else if (sk.sized < 8) bad('B5 技能按钮未渲染出可见盒子', '渲染' + sk.n + ' 可见' + sk.sized);
     else if (sk.bad.length) bad('B5 技能栏塞满越界', sk.bad.slice(0, 3).join(' | '));
     else ok('B5 技能栏塞满8个不越界（高' + sk.h + ' 底' + sk.bottom + '/' + sk.vh + '）');
@@ -241,7 +270,9 @@ function oobFn() {
       return { dw: r.width, dh: r.height, lw: B.W, lh: B.H, scale: B._cvScale,
         wallY: Math.round(B.wallY || -1), vh: innerHeight };
     });
-    if (!rf) bad('B7 取不到画布');
+    if (!ready) { /* 同上，跳过 */ }
+    else if (!rf) bad('B7 取不到画布');
+    else if (rf.dh <= 0) pq('B7 画布尺寸未就绪', 'dh=' + Math.round(rf.dh));
     else {
       const rd = rf.lh > 0 ? (rf.dw / rf.dh) : 0, rl = rf.lh > 0 ? (rf.lw / rf.lh) : 0;
       const gap = rl > 0 ? Math.abs(rd - rl) / rl : 1;
