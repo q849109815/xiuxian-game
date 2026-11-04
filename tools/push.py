@@ -313,6 +313,7 @@ FILES = [
     'tools/pxledger.json',
     'tools/uxdel.cjs',
     'tools/mutate_uxdel.cjs',
+    'tools/mutate_skillcard.cjs',
 
     # 【上传清单覆盖守卫 pushcov】—— 事故：绩效工具 tools/kpi.cjs 修好缺陷后
     # 因不在清单里，修复永远留在本地、线上仍跑旧版，与 char/scene/roadmap 同类。
