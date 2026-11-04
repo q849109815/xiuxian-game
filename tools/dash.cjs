@@ -31,7 +31,7 @@ const antiCheat=/antiCheat|cheat|哨兵|anomaly/i.test(R('js/main.js')+cfg);
 const adm=R('admin/index.html')+R('admin/js/core.js')+R('admin/js/pages.js');
 const funnel=/funnel|漏斗|dau_retention|留存/i.test(adm);
 
-const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs'];
+const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs','uxdel.cjs'];
 const tOk=tools.filter(t=>ex('tools/'+t)).length;
 
 /* 【玩家可感知交叉验证】—— 进度表固定项，每轮必跑
@@ -193,6 +193,14 @@ A('测试','后台三体验守卫',ax.f===0?`PASS${ax.p}/0`:`未过${ax.f}项`);
 const su=(()=>{try{const r=require('child_process').spawnSync('node',['tools/shopux.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
  const m=(r.stdout||'').match(/RESULT: PASS (\d+) \/ FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
 A('测试','商城购买入口守卫',su&&su.f===0?`PASS${su.p}/0`:`未过${su?su.f:'未跑通✗'}项`);
+/* 【删文案·视觉替代一致性守卫】—— 进度表固定项（V1.3.75 新增）
+ * 立规原因：ux3/adminux 都是黑名单守卫，只查"文字删没删"，从不查"删完还看不看得懂"。
+ * 后台公告页挂着长说明解释"过期公告不显示"，而列表根本没有状态列 —— 布局有病靠文字治。
+ * 本守卫要求每条删除项都有布局自身的视觉替代（选中态高亮 / 列表状态列），
+ * 并真实执行状态纯函数 4 组；含真实差异信息的必要说明登记为保留项防一刀切误删。 */
+const ud=(()=>{try{const r=require('child_process').spawnSync('node',['tools/uxdel.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
+ const m=(r.stdout||'').match(/RESULT: PASS (\d+) \/ FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','删文案视觉替代守卫',ud&&ud.f===0?`PASS${ud.p}/0`:`未过${ud?ud.f:'未跑通✗'}项`);
 /* 【埋点数据链路守卫】—— 进度表固定项
  * 立规原因：boot() 里的 game_start 在【登录读档之前】触发，此时 window.P 为 null，
  * 写入存档那一段被整个跳过 —— 事件只落在玩家自己浏览器里，后台永远看不到启动量。
