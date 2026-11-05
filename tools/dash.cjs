@@ -1,5 +1,8 @@
 // 制作人固定进度看板 v1 —— 六部门完成度量化（每次回复固定输出）
 const fs=require('fs');
+/* V1.3.77：判据集中到 dashparse.cjs，看板与 dashcons 守卫共用同一份实现，
+ * 杜绝「工具输出改了格式、看板正则没跟着改」这类判据与实现脱节。 */
+const DP=require('./dashparse.cjs');
 const R=p=>{try{return fs.readFileSync(p,'utf8')}catch(e){return ''}};
 const c=(s,re)=>(s.match(re)||[]).length;
 const ex=p=>fs.existsSync(p);
@@ -31,7 +34,7 @@ const antiCheat=/antiCheat|cheat|哨兵|anomaly/i.test(R('js/main.js')+cfg);
 const adm=R('admin/index.html')+R('admin/js/core.js')+R('admin/js/pages.js');
 const funnel=/funnel|漏斗|dau_retention|留存/i.test(adm);
 
-const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs','uxdel.cjs'];
+const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs','uxdel.cjs','dashparse.cjs','dashcons.cjs','mutate_dashcons.cjs','mutrestore.cjs','mutate_mutrestore.cjs'];
 const tOk=tools.filter(t=>ex('tools/'+t)).length;
 
 /* 【玩家可感知交叉验证】—— 进度表固定项，每轮必跑
@@ -82,22 +85,29 @@ const ta=(()=>{try{return JSON.parse(fs.readFileSync('tools/_toolaudit_last.json
  * 把「这个工具还没体检过」显示成了「体检过、不合格」。
  * 这和历史上「没跑却报绿」是同一个洞：用旧结论冒充当前状态。
  * 因此：快照 mtime 必须晚于所有受检工具的 mtime，否则显式判「已过期」。 */
+const taNames=(()=>{try{return ((fs.readFileSync('tools/toolaudit.cjs','utf8').match(/const GUARDS = \[([\s\S]*?)\]/)[1]||'')
+  .replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'')
+  .match(/'([A-Za-z0-9_.-]+)'/g)||[]).map(s=>s.replace(/'/g,''))}catch(e){return []}})();
 const taFresh=(()=>{
   if(!ta||!ta.at) return false;
   const snapMs = (()=>{try{return fs.statSync('tools/_toolaudit_last.json').mtimeMs}catch(e){return 0}})();
   if(!snapMs) return false;
   try{
-    const names=((fs.readFileSync('tools/toolaudit.cjs','utf8').match(/const GUARDS = \[([\s\S]*?)\]/)[1]||'')
-      .replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'')
-      .match(/'([A-Za-z0-9_.-]+)'/g)||[]).map(s=>s.replace(/'/g,''));
-    for(const n of names){
+    for(const n of taNames){
       const f='tools/'+n+'.cjs';
       if(fs.existsSync(f) && fs.statSync(f).mtimeMs > snapMs) return false;
     }
   }catch(e){return false}
   return true;
 })();
-A('测试','检测工具体检',!ta?'未跑通✗':(!taFresh?'已过期←需重跑':`可信${ta.trust}/${ta.total}`+(ta.bad?` 不可信${ta.bad}`:'')+(ta.skipN?` 跳过${ta.skipN}`:'')));
+/* 【条数完整性证】—— V1.3.77 事故：批量体检被强杀，只跑完第一个工具
+ * 就落了残快照（total=1，那一行 pass=0/fail=0 判「不可信」），
+ * 看板却显示「可信0/1 不可信1」—— 把「根本没体检完」说成「体检过、全不合格」。
+ * 这和时效证要治的是同一类洞：拿不完整/过期的结论冒充当前状态。
+ * 规矩：快照必须标记 complete、行数覆盖 GUARDS 全量、每行不得空跑。
+ * 不足一律判「残快照←需重跑」，并显式带 ✗，不用中性词蒙混。 */
+const taComplete=DP.taComplete(ta, taNames);
+A('测试','检测工具体检',!ta?'未跑通✗':(!taComplete?'残快照←需重跑✗':(!taFresh?'已过期←需重跑✗':`可信${ta.trust}/${ta.total}`+(ta.bad?` 不可信${ta.bad}`:'')+(ta.skipN?` 跳过${ta.skipN}`:''))));
 /* 【变异验证覆盖】—— 进度表固定项
  * 铁律：抓不住缺陷的断言等于不存在。只报「工具有多少条断言」没意义，
  * 必须报「多少条被证明过抓得住」。数字取最近一次实测轮次，未跑则显式写未验证，
@@ -206,8 +216,14 @@ A('测试','删文案视觉替代守卫',ud&&ud.f===0?`PASS${ud.p}/0`:`未过${u
  * 写入存档那一段被整个跳过 —— 事件只落在玩家自己浏览器里，后台永远看不到启动量。
  * 这是历史上「埋点只存本地 → 后台 0 条」那条链路上剩下的最后一个洞。
  * 现在登录前事件先进暂存区，登录完成后由 flushBI 补写进存档。 */
+/* 【判据与实现一致性】—— V1.3.77 事故：
+ * biguard.cjs 实际输出是 `biguard: PASS=12 FAIL=0`，而本处判据写死
+ * `/biguard: PASS (\d+) FAIL (\d+)/`（无等号），永远匹配不到 →
+ * 看板一直显示「未跑通✗」，单独跑 biguard 却 exit=0 全绿。
+ * 判据与实现脱节 = 把健康工具误报成故障，和假通过一样有害。
+ * 修法：等号可选 + 退出码纳入判据（崩溃/超时不得靠 stdout 蒙混过关）。 */
 const bg=(()=>{try{const r=require('child_process').spawnSync('node',['tools/biguard.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
- const m=(r.stdout||'').match(/biguard: PASS (\d+) FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+ return DP.parseBI(r.stdout,r.status)}catch(e){return null}})();
 A('测试','埋点数据链路守卫',bg&&bg.f===0?`PASS${bg.p}/0`:`未过${bg?bg.f:'未跑通✗'}项`);
 /* 【错题本 · 复发错误提醒】—— 进度表固定项（本轮新增）
  * 管理要求：老是犯错的部门多提醒，别重复犯错。
@@ -232,6 +248,21 @@ const mm=(()=>{try{const r=require('child_process').spawnSync('node',['tools/mis
   const o=(r.stdout||'');const n=(o.match(/本轮验证 (\d+) 条，捕获 (\d+)\//)||[]);
   return n[1]&&n[1]===n[2]?{ok:1,t:n[2]}:{ok:0,t:n[2]||0}}catch(e){return null}})();
 A('测试','错题复发捕获',mm?(mm.ok?`捕获${mm.t}/${mm.t}✓`:`未捕获✗`):'未跑通✗');
+/* 【看板判据一致性】—— V1.3.77 新增固定项
+ * 本轮三项遗留异常的修复必须每轮自证：判据与工具输出一致、残快照不冒充结论、
+ * 实时基准不写死。守卫自身由 mutate_dashcons.cjs 变异验证（5/5 捕获）。 */
+const dc=(()=>{try{const r=require('child_process').spawnSync('node',['tools/dashcons.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
+ if(r.status!==0) return null;
+ const m=(r.stdout||'').match(/dashcons:\s*PASS=(\d+)\s+FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','看板判据一致性',dc&&dc.f===0?`PASS${dc.p}/0`:`未过${dc?dc.f:'未跑通✗'}项`);
+/* 【变异中断还原】—— V1.3.78 新增固定项
+ * 事故：mutguard 在注入态收到 SIGTERM，旧 handler 只清锁就退出，try/finally
+ * 没机会执行，tools/push.py 的 c01_jack.jpg 上传条目被删后未还原（发布即线上破图）。
+ * 守卫真实起一个停在注入态的子进程、发 SIGTERM，验证文件确实被写回；
+ * mutate_mutrestore.cjs 5/5 变异捕获，证明它不是摆设。 */
+const mr2=(()=>{try{const r=require('child_process').spawnSync('node',['tools/mutrestore.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
+ const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return r.status===0&&m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','变异中断还原守卫',mr2&&mr2.f===0?`PASS${mr2.p}/0`:`未过${mr2?mr2.f:'未跑通✗'}项`);
 A('策划','题材铁律守卫',tg&&tg.f===0?`PASS${tg.p}/0`:`未过${tg?tg.f:'未跑通✗'}项`);
 A('运营','后台漏斗',funnel?'✓':'✗'); A('运营','反作弊',antiCheat?'✓':'✗');
 A('运营','活动日历',ex('运营日历_V1.0.2.md')?'✓':'✗'); A('运营','赛季排期',ex('赛季排期日历_V1.1.0.md')?'✓':'✗'); A('运营','脏订单','已清(5条)');
