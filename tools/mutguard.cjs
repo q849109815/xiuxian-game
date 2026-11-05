@@ -362,6 +362,10 @@ if (process.argv[2] === '--restore') process.exit(restoreAll());
  * 否则拒绝开工 —— 宁可不验证，也不能让两个实例互毁快照。 */
 const LOCK = path.join(ROOT, 'tools', '.mutguard.lock');
 function acquireLock() {
+  /* 【V1.3.78】信号自证是独立探针，不申请全局锁。
+   * 事故：看板固定项 mutrestore 与全量 mutguard 同时跑时，探针被锁拒绝开工
+   * → E1/E2/E3 一连串假失败（前提未就绪被当成工具坏了）。 */
+  if (process.argv[2] === '--selftest-signal') return;
   if (fs.existsSync(LOCK)) {
     let pid = NaN;
     try { pid = parseInt(fs.readFileSync(LOCK, 'utf8').trim(), 10); } catch (e) {}
@@ -381,21 +385,74 @@ function acquireLock() {
       console.log(`[陈旧锁] 锁内 PID ${pid} 即本进程（PID 复用），接管`);
       alive = false;
     }
+    /* 【身份核验】—— V1.3.77：只看「PID 活着」不够。
+     * 事故形态：强停看板留下孤儿 mutguard，它退出后 PID 被无关进程复用，
+     * 锁文件仍是旧 PID → kill(pid,0) 成功 → 判定「已有实例在跑」→ 永久拒绝开工。
+     * 变异验证是全站守卫可信度的执行者，它静默停摆没人会收到警报。
+     * 因此活着的 PID 必须真的在跑 mutguard.cjs（读 /proc/<pid>/cmdline）。 */
     if (alive) {
-      console.log(`[拒绝开工] 已有 mutguard 实例在跑（PID ${pid}）。`);
-      console.log('  两个实例共享 tools/_mutsnap，会互毁快照。等它结束，');
+      try {
+        const cmd = fs.readFileSync('/proc/' + pid + '/cmdline', 'utf8').replace(/\0/g, ' ');
+        if (!/mutguard\.cjs/.test(cmd)) {
+          console.log(`[陈旧锁] PID ${pid} 当前是「${cmd.trim().slice(0, 80)}」，不是 mutguard（PID 复用），接管`);
+          alive = false;
+        }
+      } catch (e) { /* /proc 不可读时保守判活，不擅自接管 */ }
+    }
+    if (alive) {
+      let ageMin = 0;
+      try { ageMin = Math.round((Date.now() - fs.statSync(LOCK).mtimeMs) / 60000); } catch (e) {}
+      console.log(`[拒绝开工] 已有 mutguard 实例在跑（PID ${pid}，锁已存活 ${ageMin} 分钟）。`);
+      console.log('  两个实例共享 tools/_mutsnap，会互毁快照。等它跑完，不强杀（强杀会留污染）；');
       console.log(`  或确认已僵死后删除 ${LOCK}。`);
       process.exit(4);
     }
     console.log(`[陈旧锁] PID ${pid} 已不存在，接管`);
   }
   fs.writeFileSync(LOCK, String(process.pid));
-  const rel = () => { try { fs.unlinkSync(LOCK); } catch (e) {} };
+  /* 【V1.3.78 真事故】信号中断时进程可能正处在「注入态」。
+   * 旧 handler 只清锁就 exit(143)，try/finally 根本没机会执行 —— 注入的缺陷
+   * 永久留在源码里。本轮实测：tools/push.py 的 c01_jack.jpg 上传条目被删后
+   * 没还原，若发布即线上破图。记录当前注入文件与原文，任何退出路径先写回。 */
+  const rel = () => { emergencyRestore(); try { fs.unlinkSync(LOCK); } catch (e) {} };
   process.on('exit', rel);
   process.on('SIGTERM', () => { rel(); process.exit(143); });
   process.on('SIGINT', () => { rel(); process.exit(130); });
 }
+/* 当前注入态：{ file, src(原文), before(md5) }；还原成功后清空 */
+let ACTIVE = null;
+function emergencyRestore() {
+  if (!ACTIVE) return;
+  try {
+    const fp = ROOT + '/' + ACTIVE.file;
+    if (fs.existsSync(fp) && md5f(ACTIVE.file) !== ACTIVE.before) {
+      fs.writeFileSync(fp, ACTIVE.src);
+      console.log(`[中断还原] ${ACTIVE.file} 已从注入态写回`);
+    }
+  } catch (e) {
+    console.log('[中断还原失败] ' + (e && e.message || e));
+  }
+  ACTIVE = null;
+}
 acquireLock();
+
+/* 【V1.3.78 自证入口】供 tools/mutrestore.cjs 做真实信号中断测试：
+ * 子进程停在「注入态」，父进程发 SIGTERM，验证退出处理会把文件写回。
+ * 只在此开关下运行，正常验证路径完全不受影响。 */
+if (process.argv[2] === '--selftest-signal') {
+  const probe = 'tools/_restore_probe.txt';
+  const orig = 'ORIGINAL-BEFORE-INJECT\n';
+  fs.writeFileSync(ROOT + '/' + probe, orig);
+  ACTIVE = { file: probe, src: orig, before: md5(orig) };
+  fs.writeFileSync(ROOT + '/' + probe, 'INJECTED-DIRTY\n');
+  /* 与主路径同一套 emergencyRestore；自证不持有锁，故 rel 不清锁。 */
+  const rel = () => { emergencyRestore(); };
+  process.on('exit', rel);
+  process.on('SIGTERM', () => { rel(); process.exit(143); });
+  process.on('SIGINT', () => { rel(); process.exit(130); });
+  setInterval(() => {}, 1000);
+  return;
+}
 
 /* V1.3.8：支持一次传入多个守卫名。
  * 为什么：全量 30 条用例一次跑完会顶到沙盒时限，一旦被强杀，
@@ -489,6 +546,7 @@ for (const m of list) {
   let iv = 'ERR', i = { ec: -1 }, after = '', restored = false, rv = 'ERR', crashed = '';
   let r0 = { ec: -1, timedOut: false };   /* 还原后那次运行的证据，需带出 finally 作用域 */
   try {
+    ACTIVE = { file: m.file, src, before };
     fs.writeFileSync(fp, inject(src));
     i = run(m.guard);
     iv = verdict(m.guard, i.out, i.ec) || (i.ec === 0 ? 'PASS' : 'FAIL');
@@ -505,6 +563,7 @@ for (const m of list) {
       after = md5f(m.file);
       restored = after === before;
     }
+    if (restored) ACTIVE = null;
     r0 = run(m.guard);
     rv = verdict(m.guard, r0.out, r0.ec) || (r0.ec === 0 ? 'PASS' : 'FAIL');
   }
@@ -547,10 +606,17 @@ function finish() {
   console.log(`\n=== 汇总 ===`);
   console.log(`捕获 ${pass} / 假通过 ${fake} / 其他失效 ${broken}  (共 ${list.length})`);
 
+  const autoFixed = dirty.length > 0;
   if (dirty.length) {
     console.log(`\n❌ 工作区仍被污染（与开工快照不一致）：`);
     for (const d of dirty) console.log(`   - ${d}`);
-    console.log('   请执行 `node tools/mutguard.cjs --restore` 恢复后再上传，否则会把缺陷带上线。');
+    /* V1.3.78：不只提示，立刻用开工快照兜底恢复。旧行为把污染留在工作区
+     * 等人工 --restore，而发布流程不会自动跑它，污染随时可能被上传。 */
+    try { restoreAll(); } catch (e) { console.log('   [自动恢复异常] ' + (e && e.message || e)); }
+    dirty = SNAP_FILES.filter(f => !fs.existsSync(ROOT + '/' + f) || md5f(f) !== BASE0[f]);
+    console.log(dirty.length
+      ? '   自动恢复后仍不一致，必须人工处理'
+      : '   已从开工快照自动恢复；本批结论仍作废（必须重跑）');
   } else {
     console.log(`工作区校验：${SNAP_FILES.length} 个文件全部与开工快照一致（无变异残留）`);
   }
@@ -561,7 +627,7 @@ function finish() {
    * 一条都没验证，却宣布全部可信 —— 与 adm「断言数归 0 却报绿」
    * 是同一种假通过，出现在管所有守卫可信度的工具自己身上，性质更重。
    * 覆盖面缩水必须判失败：验证数必须等于注册数。 */
-  const clean = fake === 0 && broken === 0 && dirty.length === 0
+  const clean = fake === 0 && broken === 0 && dirty.length === 0 && !autoFixed
                 && list.length > 0 && pass === list.length;
   if (list.length === 0) {
     console.log('\n❌ 用例数为 0：守卫名需带 .cjs 后缀（如 deadcfg.cjs），或该守卫尚未注册用例。');
@@ -577,7 +643,7 @@ function finish() {
   /* 覆盖面缺口也要计进 FAIL，否则机读行会显示 PASS=0 FAIL=0，
    * 与「全通过」在数字上无法区分（这正是体检员此前抓不到问题的原因）。 */
   const gap = Math.max(0, list.length - pass) + (list.length === 0 ? 1 : 0);
-  console.log(`RESULT: PASS=${pass} FAIL=${fake + broken + dirty.length + gap}`);
+  console.log(`RESULT: PASS=${pass} FAIL=${fake + broken + dirty.length + gap + (autoFixed ? 1 : 0)}`);
   return clean ? 0 : 1;
 }
 process.exit(finish());
