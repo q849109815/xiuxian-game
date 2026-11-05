@@ -50,6 +50,8 @@ const GUARDS = [
    * 这与 admperm / mutsentinel 是同一类洞：新建的守卫必须同步登记，
    * 否则「每轮都报绿」只是因为它压根没被体检。 */
   'themeguard',
+  /* V1.3.78：新建守卫必须同步登记，否则「每轮报绿」只是因为压根没被体检。 */
+  'mutrestore',
 ];
 
 /* 从输出里抓断言计数。
@@ -69,6 +71,13 @@ function parseCounts(out) {
   /* 规范形态优先 */
   const spec = t.match(SPEC_RE);
   if (spec) return { pass: +spec[1], fail: +spec[2], fmt: 'spec' };
+
+  /* 斜杠形态：`=== FAIL 94/1 ===`（PASS/FAIL 分列斜杠两侧，前缀随结果变化）。
+   * V1.3.77 事故：v123.cjs 输出 `FAIL 94/1`，旧判据 grab('FAIL') 抓到 94
+   * 当成「94 条失败」，实际是 94 条通过 + 1 条失败。体检员自己读错数字，
+   * 把「待整改 1」放大成「FAIL 94」—— 与判据和工具输出脱节是同一类洞。 */
+  const slash = t.match(/===\s*(?:PASS|FAIL)\s+(\d+)\/(\d+)\s*===/);
+  if (slash) return { pass: +slash[1], fail: +slash[2], fmt: 'slash' };
 
   const grab = (keys) => {
     for (const k of keys) {
@@ -192,7 +201,9 @@ function main() {
   let bad = 0, warn = 0, skipN = 0;
 
   for (const name of list) {
-    const r = runOnce(name);
+    /* mutguard 全量 38 条用例要真跑数分钟，默认 240s 会把它判成超时/不可信，
+     * 那是体检员自己制造的假结论（工具没病，是等待时间不够）。单独放宽。 */
+    const r = runOnce(name, name === 'mutguard' ? 540000 : 240000);
     const row = { name, code: r.code, issues: [], warns: [] };
 
     if (r.missing) {
@@ -360,11 +371,19 @@ function main() {
     const badAll = all.filter(r => r.verdict === '不可信').length;
     const warnAll = all.filter(r => r.verdict === '待整改').length;
     const skipAll = all.filter(r => r.verdict === '未验证').length;
+    /* 【完整性标记】—— V1.3.77 事故：批量体检被强杀，只跑完第一个工具
+     * 就落了残快照（total=1），看板把「没体检完」显示成「体检过、全不合格」。
+     * 分批合并仍允许（--append 是既定能力，不能破坏），但必须带 complete：
+     * 条数不足注册 GUARDS 时标记 false，看板一律判「残快照←需重跑」，
+     * 绝不拿残数字冒充结论。最后一批跑完自然转 true。 */
+    const complete = all.length >= GUARDS.length;
     fs.writeFileSync(lastPath, JSON.stringify({
-      rows: all, total: all.length, bad: badAll, warn: warnAll, skipN: skipAll,
+      rows: all, total: all.length, complete,
+      bad: badAll, warn: warnAll, skipN: skipAll,
       trust: all.length - badAll - warnAll - skipAll,
       at: new Date().toISOString().slice(0, 19),
     }));
+    if (!complete) console.log(`注意：体检快照仅 ${all.length}/${GUARDS.length}，已标记 complete=false（看板判「需重跑」）；请继续跑完剩余批次。`);
   } catch (e) {}
   process.exit(bad ? 1 : 0);
 }
