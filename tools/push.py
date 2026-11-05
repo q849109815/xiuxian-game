@@ -314,6 +314,8 @@ FILES = [
     'tools/uxdel.cjs',
     'tools/mutate_uxdel.cjs',
     'tools/mutate_skillcard.cjs',
+    'tools/mutrestore.cjs',
+    'tools/mutate_mutrestore.cjs',
 
     # 【上传清单覆盖守卫 pushcov】—— 事故：绩效工具 tools/kpi.cjs 修好缺陷后
     # 因不在清单里，修复永远留在本地、线上仍跑旧版，与 char/scene/roadmap 同类。
@@ -370,6 +372,11 @@ FILES = [
     'tools/mutate_vernorm.cjs',
     'tools/pushcov.cjs',
     'tools/mutguard.cjs',
+    # V1.3.77：看板判据共享模块 + 一致性守卫 + 变异验证，三者都必须随发版上传，
+    # 否则修好的判据仍留在线下，线上看板继续显示假结论（历史同形态事故已复发多次）。
+    'tools/dashparse.cjs',
+    'tools/dashcons.cjs',
+    'tools/mutate_dashcons.cjs',
     '制作人周报_V1.3.7211111111_主菜单重做与选中态修正.md',
 ]
 
