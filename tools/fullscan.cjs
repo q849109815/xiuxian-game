@@ -29,8 +29,10 @@ let pass = 0, fail = 0;
 const bad = [];
 const ok = (m) => { pass++; console.log('  √  ' + m); };
 const ng = (m) => { fail++; bad.push(m); console.log('  x  ' + m); };
-/* 待定性清单：D2/D3 天然存在合法差异（本地改了还没上传），一律判 FAIL 会
- * 让工具永远红、反而没人看。改为登记待定性，不计入失败；确认污染靠 D1/D4。 */
+/* 人工定性清单：仅 D2 备份对比使用（备份天然是旧快照，逐轮刷 FAIL 会让
+ * 工具永远红、反而没人看）。V1.3.77 起 D3 不再用「待定性」——
+ * 它以 synccheck 的结构化实时基准为准：一致判绿、不一致点名并计入失败，
+ * 中性词不再让真污染溜过去。 */
 const listed = [];
 const info = (m) => { listed.push(m); console.log('  -  ' + m); };
 
@@ -190,19 +192,53 @@ if (d2cmp > 0) ok('D2 已比对 ' + d2cmp + ' 组备份（' + d2auto + ' 组为�
 /* ------------------------------------------------------------ D3 基准证 */
 console.log('\n— D3 基准证：与线上 main 比对（外部干净基准）—');
 const ONLINE = path.join(ROOT, '_scan', 'online');
-if (fs.existsSync(ONLINE)) {
+/* 【实时复核优先 + 基准时效证】—— V1.3.77 事故：
+ * _scan/online/ 里只有 3 个 10-28 的历史快照，本地这 3 个文件在 V1.3.76 已改，
+ * D3 于是每轮刷 3 条「与线上不一致（待定性）」；而 synccheck 的实时全量复核
+ * 才是当前状态。「待定性」是中性词，人和 Agent 都会略过它，真污染混在噪音里没人看。
+ * 又查出一层更深的坑：synccheck 旧代码 '\n'.join(diff) 里 diff 元素是三元组，
+ * 抛 TypeError 后被 except 静默吞掉 → diff.txt 长期停在空内容。
+ * 所以绝不能靠「diff.txt 为空」判一致（那会是假通过），改读结构化
+ * synclast.json：consistent 是显式布尔，diff 是点名清单，且带时间戳。
+ * 修法：① 实时基准新鲜且 consistent=true → 判绿，历史快照不冒充当前状态；
+ *       ② consistent=false → 逐条点名并计入失败；
+ *       ③ 无实时基准时才退回快照，且快照 mtime 不得早于本地改动；
+ *       ④ 不再输出「待定性」中性词。 */
+const SYNC = path.join(ROOT, '_scan', 'synclast.json');
+const d3Live = (() => {
+  try {
+    if (!fs.existsSync(SYNC)) return null;
+    const j = JSON.parse(fs.readFileSync(SYNC, 'utf8'));
+    return Object.assign({}, j, { ageMs: Date.now() - fs.statSync(SYNC).mtimeMs });
+  } catch (e) { return null; }
+})();
+const d3Fresh = d3Live && d3Live.ageMs < 30 * 60 * 1000;
+if (d3Fresh && d3Live.consistent === true) {
+  ok('D3 线上全量复核 0 差异（实时基准 synccheck ' + d3Live.files + ' 文件，历史快照不再冒充当前状态）');
+} else if (d3Fresh && d3Live.consistent === false) {
+  for (const f of (d3Live.diff || [])) ng('D3 ' + f + ' 实时复核不一致（本地改动未上传或线上回滚）');
+  for (const f of (d3Live.miss || [])) ng('D3 ' + f + ' 线上缺失');
+  if (!(d3Live.diff || []).length && !(d3Live.miss || []).length) {
+    ng('D3 实时复核未通过（双分支分叉或线上缺失，须重跑 synccheck 看明细）');
+  }
+} else if (fs.existsSync(ONLINE)) {
   for (const n of fs.readdirSync(ONLINE)) {
     const rel = n.replace(/__/g, '/');
     const cp3 = path.join(ROOT, rel);
     if (!fs.existsSync(cp3)) continue;
-    if (md5(fs.readFileSync(path.join(ONLINE, n))) === md5(fs.readFileSync(cp3))) {
+    const snap = path.join(ONLINE, n);
+    if (fs.statSync(snap).mtimeMs < fs.statSync(cp3).mtimeMs) {
+      ng('D3 ' + rel + ' 基准快照过期（快照早于本地改动，需重跑 synccheck / _scan/pull.py）');
+      continue;
+    }
+    if (md5(fs.readFileSync(snap)) === md5(fs.readFileSync(cp3))) {
       ok('D3 ' + rel + ' 与线上一致');
     } else {
-      info('D3 ' + rel + ' 与线上不一致（待定性：合法改动 or 污染）');
+      ng('D3 ' + rel + ' 与线上不一致（实时复核未证明一致，须上传或回滚后重跑）');
     }
   }
 } else {
-  console.log('  -  D3 跳过（无线上基准快照，先跑 _scan/pull.py）');
+  ng('D3 无线上基准快照且实时复核未证明（先跑 tools/synccheck.py）');
 }
 
 /* ------------------------------------------------------------ D4 开关证 */
@@ -281,6 +317,16 @@ function ghGet(p2, br) {
       .map((l) => l.trim()).filter(Boolean);
   }
   for (const t of targets) {
+    /* 【V1.3.78 判据修正】tools/ 下的检测工具源码本来就要引用 FEATS
+     * （特征表就是判据本身），裸子串匹配必然把「工具在描述自己要抓什么」
+     * 误报成「污染已进生产」——本轮实测 4 条全是合法源码：
+     * synccheck.py / fullscan.cjs / dash.cjs / mutguard.cjs。
+     * 这些文件不进玩家运行时，污染由 D1 本地全量证与 D6 备份源洁净证覆盖。
+     * 玩家会加载的 js/、index.html、admin/、css/、data/zb/ 一个都不豁免。 */
+    if (t.startsWith('tools/')) {
+      d5n++; ok('D5 线上 ' + t + ' 为检测工具，特征串属判据本身，不计污染');
+      continue;
+    }
     /* 自证模式：用本地模拟的"线上真身"代替网络请求。
      * 为什么要这个：D5 的网络版无法安全做变异验证 —— 要证明它抓得住污染，
      * 就得真往生产传一份带 __MUT 的 ui.js，而这正是我们要防的事故本身。
