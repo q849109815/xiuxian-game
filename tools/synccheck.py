@@ -158,13 +158,32 @@ def main():
     # 供 fullscan 的 D5「线上内容证」消费：只对这些文件拉线上真身扫污染特征。
     # 为什么要有这条管道：V1.3.8 真事故 —— 本地 ui.js 干净、线上却仍带 __MUT，
     # 而此前所有扫描都只扫本地。有差异的文件才是线上与本地可能分叉的地方。
+    # 【V1.3.77 修复】diff 的元素是 (文件, 本地sha, 线上sha) 三元组，
+    # 旧代码 '\n'.join(diff) 会抛 TypeError，被 except 静默吞掉 →
+    # diff.txt 长期停在旧内容（空），D5「线上内容证」永远拿不到差异清单；
+    # 任何以「diff.txt 为空」判「线上一致」的新判据都会变成假通过。
+    # 修法：正确序列化 + 落一份结构化实时基准 synclast.json（含 consistent 布尔），
+    # 并让落盘异常显式判失败，不再静默跳过。
     try:
-        import os as _os
+        import os as _os, json as _json, datetime as _dt
         _d = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '_scan')
         _os.makedirs(_d, exist_ok=True)
-        open(_os.path.join(_d, 'diff.txt'), 'w').write('\n'.join(diff))
-    except Exception:
-        pass
+        names = [f for f, _, _ in diff]
+        state = {
+            'consistent': bad == 0,
+            'files': len(files),
+            'diff': names,
+            'miss': miss,
+            'absent': absent,
+            'crossFail': bool(cross_fail),
+            'at': _dt.datetime.utcnow().isoformat() + 'Z',
+        }
+        open(_os.path.join(_d, 'diff.txt'), 'w').write('\n'.join(names))
+        open(_os.path.join(_d, 'synclast.json'), 'w').write(
+            _json.dumps(state, ensure_ascii=False))
+    except Exception as e:
+        print('[FAIL] 实时基准落盘异常（D3/D5 将失效，不得静默跳过）：%s' % e)
+        return 1
     print('\n结果：不一致 %d，线上缺失 %d，本地缺失 %d' % (len(diff), len(miss), len(absent)))
     if bad:
         print('[FAIL] 发布一致性未通过 —— 本地改动有未上传项')
