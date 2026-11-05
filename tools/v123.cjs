@@ -60,8 +60,25 @@ ok(next.every((x) => (x.hi || []).length >= 2), 'A3 每个未来版本至少 2 �
   next.filter((x) => (x.hi || []).length < 2).map((x) => x.v).join(','));
 ok(next.every((x) => String(x.n || '').trim()), 'A4 每个未来版本有名称');
 ok(next.every((x) => ['patch', 'minor', 'major'].indexOf(x.tp) >= 0), 'A5 类型合法');
+/* 【A6 版本规范重设豁免】—— V1.3.77：
+ * V1.3.73 是「废弃末尾追加1、改用 PATCH 十进制递增」的基线重设，
+ * 历史序列里因此存在 V1.3.7211111111111 → V1.3.73 这一段，按数值必然「变小」。
+ * 这不是排期写错，是版本规范整改的合法过渡；此前 A6 一刀切判它 FAIL，
+ * 让 v123 长期挂着 1 条失败，体检员又把 `FAIL 94/1` 误读成 94 条失败。
+ * 豁免条件严格限定：前一条 PATCH>99（畸形膨胀串）、后一条是规范三段式且 PATCH<=99。
+ * 其余所有相邻版本仍强制严格递增，不许借豁免放过真回退。 */
+const isMalformed = (v) => {
+  const p = String(v || '').replace(/^v/i, '').split('.').map(Number);
+  return p.length === 3 && Number.isFinite(p[2]) && p[2] > 99;
+};
+const isNormVer = (v) => {
+  const p = String(v || '').replace(/^v/i, '').split('.').map(Number);
+  return p.length === 3 && p.every(Number.isFinite) && p[2] <= 99;
+};
 for (let i = 1; i < V.length; i++) {
-  ok(cmpVer(V[i].v, V[i - 1].v) > 0, 'A6 版本号递增 ' + V[i - 1].v + '→' + V[i].v);
+  const reset = isMalformed(V[i - 1].v) && isNormVer(V[i].v);
+  ok(reset || cmpVer(V[i].v, V[i - 1].v) > 0,
+    (reset ? 'A6 版本规范重设（合法过渡）' : 'A6 版本号递增 ') + V[i - 1].v + '→' + V[i].v);
 }
 /* 必须有 minor 级未来版本（不能全是修 BUG） */
 ok(next.some((x) => x.tp === 'minor'), 'A7 未来版本含 minor（不能全是修BUG）');
@@ -191,4 +208,8 @@ try {
 }
 
 console.log('\n=== ' + (fail ? 'FAIL' : 'PASS') + ' ' + pass + '/' + fail + ' ===');
+/* 追加规范形态：旧输出 `=== FAIL 94/1 ===` 的 94 是 PASS 不是 FAIL，
+ * 体检员 grab('FAIL') 会把「94 条通过」误读成「94 条失败」。
+ * 保留原输出不破坏既有消费者，另加一行 RESULT 让解析走无歧义的规范形态。 */
+console.log('RESULT: PASS=' + pass + ' FAIL=' + fail);
 process.exit(fail ? 1 : 0);
