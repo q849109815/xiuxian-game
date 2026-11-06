@@ -377,6 +377,12 @@ FILES = [
     'tools/dashparse.cjs',
     'tools/dashcons.cjs',
     'tools/mutate_dashcons.cjs',
+    # V1.3.79：新增两条变异验证（资源守卫文件存在证 / 体检别名旧账清理），
+    # 不登记就只在本地跑，线上永远不会证明「抓得住缺陷」——历史复发项。
+    'tools/mutate_assetguard.cjs',
+    'tools/mutate_toolaudit.cjs',
+    # 错题本此前只在本地记账：复发次数与新增错题永远传不上线（同一个漏登记洞）。
+    'tools/mistakes.json',
     '制作人周报_V1.3.7211111111_主菜单重做与选中态修正.md',
 ]
 
