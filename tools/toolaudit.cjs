@@ -196,6 +196,20 @@ function main() {
   const list = (only.length ? only : GUARDS).filter(n => !skipped.includes(n));
 
   const base = loadBaseline();
+  /* 基线别名清理（V1.3.79）
+   * 事故：曾以 'themeguard.cjs'（带后缀）跑过一次单工具体检，
+   * base 与 last 快照里同时留下 'themeguard' / 'themeguard.cjs' 两个键。
+   * 合并按 name 精确匹配，带后缀那条永远不会被后续结果覆盖 ——
+   * 一条 0/0 的「不可信」旧账永久挂看板上，total 虚高，
+   * 还让 complete 判据（条数 >= 注册数）被幽灵条目蒙混过关。
+   * 修法：所有键统一去后缀，不在 GUARDS 的幽灵键一律丢弃。 */
+  const bareOf = n => String(n).replace(/\.(cjs|py)$/, '');
+  const guardSet = new Set(GUARDS.map(bareOf));
+  for (const k of Object.keys(base)) {
+    const b = bareOf(k);
+    if (!guardSet.has(b)) { delete base[k]; continue; }
+    if (k !== b) { if (!base[b]) base[b] = base[k]; delete base[k]; }
+  }
   const covered = mutguardCoverage();
   const rows = [];
   let bad = 0, warn = 0, skipN = 0;
@@ -365,8 +379,16 @@ function main() {
     let prev = { rows: [] };
     if (append) { try { prev = JSON.parse(fs.readFileSync(lastPath, 'utf8')) || { rows: [] }; } catch (e) { prev = { rows: [] }; } }
     const map = new Map();
-    for (const r of (prev.rows || [])) map.set(r.name, r);
-    for (const r of rows) map.set(r.name, { name: r.name, verdict: r.verdict, pass: r.pass, fail: r.fail });
+    let dropped = 0, merged = 0;
+    for (const r of (prev.rows || [])) {
+      const b = bareOf(r.name);
+      /* 幽灵条目（不在注册清单）：不继承。别名条目：归并到规范键，
+       * 由本轮同名结果覆盖，不再单独占一格冒充「本轮体检结论」。 */
+      if (!guardSet.has(b)) { dropped++; continue; }
+      if (r.name !== b) merged++;
+      map.set(b, { ...r, name: b });
+    }
+    for (const r of rows) map.set(bareOf(r.name), { name: bareOf(r.name), verdict: r.verdict, pass: r.pass, fail: r.fail });
     const all = [...map.values()];
     const badAll = all.filter(r => r.verdict === '不可信').length;
     const warnAll = all.filter(r => r.verdict === '待整改').length;
@@ -383,6 +405,8 @@ function main() {
       trust: all.length - badAll - warnAll - skipAll,
       at: new Date().toISOString().slice(0, 19),
     }));
+    /* AX：清理动作必须看得见、可机读，不能只靠人翻快照文件去猜。 */
+    console.log(`ALIAS_MERGED=${merged} ALIAS_DROPPED=${dropped} TOTAL=${all.length}/${GUARDS.length} COMPLETE=${complete}`);
     if (!complete) console.log(`注意：体检快照仅 ${all.length}/${GUARDS.length}，已标记 complete=false（看板判「需重跑」）；请继续跑完剩余批次。`);
   } catch (e) {}
   process.exit(bad ? 1 : 0);
