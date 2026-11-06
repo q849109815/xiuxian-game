@@ -1,0 +1,205 @@
+[
+  {
+    "dept": "程序",
+    "sig": "配置写了但零调用（配了不生效）",
+    "n": 8,
+    "first": "2027-04-11",
+    "last": "2027-04-19",
+    "guard": "deadcfg.cjs",
+    "fix": "新增配置必须带消费点，deadcfg 闸门拦改名/失联",
+    "cases": "eventDropRoll / endlessWaveRw / DROP_EVENT_TXT / seasonClaimable / grantFrame / CFG.tips / EX.txt / API_PROXY(误报)"
+  },
+  {
+    "dept": "程序",
+    "sig": "改了本地但没传到线上（线上漏传）",
+    "n": 4,
+    "first": "2027-04-16",
+    "last": "2026-10-24",
+    "guard": "synccheck.py",
+    "fix": "发布后强制全量复核 262+ 文件 blob sha",
+    "cases": "js/engine.js 头像框校验线上缺失；6 张图标线上 404"
+  },
+  {
+    "dept": "程序",
+    "sig": "CSS 括号缺失导致整条声明被丢弃（样式静默失效）",
+    "n": 2,
+    "first": "2027-05-01",
+    "last": "2027-05-02",
+    "guard": "layoutguard.cjs",
+    "fix": "括号配对体检 + 布局越界守卫（P0 事故本源）",
+    "cases": "var(--txt2 缺右括号 → -webkit-line-clamp/overflow 三参数全失效，技能卡撑出屏幕"
+  },
+  {
+    "dept": "程序",
+    "sig": "版本号没升导致玩家拿到旧缓存",
+    "n": 2,
+    "first": "2027-04-30",
+    "last": "2027-05-01",
+    "guard": "releaseguard.cjs",
+    "fix": "push 前版本闸门 + bump1 末尾+1 铁律",
+    "cases": "修复上线但版本未变，玩家缓存仍是被污染的旧 ui.js"
+  },
+  {
+    "dept": "程序",
+    "sig": "热更 manifest 漏登文件",
+    "n": 1,
+    "first": "2027-05-01",
+    "last": null,
+    "guard": "cacheguard.cjs",
+    "fix": "C4 清单覆盖证，13 项覆盖 13 个引用",
+    "cases": "ops.js / chibi.js / user.js 从未登记"
+  },
+  {
+    "dept": "美术",
+    "sig": "资源画了没登记上传清单（本地有、线上无）",
+    "n": 2,
+    "first": "2027-04-14",
+    "last": "2027-04-16",
+    "guard": "assetguard.cjs",
+    "fix": "资源守卫：缺失 0 / 未登记 0，双指标",
+    "cases": "V1.1.0 六张境界图标；冲刺2 十五张新图"
+  },
+  {
+    "dept": "美术",
+    "sig": "场景与章节主题脱节（推图无区域感）",
+    "n": 1,
+    "first": "2027-04-23",
+    "last": null,
+    "guard": "sceneTheme.cjs",
+    "fix": "每章 8+2 主题池，BOSS 关强制主题",
+    "cases": "第 1 章混用 6 种场景"
+  },
+  {
+    "dept": "测试",
+    "sig": "守卫假通过（报绿但一条没查）",
+    "n": 6,
+    "first": "2027-04-16",
+    "last": "2027-05-01",
+    "guard": "toolaudit.cjs",
+    "fix": "toolaudit 支持单工具审计，M9 变异验证可跑（原全量数分钟超时被杀，注入未还原叠加污染）",
+    "cases": "acorn 丢失静默退出；vistate/adm 崩溃；tips 自造配置；判定函数算错；正则字面量误判；D1 跳过 .bak",
+    "proven": "已通过 mistmut 复发变异验证"
+  },
+  {
+    "dept": "测试",
+    "sig": "守卫抓不住缺陷（变异未捕获）",
+    "n": 5,
+    "first": "2027-04-19",
+    "last": "2027-05-01",
+    "guard": "mutguard.cjs",
+    "fix": "铁律：抓不住缺陷的断言等于不存在，逐条补变异用例",
+    "cases": "DROP_EVENT_TXT 宽松正则；deadcfg 自判失效；tips 阈值断言；R4 正则扫出 0 项"
+  },
+  {
+    "dept": "测试",
+    "sig": "测试污染残留进代码/生产",
+    "n": 2,
+    "first": "2027-04-28",
+    "last": "2027-05-02",
+    "guard": "fullscan.cjs",
+    "fix": "D5 线上内容证 + D6 备份源洁净证 + 并发锁",
+    "cases": "window.__MUT 进入线上 ui.js；.bak 备份在污染态拍快照"
+  },
+  {
+    "dept": "测试",
+    "sig": "玩家先于测试组发现 P0",
+    "n": 1,
+    "first": "2027-05-01",
+    "last": null,
+    "guard": "layoutguard.cjs",
+    "fix": "布局越界守卫：量真实盒子，四机型 336 项",
+    "cases": "技能卡撑出屏幕 + 建筑第 4 张出屏 60px"
+  },
+  {
+    "dept": "运营",
+    "sig": "排期数据失真 / 建了字段不填",
+    "n": 5,
+    "first": "2027-04-18",
+    "last": "2026-11-06",
+    "guard": "roadmap.cjs",
+    "fix": "全覆盖闸门：G1-8f 断言全表 39 条六部门分工齐全（原只查未来三轮，V1.3.8 清空 dp 仍报绿，M6 实测未捕获）；补齐 V1.0~V1.2.2 共 9 条历史空 dp",
+    "cases": "V1.2.3 只建功能不填数据；24 条仅 15 条填分工；V1.3.7 表与实际不符；V1.3.79 在 roadmap.json 副本插条目后跑 rmsync 被 config.js 主源覆盖（57→58 被回退成 57），排期守卫 G5-7b 当场报红",
+    "proven": "已通过 mistmut 复发变异验证"
+  },
+  {
+    "dept": "运营",
+    "sig": "运营日历日期错误（星期/天数不对）",
+    "n": 1,
+    "first": "2027-04-30",
+    "last": null,
+    "guard": "roadmap.cjs",
+    "fix": "起始星期对齐真实日历 + 天数完整 + 无空窗",
+    "cases": "9/1 标成周三（实为周二），31 天只排 27 天"
+  },
+  {
+    "dept": "策划",
+    "sig": "题材跑偏（末日废土做成修仙）",
+    "n": 1,
+    "first": "2027-04-13",
+    "last": null,
+    "guard": "themeguard.cjs",
+    "fix": "题材铁律守卫：代码零容忍，16 条禁用词（本轮新增覆盖）",
+    "cases": "V1.1.0 立项事故，全量回滚；此前长期无守卫"
+  },
+  {
+    "dept": "策划",
+    "sig": "关卡一次性批量加 50 关（数值跨度过大）",
+    "n": 1,
+    "first": "2027-04-25",
+    "last": null,
+    "guard": "roadmap.cjs",
+    "fix": "G6 关卡扩容铁律：一次只加一章 = 10 关",
+    "cases": "V1.1.0 第 11-15 章 50 关，后花一整版削峰"
+  },
+  {
+    "dept": "策划",
+    "sig": "数值模型解析错误导致结论反转",
+    "n": 2,
+    "first": "2027-04-11",
+    "last": "2027-04-22",
+    "guard": "curve.cjs",
+    "fix": "curve.cjs 加模型自检：全主线养成收益累计必须 >0，否则判失败（原退出码恒 0，算错了也不报错；M7 实测未捕获）",
+    "cases": "l.gold 标量错配 → 养成收益归零，误判 6 章卡死",
+    "proven": "已通过 mistmut 复发变异验证"
+  },
+  {
+    "dept": "策划",
+    "sig": "配置值与注释不符（靠代码兜底才没出事）",
+    "n": 1,
+    "first": "2027-04-14",
+    "last": null,
+    "guard": "v110all.cjs",
+    "fix": "联合审计核对配置与注释一致性",
+    "cases": "ATK_PER 写 0，注释写每层 +1.5%"
+  },
+  {
+    "dept": "音频",
+    "sig": "角色切换无听觉差异（只有文字差异）",
+    "n": 1,
+    "first": "2027-04-26",
+    "last": null,
+    "guard": "charsnd.cjs",
+    "fix": "16 角色专属音效 + 基频偏移区分",
+    "cases": "16 角色切换播同一个通用音"
+  },
+  {
+    "dept": "测试",
+    "sig": "工具输出谎报动作 / 污染被守卫自动合法化",
+    "n": 1,
+    "first": "2026-11-06",
+    "last": "2026-11-06",
+    "guard": "assetguard.cjs",
+    "fix": "F 文件存在证（具体引用必须真实存在）+ 文案只陈述真实动作 + --rebase 拒绝把不存在的引用写进基线；mutate_assetguard 5/0 变异捕获",
+    "cases": "变异注入的 star_X.jpg 留在 js/config.js EV10，磁盘无此文件；assetguard 打印「新增引用 1 条（已自动登记）」但实际未写盘，且只查「有没有登记进 FILES」不查文件是否存在——顺手补登记就会全绿，玩家看到破图"
+  },
+  {
+    "dept": "测试",
+    "sig": "体检快照按原名精确合并，带后缀别名永久残留",
+    "n": 1,
+    "first": "2026-11-06",
+    "last": "2026-11-06",
+    "guard": "toolaudit.cjs",
+    "fix": "合并键与基线键统一去后缀，不在 GUARDS 的幽灵条目丢弃，输出 ALIAS_MERGED/ALIAS_DROPPED 可机读计数；mutate_toolaudit 6/0 变异捕获",
+    "cases": "themeguard.cjs（0/0 不可信）与 themeguard（4/0 可信）并存 29 行，别名永远等不到同名覆盖，total 虚高让 complete 判据被蒙混；清理后还暴露出 mutguard 从未进过体检快照"
+  }
+]
