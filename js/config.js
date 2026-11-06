@@ -935,22 +935,22 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '1.3.78',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '1.3.79',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/tokens.css', ver:'1.3.78', size: 0 },
-      { p: 'css/style.css', ver:'1.3.78', size: 0 },
-      { p: 'js/net.js', ver:'1.3.78', size: 0 },
-      { p: 'js/config.js', ver:'1.3.78', size: 0 },
-      { p: 'js/ops.js', ver:'1.3.78', size: 0 },
-      { p: 'js/engine.js', ver:'1.3.78', size: 0 },
-      { p: 'js/chibi.js', ver:'1.3.78', size: 0 },
-      { p: 'js/juice.js', ver:'1.3.78', size: 0 },
-      { p: 'js/battle.js', ver:'1.3.78', size: 0 },
-      { p: 'js/ui.js', ver:'1.3.78', size: 0 },
-      { p: 'js/user.js', ver:'1.3.78', size: 0 },
-      { p: 'js/main.js', ver:'1.3.78', size: 0 },
-      { p: 'js/audio.js', ver:'1.3.78', size: 0 },
+      { p: 'css/tokens.css', ver:'1.3.79', size: 0 },
+      { p: 'css/style.css', ver:'1.3.79', size: 0 },
+      { p: 'js/net.js', ver:'1.3.79', size: 0 },
+      { p: 'js/config.js', ver:'1.3.79', size: 0 },
+      { p: 'js/ops.js', ver:'1.3.79', size: 0 },
+      { p: 'js/engine.js', ver:'1.3.79', size: 0 },
+      { p: 'js/chibi.js', ver:'1.3.79', size: 0 },
+      { p: 'js/juice.js', ver:'1.3.79', size: 0 },
+      { p: 'js/battle.js', ver:'1.3.79', size: 0 },
+      { p: 'js/ui.js', ver:'1.3.79', size: 0 },
+      { p: 'js/user.js', ver:'1.3.79', size: 0 },
+      { p: 'js/main.js', ver:'1.3.79', size: 0 },
+      { p: 'js/audio.js', ver:'1.3.79', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -1209,6 +1209,17 @@ const EX = {
         '音频': '无改动（本轮不涉音效与 BGM）',
         '测试': '新增 mutrestore 18 项断言（含真实 SIGTERM 自证）与 mutate_mutrestore 6/6 变异捕获；重跑全量变异与工具体检',
         '运营': '排期登记 V1.3.78 并同步 main/players 双源，复核上传清单覆盖新工具'
+      }
+    },
+    { v: 'V1.3.79', n: '上一轮欠账收口：污染清除与体检旧账归零', wk: '已发布', eta: '2026-11-06', tp: 'patch', c: '继续上一轮未完成的收尾，查出并清除真污染：变异注入的假引用 assets/icon/star_X.jpg 留在 js/config.js 的 EV10 成就活动配置里（磁盘无此文件，上传即破图），已按干净快照还原为 star.jpg。资源守卫补 F 文件存在证：引用必须真实存在，输出不再谎称「已自动登记」，--rebase 拒绝把污染写进基线；体检工具合并键统一去后缀，清掉永久残留的 themeguard.cjs 别名旧账并输出可机读计数。两条变异验证 5/0 与 6/0 全捕获，还原逐字节一致。', ms: '上一轮挂的账真做完，不留半截结论', ok: 'assetguard 240/0、mutsentinel 3/0、fullscan D3 转绿、体检快照无别名且 complete=true、发布一致性全量一致、玩家端功能零改动', pr: 'P1', done: true, pub: true,
+      hi: ['成就活动的图标不会因测试残留变成破图', '看板不再挂一条永远清不掉的旧账'],
+      dp: {
+        '策划': '确认 EV10 还原值取自干净快照，玩家可见信息零改动',
+        '美术': '核对 star.jpg 为既有素材，未新增或改动任何图片、配色与布局',
+        '程序': '还原 config.js 假引用；assetguard 补文件存在证与 rebase 拦截；toolaudit 合并键规范化',
+        '音频': '无改动，回归确认 BGM 与 16 个角色专属音效链路不受影响',
+        '测试': '补 mutate_assetguard 5/0、mutate_toolaudit 6/0 变异验证；分批全量体检与重复测试',
+        '运营': '在 config.js 主源登记 V1.3.79 后跑 rmsync 同步，前瞻页可见'
       }
     },
     { v: 'V1.4.0', n: '社交深化', wk: '规划中', eta: '2026-12', tp: 'minor', c: '军团战、好友助战技能化、角色扩到20', ms: '有人一起玩', ok: '军团战可开', pr: 'P2', done: false, pub: true,
