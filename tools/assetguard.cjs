@@ -76,6 +76,25 @@ for(const r of cur){
   else { fail++; console.log('  x  未登记: '+r); }
 }
 
+/* F 文件存在证（V1.3.79 新增）
+ * ---------------------------------------------------------------------------
+ * 事故：变异注入的假引用 'assets/icon/star_X.jpg?v=...' 留在 js/config.js，
+ * 磁盘上根本没有这个文件。原守卫只问「有没有登记进 push.py FILES」——
+ * 一旦有人顺手把它补登记，守卫就全绿，而玩家看到的是破图。
+ * 更糟的是原输出写「新增引用 1 条（已自动登记）」，实际代码根本没写盘：
+ * 输出与实际行为不一致，会让接手的人/Agent 以为污染已被合法化（AX 事故）。
+ * 因此：① 具体文件必须真实存在；② 文案只陈述真实动作；
+ *       ③ --rebase 也不能把不存在的引用写进基线（显式确认 ≠ 确认污染）。
+ */
+const FILE_EXT=/\.(png|jpe?g|gif|webp|svg|mp3|ogg|wav|ttf|woff2?)$/i;
+const MUT_MARK=/__MUT|mut_|_X\.(?:jpe?g|png|webp|svg)/i;
+const broken=cur.filter(r=>FILE_EXT.test(r)&&!fs.existsSync(path.join(ROOT,r)));
+if(broken.length){
+  console.log('\n  x  引用文件不存在（疑似测试污染残留 / 上线必破图）：');
+  broken.forEach(r=>console.log('       ! '+r+(MUT_MARK.test(r)?'  [命中变异特征]':'')));
+  fail+=broken.length;
+}
+
 /* 消失的引用：直接判失败，防止「删掉引用让守卫变绿」这种自欺。
  * 真要删（功能下线/换图），必须 --rebase 显式确认。 */
 if(gone.length){
@@ -83,11 +102,14 @@ if(gone.length){
   gone.forEach(r=>console.log('       - '+r));
 }
 if(added.length && !rebase){
-  console.log('\n  ·  新增引用 '+added.length+' 条（已自动登记）：');
+  console.log('\n  ·  新增引用 '+added.length+' 条（仅报告，未写入基线；确认无误后执行 --rebase）：');
   added.slice(0,10).forEach(r=>console.log('       + '+r));
 }
 
-if(rebase || !fs.existsSync(REFSET)){
+if(rebase && broken.length){
+  console.log('\n  x  --rebase 拒绝执行：存在不存在的引用，先清污染再重设基线');
+}
+if(((rebase && !broken.length) || !fs.existsSync(REFSET)) && !broken.length){
   fs.writeFileSync(REFSET,JSON.stringify({refs:cur,at:new Date().toISOString().slice(0,19)},null,1));
   if(rebase) console.log('\n  ·  --rebase：引用集合基线已按当前状态重设（'+cur.length+' 条）');
 }
