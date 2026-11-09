@@ -1,3 +1,6 @@
+/* 【mutate_releaseguard.cjs】立规原因：本工具为常驻守卫，历史上缺自述头，AI Agent 无法判断该不该选用。
+ * 判据：以本工具自身断言输出为准（见文件内实现）。
+ * 退出码语义：0=全部通过 / 1=存在未过项 / 2=工具崩溃或前提未就绪（崩溃显式判失败，不静默报绿）。 */
 /* 发布流程守卫变异验证：证明守卫抓得住缺陷（抓不住 = 断言不存在） */
 const fs=require('fs'),cp=require('child_process'),crypto=require('crypto'),path=require('path');
 const ROOT=path.resolve(__dirname,'..');
