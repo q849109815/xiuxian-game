@@ -151,7 +151,7 @@ const MAIN = {
     }
     if (!p) {
       p = E.newPlayer(UID, name, gender);
-      UI.toast('欢迎加入，先锋官！', 'ok');
+      /* V1.3.80：欢迎标语属多余标语，已删（登录即弹的绿色气泡） */
       /* 「重置存档 / 注销后重注册 → 历史运营补发被全部重发一遍」修复。
        * 指令去重只靠存档里的 p.opsDone 本地记录，而重置会把它清空，
        * 云端 data/zb/ops/<uid>.json 却原封不动留着 ——
