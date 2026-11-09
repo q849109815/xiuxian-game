@@ -533,8 +533,8 @@ const PAGES = {
           <div class="plist">${list.length ? list.map((p) => this.pcard(p)).join('') : '<div class="empty">无</div>'}</div>
         </div>
         <div class="card">
-          <h3>补发物品<span class="tag">走指令队列，不会被玩家自动存档覆盖</span></h3>
-          ${this.SEL ? this.selBar() : '<div class="empty">先在上方点选玩家</div>'}
+          <h3>补发物品</h3>
+          ${this.SEL ? this.selBar() : '<div class="empty">未选择玩家</div>'}
           <div class="fr"><label class="wide">物品</label>${U.picker('op_item', 'gold')}</div>
           <div class="fr"><label class="wide">数量</label><input id="op_n" type="number" value="100"></div>
           <div class="fr"><label class="wide">限时(小时)</label><input id="op_exp" type="number" value="0" placeholder="0=永久"></div>
@@ -2041,8 +2041,7 @@ const PAGES = {
         const NOT_READ = wired();
         const seg = (k, n) => `<button class="${t === k ? 'on' : ''}" data-a="tab" data-k="${k}">${n}</button>`;
         const body = t === 'goods'
-          ? `<div class="btns"><button class="btn" data-a="shpReload">⟳ 刷新商品</button></div>
-             <div id="spBox" style="margin-top:10px"><div class="empty">点「刷新商品」</div></div>`
+          ? `<div id="spBox" style="margin-top:10px"><div class="empty"><button class="btn" data-a="shpReload">⟳ 刷新商品</button></div></div>`
           : `
              <div class="fr"><label class="wide">订单号</label><input id="od_id" placeholder="订单号"></div>
              <div class="fr"><label class="wide">UID</label><input id="od_uid" placeholder="玩家 UID"></div>
