@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+/* 【mutate_ux3.cjs】立规原因：本工具为常驻守卫，历史上缺自述头，AI Agent 无法判断该不该选用。
+ * 判据：以本工具自身断言输出为准（见文件内实现）。
+ * 退出码语义：0=全部通过 / 1=存在未过项 / 2=工具崩溃或前提未就绪（崩溃显式判失败，不静默报绿）。 */
 /* ux3 变异验证：故意把已清理的缺陷塞回去，守卫必须报红；还原后必须回绿且字节一致。
  * 每条变异独立：备份 → 注入 → 跑守卫(期望 FAIL) → 还原 → 校验 md5。 */
 const fs=require('fs'),path=require('path'),cp=require('child_process'),crypto=require('crypto');
