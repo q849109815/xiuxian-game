@@ -1,3 +1,6 @@
+/* 【layout.cjs】立规原因：本工具为常驻守卫，历史上缺自述头，AI Agent 无法判断该不该选用。
+ * 判据：以本工具自身断言输出为准（见文件内实现）。
+ * 退出码语义：0=全部通过 / 1=存在未过项 / 2=工具崩溃或前提未就绪（崩溃显式判失败，不静默报绿）。 */
 // 全量布局体检：细长文字块 / 元素重叠 / 越界 / 异常文本 / 破图
 const { chromium } = require('playwright');
 const WIDTHS = process.argv[2] ? process.argv[2].split(',').map(Number) : [393];
