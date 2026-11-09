@@ -383,6 +383,8 @@ FILES = [
     'tools/mutate_toolaudit.cjs',
     # 错题本此前只在本地记账：复发次数与新增错题永远传不上线（同一个漏登记洞）。
     'tools/mistakes.json',
+    'tools/visguard.cjs',
+    'tools/mutate_visguard.cjs',
     '制作人周报_V1.3.7211111111_主菜单重做与选中态修正.md',
 ]
 
