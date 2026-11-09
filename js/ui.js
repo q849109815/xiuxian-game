@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.80';
+const IMG_V = '1.3.81';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -287,7 +287,13 @@ const UI = {
     $('#hmLv').textContent = 'Lv.' + (p.lv || 1);
     $('#hmPower').textContent = E.fmt(E.power(p));
     $('#cuGold').textContent = E.fmt(p.gold);
-    const ci = EX.curIcon || {};
+    /* V1.3.81：后台未下发 curIcon 时，三个资源图标的 <img> 会永远没有 src，
+     * 浏览器画成空方框（真实截图右上角「□ 0」）。给一份本地兜底，前后台都不依赖热配。 */
+    const ci = Object.assign({
+      gold: 'assets/icon/i_gold.jpg',
+      diamond: 'assets/icon/i_diamond.jpg',
+      stamina: 'assets/icon/i_stamina.jpg',
+    }, EX.curIcon || {});
     const cgEl = $('#cuGoldIco'); if (cgEl && ci.gold) cgEl.src = ci.gold + '?v=' + IMG_V;
     const cdEl = $('#cuDiaIco'); if (cdEl && ci.diamond) cdEl.src = ci.diamond + '?v=' + IMG_V;
     const csEl = $('#cuStaIco'); if (csEl && ci.stamina) csEl.src = ci.stamina + '?v=' + IMG_V;
@@ -2160,7 +2166,13 @@ r_tavern(p, tab) {
    *   全项目 12 条任务里 7 条奖励不含金币/钻石，全部中招。
    * 现在统一渲染所有奖励项：金币/钻石/体力走货币图标，材料与成就点走文字。 */
   rwIcons(rw) {
-    const ci = EX.curIcon || {};
+    /* V1.3.81：后台未下发 curIcon 时，三个资源图标的 <img> 会永远没有 src，
+     * 浏览器画成空方框（真实截图右上角「□ 0」）。给一份本地兜底，前后台都不依赖热配。 */
+    const ci = Object.assign({
+      gold: 'assets/icon/i_gold.jpg',
+      diamond: 'assets/icon/i_diamond.jpg',
+      stamina: 'assets/icon/i_stamina.jpg',
+    }, EX.curIcon || {});
     const ks = Object.keys(rw || {}).filter((k) => {
       const v = rw[k];
       if (typeof v === 'number') return isFinite(v) && v > 0;
