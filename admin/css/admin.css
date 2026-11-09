@@ -321,3 +321,8 @@ pre.json{margin:0;padding:15px;background:var(--bg2);border:1px solid var(--bd);
 .hint,.lbl{line-height:1.5}
 .kpi .v{letter-spacing:.5px}
 .nav-t{letter-spacing:2px;opacity:.55}
+
+
+/* V1.3.81 空状态重做：行动按钮放进空状态内部，不再靠一句说明教运营点哪里 */
+.empty .btn{margin-top:2px}
+.empty .btn:hover{filter:brightness(1.12)}
