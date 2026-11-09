@@ -263,6 +263,8 @@ A('测试','看板判据一致性',dc&&dc.f===0?`PASS${dc.p}/0`:`未过${dc?dc.f
 const mr2=(()=>{try{const r=require('child_process').spawnSync('node',['tools/mutrestore.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
  const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return r.status===0&&m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
 A('测试','变异中断还原守卫',mr2&&mr2.f===0?`PASS${mr2.p}/0`:`未过${mr2?mr2.f:'未跑通✗'}项`);
+const vg=(()=>{try{const r=require('child_process').spawnSync('node',['tools/visguard.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:60000});const m=(r.stdout||'').match(/visguard:\s*PASS=(\d+)\s+FAIL=(\d+)/);return r.status===0&&m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','视觉审查守卫',vg&&vg.f===0?`PASS${vg.p}/0`:`未过${vg?vg.f:'未跑通✗'}项`);
 A('策划','题材铁律守卫',tg&&tg.f===0?`PASS${tg.p}/0`:`未过${tg?tg.f:'未跑通✗'}项`);
 A('运营','后台漏斗',funnel?'✓':'✗'); A('运营','反作弊',antiCheat?'✓':'✗');
 A('运营','活动日历',ex('运营日历_V1.0.2.md')?'✓':'✗'); A('运营','赛季排期',ex('赛季排期日历_V1.1.0.md')?'✓':'✗'); A('运营','脏订单','已清(5条)');
