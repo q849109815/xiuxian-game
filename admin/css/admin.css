@@ -312,3 +312,12 @@ pre.json{margin:0;padding:15px;background:var(--bg2);border:1px solid var(--bd);
   .main{padding:18px 13px 40px}
   .ph h2{font-size:19px}
 }
+
+
+/* ===== V1.3.80 后台视觉整改 ===== */
+.fr label{min-width:96px;text-align:right;display:inline-block;margin-right:8px}
+.empty{min-height:76px;display:flex;align-items:center;justify-content:center;gap:8px}
+.empty::before{content:'○';opacity:.4;font-size:18px}
+.hint,.lbl{line-height:1.5}
+.kpi .v{letter-spacing:.5px}
+.nav-t{letter-spacing:2px;opacity:.55}
