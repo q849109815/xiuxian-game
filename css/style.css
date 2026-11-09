@@ -2486,3 +2486,33 @@ b { font-weight: var(--fw-semibold) !important; }
 .sn-bar i{display:block;height:100%;background:var(--gd1)}
 .sn-src{display:flex;flex-wrap:wrap;gap:var(--sp-1)}
 .sn-src span{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--sp-1);padding:var(--sp-1) var(--sp-2);font-size:var(--fs-xs);color:var(--txt2)}
+
+
+/* ===== V1.3.80 视觉审查整改（追加覆盖，不改既有规则） ===== */
+/* 活动/邮件等列表行：图标 / 信息 / 操作 三列，信息内部严格分层不再折行挤压 */
+.zrow.act-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--sp-2)}
+.zrow .zav{grid-column:1;flex:none}
+.zrow .zi{grid-column:2;display:flex;flex-direction:column;gap:2px;min-width:0}
+.zrow .zi b{line-height:1.25}
+.zrow .zi>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35}
+.zrow .zi .zr-desc{color:var(--txt2)}
+.zrow .zi .zr-meta{font-size:var(--fs-xs);color:var(--txt3)}
+.zrow .zi .zr-rw{font-size:var(--fs-xs);color:var(--c-amber-100)}
+.zr-act{grid-column:3;display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:72px;max-width:104px}
+.zr-act .btn{white-space:nowrap}
+.zr-act .st{font-size:var(--fs-xs);white-space:nowrap}
+.act-row{padding:var(--sp-2) var(--sp-1)}
+/* 空状态：紧凑居中 + 图形锚点，消除大片空白感；删了说明也看得懂靠的是布局 */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:104px;padding:var(--sp-4) 10px;color:var(--txt3);font-size:var(--fs-sm);text-align:center}
+.empty::before{content:'○';font-size:26px;line-height:1;opacity:.35}
+.card:has(>.empty){min-height:150px}
+.lbl{font-size:var(--fs-xs);color:var(--txt3)}
+/* 角色卡：内容垂直居中、头像更醒目，未解锁卡不再是一块空框 */
+.chr-grid .gcell{justify-content:center;align-content:center;text-align:center;background:linear-gradient(160deg,rgba(255,255,255,.035),rgba(0,0,0,.12))}
+.chr-grid .gcell img{width:72px;height:72px}
+.chr-grid .gcell .gn{font-size:var(--fs-md);font-weight:600}
+/* 技能分组标题不再贴在右边缘 */
+.card-t .grp,.card-t .ct-n{float:none !important;display:inline-block;margin-left:8px;vertical-align:middle}
+
+/* 分组标题左对齐：此前唯一子元素被 card-t 的对齐规则推到卡片右边缘 */
+.grp-t{text-align:left !important;justify-content:flex-start !important;display:block !important}
