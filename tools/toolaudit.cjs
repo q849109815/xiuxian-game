@@ -178,6 +178,23 @@ function mutguardCoverage() {
     const covered = new Set();
     const re = /guard:\s*'([A-Za-z0-9_.-]+)\.cjs'/g;
     let m; while ((m = re.exec(src))) covered.add(m[1]);
+    /* V1.3.79 补：变异验证有两种落地形态 ——
+     *   ① 注册进 mutguard REG（集中式）
+     *   ② 独立的 tools/mutate_<guard>.cjs（分批 / 真实信号自证型，
+     *      如 mutrestore / assetguard / toolaudit）
+     * 原判据只认 ①，把「已有独立脚本 6/6 实证过」的守卫误报成「未经证明」，
+     * 看板因此长期挂一条待整改。判据不完整本身也是假结论。
+     * 但「有个同名文件」不等于证明过：必须同时具备真实注入、真实还原、
+     * 逐字节校验与可机读结果四个硬特征，空壳文件不算数。 */
+    for (const g of GUARDS) {
+      const b = String(g).replace(/\.(cjs|py)$/, '');
+      if (covered.has(b)) continue;
+      const f = path.join(TOOLS, 'mutate_' + b + '.cjs');
+      if (!fs.existsSync(f)) continue;
+      const t = fs.readFileSync(f, 'utf8');
+      if (/writeFileSync|spawnSync/.test(t) && /还原/.test(t) &&
+          /md5|逐字节/.test(t) && /RESULT:\s*PASS=/.test(t)) covered.add(b);
+    }
     return covered;
   } catch (e) { return new Set(); }
 }
@@ -265,7 +282,12 @@ function main() {
     if (r.code === 0 && (ev.fail || 0) > 0) {
       row.issues.push(`报 FAIL ${ev.fail} 却 exit 0 —— 退出码失真，下游会误判通过`);
     }
-    if (r.code !== 0 && (ev.fail || 0) === 0 && ev.pass !== null) {
+    /* V1.3.79 修：被并发锁挡下（exit 4 + 「拒绝开工」）是【前提未就绪】，
+     * 不是工具坏了。原来这条通用判据先塞了一个 issue，
+     * 于是后面明明识别到 row.locked，verdict 仍被 issues 优先级抢成「不可信」——
+     * 与 V1.3.74 修过的「前提未就绪混进缺陷计数」是同一类洞的新形态。
+     * 语义：一条断言都没跑 → 判「未验证/需错峰补跑」，不得判「工具不可信」。 */
+    if (r.code !== 0 && (ev.fail || 0) === 0 && ev.pass !== null && !/拒绝开工/.test(r.out + r.err)) {
       row.issues.push(`exit ${r.code} 但输出无 FAIL 计数 —— 可能是崩溃而非断言失败`);
     }
     if (r.code === 0 && /✗|✘/.test(r.out) && (ev.fail || 0) === 0) {
