@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+/* 【consist.cjs】立规原因：本工具为常驻守卫，历史上缺自述头，AI Agent 无法判断该不该选用。
+ * 判据：以本工具自身断言输出为准（见文件内实现）。
+ * 退出码语义：0=全部通过 / 1=存在未过项 / 2=工具崩溃或前提未就绪（崩溃显式判失败，不静默报绿）。 */
 /* 跨面板数值一致性：同一指标在主界面/各面板/引擎计算值之间是否一致 */
 const { chromium } = require('playwright');
 const PANELS=['shop','role','bag','gun','chip','task','core','codex','base','legion',
