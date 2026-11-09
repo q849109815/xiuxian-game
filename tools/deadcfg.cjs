@@ -1,3 +1,6 @@
+/* 【deadcfg.cjs】立规原因：本工具为常驻守卫，历史上缺自述头，AI Agent 无法判断该不该选用。
+ * 判据：以本工具自身断言输出为准（见文件内实现）。
+ * 退出码语义：0=全部通过 / 1=存在未过项 / 2=工具崩溃或前提未就绪（崩溃显式判失败，不静默报绿）。 */
 // 死配置审计：EX 里定义的键名，是否在 config.js 之外被消费
 const fs=require('fs'),path=require('path');
 const ROOT=path.resolve(__dirname,'..');
