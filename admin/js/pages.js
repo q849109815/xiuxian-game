@@ -344,7 +344,7 @@ const PAGES = {
                <div class="btns"><button class="btn" data-a="copyRaw">📋 复制 JSON</button></div>`
             : '<div class="empty">先在左侧点选玩家</div>';
         } else if (t === 'backup') {
-          body = `<div class="lbl">备份与回档：点击「立即备份」保存当前存档快照，可从快照恢复。</div>
+          body = `
             <div class="btns">
               <button class="btn pri" data-a="backup">＋ 备份当前</button>
               <button class="btn" data-a="listBak">⟳ 刷新备份列表</button>
@@ -643,7 +643,7 @@ const PAGES = {
             <div class="btns"><button class="btn pri" data-a="addRw">＋ 添加配置</button></div>
             <div id="rwBox" style="margin-top:10px"><div class="empty">点上方加载已有配置</div></div>`;
         } else {
-          body = `<div class="lbl">按当前榜单名次，给上榜玩家发放已配置的排名奖励（走指令队列，自动到账）。</div>
+          body = `
             <div class="fr"><label class="wide">榜单</label><select id="st_b">
               <option value="endless">无尽榜</option><option value="power">战力榜</option><option value="event">活动榜</option></select></div>
             <div class="fr"><label class="wide">发奖名次</label><input id="st_top" type="number" value="10"></div>
@@ -670,7 +670,7 @@ const PAGES = {
                 l.map((x, i) => [i + 1, U.esc(x.name || x.nick || '—'), U.esc(x.uid), U.fmt(x.v || x.eb || x.pw || 0)]))
                 : '<div class="empty">空</div>'));
           }
-          box.innerHTML = out.join('') + '<div class="hint">活动榜数据来自活动积分，随活动结算更新</div>';
+          box.innerHTML = out.join('') + '';
           this.toast('已刷新', 'ok');
         },
         async rebuild() {
@@ -1787,7 +1787,7 @@ const PAGES = {
             });
           };
           walk((EX && EX.tips) || {}, '');
-          body = `<div class="hint">游戏内提示文案（金币不足 / BOSS 警告 / 波次播报等），留空即恢复默认。</div>
+          body = `
             ${flat.length ? this.table(['键', '默认文案', '当前生效', '操作'],
               flat.map((row) => {
                 const k = row[0], defv = row[1];
@@ -2043,8 +2043,7 @@ const PAGES = {
         const body = t === 'goods'
           ? `<div class="btns"><button class="btn" data-a="shpReload">⟳ 刷新商品</button></div>
              <div id="spBox" style="margin-top:10px"><div class="empty">点「刷新商品」</div></div>`
-          : `<div class="lbl">真付费尚未接入。此处为支付回调预留：接入后把订单写入 data/zb/order.json，
-               后台可在此查看与补单。</div>
+          : `
              <div class="fr"><label class="wide">订单号</label><input id="od_id" placeholder="订单号"></div>
              <div class="fr"><label class="wide">UID</label><input id="od_uid" placeholder="玩家 UID"></div>
              <div class="fr"><label class="wide">商品</label>${U.picker('od_i', 'diamond')}</div>
@@ -2461,8 +2460,6 @@ const PAGES = {
             <div class="lbl">云端经过多轮调试与验收，堆积了大量测试号存档、
               玩家索引幽灵条目（存档已删除但索引还留着）和榜单脏数据，
               真实玩家的名次被测试号长期占据。</div>
-            <div class="hint">先点「扫描」看清要删什么、保留什么，确认无误后再执行。
-              <b>已注册的账号永远不会被删。</b></div>
             <div class="btns"><button class="btn pri" data-a="cuScan">🔍 扫描可清理项</button></div>
           </div>`;
         }
@@ -2479,8 +2476,6 @@ const PAGES = {
         ];
         return `<div class="card">
           <h3>数据清理<span class="tag">扫描完成 · ${U.dt(s.at)}</span></h3>
-          <div class="hint">真实玩家白名单来自账号目录 <b>${s.protect.length}</b> 个注册账号，
-            名单内的存档 / 索引 / 榜单条目<b>一个都不会删</b>。</div>
           <div class="kpis">
             <div class="kpi"><div class="v">${s.saves.del.length}</div><div class="k">待删存档</div></div>
             <div class="kpi"><div class="v">${s.idx.del}</div><div class="k">索引幽灵</div></div>
