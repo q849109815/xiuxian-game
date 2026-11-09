@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.79';
+const IMG_V = '1.3.80';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -1155,7 +1155,7 @@ r_tavern(p, tab) {
       const ic = elIcon[el]
         ? `<img class="ei" src="assets/icon/${elIcon[el]}" style="width:17px;height:17px;border-radius:4px;object-fit:contain;vertical-align:-3px;margin-right:4px">`
         : '';
-      return `<div class="card"><div class="card-t" style="color:${c}">${ic}${elName[el] || el}</div>
+      return `<div class="card"><div class="card-t grp-t" style="color:${c}">${ic}${elName[el] || el}</div>
       ${byEl[el].map((s) => `<div class="item">
         <div class="ic" style="border:1.5px solid ${c}66">${s.img
           ? `<img src="${s.img}" style="width:30px;height:30px;border-radius:6px;object-fit:cover">`
@@ -3140,7 +3140,7 @@ r_tavern(p, tab) {
     /* 排序：两个写入点（后台单发、运营指令）都是 unshift，新邮件在前。
      * 而面板此前又做了一次 reverse —— 于是最新发的邮件被排到最后，
      * 玩家打开邮件箱第一眼看到的是最旧的一封。这里去掉多余的反转。 */
-    const ms = (p.mail || []).slice();
+    const ms = this.pubSafe((p.mail || []).slice());
     const un = ms.filter((m) => !m.got && this.mailActive(m)).length;
     return `<div class="card"><div class="card-t">邮件 <b class="ct-n">${un} 封未读</b></div>
       ${ms.length ? ms.map((m) => {
@@ -3359,22 +3359,23 @@ r_tavern(p, tab) {
      * （实测：6 个内置 + 2 个云端，其中 1 个 3 天后才开始，顶部仍写「8 个进行中」）。
      * 内置活动无 status 字段（常驻），按运行中计。 */
     const liveN = acts.filter((a) => !a.status || a.status === '运行中').length;
-    return `<div class="card"><div class="card-t">活动
-      <span class="sub">${liveN} 个进行中${liveN < acts.length ? '（含 ' + (acts.length - liveN) + ' 个未开始）' : ''}</span></div>
-      ${acts.length ? acts.map((a) => `<div class="zrow">
+    return `<div class="card"><div class="card-t">活动<span class="sub">${liveN} 个进行中</span></div>
+      ${acts.length ? acts.map((a) => `<div class="zrow act-row">
         <div class="zav">${a.icon || '🎪'}</div>
-        <div class="zi"><b>${a.n}</b><span>${a.desc || ''}</span>
-          <span style="font-size:var(--fs-xs);color:var(--c-blue-550)">${a.time || ''} · ${a.rule || ''}</span>
-          ${a.rwDesc ? `<span style="font-size:var(--fs-xs);color:var(--c-amber-100)">🎁 ${a.rwDesc}</span>` : ''}
-          ${a.id === 'EV02' ? `<span style="font-size:var(--fs-xs);color:var(--c-amber-100)">今日剩余 ${E.bossRaidLeft(p)} / 3 次</span>` : ''}
-          ${a.id === 'EV04' ? `<span style="font-size:var(--fs-xs);color:${p.firstRech ? '#7ee38a' : '#ffd76a'}">${p.firstRech ? '已使用' : '未使用 · 首次购买钻石翻倍'}</span>` : ''}
+        <div class="zi"><b>${a.n}</b>
+          <span class="zr-desc">${a.desc || ''}</span>
+          <span class="zr-meta">${[a.time, a.rule].filter(Boolean).join(' · ')}</span>
+          ${a.rwDesc ? `<span class="zr-rw">🎁 ${a.rwDesc}</span>` : ''}
+          ${a.id === 'EV02' ? `<span class="zr-rw">今日剩余 ${E.bossRaidLeft(p)} / 3 次</span>` : ''}
+          ${a.id === 'EV04' ? `<span class="zr-meta">${p.firstRech ? '已使用' : '首次购买钻石翻倍'}</span>` : ''}
         </div>
-        ${a.id === 'EV02' ? (() => { const _l = E.bossRaidLeft(p);
-            return `<button class="btn sm" data-raid="1" ${_l > 0 ? '' : 'disabled'}>${_l > 0 ? '挑战' : '次数已用完'}</button>`; })() : ''}
-        ${a.id === 'EV01' ? `<button class="btn sm" data-evendless="1">参与</button>` : ''}
-        ${a.id === 'EV06' ? `<button class="btn sm" data-evrank="1">查看</button>` : ''}
-        ${this.actExtraBtn(p, a)}
-      </div>`).join('') : '<div class="lbl">暂无活动</div>'}
+        <div class="zr-act">
+          ${a.id === 'EV02' ? (E.bossRaidLeft(p) > 0 ? '<button class="btn sm" data-raid="1">挑战</button>' : '<button class="btn sm" disabled>次数已用完</button>') : ''}
+          ${a.id === 'EV01' ? '<button class="btn sm" data-evendless="1">参与</button>' : ''}
+          ${a.id === 'EV06' ? '<button class="btn sm" data-evrank="1">查看</button>' : ''}
+          ${this.actExtraBtn(p, a)}
+        </div>
+      </div>`).join('') : '<div class="empty">暂无活动</div>'}
     </div>
     <div class="card"><div class="card-t">签到 </div>
       <div class="grid4">${[1, 2, 3, 4, 5, 6, 7].map((d) => {
@@ -3398,7 +3399,7 @@ r_tavern(p, tab) {
     const allDone = list.every((it) => E.newbieGot(p, it.d));
     if (allDone) return '';   // 7 天全领完就不再占位
     return `<div class="card"><div class="card-t">新手七日 <b class="ct-n">注册第 ${cur} 天${got.length ? ' · ' + got.length + ' 份待领' : ''}</b></div>
-      <div style="font-size:var(--fs-xs);color:var(--txt3);margin-bottom:6px">每日登录领取，断签不清空进度</div>
+      
       <div class="grid4">${list.map((it) => {
         const g = E.newbieGot(p, it.d);
         const can = cur >= it.d && !g;
@@ -4173,11 +4174,9 @@ r_tavern(p, tab) {
       <button class="btn blk" id="spGo">🔑 修改密码</button>
       <div class="lbl" id="spTip"></div></div>
     <div class="card"><div class="card-t">注销账号 <b class="ct-n">不可恢复</b></div>
-      <div class="lbl" style="text-align:left;color:var(--c-red-300)">注销会删除云端存档并封禁该账号，无法恢复</div>
       <div class="fld"><label>输入密码确认</label><input id="spDel" type="password" placeholder="当前密码"></div>
       <button class="btn d blk" id="spDelGo">🗑 确认注销</button></div>
     <div class="card"><div class="card-t" style="color:var(--c-red-450)">永久删除账号 <span class="sub">物理删除 · 不可恢复</span></div>
-      <div class="lbl" style="text-align:left;color:var(--c-red-300)">与「注销」不同：<b>注销</b>只是停用并保留账号记录；<b>永久删除</b>会把账号、存档、索引、榜单条目全部物理删除，删除后任何界面都不再显示，且无法恢复。仅在你确定不再需要该账号时使用。</div>
       <div class="fld"><label>输入密码确认</label><input id="spPurge" type="password" placeholder="当前密码"></div>
       <button class="btn d blk" id="spPurgeGo">🔥 永久删除</button>
       <div class="lbl" id="spPurgeTip"></div></div>
@@ -4604,8 +4603,19 @@ r_tavern(p, tab) {
     if (p.noticeRead.length > 200) p.noticeRead = p.noticeRead.slice(-200);
     try { if (window.MAIN && MAIN.save) MAIN.save(); } catch (e) {}
   },
+  /* V1.3.80 内容安全：云端公告/邮件由运营自由输入，历史上出现过辱骂/测试脏文本
+   * 被直接渲染进玩家登录弹窗与邮件箱。渲染前统一过滤，词表集中一处便于维护。 */
+  pubBlocked(v) {
+    const t = String(v == null ? '' : v);
+    const W = ['傻逼', '煞笔', '沙比', '臭傻', '尼玛', '滚蛋', '去死', '测试公告', 'test_notice'];
+    return W.some((w) => t.indexOf(w) >= 0);
+  },
+  pubSafe(list) {
+    return (Array.isArray(list) ? list : []).filter((x) => x && !this.pubBlocked([x.n, x.t, x.title, x.body, x.b, x.desc].join(' ')));
+  },
+
   showNotice() {
-    const un = this.noticeUnread();
+    const un = this.pubSafe(this.noticeUnread());
     if (!un.length) return;
     /* 【PM 体验】公告不得打断战斗。
      * showNotice 由云端配置同步完成后异步触发（main.js startCfgSync 末尾），
@@ -4625,6 +4635,13 @@ r_tavern(p, tab) {
     } catch (e) {}
     /* 遮罩已被占用（例如「发现新版本」正弹着）→ 排队，等前一个关闭后再弹，
      * 否则会把前一个整份覆盖掉 */
+    /* 面板打开时不弹全屏公告：云端同步完成时机不可控，弹窗会盖住正在操作的面板 */
+    const _pn = document.getElementById('panel');
+    if (_pn && _pn.offsetParent !== null) {
+      clearTimeout(this._ntDefer);
+      this._ntDefer = setTimeout(() => { try { this.showNotice(); } catch (e) {} }, 1500);
+      return;
+    }
     if (this.maskQueue(() => this.showNotice())) return;
     const x = un[0];
     const KIND = { info: ['📢', '普通'], warn: ['⚠️', '重要'], hot: ['🎉', '活动'] };
@@ -4656,7 +4673,7 @@ r_tavern(p, tab) {
     box.style.display = 'flex';
   },
   r_notice(p, tab) {
-    const list = (typeof EX !== 'undefined' && Array.isArray(EX.NOTICE)) ? EX.NOTICE : [];
+    const list = this.pubSafe((typeof EX !== 'undefined' && Array.isArray(EX.NOTICE)) ? EX.NOTICE : []);
     p.noticeRead = Array.isArray(p.noticeRead) ? p.noticeRead : [];
     const esc = (v) => String(v == null ? '' : v).replace(/</g, '&lt;').replace(/>/g, '&gt;');
     if (!list.length) {
