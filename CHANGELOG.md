@@ -117,3 +117,29 @@
 
 ## V1.3.76（修 BUG / 小幅优化） · 2026-11-04
 - 技能卡删重复标题；修复排期双分支分叉（players 缺 V1.3.75）；uxdel 新增 R7/R8/K2 与变异验证
+
+## V1.3.77（修 BUG / 小幅优化） · 2026-11-05
+- 开工前错题提醒点名 10 条复发项（程序 ×4 线上漏传、测试 ×6 守卫假通过、运营 ×4 排期失真），本轮实测再次命中
+- 三项遗留异常清零：① 工具体检残快照（total=1）被显示成「可信0/1 不可信1」→ 快照带 complete 标记、条数不足判「残快照←需重跑✗」；② 埋点守卫判据 `/PASS (\d+)/` 与实际输出 `PASS=12` 脱节 → 判据抽为共享模块 tools/dashparse.cjs，看板与守卫同一份实现且纳入退出码；③ fullscan D3 拿 10-28 过期快照刷 3 条「待定性」→ 改按结构化实时判定
+- 深挖真缺陷：synccheck 的 `'\n'.join(diff)` 里 diff 元素是三元组，抛 TypeError 后被 `except Exception: pass` 静默吞掉，diff.txt 长期为空；D5「线上内容证」因此永远拿不到差异清单，任何以「diff.txt 为空」判线上一致的新判据都会变成假通过。修法：正确序列化 + 落 `_scan/synclast.json`（含显式 consistent 布尔与点名清单）+ 落盘异常显式判失败
+- fullscan D3 改为按 synclast.consistent 判定：一致判绿、不一致逐条点名并计入失败、基准过期显式报红，彻底清除「待定性」中性词
+- 顺带修三处：v123 A6 对 V1.3.73 版本规范重设的合法过渡豁免（此前长期挂 1 条 FAIL）；体检员支持 `=== FAIL 94/1 ===` 斜杠形态，不再把 94 条通过误读成 94 条失败；mutguard 并发锁按 /proc/<pid>/cmdline 核验实例身份，PID 被无关进程复用不再永久拒绝开工
+- 新增 tools/dashcons.cjs 19 项断言（含 10 组真实执行）与 tools/mutate_dashcons.cjs 6/6 变异捕获；第一版 D5 把锚点写在注释里，变异当场抓出假通过，已改为剥注释后校验代码
+- 28 个常驻工具全量重跑体检，快照 complete=true；v123 96/0、排期 115/0、dashcons 19/0、pushcov 7/0、biguard 12/0
+- 本轮零玩家可见改动：未动游戏逻辑、配色、布局与数值；三体验对账 UX（看板状态准确，不再误导制作人）/ DX（判据集中一处，工具输出格式演进不再需要人肉同步）/ AX（显式布尔、无中性词、崩溃即失败、变异可捕获）
+
+## V1.3.78（修 BUG / 小幅优化） · 2026-11-05
+- 真污染（本轮开工前查到）：mutguard 在「注入态」收到 SIGTERM 时，旧 handler 只清锁就 exit，try/finally 没机会执行，tools/push.py 的 `c01_jack.jpg` 上传条目被删后未还原。该条目是第 1 张角色立绘，若发布即线上 404。已还原并核对 md5 与变异前快照一致
+- 修法：登记当前注入态（文件/原文/md5），SIGTERM / SIGINT / exit 三条退出路径都先写回原文；finish() 发现与开工快照不一致时自动 restoreAll() 兜底恢复，且该批结论作废（不得判全绿、计入机读 FAIL）
+- 自证探针 `--selftest-signal` 不申请全局锁：此前看板固定项与全量变异同时跑会被锁拒绝开工，E1/E2/E3 一连串假失败，与 V1.3.74 修过的「前提未就绪混进缺陷计数」同源
+- 新增 tools/mutrestore.cjs 18 项断言（12 静态 + 6 真实执行，含真实起注入态子进程发 SIGTERM 验证写回）；mutate_mutrestore.cjs 6/6 变异捕获，还原逐字节一致。第一版 R3 判据被自证分支的同名代码顶包导致 M1 逃逸，已收紧为「主退出路径且清锁」形态后重新捕获
+- fullscan D5 判据修正：把 `tools/` 下检测工具源码里合法引用的特征串误判成「污染已进生产」，实测 4 条误报（synccheck.py / fullscan.cjs / dash.cjs / mutguard.cjs）。FEATS 本身就是判据表，工具必须引用它；这类文件不进玩家运行时，污染由 D1/D6 覆盖。玩家会加载的 js/、index.html、admin/、css/、data/zb/ 一个都不豁免，自证样本 js/ui.js 仍被真实抓出
+- 登记与覆盖：mutrestore / mutate_mutrestore 进 dash.cjs 常驻数组、toolaudit GUARDS、push.py 上传清单；看板新增固定项「变异中断还原守卫」，每轮必跑必报。排期登记 V1.3.78 并同步 main/players 双源（56→57 条）
+- 三体验对账：UX 零玩家可见改动，不破坏任何现有功能；DX 中断还原集中一处，工具输出格式演进不再需要人肉同步；AX 显式布尔、崩溃即失败、自证不抢锁、变异可捕获
+- 回归：roadmap 115/0、releaseguard 17/0、cacheguard 8/0、pushcov 7/0、dashcons 19/0、mutrestore 18/0、mutate_mutrestore 6/6、mutguard 全量 32/33（fullscan 基线待发布后复核）
+
+## V1.3.79（修 BUG / 小幅优化） · 2026-11-06
+- 收口上一轮欠账：清除测试污染假引用、资源守卫补文件存在证、体检快照别名旧账清理
+
+## V1.3.80（修 BUG / 小幅优化） · 2026-11-09
+- V1.3.80 视觉审查整改：内容安全过滤、活动卡片三列重做、空状态与文案精简、前后台布局对齐
