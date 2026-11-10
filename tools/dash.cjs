@@ -118,6 +118,9 @@ A('测试','检测工具体检',!ta?'未跑通✗':(!taComplete?'残快照←需
 const iop=(()=>{try{const r=require('child_process').spawnSync('node',['tools/interop.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:30000});
   const m=(r.stdout||'').match(/interop: PASS (\d+) \/ FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
 A('测试','交互操作性守卫',iop?(iop.f?`未过${iop.f}✗`:`PASS${iop.p}/0`):'未跑通✗');
+const i2=(()=>{try{const r=require('child_process').spawnSync('node',['tools/interop2.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:30000});
+const m=(r.stdout||'').match(/INTEROP2 PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','交互操作性(真实取证)',i2?(i2.f?`未过${i2.f}✗`:`PASS${i2.p}/0`):'未跑通✗');
 /* 【变异验证覆盖】—— 进度表固定项
  * 铁律：抓不住缺陷的断言等于不存在。只报「工具有多少条断言」没意义，
  * 必须报「多少条被证明过抓得住」。数字取最近一次实测轮次，未跑则显式写未验证，
