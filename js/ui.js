@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.83';
+const IMG_V = '1.3.84';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -2267,7 +2267,7 @@ r_tavern(p, tab) {
                       : '<span class="st off">未完成</span>')}</div>`;
         }).join('')}
       </div>
-      <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往任务</button>`;
+      <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往关卡</button>`;
     }
     if (tab === '成就') {
       return `${_head}<div class="card"><div class="card-t">成就
@@ -2307,7 +2307,7 @@ r_tavern(p, tab) {
                     : '<span class="st off">进行中</span>')}</div>`;
       }).join('')}
       </div>
-      <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往任务</button>`;
+      <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往关卡</button>`;
   },
   b_task(p, tab) {
     const ca = $('#taskClaimAll');
@@ -2640,22 +2640,26 @@ r_tavern(p, tab) {
          * 否则按钮照常可点，玩家点下去只弹一句提示，看着像按钮坏了。 */
         const ownMsg = this.shopOwned(p, g, tab);
         const noBuy = blocked || stamFull || passOn || !!ownMsg;
-        const btnTxt = stamFull ? '体力已满'
+        /* V1.3.84：限购已达上限时按钮仍显示「💎200」但灰着，玩家要读下面红字才知道原因。
+         * 与任务页「已领取」同口径：按钮自身就该说出状态，而不是让人去别处找解释。 */
+        const btnTxt = blocked ? '已达上限'
+          : stamFull ? '体力已满'
           : ownMsg ? (ownMsg.indexOf('背包') >= 0 ? '背包已满' : '已拥有')
           : passOn ? '已激活'
           : (g.price === 0 ? '免费领取' : (g.cur === 'diamond' ? '💎' : '🪙') + g.price);
-        return `<div class="gcell">
+        /* 描述里的「· 每日N次」是静态规则，底部状态行 lm.msg 是当天动态余量，
+         * 两者同时出现 = 同一件事说两遍。展示层剥离，配置数据不动。 */
+        const descShort = String(g.desc || '').replace(/\s*[·•]\s*每日\s*\d+\s*次\s*$/, '').trim();
+        return `<div class="gcell shop-cell">
           ${g.img ? `<img src="${g.img}">` : `<div class="gi">${g.icon}</div>`}
           <div class="gn">${g.n}${g.rmb ? `<span class="tag y" style="font-size:var(--fs-xs)">${g.rmb}</span>` : ''}</div>
-          ${g.desc ? `<div class="lbl" style="font-size:var(--fs-xs);line-height:1.3;margin:2px 0;
-            display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${g.desc}</div>` : ''}
+          ${descShort ? `<div class="lbl gd" title="${descShort}">${descShort}</div>` : ''}
           ${(E.isRechargeGoods && E.isRechargeGoods(g, tab) && !p.firstRech)
             ? `<div class="lbl" style="font-size:var(--fs-xs);color:var(--c-amber-100)">🎉 首充双倍 → 💎${Number(g.give.diamond) * 2}</div>` : ''}
-          <button class="btn sm" data-buy="${g.id}" ${(can && !noBuy) ? '' : 'disabled'}
-            style="font-size:var(--fs-xs);padding:3px 6px;margin-top:2px">
-            ${btnTxt}</button>
-          ${lm ? `<div class="lbl" style="font-size:var(--fs-xs);color:${lm.ok ? '#7ee38a' : '#ff8a8a'}">${lm.msg}</div>` : ''}
-          ${stamFull ? `<div class="lbl" style="font-size:var(--fs-xs);color:var(--c-red-400)">体力已满 ${Math.floor(p.stamina||0)}/${EX.STAMINA_MAX}</div>` : ''}
+          <div class="gbuy">
+            <button class="btn sm" data-buy="${g.id}" ${(can && !noBuy) ? '' : 'disabled'}>${btnTxt}</button>
+            <span class="gst ${(blocked || stamFull || !can) ? 'warn' : ''}">${lm ? lm.msg : (!can ? '货币不足' : '')}</span>
+          </div>
         </div>`;
       }).join('') : '<div class="lbl">暂无商品</div>'}</div>
     </div>`;
