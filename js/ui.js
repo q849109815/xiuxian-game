@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.84';
+const IMG_V = '1.3.86';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -266,7 +266,23 @@ const UI = {
     d.className = 'toast ' + (cls || ''); d.innerHTML = msg;
     emojify(d);
     box.appendChild(d); setTimeout(() => { if (d.remove) d.remove(); }, cls === 'boss' ? 2600 : 2000);
-    while (box.children.length > 4 && box.firstElementChild) box.firstElementChild.remove();
+    /* V1.3.86 操作性修复：多条 toast 向下堆叠时，第二条正好压在面板顶部
+     * 的货币栏 / 标题上（实测「购买成功」把「100.6万 💎9799」遮成「00.6万」）。
+     * 玩家刚买完东西却看不到余额 —— 反馈挡住了下一步的决策依据。
+     * 改为同屏只留最新一条（移动端 toast 通行做法）；连续点击的汇总反馈
+     * 已由 burst() 承担，不会因单条化丢失「一共点了几次」。 */
+    while (box.children.length > 1 && box.firstElementChild) box.firstElementChild.remove();
+  },
+
+  /* V1.3.86 导航逻辑：◀ 与 ✕ 此前语义不同却长得几乎一样，且无上级时
+   * 两者功能完全重复（都直接关闭面板）。现在只在「有上一级可回」时显示 ◀，
+   * 玩家看到它出现就知道能回上一级；没有上级时隐藏，只留右上角 ✕。
+   * 用 visibility 而非 display，保留 32px 占位，标题仍严格居中。 */
+  syncBack() {
+    const el = document.getElementById('pnBack'); if (!el) return;
+    const can = !!(this._pnStack && this._pnStack.length);
+    el.classList.toggle('no-up', !can);
+    el.title = can ? '返回上一级' : '';
   },
 
   /* ================= 基地主界面 ================= */
@@ -727,6 +743,7 @@ const UI = {
     const _sig = key + '|' + this.curTab[key];
     const _needTop = this._pnScrollSig !== _sig;
     $('#panel').classList.add('on');
+    this.syncBack();
     this.bind(key, this.curTab[key]);
     /* BUG：切页签 / 换面板 / 关掉再打开时【不重置滚动位置】。
      * 实测（393×852）：图鉴「怪物」页滚到底 scrollTop=208，切到「武器」页后仍停在 208；
@@ -762,7 +779,7 @@ const UI = {
     return false;
   },
   close() { $('#panel').classList.remove('on'); this.curPanel = null; this._pnScrollSig = null;
-    this._pnStack = [];
+    this._pnStack = []; this.syncBack();
     /* 关面板时把滚动位置一并归零：下次再打开（哪怕同一个面板同一个页签）
      * 都从顶部开始，不会残留上一次的滚动偏移。 */
     const bd = $('#pnBody'); if (bd) bd.scrollTop = 0; },
@@ -2219,7 +2236,34 @@ r_tavern(p, tab) {
     return out;
   },
 
-  /* ---------- 任务（截图：主线/日常/成就 + 黄色「前往任务」） ---------- */
+  /* ---------- 任务 ---------- */
+  /* V1.3.86 操作流程整改：未完成任务给「一步直达」，按条件类型映射到正确落点。
+   * 真实浏览器取证（_flowwalk_v1386 before）：日常页 5 条未完成、行内直达 0 个，
+   * 唯一的「前往关卡」在 y=1058（首屏 852 之外，要滚 223px）；点它一律落 level，
+   * 对「强化1次」(该去武器页) 与「无尽1次」(无尽卡片在 level 页 y=2263) 是错落点；
+   * 周常页 2 条未完成、入口 0 个。玩家看到「未完成」却没有任何下一步。
+   * 现在把行动放进每一行，并按 cond.t 分派；配合 open() 的返回栈，
+   * 形成「看任务 → 一步去完成 → ◀ 回任务 → 领取」闭环。 */
+  taskGo(t) {
+    const c = (t && t.cond && t.cond.t) || '';
+    if (c === 'login') return null;                       /* 登录即完成，没有可去的地方 */
+    /* V1.3.86b：真实浏览器补测（_flowwalk_v1386b）证明「落到对的面板」还不够。
+     * 「去强化」此前落 gun/武器库，而强化按钮 #gunUp 只在首个「强化」页签渲染，
+     * 玩家点完还要自己再切一次页签（取证 targetFound=false）；改为动态取首个页签，
+     * 运营热改 TXT_005 文案后也不会失效。
+     * 「去关卡/去扫荡」落 level 顶部，首个「挑战」按钮实测 top=956（首屏 852 外），
+     * 与「去无尽」同理补 focus，把当前章节第一关滚到眼前。 */
+    if (c === 'dailyUp') return { label: '去强化', key: 'gun', tab: this.PANELS.gun[1][0] };
+    if (c === 'dailyEndless' || c === 'endlessTime')
+      return { label: '去无尽', key: 'level', tab: '章节', focus: 'lvEndless' };
+    if (c === 'dailySweep') return { label: '去扫荡', key: 'level', tab: '章节', focus: 'lvFirst' };
+    return { label: '去关卡', key: 'level', tab: '章节', focus: 'lvFirst' };
+  },
+  taskGoBtn(t) {
+    const g = this.taskGo(t);
+    if (!g) return '<span class="st off">未完成</span>';
+    return `<button class="btn sm o" data-go="${g.key}" data-gtab="${g.tab || ''}" data-gfocus="${g.focus || ''}">${g.label}</button>`;
+  },
   r_task(p, tab) {
     const DONE = '✔';
     /* 任务表兜底：EX.tasks 被清空（后台误操作/空文件）时，
@@ -2241,13 +2285,16 @@ r_tavern(p, tab) {
            * 玩家再点只会弹出"已领取"，看着像按钮坏了。
            * 现在与成就页一致：已领取 → 显示"已领取"，不再给可点的按钮。 */
           const got = this._claimed(p, 'weekly', t.id);
-          return `<div class="zrow">
+          /* V1.3.86：t.desc 与标题逐字重复（「每周通关10关」/「本周通关 10 个关卡」），
+           * 行内按钮占宽后这行被省略号吞成「0/10 · 本周通…」——删重复而非挤布局。
+           * 注意：注释必须留在模板字符串外，否则会被渲染成玩家可见文字。 */
+          return `<div class="zrow zrow-go">
             <div class="zav">🏆</div>
-            <div class="zi"><b>${t.n}</b><span>${cur}/${need} · ${t.desc || ''}</span>
+            <div class="zi"><b>${t.n}</b><span>${cur}/${need}</span>
               <span class="rwRow">${this.rwIcons(t.rw)}</span></div>
             ${got ? '<span class="st on">已领取</span>'
               : (done ? `<button class="btn sm g" data-wq="${t.id}">领取</button>`
-                      : '<span class="st off">未完成</span>')}</div>`;
+                      : this.taskGoBtn(t))}</div>`;
         }).join('') || '<div class="lbl">暂无周常</div>'}
         
       </div>`;
@@ -2258,16 +2305,15 @@ r_tavern(p, tab) {
           const need = t.need || (t.cond ? t.cond.v : 1);
           const cur = E.taskProg(p, t), done = cur >= need;
           const got = this._claimed(p, 'daily', t.id);
-          return `<div class="zrow">
+          return `<div class="zrow zrow-go">
             <div class="zav">${this.taskIcon(t)}</div>
             <div class="zi"><b>${t.n}</b><span>${cur}/${need}</span>
               <span class="rwRow">${this.rwIcons(t.rw)}</span></div>
             ${got ? '<span class="st on">已领取</span>'
               : (done ? `<button class="btn sm g" data-dq="${t.id}">领取</button>`
-                      : '<span class="st off">未完成</span>')}</div>`;
+                      : this.taskGoBtn(t))}</div>`;
         }).join('')}
-      </div>
-      <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往关卡</button>`;
+      </div>`;
     }
     if (tab === '成就') {
       return `${_head}<div class="card"><div class="card-t">成就
@@ -2280,13 +2326,13 @@ r_tavern(p, tab) {
           const done = E.taskDone(p, a);
           const got = (p.achGot || {})[a.id] || done;
           const claimed = this._claimed(p, 'achieve', a.id);
-          return `<div class="zrow">
+          return `<div class="zrow zrow-go">
             <div class="zav">${this.taskIcon(a)}</div>
             <div class="zi"><b>${a.n}</b><span>${a.desc}</span>
               <span style="color:var(--yel)">成就点 +${a.rw.ach || 0}</span></div>
             ${claimed ? '<span class="st on">已领取</span>'
               : (done ? `<button class="btn sm g" data-aq="${a.id}">领取</button>`
-                      : '<span class="st off">未达成</span>')}</div>`;
+                      : this.taskGoBtn(a))}</div>`;
         }).join('')}</div>`;
     }
     /* 主线（截图：清除僵尸/通关关卡/收集材料/领取奖励 + 紫宝石金币奖励） */
@@ -2298,16 +2344,15 @@ r_tavern(p, tab) {
         /* 主线此前同样不判 mainClaimed：任务完成后按钮【永久停在"领取"】，
          * 点了永远回"已领取"。这里先判已领取，再判是否完成。 */
         const got = this._claimed(p, 'main', t.id);
-        return `<div class="zrow">
+        return `<div class="zrow zrow-go">
           <div class="zav">${this.taskIcon(t)}</div>
           <div class="zi"><b>${t.n}</b><span>${Math.min(cur, need)}/${need}</span>
             <span class="rwRow">${this.rwIcons(t.rw)}</span></div>
           ${got ? '<span class="st on">已领取</span>'
             : (done ? `<button class="btn sm g" data-mq="${t.id}">领取</button>`
-                    : '<span class="st off">进行中</span>')}</div>`;
+                    : this.taskGoBtn(t))}</div>`;
       }).join('')}
-      </div>
-      <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往关卡</button>`;
+      </div>`;
   },
   b_task(p, tab) {
     const ca = $('#taskClaimAll');
@@ -2326,14 +2371,23 @@ r_tavern(p, tab) {
         this.open('task'); this.home();
       } else this.toast(lastMsg || '没有可领取的任务奖励', 'err');
     };
-    const gb = $('#goTask');
     const asb = $('#toAchShop');
     if (asb) asb.onclick = () => this.open('ashop', '成就商店');
+    /* V1.3.86 行内直达：open() 会压返回栈（◀ 回任务面板），
+     * 有 focus 时把目标卡片滚到眼前。定位必须排在 open() 的 rAF 归零之后，
+     * 否则会被覆盖回顶部（实测「去无尽」会白跳一次）。 */
+    $$('#pnBody [data-go]').forEach((b) => { b.onclick = () => {
+      this.open(b.dataset.go, b.dataset.gtab || undefined);
+      const fc = b.dataset.gfocus;
+      if (fc) setTimeout(() => {
+        const el = document.getElementById(fc);
+        if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' });
+      }, 80);
+    }; });
     $$('#pnBody [data-aq]').forEach((b) => { b.onclick = () => {
       const r = E.claimTask(p, 'achieve', b.dataset.aq); this.toast(r.msg, r.ok ? 'ok' : 'err');
       if (r.ok) { if (window.SND) SND.play('pickup'); E.saveSoon(p); this.open('task'); this.home(); }
     }; });
-    if (gb) gb.onclick = () => { this.close(); this.open('level', '章节'); };
     $$('#pnBody [data-mq]').forEach((b) => { b.onclick = () => {
       const r = E.claimTask(p, 'main', b.dataset.mq); this.toast(r.msg, r.ok ? 'ok' : 'err');
       /* 音效此前只有 achieve / weekly 两个分支播，main / daily 漏接：
@@ -2647,6 +2701,13 @@ r_tavern(p, tab) {
           : ownMsg ? (ownMsg.indexOf('背包') >= 0 ? '背包已满' : '已拥有')
           : passOn ? '已激活'
           : (g.price === 0 ? '免费领取' : (g.cur === 'diamond' ? '💎' : '🪙') + g.price);
+        /* V1.3.85：售罄时按钮已写「已达上限」，状态行再写「今日已售罄」
+         * 是同一件事说两遍。改成告诉玩家「什么时候能再买」——这才是他
+         * 此刻真正需要的下一步信息；非周期型限购（关卡/BOSS/一次性）保留
+         * 原条件文案，因为那不是重复而是解锁条件。 */
+        const _period = { daily: '明日刷新', weekly: '下周刷新', monthly: '下月刷新' };
+        const stTxt = (blocked && _period[g.limit && g.limit.t]) ? _period[g.limit.t]
+          : (lm ? lm.msg : (!can ? '货币不足' : ''));
         /* 描述里的「· 每日N次」是静态规则，底部状态行 lm.msg 是当天动态余量，
          * 两者同时出现 = 同一件事说两遍。展示层剥离，配置数据不动。 */
         const descShort = String(g.desc || '').replace(/\s*[·•]\s*每日\s*\d+\s*次\s*$/, '').trim();
@@ -2658,7 +2719,7 @@ r_tavern(p, tab) {
             ? `<div class="lbl" style="font-size:var(--fs-xs);color:var(--c-amber-100)">🎉 首充双倍 → 💎${Number(g.give.diamond) * 2}</div>` : ''}
           <div class="gbuy">
             <button class="btn sm" data-buy="${g.id}" ${(can && !noBuy) ? '' : 'disabled'}>${btnTxt}</button>
-            <span class="gst ${(blocked || stamFull || !can) ? 'warn' : ''}">${lm ? lm.msg : (!can ? '货币不足' : '')}</span>
+            <span class="gst ${(blocked || stamFull || !can) ? 'warn' : ''}">${stTxt}</span>
           </div>
         </div>`;
       }).join('') : '<div class="lbl">暂无商品</div>'}</div>
@@ -2880,15 +2941,17 @@ r_tavern(p, tab) {
       if (g.limit) { try { E.giftMark(p, g); } catch (e) {} }
       E.save(p); if (!g.monthly && !g.pass) this.toast(EX.tip('popup.buyOk'), 'ok');
       if (window.SND) SND.play('get');
-      /* 买完不再"钉"在屏幕上：
-       * 此前无论这件商品还能不能买，一律 this.open('shop', tab) 重新把面板铺开，
-       * 玩家点了购买后看不到任何"结束"的反馈，面板一直挂在眼前；
-       * 叠加旧配置里 D2~D6 无限购，就成了「可以一直点、一直买下去」。
-       * 现在：该商品已达限购上限 → 关闭面板回到主界面（直接看到金币/钻石变化）；
-       *       还有剩余次数 → 就地刷新，方便接着买。 */
-      let soldOut = false;
-      if (g.limit) { try { const lm2 = E.giftCan(p, g); soldOut = !!(lm2 && !lm2.ok); } catch (e) { soldOut = false; } }
-      if (soldOut) { this.close(); } else { this.open('shop', tab); }
+      /* 买完统一原地刷新，不再把玩家踢出商城（V1.3.85 操作性整改）。
+       * 历史：V1.3.84 为「让玩家看到金币变化」，在商品达到限购上限时直接
+       *   this.close() 回主界面。真实走查（_flowwalk.cjs F5）发现这是纯打断：
+       *   每日页 6 件商品，买掉第一件每日限购 1 次的就被弹出面板，
+       *   想买第二件要重新点商城、再切回页签，多两步且没有任何提示。
+       *   而且 r_shop 卡片标题本来就显示「🪙 金币 · 💎 钻石」，原地刷新
+       *   这个数字立刻更新 —— 「必须关面板才看得到余额」的前提根本不成立。
+       * 现在：无论是否售罄都 this.open('shop', tab) 就地刷新；
+       *   售罄那件按钮自身写「已达上限」并禁用（V1.3.84 已做），
+       *   其余商品保持可点，操作流不中断。 */
+      this.open('shop', tab);
       this.home();
     }; });
     /* 月卡每日领取 */
@@ -3658,7 +3721,7 @@ r_tavern(p, tab) {
         </div>`).join('')}</div></div>`;
     })();
     return chBar + diffBar + csCard + `<div class="card">${chHead || `<div class="card-t">${cd.n}</div>`}
-      ${list.map((l) => {
+      ${list.map((l, li) => {
         const lock = !E.levelUnlocked(p, l.id);
         const st = E.diffStars(p, l.id, diff);
         const isBoss = l.cond === 'boss' || l.cond === 'bossAll';
@@ -3675,7 +3738,7 @@ r_tavern(p, tab) {
         const poolTxt = isBoss
           ? ' · ' + (Array.isArray(l.pool) ? l.pool : []).map((x) => (EX.zombies.find((z) => z.id === x) || {}).n).join('、')
           : '';
-        return `<div class="item"><div class="ic">${isBoss ? '👹' : '🎯'}</div>
+        return `<div class="item"${li === 0 ? ' id="lvFirst"' : ''}><div class="ic">${isBoss ? '👹' : '🎯'}</div>
           <div class="info"><div class="nm">${l.id} ${l.n} ${isBoss ? '<span class="tag r">BOSS</span>' : ''}
             ${st ? '<span class="tag" style="background:' + (E.diffDef(diff).color || '#5fd97a') + '33 !important">' + E.diffDef(diff).icon + '★' + st + '</span>' : ''}</div>
           <div class="sub wrap" style="letter-spacing:1px;color:${st ? (E.diffDef(diff).color || '#5fd97a') : 'inherit'}">${starTxt}</div>
@@ -3688,7 +3751,7 @@ r_tavern(p, tab) {
             : `<button class="btn c sm" data-lv="${l.id}" data-df="${diff}">挑战</button>`
             + (st ? `<button class="btn sm o" data-sw="${l.id}" style="margin-top:4px">扫荡</button>` : '')}</div></div>`;
       }).join('')}</div>
-      <div class="card"><div class="card-t">无尽模式</div>
+      <div class="card" id="lvEndless"><div class="card-t">无尽模式</div>
       ${(() => {
         /* 解锁口径统一走 E.endlessUnlocked（读 EX.ENDLESS_UNLOCK）。
          * 此前 UI 写死「默认解锁」，配置项在后台改了界面也不认，属配置陷阱。 */
