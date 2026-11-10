@@ -1,0 +1,138 @@
+{
+  "tag": "v1386_after2",
+  "ready": true,
+  "steps": {
+    "G1_日常页未完成入口": {
+      "rows": 6,
+      "unfinished": 0,
+      "inlineGo": 5,
+      "hasGoTask": false,
+      "goTaskText": "",
+      "goTaskTop": null,
+      "viewportH": 852,
+      "goTaskInFirstScreen": false,
+      "offNames": []
+    },
+    "G2_笼统按钮需滚动": {
+      "scrollTop": 23,
+      "scrollHeight": 784,
+      "clientHeight": 761,
+      "goTaskVisible": false
+    },
+    "G3_笼统按钮落点": {
+      "landed": "task",
+      "tab": "日常",
+      "title": "任务"
+    },
+    "G4_无尽入口可见性": {
+      "hasEndlessCard": false,
+      "cardTop": null,
+      "viewportH": 852,
+      "inFirstScreen": false
+    },
+    "G5_周常页入口": {
+      "rows": 2,
+      "unfinished": 0,
+      "hasInlineGo": 2,
+      "hasGoTask": false,
+      "buttons": [
+        "一键领取全部（3）",
+        "去关卡",
+        "去关卡"
+      ],
+      "leakedComment": false
+    },
+    "G6_返回闭环": {
+      "jumped": "level",
+      "backReturned": true,
+      "landed": "task",
+      "tab": "日常"
+    },
+    "G7_四页签行内入口": [
+      {
+        "tab": "主线",
+        "unfinishedBtns": 1,
+        "labels": [
+          "去关卡"
+        ],
+        "keys": [
+          "level"
+        ],
+        "focus": [
+          "lvFirst"
+        ]
+      },
+      {
+        "tab": "日常",
+        "unfinishedBtns": 5,
+        "labels": [
+          "去关卡",
+          "去强化",
+          "去扫荡",
+          "去无尽"
+        ],
+        "keys": [
+          "level",
+          "gun"
+        ],
+        "focus": [
+          "lvFirst",
+          "lvEndless"
+        ]
+      },
+      {
+        "tab": "周常",
+        "unfinishedBtns": 2,
+        "labels": [
+          "去关卡"
+        ],
+        "keys": [
+          "level"
+        ],
+        "focus": [
+          "lvFirst"
+        ]
+      },
+      {
+        "tab": "成就",
+        "unfinishedBtns": 4,
+        "labels": [
+          "去关卡",
+          "去无尽"
+        ],
+        "keys": [
+          "level"
+        ],
+        "focus": [
+          "lvFirst",
+          "lvEndless"
+        ]
+      }
+    ],
+    "G8_点击落点与返回": {
+      "up": {
+        "landed": "gun",
+        "tab": "强化"
+      },
+      "endless": {
+        "landed": "level",
+        "focusTop": 654,
+        "inFirstScreen": true
+      },
+      "back": {
+        "returned": true,
+        "landed": "task",
+        "tab": "日常"
+      }
+    },
+    "G9_领取绑定未破坏": {
+      "[data-dq]": true,
+      "[data-mq]": "no-button",
+      "[data-wq]": "no-button",
+      "[data-aq]": "no-button",
+      "claimAll": true
+    }
+  },
+  "errs": [],
+  "errCount": 0
+}
