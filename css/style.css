@@ -2556,3 +2556,21 @@ b { font-weight: var(--fw-semibold) !important; }
 
 .hm-cur img:not([src]){display:none}
 .hm-cur .cu img{width:15px;height:15px;object-fit:contain}
+
+
+/* ==================== V1.3.82 视觉复核整改（真实截图逐屏看） ====================
+ * S1 兑换商店：.zi>span 全局单行省略把「限购 N（已兑 M）」吞成「限购…」，
+ *    限购是有效信息，不能靠删字了事 —— 拆成价格/限购两行并允许换行。
+ * S2 侧栏页签：「成就商店」被压成两行竖排，改为不换行 + 侧栏加宽。
+ * S3 空状态卡片：无邮件/无公告时不再只有顶部一小块，卡片本身给足高度。
+ */
+.zrow.shop-row .zi>span{white-space:normal;overflow:visible;text-overflow:clip}
+.zrow.shop-row .zi .zr-cost{color:var(--c-amber-100);font-weight:var(--fw-semibold)}
+.zrow.shop-row .zi .zr-meta{color:var(--txt3)}
+#panel[data-tp="side"] .pt{white-space:nowrap;flex:0 0 auto;min-width:56px}
+.card>.empty{min-height:180px}
+
+/* V1.3.82 二轮细修（真实截图复核后）：侧栏 4 字页签不再竖排；空态卡片不再半屏空 */
+#panel[data-tp="side"] .pn-tabs{flex:0 0 88px !important}
+#panel[data-tp="side"] .pt{font-size:11px !important;white-space:nowrap !important;padding:6px 2px !important}
+.card>.empty{min-height:280px}
