@@ -66,7 +66,7 @@ async function pwdOK(pwd) {
  * 做法与前端 ui.js 的 emojify 相同：渲染后遍历文本节点就地换成 <img class="ai">。
  * 未收录的 emoji 原样保留（不会变空白、不会报错），所以是渐进式的。
  * =================================================================== */
-const AIMG_V = '1.3.81';
+const AIMG_V = '1.3.82';
 const AICON = {
   '💰': 'i_gold.jpg', '💎': 'i_diamond.jpg', '⚡': 'i_stamina.jpg',
   '🏆': 'nav_rank.png', '🎁': 'sh01_gift.jpg', '📦': 'd3_box.jpg',
@@ -588,12 +588,12 @@ const APP = {
       const p = this.pages[k];
       (g[p.g] = g[p.g] || []).push({ k, n: p.n, i: p.i });
     });
-    let h = `<div class="nav-t">角 色</div><div style="padding:2px 10px 8px">
+    let h = `<div style="padding:2px 10px 8px">
       <select id="roleSel" style="width:100%;padding:5px;font-size:12px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px">
       ${Object.keys(PERM.ROLES).map((r) => `<option value="${r}"${PERM.curRole() === r ? ' selected' : ''}>${PERM.ROLES[r].n}</option>`).join('')}
       </select></div>`;
     Object.keys(g).forEach((gn) => {
-      h += `<div class="nav-t">${U.esc(gn)}</div>`;
+      h += `<div class="nav-sep"></div>`;
       g[gn].forEach((it) => {
         h += `<button class="nv" data-pg="${it.k}"><i>${it.i}</i><span>${U.esc(it.n)}</span></button>`;
       });
@@ -656,9 +656,8 @@ const APP = {
     });
     /* 加载进度条：读 200 份存档要几十秒，不提示会被误认为"读不到玩家" */
     const pg = this.LOAD_PROG;
-    const bar = (pg && pg.total)
-      ? `<div class="card" style="padding:8px 12px"><div class="lbl">
-           ⟳ 正在拉取玩家存档 ${pg.done}/${pg.total} …</div></div>` : '';
+    const bar = (pg && pg.total && pg.done < pg.total)
+      ? `<div class="ld-bar"><i style="width:${Math.round(pg.done / pg.total * 100)}%"></i></div>` : '';
     try {
       b.innerHTML = '<div class="ph"><h2>' + U.esc(p.n) + '</h2></div>' + bar + p.render.call(this);
     admEmojify(b);
