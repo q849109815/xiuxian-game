@@ -17,11 +17,18 @@ try {
   if (!aft.screens || !bef.screens) throw new Error('取证 JSON 缺失，需先跑 _opshot.cjs before/after');
 
   // ---- 源码锚点（可被变异验证命中）----
-  ok((ui.match(/id="goTask"[^>]*>前往关卡</g) || []).length === 2, 'S1 任务面板两处按钮文案=前往关卡',
-    '匹配数=' + (ui.match(/id="goTask"[^>]*>前往关卡</g) || []).length);
+  /* V1.3.86 判据升级（不是删除）：原 S1/S2 守的是「按钮文案与落点一致」，
+   * 当时靠两个 goTask=前往关卡 实现；现在改为每条未完成任务的「行内直达」，
+   * 按 cond.t 分派到正确面板，原目的由更严格的判据承接。 */
+  ok(!/id="goTask"/.test(ui) && !/>前往关卡</.test(ui) && /taskGo\(t\)\s*\{/.test(ui) &&
+     (ui.match(/this\.taskGoBtn\([ta]\)\)\}/g) || []).length >= 4,
+    'S1 任务面板改为四页签行内直达（无笼统按钮）',
+    'goTask 残留=' + /id="goTask"/.test(ui) + ' taskGoBtn 数=' + (ui.match(/this\.taskGoBtn\([ta]\)\)\}/g) || []).length);
   ok(!/>前往任务</.test(ui), 'S3 全站不再有「前往任务」按钮', '仍存在');
-  const gh = (ui.match(/gb\.onclick\s*=\s*\(\)\s*=>\s*\{([^}]*)\}/) || [])[1] || '';
-  ok(/open\('level'/.test(gh), 'S2 按钮行为=打开关卡选择', 'handler=' + gh.trim());
+  ok(/\$\$\('#pnBody \[data-go\]'\)\.forEach/.test(ui) &&
+     /this\.open\(b\.dataset\.go, b\.dataset\.gtab \|\| undefined\)/.test(ui) &&
+     /key: 'gun'/.test(ui) && /focus: 'lvEndless'/.test(ui),
+    'S2 行内按钮按任务类型 open 对应面板', '绑定或分派缺失');
   ok(/btnTxt\s*=\s*blocked\s*\?\s*'已达上限'/.test(ui), 'S4 限购达上限时按钮直说状态', '缺 blocked 分支');
   ok(/const descShort[\s\S]{0,220}replace\(\/\\s\*\[·•\]/.test(ui), 'S5 描述静态限购后缀被剥离', '缺 descShort 剥离');
   ok(/class="lbl gd" title="\$\{descShort\}"\>\$\{descShort\}/.test(ui), 'S6 渲染改用 descShort', '仍直接用 g.desc');
@@ -44,9 +51,12 @@ try {
     'R5 价格按钮文案非空', '存在空按钮');
   ok(cells.length > 0 && cells.every(x => x.gstW > 20),
     'R7 限购状态行真实可见（宽度>20px，不是被挤成 0）', 'gstW=' + cells.map(x => x.gstW).join(','));
-  const tt = aft.screens.taskText || '';
-  ok(/前往关卡/.test(tt) && !/前往任务/.test(tt),
-    'R6 任务页真实渲染文案与行为一致', 'taskText 不含前往关卡或仍含前往任务');
+  /* V1.3.86：原 R6/A4 消费 V1.3.84 的旧快照，产品改了它却仍报绿 ——
+   * 这是「取证过期冒充当前状态」的复发错题，改为消费本轮真实取证。 */
+  const TF = J('_vis/_v1386_after2.json') || {}, TS = TF.steps || {};
+  const g7 = TS['G7_四页签行内入口'] || [];
+  ok(g7.length === 4 && g7.every(x => x.unfinishedBtns > 0),
+    'R6 四个任务页签真实渲染均有直达按钮', JSON.stringify(g7.map(x => x.tab + ':' + x.unfinishedBtns)));
 
   // ---- 前后对比 ----
   const bh = (bef.screens.shopCells || []).map(x => x.h), ah = cells.map(x => x.h);
@@ -57,9 +67,10 @@ try {
   ok(dupB > 0 && dupA === 0, 'A2 重复文案从 ' + dupB + ' 处归零', 'after dup=' + dupA);
   ok((aft.feErrors || []).length === 0 && (aft.beErrors || []).length === 0,
     'A3 整改后前后台真实渲染 0 报错', 'fe=' + (aft.feErrors || []).length + ' be=' + (aft.beErrors || []).length);
-  const gp = aft.paths && aft.paths.goTask || {};
-  ok(gp.found && /关卡/.test(gp.label) && gp.landed === 'level',
-    'A4 点击路径：文案=关卡、落点=关卡选择', JSON.stringify(gp));
+  const g8 = TS['G8_点击落点与返回'] || {};
+  ok(g8.up?.landed === 'gun' && g8.endless?.landed === 'level' &&
+     g8.endless?.inFirstScreen === true && g8.back?.landed === 'task',
+    'A4 点击路径：按类型落点 + 无尽聚焦首屏 + ◀ 回任务', JSON.stringify(g8));
   const bBtn = (bef.screens.shop_daily || {}).visibleButtons || 0;
   const aBtn = (aft.screens.shop_daily || {}).visibleButtons || 0;
   ok(bBtn === aBtn, 'A5 按钮总数不变（未破坏现有功能）', 'before=' + bBtn + ' after=' + aBtn);
