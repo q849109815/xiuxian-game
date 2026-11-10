@@ -253,6 +253,10 @@ FILES = [
     # 版本排期（V1.2.3）：后台维护后下发到云端，玩家端「设置→前瞻」直接读取。
     # 与美术资源同理 —— 不登记就永远「本地有、线上无」，玩家看到的仍是内置排期。
     'data/zb/roadmap.json',
+    'tools/visualshot.cjs',
+    'tools/visualgrid.py',
+    'tools/vis2.cjs',
+    'tools/mutate_vis2.cjs',
     'tools/acguard.cjs',
     'tools/adm.cjs',
     'tools/bi_retention.cjs',
