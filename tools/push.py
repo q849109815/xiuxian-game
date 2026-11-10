@@ -393,6 +393,29 @@ FILES = [
     'tools/mistakes.json',
     'tools/visguard.cjs',
     'tools/mutate_visguard.cjs',
+    'tools/flowguard.cjs',
+    'tools/mutate_flowguard.cjs',
+    'tools/_flowwalk.cjs',
+    # V1.3.86 任务链守卫三件从未登记（上轮周报称已登记，实测只在 flowguard 上成立）：
+    # 补登后线上才会真正跑「看到未完成任务能不能一步走到该做的事」这条判据。
+    'tools/taskflow.cjs',
+    'tools/mutate_taskflow.cjs',
+    'tools/_flowwalk_v1386.cjs',
+    # V1.3.86b 操作流程补测：落点对 ≠ 一步到位（目标控件首屏可见性）
+    'tools/taskflow2.cjs',
+    'tools/mutate_taskflow2.cjs',
+    'tools/_flowwalk_v1386b.cjs',
+    # 常驻守卫消费的 6 份真实 Chrome 取证快照此前一个都没登记：
+    # 线上跑 flowguard/interop2/taskflow/taskflow2/visguard 必然「取证缺失 → 需重跑」，
+    # 看板长期显示未跑通的根因之一。补登后线上守卫可自证。
+    '_vis/_flowwalk_final2.json',
+    '_vis/_opaudit_after.json',
+    '_vis/_opaudit_before.json',
+    '_vis/_v1386_after2.json',
+    '_vis/_v1386b_fix.json',
+    '_vis/meta.json',
+    '制作人周报_V1.3.86_操作流程补测与发布收尾.md',
+    '制作人周报_V1.3.85_操作流程走查.md',
     '制作人周报_V1.3.7211111111_主菜单重做与选中态修正.md',
 ]
 
