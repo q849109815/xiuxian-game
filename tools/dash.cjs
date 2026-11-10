@@ -37,7 +37,7 @@ const antiCheat=/antiCheat|cheat|哨兵|anomaly/i.test(R('js/main.js')+cfg);
 const adm=R('admin/index.html')+R('admin/js/core.js')+R('admin/js/pages.js');
 const funnel=/funnel|漏斗|dau_retention|留存/i.test(adm);
 
-const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs','uxdel.cjs','dashparse.cjs','dashcons.cjs','mutate_dashcons.cjs','mutrestore.cjs','mutate_mutrestore.cjs'];
+const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs','uxdel.cjs','dashparse.cjs','dashcons.cjs','mutate_dashcons.cjs','mutrestore.cjs','mutate_mutrestore.cjs','vis2.cjs'];
 const tOk=tools.filter(t=>ex('tools/'+t)).length;
 
 /* 【玩家可感知交叉验证】—— 进度表固定项，每轮必跑
