@@ -2041,7 +2041,7 @@ const PAGES = {
         const NOT_READ = wired();
         const seg = (k, n) => `<button class="${t === k ? 'on' : ''}" data-a="tab" data-k="${k}">${n}</button>`;
         const body = t === 'goods'
-          ? `<div id="spBox" style="margin-top:10px"><div class="empty"><button class="btn" data-a="shpReload">⟳ 刷新商品</button></div></div>`
+          ? `<div id="spBox" style="margin-top:10px"><div class="empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:220px"><span style="font-size:34px;opacity:.45">🛒</span><button class="btn pri" data-a="shpReload">⟳ 刷新商品</button></div></div>`
           : `
              <div class="fr"><label class="wide">订单号</label><input id="od_id" placeholder="订单号"></div>
              <div class="fr"><label class="wide">UID</label><input id="od_uid" placeholder="玩家 UID"></div>
