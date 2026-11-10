@@ -2574,3 +2574,14 @@ b { font-weight: var(--fw-semibold) !important; }
 #panel[data-tp="side"] .pn-tabs{flex:0 0 88px !important}
 #panel[data-tp="side"] .pt{font-size:var(--fs-xs) !important;white-space:nowrap !important;padding:6px 2px !important}
 .card>.empty{min-height:280px}
+
+/* V1.3.84 操作性整改：商店卡片 */
+/* 作用域限定：避免误伤背包/角色/图鉴等复用 .gcell 的面板 */
+.gcell.shop-cell{display:flex;flex-direction:column;align-items:center}
+.gcell.shop-cell img{width:52%;max-width:64px;max-height:64px;aspect-ratio:1/1;object-fit:contain;margin:var(--sp-half) 0 var(--sp-0)}
+.gcell.shop-cell .gd{font-size:var(--fs-xs);line-height:1.25;margin:0 0 var(--sp-half);min-height:0;text-align:center;width:100%;
+  display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gcell.shop-cell .gbuy{display:flex;flex-direction:column;align-items:center;gap:var(--sp-half);margin-top:auto;width:100%}
+.gcell.shop-cell .gbuy .btn{flex:0 0 auto;width:100%;font-size:var(--fs-xs);padding:var(--sp-half) var(--sp-1);margin:0;white-space:nowrap;min-height:0;line-height:1.25;border-color:var(--c-amber-350);color:var(--c-amber-100);box-shadow:0 0 0 1px var(--c-amber-350) inset}
+.gcell.shop-cell .gst{width:100%;text-align:center;font-size:var(--fs-xs);color:var(--c-green-400);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gcell.shop-cell .gst.warn{color:var(--c-red-400)}
