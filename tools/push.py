@@ -257,6 +257,8 @@ FILES = [
     'tools/visualgrid.py',
     'tools/vis2.cjs',
     'tools/mutate_vis2.cjs',
+    'tools/interop.cjs',
+    'tools/mutate_interop.cjs',
     'tools/acguard.cjs',
     'tools/adm.cjs',
     'tools/bi_retention.cjs',
@@ -537,7 +539,36 @@ def mark_released():
     print('[版本闸门] 已记录本次发布基线 V%s' % v)
 
 
+def mut_gate():
+    """【V1.3.83】发布前变异并发闸门。
+    事故形态（本轮实测）：mutguard 全量实例在后台跑时，会周期性往真实源码
+    注入缺陷再还原。若恰在此刻发布，瞬时污染会被传到线上，而事后哨兵查不到
+    （文件早已还原）—— 同时 adm 审计会刷出 32 条假破图，真假信号混在一起。
+    规矩：锁存在且持锁进程存活 → 一律中止，等它自己跑完；不强杀，强杀会留污染。
+    """
+    lp = os.path.join(ROOT, 'zombie', 'tools', '.mutguard.lock')
+    if not os.path.exists(lp):
+        return True
+    try:
+        pid = int(open(lp).read().strip())
+    except Exception:
+        return True
+    try:
+        os.kill(pid, 0)                 # 只探测存活，不发信号
+    except ProcessLookupError:
+        print('[并发闸门] 过期锁（PID %d 已退出），忽略' % pid)
+        return True
+    except OSError:
+        pass                            # 权限不足等：保守判「仍活着」
+    print('[并发闸门] ✗ mutguard 实例仍在运行（PID %d），拒绝发布。' % pid)
+    print('           它会周期性把缺陷注入真实源码，此刻上传会把污染带到线上。')
+    print('           等它结束、mutsentinel 全绿后再发；不要强杀（强杀会留污染）。')
+    return False
+
+
 def push(msg):
+    if not mut_gate():
+        return
     bad = check()
     if not bad:
         print('\n全部一致，无需上传')
