@@ -20,6 +20,13 @@ const ROOT = '/data/workspace/zombie';
 const R = p => fs.readFileSync(ROOT + '/' + p, 'utf8');
 const md5 = s => crypto.createHash('md5').update(s).digest('hex');
 const md5f = p => md5(fs.readFileSync(ROOT + '/' + p));
+/* 【V1.3.83】版本戳锚点必须跟着当前版本走。
+ * 事故形态：REG 里写死 `?v=1.3.7`，升到 1.3.83 后该串查无此物，
+ * mutsentinel 的 S1 锚点证误判「未还原/污染」，mutguard 直接拒绝开工 ——
+ * 每升一次版，整套变异验证就静默停摆一次（AX：工具不报错但也不干活）。
+ * 从 index.html 第一处 ?v= 动态取，保证锚点永远命中；to 仍写死一个旧版本，
+ * 注入后四处版本号不一致，cycle.cjs 必须抓出来。 */
+const CURV = (() => { const m = R('index.html').match(/\?v=([\d.]+)/); return m ? m[1] : ''; })();
 
 /**
  * 注册表：每条守卫声明它「保护什么」以及「注入什么缺陷」
@@ -188,7 +195,7 @@ const REG = [
    * 它同时核对四处版本号是否一致；把 index.html 的版本戳改回上一版，
    * 若它抓不出来，所谓「闭环」就只是个状态机，管不住真实发布。 */
   { guard: 'cycle.cjs', file: 'index.html',
-    from: '?v=1.3.7', to: '?v=1.3.6', nth: 1, allowInString: true,
+    from: '?v=' + CURV, to: '?v=1.3.6', nth: 1, allowInString: true,
     label: 'index.html 版本戳回退 → 四处版本号不一致，闭环应拒绝' },
 
   /* V1.3.8 补录（本轮真事故）：js/ui.js:2038 长期躺着 `if (window.__MUT) return;`
