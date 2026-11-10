@@ -36,6 +36,10 @@ const CURV = (() => { const m = R('index.html').match(/\?v=([\d.]+)/); return m 
  *   label  : 缺陷描述
  */
 const REG = [
+  { guard: 'flowguard.cjs', file: 'js/ui.js',
+    from: "const _period = { daily: '明日刷新', weekly: '下周刷新', monthly: '下月刷新' };",
+    to: "const _period = { daily: '今日已售罄', weekly: '今日已售罄', monthly: '今日已售罄' };",
+    label: 'V1.3.85 售罄状态行恢复重复文案 → 玩家不知道何时能再买' },
   // ---------- 架构层 ----------
   { guard: 'archguard.cjs', file: 'css/tokens.css',
     from: '--sp-1:', to: '--sp-1-X:', label: '删掉一个间距令牌定义' },
