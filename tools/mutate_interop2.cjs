@@ -14,7 +14,9 @@ const md5 = b => crypto.createHash('md5').update(b).digest('hex');
 const origU = fs.readFileSync(U), origC = fs.readFileSync(C);
 const hU = md5(origU), hC = md5(origC);
 const M = [
-  { n: 'M1 文案改回「前往任务」', file: U, from: /id="goTask"[^>]*>前往关卡</g, to: 'id="goTask" style="width:100%;margin-top:8px">前往任务<', expect: 'S1' },
+  /* V1.3.86：goTask 已从产品移除，原 M1 注入会命中 0（假变异）。
+   * 改为把任务行内直达退回静态「未完成」，验证升级后的 S1 真能抓到。 */
+  { n: 'M1 任务页签改回静态未完成（无直达）', file: U, from: 'this.taskGoBtn(t)', to: "'<span class=\"st off\">未完成</span>'", expect: 'S1' },
   { n: 'M2 取消描述去重', file: U, from: "const descShort = String(g.desc || '').replace(/\\s*[·•]\\s*每日\\s*\\d+\\s*次\\s*$/, '').trim();", to: "const descShort = String(g.desc || '').trim();", expect: 'S5' },
   { n: 'M3 限购达上限不再写状态', file: U, from: /const btnTxt = blocked \? '已达上限'/, to: "const btnTxt = stamFull ? '体力已满'", expect: 'S4' },
   { n: 'M4 价格与状态拆回两行', file: U, from: '<div class="gbuy">', to: '<div class="gbuy-x">', expect: 'S7' },
