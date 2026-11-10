@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.81';
+const IMG_V = '1.3.82';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -3154,7 +3154,7 @@ r_tavern(p, tab) {
      * 玩家打开邮件箱第一眼看到的是最旧的一封。这里去掉多余的反转。 */
     const ms = this.pubSafe((p.mail || []).slice());
     const un = ms.filter((m) => !m.got && this.mailActive(m)).length;
-    return `<div class="card"><div class="card-t">邮件 <b class="ct-n">${un} 封未读</b></div>
+    return `<div class="card">${un ? `<div class="card-t"><b class="ct-n">${un} 封未读</b></div>` : ''}
       ${ms.length ? ms.map((m) => {
         const act = this.mailActive(m);
         const exp = m.expireAt && m.expireAt < (typeof AUTH_NOW === 'function' ? AUTH_NOW() : Date.now());
@@ -3166,8 +3166,8 @@ r_tavern(p, tab) {
         ${m.got ? '<span class="st off">已领</span>'
           : (act ? `<button class="btn sm g" data-ml="${m.id || ''}">领取</button><i class="gdot"></i>`
                  : '<span class="st off">不可领</span>')}
-      </div>`; }).join('') : '<div class="lbl">暂无邮件</div>'}
-      <button class="btn g" id="mailAll" style="width:100%;margin-top:8px">一键领取</button>
+      </div>`; }).join('') : '<div class="empty">暂无邮件</div>'}
+      ${un ? '<button class="btn g" id="mailAll" style="width:100%;margin-top:8px">一键领取</button>' : ''}
     </div>`;
   },
   /* ---------- 排行榜（含表33排名奖励） ---------- */
@@ -3891,8 +3891,8 @@ r_tavern(p, tab) {
     const list = isAch ? (EX.achShop || []) : (EX.eventShop || []);
     const curName = isAch ? '成就点' : '活动代币';
     const curVal = isAch ? (p.ach || 0) : (p.evToken || 0);
-    return `<div class="card"><div class="card-t">${tab}
-      <span class="sub">持有 <b style="color:var(--yel)">${E.fmt(curVal)}</b> ${curName}</span></div>
+    return `<div class="card"><div class="card-t">${tab}</div>
+      <div class="sub" style="padding:2px 2px 6px">持有 <b style="color:var(--yel)">${E.fmt(curVal)}</b> ${curName} · ${isAch ? '每日/每周/每月' : '每日/活动期'}刷新</div>
       ${list.map((it) => {
         const bought = isAch ? E.achShopBought(p, it.id)
           : (() => { const b = p.evShopBuy || {}, k = 'es_' + it.id; return b[k] ? b[k].n : 0; })();
@@ -3914,14 +3914,13 @@ r_tavern(p, tab) {
         }
         const stOver = stRoom >= 0 && (Math.max(0, Number(it.give.stamina) || 0) > stRoom);
         const can = curVal >= it.cost && !full && !locked && !ownMsg && !stOver;
-        return `<div class="zrow">
+        return `<div class="zrow shop-row">
           <div class="zav">${it.t === '芯片' ? '💠' : it.t === '碎片' ? '🧩' : it.t === '皮肤' ? '👕' : it.t === '称号' ? '🏅' : '📦'}</div>
-          <div class="zi"><b>${it.n}</b><span>${it.cost} ${curName} · 限购 ${it.limit}（已兑 ${bought}）${locked ? ' · <span style="color:var(--c-red-300)">需通关 ' + it.need + ' 关</span>' : ''}</span></div>
+          <div class="zi"><b>${it.n}</b><span class="zr-cost">${it.cost} ${curName}</span><span class="zr-meta">限购 ${it.limit} · 已兑 ${bought}${locked ? ' · <span style="color:var(--c-red-300)">需通关 ' + it.need + ' 关</span>' : ''}</span></div>
           <button class="btn sm ${can ? '' : 'd'}" data-buy="${it.id}" ${can ? '' : 'disabled'}>${ownMsg ? (ownMsg.indexOf('背包') >= 0 ? '背包已满' : '已拥有') : (stOver ? '体力将溢出' : '兑换')}</button>
         </div>`;
       }).join('')}
-      <div class="sub" style="padding:6px 2px">限购按 ${isAch ? '每日/每周/每月' : '每日/活动期'} 刷新。</div>
-    </div>`;
+      </div>`;
   },
   b_ashop(p, tab) {
     const isAch = tab === '成就商店';
