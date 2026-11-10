@@ -2572,5 +2572,5 @@ b { font-weight: var(--fw-semibold) !important; }
 
 /* V1.3.82 二轮细修（真实截图复核后）：侧栏 4 字页签不再竖排；空态卡片不再半屏空 */
 #panel[data-tp="side"] .pn-tabs{flex:0 0 88px !important}
-#panel[data-tp="side"] .pt{font-size:11px !important;white-space:nowrap !important;padding:6px 2px !important}
+#panel[data-tp="side"] .pt{font-size:var(--fs-xs) !important;white-space:nowrap !important;padding:6px 2px !important}
 .card>.empty{min-height:280px}
