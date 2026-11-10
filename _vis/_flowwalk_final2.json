@@ -1,0 +1,116 @@
+{
+  "F1_任务批量入口": {
+    "panel": "task",
+    "tab": "日常",
+    "batch": true,
+    "label": "一键领取全部（3）"
+  },
+  "F2_批量领取反馈": {
+    "before": "一键领取全部（3）",
+    "batchGone": true,
+    "toast": "已领取 3 项任务奖励",
+    "panelStillOpen": true
+  },
+  "F3_返回上级导航": {
+    "from": "role",
+    "jumped": "gun",
+    "backReturned": true,
+    "landed": "role",
+    "tab": "装备",
+    "open": true
+  },
+  "F4_页签记忆": {
+    "remembered": "直购",
+    "title": "商店"
+  },
+  "F5_购买反馈": {
+    "id": "D1",
+    "goldBefore": 1000699,
+    "goldAfter": 1005699,
+    "btnBefore": "200",
+    "btnAfter": "已达上限",
+    "disabled": true,
+    "panelOpen": true,
+    "curPanel": "shop",
+    "otherBuyable": 5,
+    "toast": "已领取 3 项任务奖励购买成功"
+  },
+  "F6_购买后滚动": {
+    "cap": 0,
+    "before": 0,
+    "after": 0
+  },
+  "F7_邮件单封领取": {
+    "singles": 2,
+    "bound": [
+      {
+        "id": "fw1",
+        "hasOnclick": true
+      },
+      {
+        "id": "fw2",
+        "hasOnclick": true
+      }
+    ],
+    "all": true
+  },
+  "BE_READY": {
+    "pages": [
+      "account",
+      "psave",
+      "ops",
+      "rank",
+      "mail",
+      "cdkey",
+      "cfg",
+      "server",
+      "bi",
+      "hotfix",
+      "shop",
+      "ad",
+      "social",
+      "notice",
+      "cleanup"
+    ],
+    "cur": "account",
+    "bodyLen": 1338
+  },
+  "F8_空状态行动入口": {
+    "pageWithEmptyBtn": "psave",
+    "emptyBtn": true,
+    "before": "psave",
+    "after": "account"
+  },
+  "F9_选中态跨页": {
+    "seq": [
+      {
+        "k": "account",
+        "sel": true
+      },
+      {
+        "k": "psave",
+        "sel": true
+      },
+      {
+        "k": "ops",
+        "sel": true
+      },
+      {
+        "k": "rank",
+        "sel": true
+      }
+    ],
+    "keptAll": true
+  },
+  "F10_危险操作确认": {
+    "found": {
+      "page": "account",
+      "label": "重置密码"
+    },
+    "modalShown": 1,
+    "nativeDialogs": 0
+  },
+  "FE_ERRS": [],
+  "BE_ERRS": [],
+  "NATIVE_DIALOGS": []
+}
