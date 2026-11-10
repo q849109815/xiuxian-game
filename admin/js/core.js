@@ -66,7 +66,7 @@ async function pwdOK(pwd) {
  * 做法与前端 ui.js 的 emojify 相同：渲染后遍历文本节点就地换成 <img class="ai">。
  * 未收录的 emoji 原样保留（不会变空白、不会报错），所以是渐进式的。
  * =================================================================== */
-const AIMG_V = '1.3.82';
+const AIMG_V = '1.3.83';
 const AICON = {
   '💰': 'i_gold.jpg', '💎': 'i_diamond.jpg', '⚡': 'i_stamina.jpg',
   '🏆': 'nav_rank.png', '🎁': 'sh01_gift.jpg', '📦': 'd3_box.jpg',
@@ -335,8 +335,8 @@ const AUDIT = {
     U.download('审计日志_' + new Date().toISOString().slice(0, 10) + '.txt', txt, 'text/plain');
     APP.toast('已导出 ' + l.length + ' 条', 'ok');
   },
-  clear() {
-    if (!confirm('清空本地审计日志？（云端日志不受影响）')) return;
+  async clear() {
+    if (!await APP.ask('清空本地审计日志', '仅清空本机留痕，云端日志不受影响。', { yes: '清空' })) return;
     localStorage.removeItem(this.KEY); APP.toast('已清空', 'ok');
   },
 };
@@ -704,6 +704,7 @@ const APP = {
         }
       });
     } catch (e) {}
+    const g = D('#goSelPlayer'); if (g) g.onclick = () => this.go('account');
     const m = D('.main'); if (m) m.scrollTop = 0;
     this.net();
   },
@@ -1156,12 +1157,69 @@ const APP = {
   str(id) { const e = D(id); return e ? String(e.value || '').trim() : ''; },
   chk(id) { const e = D(id); return !!(e && e.checked); },
 
-  /* 通用：确认危险操作 */
-  confirm(text) { return window.confirm(text); },
+  /* 【V1.3.83 操作性整改】统一确认组件 ask()
+   * 立规原因：后台 9 处危险操作散落使用原生 window.confirm —— 系统灰框与后台两套
+   *   视觉语言、按钮只有「确定/取消」、无危险分级、无防误点；且原生弹窗会阻塞
+   *   自动化，AI Agent / 批量脚本无法可靠处理（AX）。前端 UI.ask 早已做到
+   *   danger 分级 + 0.9s 减速带，这里把同一规范补齐到后台。
+   * 刻意删掉同步 confirm()：任何漏改的调用点会立刻抛 TypeError，
+   *   而不是把 Promise 当 true 静默放行危险操作（fail-fast，不静默报绿）。
+   * 判据：ask() 返回 Promise<boolean>；danger 时主按钮禁用 0.9s 且带不可撤销警示。
+   * 用法：if (!await this.ask('标题', '说明', { danger: true, yes: '永久删除' })) return; */
+  ask(title, msg, opts) {
+    opts = opts || {};
+    const danger = !!opts.danger, yes = opts.yes || '确定';
+    const m = D('#modal'), b = D('#mbox');
+    if (!m || !b) return Promise.resolve(false);
+    const prevOn = m.onclick;
+    return new Promise((resolve) => {
+      const done = (v) => {
+        if (m.__askTm) { clearInterval(m.__askTm); m.__askTm = null; }
+        m.onclick = prevOn;
+        this.closeModal();
+        resolve(!!v);
+      };
+      const html = `<h3>${U.esc(title || '确认')}</h3>
+        ${danger ? '<div class="hint err">⚠ 此操作不可撤销</div>' : ''}
+        <div class="hint">${U.esc(String(msg || '')).replace(/\n/g, '<br>')}</div>
+        <div class="btns">
+          <button class="btn" data-m="askNo">取消</button>
+          <button class="btn ${danger ? 'err' : 'ok'}" data-m="askYes">${U.esc(yes)}</button>
+        </div>`;
+      this._mfn = { askNo: () => done(false), askYes: () => done(true) };
+      this.modal(html);
+      /* 点遮罩等同取消 —— enter() 里那个 md.onclick 只会 closeModal，
+       * 不 resolve 的话 Promise 会永远挂起，调用方静默卡死。 */
+      m.onclick = (e) => { if (e.target === m) done(false); };
+      if (danger) {
+        const y = b.querySelector('[data-m="askYes"]');
+        if (y) {
+          y.disabled = true;
+          let left = 0.9;
+          y.textContent = yes + '（' + left.toFixed(1) + 's）';
+          m.__askTm = setInterval(() => {
+            left -= 0.1;
+            if (left <= 0.05) {
+              clearInterval(m.__askTm); m.__askTm = null;
+              y.disabled = false; y.textContent = yes;
+            } else y.textContent = yes + '（' + left.toFixed(1) + 's）';
+          }, 100);
+        }
+      }
+    });
+  },
 
   /* 选中玩家摘要条 */
   selBar() {
-    if (!this.SEL) return '<div class="card"><div class="lbl">先在上方点选一名玩家</div></div>';
+    /* 【V1.3.83】空状态必须给行动入口，不能只写一句"先点选"——
+     * 删了说明就看不懂，说明布局本身缺的是可点的下一步。 */
+    if (!this.SEL) {
+      /* 账号页本身就是玩家列表，再给「选择玩家」是自跳转，没意义；
+       * 其余页面统一给一个直达入口，运营不用先猜去哪个页选人。 */
+      const jump = this.cur === 'account' ? ''
+        : '<div class="btns" style="margin-top:8px"><button class="btn pri" id="goSelPlayer">选择玩家</button></div>';
+      return '<div class="card"><div class="empty">未选择玩家</div>' + jump + '</div>';
+    }
     const p = this.SEL;
     return `<div class="card">
       <h3>当前选中<span class="tag">${U.esc(p.uid)}</span></h3>
