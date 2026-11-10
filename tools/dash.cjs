@@ -37,7 +37,7 @@ const antiCheat=/antiCheat|cheat|哨兵|anomaly/i.test(R('js/main.js')+cfg);
 const adm=R('admin/index.html')+R('admin/js/core.js')+R('admin/js/pages.js');
 const funnel=/funnel|漏斗|dau_retention|留存/i.test(adm);
 
-const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs','uxdel.cjs','dashparse.cjs','dashcons.cjs','mutate_dashcons.cjs','mutrestore.cjs','mutate_mutrestore.cjs','vis2.cjs'];
+const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs','uxdel.cjs','dashparse.cjs','dashcons.cjs','mutate_dashcons.cjs','mutrestore.cjs','mutate_mutrestore.cjs','vis2.cjs','flowguard.cjs','mutate_flowguard.cjs','_flowwalk.cjs','taskflow.cjs','mutate_taskflow.cjs','_flowwalk_v1386.cjs','taskflow2.cjs','mutate_taskflow2.cjs','_flowwalk_v1386b.cjs'];
 const tOk=tools.filter(t=>ex('tools/'+t)).length;
 
 /* 【玩家可感知交叉验证】—— 进度表固定项，每轮必跑
@@ -278,6 +278,8 @@ const mr2=(()=>{try{const r=require('child_process').spawnSync('node',['tools/mu
 A('测试','变异中断还原守卫',mr2&&mr2.f===0?`PASS${mr2.p}/0`:`未过${mr2?mr2.f:'未跑通✗'}项`);
 const vg=(()=>{try{const r=require('child_process').spawnSync('node',['tools/visguard.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:60000});const m=(r.stdout||'').match(/visguard:\s*PASS=(\d+)\s+FAIL=(\d+)/);return r.status===0&&m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
 A('测试','视觉审查守卫',vg&&vg.f===0?`PASS${vg.p}/0`:`未过${vg?vg.f:'未跑通✗'}项`);
+const fg=(()=>{try{const r=require('child_process').spawnSync('node',['tools/flowguard.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:30000});const m=(r.stdout||'').match(/flowguard: PASS (\d+) \/ FAIL (\d+)/);return r.status===0&&m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','操作流程走查守卫',fg&&fg.f===0?'PASS'+fg.p+'/0':'未过'+(fg?fg.f:'未跑通✗')+'项');
 A('策划','题材铁律守卫',tg&&tg.f===0?`PASS${tg.p}/0`:`未过${tg?tg.f:'未跑通✗'}项`);
 A('运营','后台漏斗',funnel?'✓':'✗'); A('运营','反作弊',antiCheat?'✓':'✗');
 A('运营','活动日历',ex('运营日历_V1.0.2.md')?'✓':'✗'); A('运营','赛季排期',ex('赛季排期日历_V1.1.0.md')?'✓':'✗'); A('运营','脏订单','已清(5条)');
