@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.82';
+const IMG_V = '1.3.83';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -2195,6 +2195,30 @@ r_tavern(p, tab) {
     return Array.isArray(a) && a.indexOf(id) >= 0;
   },
 
+  /* 【V1.3.83 操作性整改】任务面板「一键领取全部」
+   * 立规原因：任务奖励分散在 主线/日常/周常/成就 四个页签，此前只能切 3 次页签
+   *   再逐条点「领取」；邮件早有「一键领取」、背包有「一键分解」，唯独最高频的
+   *   任务没有批量入口 —— 这是"能不能用"与"方不方便"的差距。
+   * 口径与 navDots / taskTabCount 完全一致：未 claimed && E.taskDone && 奖励可用。
+   * E.claimTask 内部仍会自行判 done/claimed，多算的条目只会被拒绝，不会错发。 */
+  taskClaimable(p) {
+    const T = EX.tasks || {}, tk = (p && p.tasks) || {}, out = [];
+    const pairs = [['main', T.main, tk.mainClaimed], ['daily', T.daily, tk.dailyClaimed],
+                   ['weekly', T.weekly, tk.weeklyClaimed], ['achieve', T.achieve, tk.achieveClaimed]];
+    try {
+      pairs.forEach(([type, arr, got]) => {
+        (arr || []).forEach((t) => {
+          if (!t) return;
+          if (Array.isArray(got) && got.indexOf(t.id) >= 0) return;
+          if (!E.taskDone(p, t)) return;
+          if (E.rwUsable && !E.rwUsable(t.rw)) return;
+          out.push({ type, id: t.id });
+        });
+      });
+    } catch (e) { return []; }
+    return out;
+  },
+
   /* ---------- 任务（截图：主线/日常/成就 + 黄色「前往任务」） ---------- */
   r_task(p, tab) {
     const DONE = '✔';
@@ -2203,8 +2227,13 @@ r_tavern(p, tab) {
      * 任务面板整体白屏。这里统一取一份安全副本。 */
     const T = EX.tasks || {};
     const _T = { main: T.main || [], daily: T.daily || [], weekly: T.weekly || [], achieve: T.achieve || [] };
+    /* 四个页签共用同一个批量入口：无论停在哪个页签，都能一次领走全部四类奖励 */
+    const _all = this.taskClaimable(p);
+    const _head = _all.length
+      ? `<button class="btn pri blk" id="taskClaimAll" style="margin-bottom:8px">一键领取全部（${_all.length}）</button>`
+      : '';
     if (tab === '周常') {
-      return `<div class="card"><div class="card-t">周常任务 </div>
+      return `${_head}<div class="card"><div class="card-t">周常任务 </div>
         ${(_T.weekly || []).map((t) => {
           const cur = E.taskProg(p, t), need = t.cond.v || t.need || 1, done = cur >= need;
           /* 【按钮与实际状态不一致 BUG 修复】
@@ -2224,7 +2253,7 @@ r_tavern(p, tab) {
       </div>`;
     }
     if (tab === '日常') {
-      return `<div class="card"><div class="card-t">日常任务 </div>
+      return `${_head}<div class="card"><div class="card-t">日常任务 </div>
         ${_T.daily.map((t) => {
           const need = t.need || (t.cond ? t.cond.v : 1);
           const cur = E.taskProg(p, t), done = cur >= need;
@@ -2241,7 +2270,7 @@ r_tavern(p, tab) {
       <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往任务</button>`;
     }
     if (tab === '成就') {
-      return `<div class="card"><div class="card-t">成就
+      return `${_head}<div class="card"><div class="card-t">成就
         <b class="ct-n">${_T.achieve.filter((a) => E.taskDone(p, a)).length}/${_T.achieve.length}</b></div>
         <div class="kv"><span>成就点</span><b style="color:var(--yel)">${p.ach || 0}</b></div>
         <button class="btn o blk" id="toAchShop">🔄 前往成就商店</button>
@@ -2261,7 +2290,7 @@ r_tavern(p, tab) {
         }).join('')}</div>`;
     }
     /* 主线（截图：清除僵尸/通关关卡/收集材料/领取奖励 + 紫宝石金币奖励） */
-    return `<div class="card"><div class="card-t">主线任务
+    return `${_head}<div class="card"><div class="card-t">主线任务
       <b class="ct-n">第 ${p.ch || 1} 章</b></div>
       ${_T.main.map((t) => {
         const need = t.need || (t.cond && t.cond.t === 'clearLv' ? 1 : (t.cond ? t.cond.v : 1));
@@ -2281,6 +2310,22 @@ r_tavern(p, tab) {
       <button class="btn" id="goTask" style="width:100%;margin-top:8px">前往任务</button>`;
   },
   b_task(p, tab) {
+    const ca = $('#taskClaimAll');
+    if (ca) ca.onclick = () => {
+      const list = this.taskClaimable(p);
+      if (!list.length) { this.toast('没有可领取的任务奖励', 'warn'); return; }
+      let ok = 0, bad = 0, lastMsg = '';
+      list.forEach((x) => {
+        const r = E.claimTask(p, x.type, x.id);
+        if (r.ok) ok++; else { bad++; lastMsg = r.msg || ''; }
+      });
+      if (ok) {
+        if (window.SND) SND.play('pickup');
+        E.saveSoon(p);
+        this.toast('已领取 ' + ok + ' 项任务奖励' + (bad ? '（' + bad + ' 项未成功：' + lastMsg + '）' : ''), bad ? 'warn' : 'ok');
+        this.open('task'); this.home();
+      } else this.toast(lastMsg || '没有可领取的任务奖励', 'err');
+    };
     const gb = $('#goTask');
     const asb = $('#toAchShop');
     if (asb) asb.onclick = () => this.open('ashop', '成就商店');
