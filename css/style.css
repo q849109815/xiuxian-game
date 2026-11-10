@@ -516,6 +516,9 @@ html[data-kb] #login{justify-content:flex-start;padding:var(--sp-3)}
   background:rgba(40, 14, 15, .95);animation:tIn .2s, tOut .4s 2.4s forwards}
 @keyframes tIn{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes tOut{to{transform:translateY(-8px);opacity:0}}
+/* V1.3.86：无上级可返回时隐藏 ◀（保留 32px 占位，标题不偏移）。
+   有上级时自动移除此类，玩家一眼能分辨「回上一级」与「关闭」。 */
+#pnBack.no-up{visibility:hidden;pointer-events:none}
 
 /* 通用 */
 .row{display:flex;gap:var(--sp-2);align-items:center}
@@ -858,6 +861,15 @@ html[data-kb] #login{justify-content:flex-start;padding:var(--sp-3)}
  * 「🪙200」这类价格数字被削掉一角，玩家看不清到底要花多少钱。
  * 这里收窄横向内边距并限宽，让整枚按钮完整落在格子内（高度仍是 32px，不影响点按）。 */
 .gcell .btn.sm{padding:var(--sp-1) 4px;max-width:100%;min-width:0}
+/* V1.3.85 操作性整改：价格按钮里的货币图标被「商品主图」规则误伤。
+ * .gcell img 是后代选择器（不区分层级），emojify 把按钮里「💎200」的 💎
+ * 换成 <img class="ei"> 后，也被套上 max-width:76%/max-height:64px 的
+ * 商品图规则 —— 实测 256×256 的图标撑成 48×48、按钮高 56px，价格数字
+ * 被挤到一边几乎看不清（玩家点之前读不出要花多少钻）。
+ * 这里用更高特异性把按钮内图标钉成 14px 行内尺寸，且不影响商品主图。 */
+.gcell .gbuy button .ei{width:14px;height:14px;min-width:14px;min-height:14px;
+  max-width:none;max-height:none;flex:0 0 14px;margin:0 2px 0 0;
+  object-fit:contain;vertical-align:middle;border-radius:3px}
 
 /* 分类网格（背包/商店/芯片，截图 4 列网格） */
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-2)}
@@ -951,6 +963,14 @@ html[data-kb] #login{justify-content:flex-start;padding:var(--sp-3)}
 .zrow .st{font-size:var(--fs-xs);padding: 2px 8px;border-radius:8px;font-weight:var(--fw-medium)}
 .zrow .st.on{background:rgba(26, 51, 32, .18);color:var(--grn);border:1px solid rgba(26, 51, 32, .4)}
 .zrow .st.off{background:rgba(51, 47, 41, .08);color:var(--txt3);border:1px solid rgba(51, 47, 41, .14)}
+/* V1.3.86 任务行内「去关卡/去强化/去无尽/去扫荡」：
+ * .zrow 是 flex-wrap，按钮必须固定不缩不换行，否则被进度文本挤到第二行，
+ * 看起来又像「没有可点的下一步」。金色描边与领取按钮区分，避免误认为已可领取。 */
+.zrow.zrow-go{flex-wrap:nowrap;gap:var(--sp-1)}
+.zrow.zrow-go .zi{flex:1 1 0;min-width:0}
+.zrow.zrow-go .btn.sm[data-go]{flex:0 0 auto;white-space:nowrap;min-width:52px;
+  padding-left:var(--sp-1);padding-right:var(--sp-1);text-align:center;
+  border:1px solid rgba(255, 200, 90, .55);color:var(--yel)}
 
 /* 技能三选一（截图：顶部标题+倒计时，卡下方箭头） */
 #choice .ch-card{position:relative;border-radius:16px;overflow:hidden;
@@ -2579,6 +2599,10 @@ b { font-weight: var(--fw-semibold) !important; }
 /* 作用域限定：避免误伤背包/角色/图鉴等复用 .gcell 的面板 */
 .gcell.shop-cell{display:flex;flex-direction:column;align-items:center}
 .gcell.shop-cell img{width:52%;max-width:64px;max-height:64px;aspect-ratio:1/1;object-fit:contain;margin:var(--sp-half) 0 var(--sp-0)}
+/* V1.3.85 复核撤回：曾据一张截图判「5/6 商品图显示为空框」并在此加了底座，
+ * 后经 _diag2.cjs 等待图片 complete 后重拍，6 张图全部清晰可见（截图只等了
+ * 220ms，图还没解码绘制）—— 是取证时序造成的假象，不是产品缺陷。
+ * 不为不存在的问题改产品代码，底座撤回；等待图片 complete 已写进取证工具。 */
 .gcell.shop-cell .gd{font-size:var(--fs-xs);line-height:1.25;margin:0 0 var(--sp-half);min-height:0;text-align:center;width:100%;
   display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gcell.shop-cell .gbuy{display:flex;flex-direction:column;align-items:center;gap:var(--sp-half);margin-top:auto;width:100%}
