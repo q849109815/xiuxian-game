@@ -111,6 +111,13 @@ const taFresh=(()=>{
  * 不足一律判「残快照←需重跑」，并显式带 ✗，不用中性词蒙混。 */
 const taComplete=DP.taComplete(ta, taNames);
 A('测试','检测工具体检',!ta?'未跑通✗':(!taComplete?'残快照←需重跑✗':(!taFresh?'已过期←需重跑✗':`可信${ta.trust}/${ta.total}`+(ta.bad?` 不可信${ta.bad}`:'')+(ta.skipN?` 跳过${ta.skipN}`:''))));
+/* 【交互操作性守卫】—— 进度表固定项（V1.3.83 新增）
+ * 立规原因：制作人追问「逻辑性操作性你看了嘛？方便嘛？」——此前每轮只做视觉精简，
+ * 从未有一条检查问过"这个操作顺不顺手、要不要来回切页签、危险操作有没有防误点"。
+ * 本项每轮必跑，未过直接显示未过项，不允许把没检查过的方向当成已优化。 */
+const iop=(()=>{try{const r=require('child_process').spawnSync('node',['tools/interop.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:30000});
+  const m=(r.stdout||'').match(/interop: PASS (\d+) \/ FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','交互操作性守卫',iop?(iop.f?`未过${iop.f}✗`:`PASS${iop.p}/0`):'未跑通✗');
 /* 【变异验证覆盖】—— 进度表固定项
  * 铁律：抓不住缺陷的断言等于不存在。只报「工具有多少条断言」没意义，
  * 必须报「多少条被证明过抓得住」。数字取最近一次实测轮次，未跑则显式写未验证，
