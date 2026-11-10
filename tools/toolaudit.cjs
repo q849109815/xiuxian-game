@@ -36,6 +36,7 @@ const BASELINE = path.join(TOOLS, '_toolaudit_base.json');
 
 /* 常驻守卫清单：这些是「每轮都要报数」的工具，必须全部可信 */
 const GUARDS = [
+  'vis2.cjs',
   'static', 'archguard', 'deadcfg', 'roadmap', 'assetguard',
   'season', 'powerguard', 'tips', 'realm', 'ch1115', 'chapterStar',
   'sceneTheme', 'v110all', 'v121', 'v123', 'ausnd', 'charsnd',
