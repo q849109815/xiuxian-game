@@ -326,3 +326,12 @@ pre.json{margin:0;padding:15px;background:var(--bg2);border:1px solid var(--bd);
 /* V1.3.81 空状态重做：行动按钮放进空状态内部，不再靠一句说明教运营点哪里 */
 .empty .btn{margin-top:2px}
 .empty .btn:hover{filter:brightness(1.12)}
+
+
+/* V1.3.82：侧栏去掉分组文字标签后，靠分隔线与间距分组；加载过程改进度条，完成即消失 */
+.nav-sep{height:1px;background:var(--line);margin:10px 12px 6px;opacity:.6}
+.ld-bar{height:3px;margin:0 0 10px;border-radius:2px;background:rgba(255,255,255,.07);overflow:hidden}
+.ld-bar i{display:block;height:100%;background:#2f81f7;transition:width .2s}
+
+/* V1.3.82：带图形锚点的空状态不再叠加默认圆圈 */
+.empty:has(>span)::before{display:none}
