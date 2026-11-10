@@ -109,10 +109,6 @@ const PAGES = {
             <button class="btn err" data-a="purge">🔥 永久删除</button>
             <button class="btn warn" data-a="purgeDead">🧹 清理已注销(${this.deadCount()})</button>
           </div>
-          <div class="hint">
-            <b>注销</b>＝停用并标记，账号记录保留，可在「显示已注销」里找回；
-            <b>永久删除</b>＝账号 / 存档 / 指令 / 索引 / 榜单全部物理删除，从此不再显示，不可恢复。
-          </div>
         </div>` : ''}`;
       },
       inputs: {
@@ -240,9 +236,12 @@ const PAGES = {
           AUDIT.log('解封', p.uid, '');
           this.toast('已解封', 'ok'); this.render();
         },
-        destroy() {
+        async destroy() {
           const p = this.SEL; if (!p) return;
-          if (!this.confirm('确定注销并删除「' + (p.name || p.uid) + '」？\n此操作不可恢复！')) return;
+          /* 差别说明从列表页常驻文字挪到这里：只在真正要做决定的时刻出现 */
+          if (!await this.ask('注销账号',
+            '「' + (p.name || p.uid) + '」将停用并删除存档；账号记录保留，可在「显示已注销」里找回。\n仅想彻底清除请用「永久删除」。',
+            { danger: true, yes: '注销账号' })) return;
           (async () => {
             p.destroyed = true; p.destroyWhy = '运营注销'; p.destroyAt = Date.now();
             await this.save(p, '注销账号');
@@ -337,12 +336,12 @@ const PAGES = {
               <button class="btn pri" data-a="saveEdit">💾 保存修改</button>
               <button class="btn" data-a="backup">📦 立即备份</button>
               <button class="btn err" data-a="resetSave">♻ 重置存档</button>
-            </div>` : '<div class="empty">先在左侧点选玩家</div>';
+            </div>` : this.selBar();
         } else if (t === 'raw') {
           body = this.SEL
             ? `<pre class="json">${U.esc(JSON.stringify(this.SEL, null, 2))}</pre>
                <div class="btns"><button class="btn" data-a="copyRaw">📋 复制 JSON</button></div>`
-            : '<div class="empty">先在左侧点选玩家</div>';
+            : this.selBar();
         } else if (t === 'backup') {
           body = `
             <div class="btns">
@@ -483,7 +482,7 @@ const PAGES = {
         },
         async restore(t) {
           const p = this.SEL; if (!p) return;
-          if (!this.confirm('确定把「' + (p.name || p.uid) + '」回档到该备份？')) return;
+          if (!await this.ask('回档存档', '「' + (p.name || p.uid) + '」当前进度将被该备份覆盖。', { danger: true, yes: '确认回档' })) return;
           const r = await TMO(Net.read('data/zb/backup/' + p.uid + '/' + t.dataset.f), 12000, null);
           if (!r || !r.data) { this.toast('读取备份失败', 'err'); return; }
           /* 必须双写：只下发指令的话，离线玩家的指令一直不被消费，
@@ -495,7 +494,7 @@ const PAGES = {
         },
         async resetSave() {
           const p = this.SEL; if (!p) return;
-          if (!this.confirm('确定重置「' + (p.name || p.uid) + '」的全部进度？')) return;
+          if (!await this.ask('重置全部进度', '「' + (p.name || p.uid) + '」的等级、装备与资源将全部回到新号状态。', { danger: true, yes: '重置进度' })) return;
           const np = E.newPlayer(p.uid, p.name || '玩家', p.gender);
           np.created = p.created || Date.now();
           /* 同上：只写存档会被在线玩家自动存档覆盖，重置后进度原样回来。
@@ -534,7 +533,7 @@ const PAGES = {
         </div>
         <div class="card">
           <h3>补发物品</h3>
-          ${this.SEL ? this.selBar() : '<div class="empty">未选择玩家</div>'}
+          ${this.selBar()}
           <div class="fr"><label class="wide">物品</label>${U.picker('op_item', 'gold')}</div>
           <div class="fr"><label class="wide">数量</label><input id="op_n" type="number" value="100"></div>
           <div class="fr"><label class="wide">限时(小时)</label><input id="op_exp" type="number" value="0" placeholder="0=永久"></div>
@@ -674,7 +673,7 @@ const PAGES = {
           this.toast('已刷新', 'ok');
         },
         async rebuild() {
-          if (!this.confirm('重建榜单？会按当前玩家存档重算名次（并入旧榜，不清空）。')) return;
+          if (!await this.ask('重建榜单', '按当前玩家存档重算名次（并入旧榜，不清空）。', { yes: '重建' })) return;
           const box = D('#rkBox'); if (box) box.innerHTML = '<div class="empty">重建中…</div>';
           /* 各维度取前 100 名并集，避免战力高手被无尽高手挤掉 */
           /* 契约修复：此前只写 {uid,name,lv,v,at}，把 u/n/pw/eb/t/ev 六个字段
@@ -953,10 +952,10 @@ const PAGES = {
             if (bd >= 1000) warn.push('· 钻石 ' + bd + '（数额较大）');
             if (exp <= 0) warn.push('· 未设过期时间 → 该邮件永久有效');
             if (warn.length) {
-              const ok = this.confirm(
-                '确认发送【全服邮件】？\n\n' + warn.join('\n') +
-                '\n\n全服邮件对所有现有玩家生效，此后新注册的玩家登录时也会领到。' +
-                '\n发错只能手动删除，已发放的奖励无法收回。');
+              const ok = await this.ask('发送全服邮件',
+                warn.join('\n') +
+                '\n\n全服邮件对所有现有玩家生效，此后新注册的玩家登录时也会领到；发错只能手动删除，已发放的奖励无法收回。',
+                { danger: true, yes: '确认发送' });
               if (!ok) return;
             }
           }
@@ -1632,8 +1631,8 @@ const PAGES = {
             this.acts.biReload.call(this);
           }
         },
-        biClear() {
-          if (!confirm('清空本地埋点缓冲？')) return;
+        async biClear() {
+          if (!await this.ask('清空本地埋点缓冲', '仅清空本机缓冲，云端数据不受影响。', { yes: '清空' })) return;
           if (window.OPS && OPS.clearTrack) OPS.clearTrack();
           this.toast('已清空', 'ok');
           this.acts.biReload.call(this);
@@ -1903,10 +1902,10 @@ const PAGES = {
             },
           });
         },
-        rmDel(t) {
+        async rmDel(t) {
           const i = parseInt(t.dataset.i, 10);
           const L2 = rmList(); const v = L2[i]; if (!v) return;
-          if (!confirm('确定删除版本 ' + (v.v || '') + ' ？')) return;
+          if (!await this.ask('删除版本排期', '删除版本 ' + (v.v || '') + '，下发后玩家端不再显示。', { yes: '删除' })) return;
           L2.splice(i, 1); rmSet(L2);
           AUDIT.log('删除版本排期', String(v.v || ''), '');
           this.toast('已删除（需下发）', 'ok'); this.render();
@@ -1936,7 +1935,7 @@ const PAGES = {
           }
         },
         async rmReset() {
-          if (!confirm('用 config.js 内置排期覆盖当前列表？')) return;
+          if (!await this.ask('恢复内置版本排期', '将用 config.js 内置排期覆盖当前列表。', { danger: true, yes: '覆盖' })) return;
           rmSet(((EX && EX.VERSIONS) || []).map((x) => Object.assign({}, x)));
           AUDIT.log('恢复内置版本排期', '', '');
           this.toast('已恢复内置（点下发生效）', 'ok'); this.render();
@@ -2015,6 +2014,11 @@ const PAGES = {
           });
         },
         async tpClear() {
+          /* V1.3.83：此前一键即清空整张 TIP_OVERRIDE 并写云端，零确认、零防误点。
+           * 旁边「删除版本 / 重置进度」都有确认，唯独影响全站提示的操作没有。 */
+          if (!await this.ask('清空全部提示文案覆盖',
+            '将清空运营配置的所有提示文案覆盖，玩家下次登录恢复默认文案。',
+            { danger: true, yes: '清空覆盖' })) return;
           const c = await DB.reload(DBP.cfg);
           c.TIP_OVERRIDE = {};
           if (await DB.set(DBP.cfg, c, '清空提示文案覆盖')) {
@@ -2169,7 +2173,7 @@ const PAGES = {
           if (o.state === 'done') { this.toast('该订单已补过', 'warn'); return; }
           if (!o.uid) { this.toast('该订单缺 UID，无法补发', 'err'); return; }
           if (!o.item) { this.toast('该订单缺物品字段，无法确定补发内容', 'err'); return; }
-          if (!this.confirm('给 ' + o.uid + ' 补发 ' + U.itemName(o.item) + '×' + (o.n || 0) + '？')) return;
+          if (!await this.ask('订单补发', '给 ' + o.uid + ' 补发 ' + U.itemName(o.item) + '×' + (o.n || 0) + '？', { yes: '补发' })) return;
           if (await this.pushOp(o.uid, { t: 'grant', item: o.item, n: Number(o.n) || 0, mail: { t: '订单补发', b: '订单 ' + (o.id || '(无单号)') } })) {
             o.state = 'done'; o.doneAt = Date.now();
             await DB.set('data/zb/order.json', d, '补单 ' + (o.id || '#' + i));
