@@ -1,0 +1,128 @@
+{
+  "tag": "v1386b_fix",
+  "ready": true,
+  "srcHash": "9fa7212e57c5b71b30e96ade055631c0",
+  "steps": {
+    "H1_直达落点与目标控件可见性": [
+      {
+        "label": "去关卡",
+        "landed": "level",
+        "tab": "章节",
+        "target": "挑战",
+        "targetFound": true,
+        "rect": {
+          "top": 465,
+          "bottom": 497,
+          "h": 32
+        },
+        "inFirstScreen": true,
+        "bodyScrollTop": 513,
+        "bodyScrollHeight": 2404,
+        "bodyClientHeight": 739
+      },
+      {
+        "label": "去强化",
+        "landed": "gun",
+        "tab": "强化",
+        "target": "强化",
+        "targetFound": true,
+        "rect": {
+          "top": 687,
+          "bottom": 726,
+          "h": 39
+        },
+        "inFirstScreen": true,
+        "bodyScrollTop": 0,
+        "bodyScrollHeight": 1173,
+        "bodyClientHeight": 761
+      },
+      {
+        "label": "去扫荡",
+        "landed": "level",
+        "tab": "章节",
+        "target": "扫荡",
+        "targetFound": true,
+        "rect": {
+          "top": 467,
+          "bottom": 499,
+          "h": 32
+        },
+        "inFirstScreen": true,
+        "bodyScrollTop": 513,
+        "bodyScrollHeight": 2404,
+        "bodyClientHeight": 739
+      },
+      {
+        "label": "去无尽",
+        "landed": "level",
+        "tab": "章节",
+        "target": "无尽卡片",
+        "targetFound": true,
+        "rect": {
+          "top": 654,
+          "bottom": 826,
+          "h": 172
+        },
+        "inFirstScreen": true,
+        "bodyScrollTop": 1665,
+        "bodyScrollHeight": 2404,
+        "bodyClientHeight": 739
+      }
+    ],
+    "H2_领取后页签保持": {
+      "hadBtn": true,
+      "before": {
+        "panel": "task",
+        "tab": "周常"
+      },
+      "afterAll": {
+        "panel": "task",
+        "tab": "周常"
+      },
+      "beforeOne": {
+        "panel": "task",
+        "tab": "成就"
+      },
+      "afterOne": {
+        "panel": "task",
+        "tab": "成就"
+      }
+    },
+    "H3_页签空白量化": [
+      {
+        "tab": "主线",
+        "cards": 1,
+        "lastBottom": 508,
+        "bodyBottom": 881,
+        "emptyPx": 373,
+        "scrollHeight": 761
+      },
+      {
+        "tab": "日常",
+        "cards": 1,
+        "lastBottom": 887,
+        "bodyBottom": 881,
+        "emptyPx": -6,
+        "scrollHeight": 784
+      },
+      {
+        "tab": "周常",
+        "cards": 1,
+        "lastBottom": 476,
+        "bodyBottom": 881,
+        "emptyPx": 405,
+        "scrollHeight": 761
+      },
+      {
+        "tab": "成就",
+        "cards": 2,
+        "lastBottom": 719,
+        "bodyBottom": 881,
+        "emptyPx": 163,
+        "scrollHeight": 761
+      }
+    ]
+  },
+  "errs": [],
+  "errCount": 0
+}
