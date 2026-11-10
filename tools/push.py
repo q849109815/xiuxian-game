@@ -414,6 +414,11 @@ FILES = [
     '_vis/_v1386_after2.json',
     '_vis/_v1386b_fix.json',
     '_vis/meta.json',
+    # 线上真身核验发现：CHANGELOG.md 和两份发布基线根本不在清单里，
+    # 线上 CHANGELOG 一直停在 V1.3.84，版发证/发布基线无从对齐。
+    'CHANGELOG.md',
+    'tools/.version.json',
+    'tools/.lastrelease.json',
     '制作人周报_V1.3.86_操作流程补测与发布收尾.md',
     '制作人周报_V1.3.85_操作流程走查.md',
     '制作人周报_V1.3.7211111111_主菜单重做与选中态修正.md',
