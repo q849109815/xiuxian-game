@@ -258,6 +258,8 @@ FILES = [
     'tools/vis2.cjs',
     'tools/mutate_vis2.cjs',
     'tools/interop.cjs',
+    'tools/interop2.cjs',
+    'tools/mutate_interop2.cjs',
     'tools/mutate_interop.cjs',
     'tools/acguard.cjs',
     'tools/adm.cjs',
