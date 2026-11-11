@@ -20,6 +20,8 @@ H = {'Authorization': 'Bearer ' + TOKEN, 'Accept': 'application/vnd.github+json'
 # 完整文件清单 —— css/style.css 必须在此，历史上因遗漏导致样式改动从未上线
 FILES = [
     'index.html',
+    'tools/redesign.cjs',
+    'tools/mutate_redesign.cjs',
     # 美术资源：章节 CG 过场图。历史上清单只含代码，导致美术交图后从未入库、
     # 线上引用 404。新增资源必须显式登记，否则「本地有、线上无」。
     'assets/cg/cg01_horde.jpg', 'assets/cg/cg02_defense.jpg', 'assets/cg/cg03_rebuild.jpg',
@@ -421,6 +423,7 @@ FILES = [
     'tools/.lastrelease.json',
     '制作人周报_V1.3.86_操作流程补测与发布收尾.md',
     '制作人周报_V1.3.85_操作流程走查.md',
+    '制作人周报_V1.3.82_前后台视觉复核整改.md',
     '制作人周报_V1.3.7211111111_主菜单重做与选中态修正.md',
 ]
 
