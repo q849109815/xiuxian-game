@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.86';
+const IMG_V = '1.3.87';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -5367,3 +5367,34 @@ r_tavern(p, tab) {
 };
 
 window.UI = UI;
+
+
+/* ========== V1.3.87 界面重做 · 交互层 ==========
+ * 立规原因：低频入口平铺导致首屏 22 个无主次；底部空半屏没有常驻导航。
+ * 判据：本段不读写存档、不改战斗状态；Tab 一律走 UI.open(已有 data-p)，抽屉只切 hidden。
+ * 退出码语义：不适用（纯 UI 交互）；由 tools/redesign.cjs 校验绑定完整性。 */
+(function () {
+  function init() {
+    var btn = document.getElementById('hmMoreBtn'), box = document.getElementById('hmMore');
+    if (btn && box && !btn.dataset.rd) {
+      btn.dataset.rd = '1';
+      btn.onclick = function () {
+        var open = box.hasAttribute('hidden');
+        if (open) box.removeAttribute('hidden'); else box.setAttribute('hidden', '');
+        btn.classList.toggle('open', open);
+        var e = btn.querySelector('em'); if (e) e.textContent = open ? '\u2303' : '\u203a';
+      };
+    }
+    document.querySelectorAll('#hmTabs [data-p]').forEach(function (t) {
+      if (t.dataset.rd) return;
+      t.dataset.rd = '1';
+      t.onclick = function () {
+        document.querySelectorAll('#hmTabs .tab').forEach(function (x) { x.classList.remove('on'); });
+        t.classList.add('on');
+        try { if (t.dataset.p === 'home') UI.show('home'); else UI.open(t.dataset.p); } catch (e) {}
+      };
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
