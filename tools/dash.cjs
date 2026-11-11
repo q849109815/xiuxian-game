@@ -37,7 +37,7 @@ const antiCheat=/antiCheat|cheat|哨兵|anomaly/i.test(R('js/main.js')+cfg);
 const adm=R('admin/index.html')+R('admin/js/core.js')+R('admin/js/pages.js');
 const funnel=/funnel|漏斗|dau_retention|留存/i.test(adm);
 
-const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs','uxdel.cjs','dashparse.cjs','dashcons.cjs','mutate_dashcons.cjs','mutrestore.cjs','mutate_mutrestore.cjs','vis2.cjs','flowguard.cjs','mutate_flowguard.cjs','_flowwalk.cjs','taskflow.cjs','mutate_taskflow.cjs','_flowwalk_v1386.cjs','taskflow2.cjs','mutate_taskflow2.cjs','_flowwalk_v1386b.cjs'];
+const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs','uxdel.cjs','dashparse.cjs','dashcons.cjs','mutate_dashcons.cjs','mutrestore.cjs','mutate_mutrestore.cjs','vis2.cjs','flowguard.cjs','mutate_flowguard.cjs','_flowwalk.cjs','taskflow.cjs','mutate_taskflow.cjs','_flowwalk_v1386.cjs','taskflow2.cjs','mutate_taskflow2.cjs','_flowwalk_v1386b.cjs','redesign.cjs','mutate_redesign.cjs'];
 const tOk=tools.filter(t=>ex('tools/'+t)).length;
 
 /* 【玩家可感知交叉验证】—— 进度表固定项，每轮必跑
@@ -127,6 +127,14 @@ A('测试','交互操作性(真实取证)',i2?(i2.f?`未过${i2.f}✗`:`PASS${i2
  * 绝不允许用「注册了」冒充「验证过」。 */
 const mr=(()=>{try{return JSON.parse(fs.readFileSync('tools/_mutround.json','utf8'))}catch(e){return null}})();
 A('测试','变异验证',mr&&mr.captured===mr.cases?`捕获${mr.captured}/${mr.cases}`:`未验证(${mr?mr.captured+'/'+mr.cases:'未跑通✗'})`);
+/* 【界面重做守卫】—— 进度表固定项（V1.3.87 新增）
+ * 立规原因：界面重做最怕「好看但入口丢了 / 按钮是死的 / 改动外溢到其他面板」。
+ * 判据：真实 spawn tools/redesign.cjs，消费其 15 项断言与真实 Chrome 取证快照。 */
+try {
+  const rr = require('child_process').spawnSync('node', ['tools/redesign.cjs'], { encoding: 'utf8', cwd: __dirname + '/..' });
+  const mm = (rr.stdout || '').match(/SUMMARY PASS=(\d+) FAIL=(\d+)/);
+  A('测试', '界面重做守卫', mm ? (+mm[2] === 0 ? 'PASS' + mm[1] + '/0' : '未过' + mm[2] + '✗') : '未跑通✗');
+} catch (e) { A('测试', '界面重做守卫', '未跑通✗'); }
 /* 【缓存冲刷守卫】—— 进度表固定项（V1.3.71 新增）
  * 立规原因：线上污染清除后，若全站资源 ?v= 未统一升版，已缓存旧文件的玩家
  * 仍会拿到带污染的代码。本项每轮必跑：任一资源漏带 ?v= 或版本号不同步，
