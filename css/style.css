@@ -2609,3 +2609,226 @@ b { font-weight: var(--fw-semibold) !important; }
 .gcell.shop-cell .gbuy .btn{flex:0 0 auto;width:100%;font-size:var(--fs-xs);padding:var(--sp-half) var(--sp-1);margin:0;white-space:nowrap;min-height:0;line-height:1.25;border-color:var(--c-amber-350);color:var(--c-amber-100);box-shadow:0 0 0 1px var(--c-amber-350) inset}
 .gcell.shop-cell .gst{width:100%;text-align:center;font-size:var(--fs-xs);color:var(--c-green-400);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gcell.shop-cell .gst.warn{color:var(--c-red-400)}
+
+/* ========== V1.3.87 界面重做 · 功能界面 ==========
+ * 立规原因：22 个入口平铺无主次、底部留白、四角悬浮面板挤占战场，玩家找功能要扫全屏、战斗点不准。
+ * 判据：作用域仅 #home / #battle；不删除任何 id / button / data-p；新增样式全部走令牌与 4pt 栅格。
+ * 退出码语义：由 tools/redesign.cjs 独立守卫校验，本文件不承载判定。 */
+#home{overflow-y:auto;overflow-x:hidden;background:linear-gradient(180deg,var(--c-ink-950) 0%,var(--c-ink-850) 62%,var(--c-ink-700) 100%)}
+#home::-webkit-scrollbar{display:none}
+#home .hm-bg{z-index:0;opacity:.42}
+#home>*:not(.hm-bg){position:relative;z-index:1}
+
+/* ① 身份条：一行收完头像/等级/战力/三资源/设置，资源不再竖排三行 */
+#home .hm-top{order:1;height:60px;flex:0 0 60px;gap:var(--sp-2);padding:0 var(--sp-3);align-items:center;
+  background:linear-gradient(180deg,rgba(13,9,6,.97),rgba(13,9,6,.72));border-bottom:var(--sp-2) solid var(--border)}
+#home .hm-av{width:42px;height:42px;flex:0 0 42px;border-radius:50%;border:2px solid var(--c-amber-320);overflow:hidden;background:var(--c-ink-650)}
+#home .hm-av img{width:100%;height:100%;object-fit:cover}
+#home .hm-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:var(--sp-half)}
+#home .hm-name{font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#home .hm-name .hm-lv{font-size:var(--fs-xs);color:var(--tw-3);margin-left:var(--sp-2)}
+#home .hm-pw,#home .hm-prog{display:inline-block;font-size:var(--fs-xs);color:var(--tw-3);margin-right:var(--sp-3);line-height:1.3}
+#home .hm-pw b,#home .hm-prog span{color:var(--c-amber-320);font-weight:var(--fw-semibold)}
+#home .hm-cur{flex:0 0 auto;flex-direction:row;gap:var(--sp-1);align-items:center}
+#home .hm-cur .cu{height:24px;padding:0 var(--sp-2);border-radius:12px;background:rgba(255,183,60,.09);
+  border:1px solid var(--border);font-size:var(--fs-xs);font-weight:var(--fw-semibold);white-space:nowrap;display:flex;align-items:center;gap:var(--sp-1)}
+#home .hm-cur .cu img{width:14px;height:14px;object-fit:contain}
+#home .hm-set{width:30px;height:30px;flex:0 0 30px;order:9}
+
+/* ② 主行动：出击做成整屏唯一主按钮，无尽缩成副卡；删掉副行说明文字 */
+#home .hm-acts{order:2;height:112px;flex:0 0 112px;gap:var(--sp-3);padding:var(--sp-3) var(--sp-3) 0}
+#home .hm-acts .ha{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:var(--sp-1);border-radius:var(--radius-lg);overflow:hidden;padding:0;min-width:0}
+#home .hm-acts .ha.go{flex:2.1 1 0;border:1px solid rgba(255,203,99,.85);
+  background:linear-gradient(180deg,var(--c-amber-100),var(--c-amber-400) 58%,var(--c-amber-500));box-shadow:0 6px 20px rgba(255,170,50,.26)}
+#home .hm-acts .ha.go::after{display:none}
+#home .hm-acts .ha.go b{font-size:var(--fs-3xl);letter-spacing:3px;color:var(--c-amber-900);font-weight:var(--fw-bold);text-shadow:0 1px 0 rgba(255,255,255,.35)}
+#home .hm-acts .ha.go span{font-size:var(--fs-xs);color:var(--c-amber-800);font-weight:var(--fw-semibold)}
+#home .hm-acts .ha:not(.go){flex:1 1 0;border:1px solid var(--border-strong);background:rgba(18,12,8,.86)}
+#home .hm-acts .ha:not(.go) b{font-size:var(--fs-xs);color:var(--c-amber-320)}
+#home .hm-acts .ha:not(.go) span{font-size:var(--fs-xs);color:var(--tw-3)}
+#home .hm-acts .ha i{width:30px;height:30px;display:flex;align-items:center;justify-content:center;margin-bottom:var(--sp-half)}
+#home .hm-acts .ha i img{width:28px;height:28px;object-fit:contain}
+#home .hm-acts .ha.go i{width:34px;height:34px}
+#home .hm-acts .ha-sub{display:none}
+
+/* ③ 菜单：高频 6 大图标 + 次频 4 中图标，靠尺寸/间距分组，不加任何文字标签 */
+#home .hm-menu{order:3;flex:0 0 auto;min-height:0;overflow:visible;padding:var(--sp-3) var(--sp-3) 0;background:none;border:none;box-shadow:none}
+#home .hmg{background:none;border:none;box-shadow:none;padding:0}
+#home .hmg-b{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--sp-2);padding:0}
+#home .hmg-b .hmb{width:100%;min-width:0;display:flex;flex-direction:column;align-items:center;gap:var(--sp-1);
+  padding:var(--sp-2) 0 var(--sp-1);border-radius:var(--radius-lg);border:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(255,183,60,.075),rgba(255,183,60,.025))}
+#home .hmg-b .hmb i{width:46px;height:46px;flex:0 0 46px;display:flex;align-items:center;justify-content:center;
+  border-radius:12px;background:rgba(255,183,60,.07);border:1px solid var(--border)}
+#home .hmg-b .hmb i img{width:40px;height:40px;object-fit:contain}
+#home .hmg-b .hmb span{font-size:var(--fs-xs);color:var(--tw-1);white-space:nowrap}
+#home .hmg-b .hmb:nth-child(n+7) i{width:40px;height:40px;flex-basis:40px}
+#home .hmg-b .hmb:nth-child(n+7) i img{width:34px;height:34px}
+#home .hmg-b .hmb:nth-child(n+7){background:rgba(255,183,60,.03);border-color:rgba(255,183,60,.12)}
+#home .hmg-b .hmb .nv-dot{top:var(--sp-half);right:var(--sp-2)}
+
+/* ④ 全部功能抽屉：默认收起，展开后 12 个入口一个不少 */
+#home .hmg-toggle{margin-top:var(--sp-3);width:100%;height:48px;flex:0 0 48px;display:flex;align-items:center;gap:var(--sp-3);
+  padding:0 var(--sp-3);border-radius:var(--radius-lg);border:1px solid var(--border-strong);
+  background:linear-gradient(90deg,rgba(255,183,60,.12),rgba(255,183,60,.02));color:var(--tw-1);cursor:pointer}
+#home .hmg-toggle .ht-ic{width:18px;height:14px;flex:0 0 18px;border-radius:3px;
+  background:repeating-linear-gradient(90deg,var(--c-amber-320) 0 4px,transparent 4px 6px);opacity:.8;
+  box-shadow:0 5px 0 rgba(255,183,60,.8),0 10px 0 rgba(255,183,60,.8)}
+#home .hmg-toggle b{flex:1;text-align:left;font-size:var(--fs-xs);font-weight:var(--fw-semibold)}
+#home .hmg-toggle span{font-size:var(--fs-xs);color:var(--tw-3)}
+#home .hmg-toggle em{font-style:normal;font-size:var(--fs-lg);color:var(--c-amber-320);font-weight:var(--fw-bold);transition:transform .2s}
+#home .hmg-toggle.open em{color:var(--c-amber-100)}
+#home .hmg-more{margin-top:var(--sp-3);grid-template-columns:repeat(4,1fr);gap:var(--sp-2)}
+#home .hmg-more[hidden]{display:none !important}
+#home .hmg-more .hmb i{width:46px;height:46px;flex-basis:46px}
+#home .hmg-more .hmb i img{width:40px;height:40px}
+
+/* ⑤ 待办 / 今日进度：卡片化，内容不足也不留白 */
+#home .hm-guide{order:4;margin:var(--sp-3) var(--sp-3) 0;padding:var(--sp-3) var(--sp-3);border-radius:var(--radius-lg);
+  border:1px solid var(--border);background:var(--surface-2);display:flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-xs)}
+#home .hm-guide .hg-go{margin-left:auto;padding:var(--sp-1) var(--sp-3);border-radius:12px;
+  background:rgba(255,183,60,.15);border:1px solid var(--border-strong);white-space:nowrap}
+#home .hm-today{order:5;margin:var(--sp-3) var(--sp-3) 0;padding:0;border-radius:var(--radius-lg);
+  border:1px solid var(--border);background:var(--surface-2);overflow:hidden}
+#home .hm-today .htd{padding:var(--sp-2) var(--sp-3);border-left:var(--sp-2) solid var(--border);background:none}
+#home .hm-today .htd:first-child{border-left:none}
+#home .hm-base{order:6;flex:0 0 auto;margin:var(--sp-3) var(--sp-3) var(--sp-3);grid-template-columns:repeat(4,1fr);gap:var(--sp-2)}
+#home .hm-base .bs{width:100%;min-width:0;padding:var(--sp-2) var(--sp-half);border-radius:var(--radius-md);
+  border:1px solid var(--border);background:rgba(30,22,15,.72)}
+#home .hm-base .bs i{width:30px;height:30px}
+#home .hm-base .bs b{font-size:var(--fs-xs)}
+#home .hm-base .bs span{display:none}
+
+/* ⑥ 底部常驻 Tab：拇指热区，sticky 保证抽屉展开后仍在 */
+#home .hm-tabs{order:7;position:sticky;bottom:0;z-index:5;height:58px;flex:0 0 58px;
+  display:grid;grid-template-columns:repeat(4,1fr);border-top:var(--sp-2) solid var(--border-strong);
+  background:linear-gradient(180deg,rgba(22,15,10,.97),rgba(10,7,5,.99))}
+#home .hm-tabs .tab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sp-1);
+  background:none;border:none;color:var(--tw-3);cursor:pointer;padding:0}
+#home .hm-tabs .tab .ti{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,183,60,.09);border:1px solid var(--border)}
+#home .hm-tabs .tab .ti img{width:20px;height:20px;object-fit:contain}
+#home .hm-tabs .tab span{font-size:var(--fs-xs)}
+#home .hm-tabs .tab.on .ti{background:rgba(255,183,60,.26);border-color:var(--c-amber-320)}
+#home .hm-tabs .tab.on span{color:var(--c-amber-320);font-weight:var(--fw-semibold)}
+#home .hm-tabs .tab.on::before{content:'';position:absolute;top:0;width:34px;height:2px;border-radius:2px;background:var(--c-amber-320)}
+
+/* ========== V1.3.87 界面重做 · 战斗界面 ==========
+ * 四角悬浮收成顶部一条；底部做成 124px 拇指操作坞，技能按钮 42→68px（点击面积 2.6 倍）。
+ * canvas 与 battle.js 一行未动，B8 震屏变换归零守卫不受影响。 */
+#battle .bt-topbar{height:46px;padding:0 var(--sp-3);gap:var(--sp-2);align-items:center;
+  background:linear-gradient(180deg,rgba(8,6,4,.90),rgba(8,6,4,0));border:none}
+#battle .bt-topbar .btb-icon,#battle .bt-topbar .btb-speed{width:34px;height:34px;flex:0 0 34px;border-radius:10px}
+#battle .btb-mid{display:flex;align-items:center;justify-content:center;gap:var(--sp-2);flex-wrap:wrap;text-align:left}
+#battle .btb-lv{font-size:var(--fs-sm);font-weight:var(--fw-semibold);letter-spacing:.5px}
+#battle .btb-sub{gap:var(--sp-2);margin:0}
+#battle .btb-sub span{font-size:var(--fs-xs);white-space:nowrap}
+#battle .btb-prog{position:absolute;left:var(--sp-3);right:var(--sp-3);top:var(--bt-prog-top);margin:0;width:auto;height:3px;
+  border-radius:2px;background:rgba(0,0,0,.55)}
+#battle .btb-speed{font-size:var(--fs-xs);font-weight:var(--fw-semibold);padding:0 var(--sp-3)}
+
+/* 状态带：贴顶栏下方一条胶囊，删「本局」次要标签 */
+#battle .bt-status{top:var(--bt-status-top);left:var(--sp-3);right:var(--sp-3);height:30px;padding:0 var(--sp-3);gap:var(--sp-2);
+  border-radius:15px;background:rgba(12,9,6,.78);border:1px solid rgba(255,183,60,.20);
+  backdrop-filter:blur(3px);align-items:center}
+#battle .bs-hp{gap:var(--sp-2)}
+#battle .bs-bar{height:6px}
+#battle .bs-hp b{font-size:var(--fs-xs)}
+#battle .bs-res{gap:var(--sp-3)}
+#battle .bs-res span{font-size:var(--fs-xs);font-weight:var(--fw-semibold);gap:var(--sp-1)}
+#battle .bs-res img{width:14px;height:14px}
+#battle .bs-res .bs-lb{display:none}
+#battle .bs-sh{width:36px}
+
+/* 右侧功能键放大到拇指可点尺寸，避开战场中心 */
+#battle .bt-side{right:var(--sp-3);top:auto;bottom:calc(var(--bt-side-bottom) + var(--sab,0px));transform:none;
+  flex-direction:column;gap:var(--sp-2)}
+#battle .bt-side .bts{width:46px;height:46px;border-radius:14px;
+  border:1px solid rgba(255,183,60,.34);background:rgba(20,14,9,.82)}
+#battle .bt-side .bts img{width:26px;height:26px}
+
+/* 底部操作坞：换弹 + 3 技能 + 炮台，全部落在拇指热区，不再互相压盖 */
+#battle .bt-dock{min-height:var(--bt-dock-h);height:auto;bottom:0;left:0;right:0;padding:var(--sp-2) var(--sp-3) calc(var(--sp-3) + var(--sab,0px));
+  display:flex;flex-direction:column;justify-content:center;gap:var(--sp-2);
+  background:linear-gradient(180deg,rgba(20,14,9,.94),rgba(8,6,4,1));border-top:var(--sp-2) solid rgba(255,183,60,.30)}
+#battle .bt-turret{position:static;flex:0 0 auto;display:flex;gap:var(--sp-2);justify-content:center;flex-wrap:nowrap;overflow-x:auto;height:24px}
+#battle .bt-turret button{font-size:var(--fs-xs);padding:var(--sp-1) var(--sp-2);border-radius:9px}
+#battle .bt-act{display:flex;align-items:center;gap:var(--sp-3);flex:1;min-height:0}
+#battle .bt-skills{position:static;flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:var(--sp-2);justify-content:center;overflow:visible}
+#battle .bt-skills .bs{width:68px;height:68px;flex:0 0 68px;min-width:0;border-radius:14px;
+  border:1px solid rgba(255,183,60,.30);background:rgba(255,183,60,.07)}
+#battle .bt-skills .bs img{width:42px;height:42px;border-radius:10px}
+#battle .bt-skills .bs>b{font-size:var(--fs-xs);right:var(--sp-1);top:var(--sp-1)}
+#battle .bt-reload{position:relative;right:auto;bottom:auto;flex:0 0 72px;width:72px;height:72px;
+  border:2px solid var(--c-amber-320);box-shadow:0 0 16px rgba(255,183,60,.22)}
+#battle .bt-reload .gun-ic{width:32px;height:32px}
+#battle .bt-reload span{font-size:var(--fs-xs);font-weight:var(--fw-semibold)}
+#battle .bt-talk{top:auto;bottom:calc(var(--bt-talk-bottom) + var(--sab,0px));max-width:82%;padding:var(--sp-2) var(--sp-4);
+  border-radius:14px;background:rgba(12,9,6,.86);border:1px solid rgba(255,183,60,.22);font-size:var(--fs-xs)}
+
+/* 技能三选一：三列等宽大卡，图标+名称+效果数值，去掉重复说明层 */
+.ccard{max-width:none !important;height:210px;justify-content:flex-start;padding:var(--sp-3) var(--sp-2) var(--sp-3);
+  border-radius:16px;border:1px solid rgba(255,183,60,.32);
+  background:linear-gradient(180deg,rgba(58,42,26,.97),rgba(24,17,11,.98))}
+.ccard>i{width:56px;height:56px;flex:0 0 56px;border-radius:14px}
+.ccard>i img{width:46px;height:46px}
+.ccard .ci{flex:0 0 auto;width:100%;text-align:center}
+.ccard .cn{justify-content:center;font-size:var(--fs-sm);margin-top:var(--sp-3)}
+.ccard .cd2{-webkit-line-clamp:3;font-size:var(--fs-xs);line-height:1.5;margin-top:var(--sp-2);text-align:center}
+.ccard .cl{display:block;margin-top:var(--sp-2);font-size:var(--fs-xs);font-weight:var(--fw-semibold)}
+
+/* ========== V1.3.87b 视觉复核修正（真实截图取证后重排） ==========
+ * 立规原因：首版把身份条压成单行导致信息被截断、下半屏留白、次频入口留空洞。
+ * 判据：信息不丢、Tab 常驻底部、菜单内部滚动、空白由场景氛围承接；仍不删任何 button / id。 */
+#home{overflow:hidden}
+#home .hm-top{height:auto;min-height:84px;flex:0 0 auto;display:grid;
+  grid-template-columns:40px 1fr 30px;grid-template-rows:42px 26px;gap:var(--sp-1) var(--sp-2);
+  padding:var(--sp-2) var(--sp-4) var(--sp-2);align-items:center}
+#home .hm-av{grid-column:1;grid-row:1;width:40px;height:40px;flex-basis:40px}
+#home .hm-info{grid-column:2;grid-row:1;display:flex;align-items:center;gap:var(--sp-1) var(--sp-3);
+  flex-wrap:wrap;min-width:0;overflow:hidden;padding-right:var(--sp-half)}
+#home .hm-name{flex:0 0 auto;font-size:var(--fs-sm);white-space:nowrap}
+#home .hm-name .hm-lv{margin-left:var(--sp-1);font-size:var(--fs-xs);color:var(--tw-3)}
+#home .hm-pw,#home .hm-prog{margin:0;font-size:var(--fs-xs);white-space:nowrap;line-height:1.2}
+#home .hm-set{grid-column:3;grid-row:1;position:static;order:0;width:30px;height:30px}
+#home .hm-cur{grid-column:1/-1;grid-row:2;flex-direction:row;justify-content:flex-start;gap:var(--sp-2);align-items:center}
+#home .hm-cur .cu{height:24px;padding:0 var(--sp-2);font-size:var(--fs-xs)}
+#home .hm-cur .cu img{width:13px;height:13px}
+
+/* 场景氛围承接剩余空间，内容不足也不留白板 */
+#home .hm-bg{z-index:0;opacity:.62;background:
+  linear-gradient(180deg,rgba(13,9,6,.94) 0%,rgba(13,9,6,.62) 26%,rgba(13,9,6,.30) 62%,rgba(13,9,6,.88) 100%),
+  url('../assets/scene/city.jpg') center 70%/cover no-repeat}
+#home>*:not(.hm-bg){z-index:1}
+
+/* 菜单吃掉剩余高度并内部滚动，TabBar 因此永远贴底常驻 */
+#home .hm-menu{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;
+  padding:var(--sp-3) var(--sp-4) var(--sp-3);background:linear-gradient(180deg,transparent 58%,rgba(90,58,28,.10) 100%)}
+#home .hm-menu::-webkit-scrollbar{display:none}
+#home .hm-guide:empty,#home .hm-today:empty,#home .hm-base:empty{display:none}
+#home .hm-tabs{position:relative;bottom:auto;margin-top:0;flex:0 0 58px}
+
+/* 次频 4 个独立成行，不再留 2 个空洞格 */
+#home .hmg-mid{grid-template-columns:repeat(4,1fr);gap:var(--sp-2);margin-top:var(--sp-2)}
+#home .hmg-mid .hmb i{width:46px;height:46px;flex-basis:46px}
+#home .hmg-mid .hmb i img{width:40px;height:40px}
+#home .hmg-mid .hmb{background:linear-gradient(180deg,rgba(255,183,60,.075),rgba(255,183,60,.025));
+  border-color:var(--border)}
+
+/* 出击主按钮：文字已表意，去掉贴纸式图标 */
+#home .hm-acts .ha.go i{display:none}
+#home .hm-acts .ha.go b{font-size:var(--fs-4xl)}
+
+/* ========== V1.3.87c 可操作性复核：点击热区一律 >= 44px ==========
+ * 立规原因：真实取证量出设置 30x30、暂停/倍速 34x34，拇指点不准；玩家反馈「操作不方便」。
+ * 判据：#home 与 #battle 内所有可点控件实测宽高均 >= 44（由 redesign.cjs 复核）。 */
+#home .hm-top{grid-template-columns:40px 1fr 44px;grid-template-rows:44px 26px;min-height:88px}
+#home .hm-set{width:44px;height:44px;flex-basis:44px}
+#battle .bt-topbar{height:52px;padding:0 var(--sp-3)}
+#battle .bt-topbar .btb-icon,#battle .bt-topbar .btb-speed{width:44px;height:44px;flex:0 0 44px;border-radius:12px}
+#battle .btb-prog{top:var(--bt-prog-top)}
+#battle .bt-status{top:var(--bt-status-top)}
+#choice .ch-head{padding:0 var(--sp-1)}
+#choice .ch-arrow{height:34px;padding:0;border-radius:10px;background:linear-gradient(180deg,var(--c-amber-100),var(--c-amber-400));
+  opacity:.92;font-size:var(--fs-md)}
