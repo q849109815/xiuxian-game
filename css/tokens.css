@@ -326,3 +326,11 @@
   /* --vvh：软键盘弹出时由 JS 写入可视高度，未写入回落 100vh */
   --vvh:100vh;
 }
+
+/* V1.3.87 战斗操作坞语义尺寸（定位值不是 4pt 间距，不应用 var(--sp-*) 冒充） */
+  --bt-topbar-h:52px;
+  --bt-prog-top:50px;
+  --bt-status-top:58px;
+  --bt-dock-h:124px;
+  --bt-side-bottom:140px;
+  --bt-talk-bottom:132px;
