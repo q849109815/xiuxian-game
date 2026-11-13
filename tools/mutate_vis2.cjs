@@ -38,4 +38,5 @@ let clean=true;
 for(const [f,[orig,h]] of snap){const now=md5(f);if(now!==h){console.log('  污染! '+f);clean=false}}
 console.log('变异捕获 '+cap+'/'+MUT.length+'，还原 '+(clean?'逐字节一致':'失败'));
 console.log('还原后基线: '+guard().trim().split('\n').slice(-1)[0]);
+console.log('RESULT: PASS='+cap+' FAIL='+(MUT.length-cap)+(clean?'':' 还原失败'));
 process.exit(cap===MUT.length&&clean?0:1);
