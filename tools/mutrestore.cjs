@@ -30,9 +30,13 @@ ck('R1 注入态登记表存在', /let ACTIVE = null/.test(src) && /function eme
 ck('R2 emergencyRestore 会写回原文', /fs\.writeFileSync\(fp, ACTIVE\.src\)/.test(src));
 /* 必须锁定「主退出路径」那一条（带清锁动作）：自证分支也有一个
  * `const rel = () => { emergencyRestore(); }`，只匹配前缀会被它顶包，
- * 导致「删掉主路径还原调用」这条变异逃过检查。 */
+ * 导致「删掉主路径还原调用」这条变异逃过检查。
+ * V1.3.91：主路径改为多行后，旧的单行正则失明（报假 FAIL）。改为截取
+ * 「含清锁动作的那个 rel 块」，再在块内逐项检查，既不被自证分支顶包，
+ * 也不因实现换行而误判。 */
+const mainRel = (src.match(/const rel = \(\) => \{[\s\S]{0,1600}?fs\.unlinkSync\(LOCK\)[\s\S]{0,160}?\};/) || [])[0] || '';
 ck('R3 主退出路径 rel 调用 emergencyRestore 且清锁',
-   /const rel = \(\) => \{ emergencyRestore\(\); try \{ fs\.unlinkSync\(LOCK\)/.test(src));
+   /emergencyRestore\(\)/.test(mainRel) && /fs\.unlinkSync\(LOCK\)/.test(mainRel));
 ck('R4 SIGTERM / SIGINT / exit 三条退出路径都挂 rel',
    (src.match(/process\.on\('(?:SIGTERM|SIGINT|exit)'/g) || []).length >= 3);
 ck('R5 注入前登记 ACTIVE', /ACTIVE = \{ file: m\.file, src, before \}/.test(src));
@@ -44,6 +48,13 @@ ck('R10 存在信号自证入口', /--selftest-signal/.test(src));
 ck('R11 自证不申请全局锁（不与全量变异互斥）',
    /if \(process\.argv\[2\] === '--selftest-signal'\) return;/.test(src));
 ck('R12 收工有开工快照全量比对', /md5f\(f\) !== BASE0\[f\]/.test(src));
+/* V1.3.91 真事故：遗留实例结束后 admin/index.html 注入未还原，
+ * emergencyRestore 只认 ACTIVE，ACTIVE 被清空即全盲。退出钩子必须再按开工快照兜底。 */
+ck('R13 退出钩子按开工快照全量兜底（不依赖 ACTIVE）',
+   /中断全量兜底/.test(src) && /typeof BASE0 !== 'undefined'/.test(src)
+   && /Object\.keys\(BASE0\)/.test(src) && /snapPath\(f\)/.test(src)
+   && /fs\.readFileSync\(sp\)/.test(src)
+   && /fs\.writeFileSync\(ROOT \+ '\/' \+ f, fs\.readFileSync\(sp\)\)/.test(src));
 
 console.log('\n— E 执行证：真实信号中断 + 卫生检查 —');
 const probe = ROOT + '/tools/_restore_probe.txt';
