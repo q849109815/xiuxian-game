@@ -935,22 +935,22 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '1.3.88',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '1.3.89',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/tokens.css', ver:'1.3.88', size: 0 },
-      { p: 'css/style.css', ver:'1.3.88', size: 0 },
-      { p: 'js/net.js', ver:'1.3.88', size: 0 },
-      { p: 'js/config.js', ver:'1.3.88', size: 0 },
-      { p: 'js/ops.js', ver:'1.3.88', size: 0 },
-      { p: 'js/engine.js', ver:'1.3.88', size: 0 },
-      { p: 'js/chibi.js', ver:'1.3.88', size: 0 },
-      { p: 'js/juice.js', ver:'1.3.88', size: 0 },
-      { p: 'js/battle.js', ver:'1.3.88', size: 0 },
-      { p: 'js/ui.js', ver:'1.3.88', size: 0 },
-      { p: 'js/user.js', ver:'1.3.88', size: 0 },
-      { p: 'js/main.js', ver:'1.3.88', size: 0 },
-      { p: 'js/audio.js', ver:'1.3.88', size: 0 },
+      { p: 'css/tokens.css', ver:'1.3.89', size: 0 },
+      { p: 'css/style.css', ver:'1.3.89', size: 0 },
+      { p: 'js/net.js', ver:'1.3.89', size: 0 },
+      { p: 'js/config.js', ver:'1.3.89', size: 0 },
+      { p: 'js/ops.js', ver:'1.3.89', size: 0 },
+      { p: 'js/engine.js', ver:'1.3.89', size: 0 },
+      { p: 'js/chibi.js', ver:'1.3.89', size: 0 },
+      { p: 'js/juice.js', ver:'1.3.89', size: 0 },
+      { p: 'js/battle.js', ver:'1.3.89', size: 0 },
+      { p: 'js/ui.js', ver:'1.3.89', size: 0 },
+      { p: 'js/user.js', ver:'1.3.89', size: 0 },
+      { p: 'js/main.js', ver:'1.3.89', size: 0 },
+      { p: 'js/audio.js', ver:'1.3.89', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -1279,6 +1279,18 @@ const EX = {
             测试: '新建 vis3 14 项常驻守卫（7 静态 + 7 真实 Chrome 量盒子）并接入看板固定项；变异 4/4 全部捕获且逐字节还原；全量回归与 24+15 屏真实渲染 0 报错',
             运营: '排期权威源先改 config.js 再跑 rmsync，players 分支单独下发并线上真身核验，防止双分支分叉复发' }
     },
+    { v: 'V1.3.89', n: '检测工具收口与空状态精细化', wk: '已发布', eta: '2026-11-14', tp: 'patch',
+      c: '收口上一轮欠账：体检员不支持 PASS=14 等号形态，把全绿的 taskflow 误判成「报 FAIL 14 却 exit 0」不可信；vistate 解析带伪元素的状态选择器时把 .tab.on::before 整个塞进 className，CSS 永不匹配，恒报「0 差异」假红（补量伪元素与子元素后 30/30 全过）；体检第 5 批超时强杀留下题材禁用词注入串，由 mutrestore 自动还原、mutsentinel 复核 3/0，并明确变异与体检不得并发；空状态图形锚点由字符 ○ 改为虚线圆角块 + 琥珀渐层，选中 Tab 补暖光，全程零新增文案；界面重做提案文档状态归位为已落地。',
+      ms: '工具体检结论不再骗人，空面板与选中态更清楚',
+      ok: 'vistate 30/0、taskflow2 13/0（取证快照已按最终 ui.js 重跑）、mutsentinel 3/0、archguard 247/0、static 10/0；体检快照 complete=true 且 34/34 全可信',
+      pr: 'P1', done: true, pub: true,
+      hi: ['空面板不再只有一个小圆圈，状态一眼可辨', '底部选中的页签有明显暖光高亮'],
+      dp: { 策划: '复核哪些判据失真属于「工具骗人」而非产品缺陷，确认零文案新增、玩法数值不动',
+            美术: '空状态图形锚点与选中 Tab 暖光的质感、描边与渐层，不改配色体系、不新增素材',
+            程序: '修 toolaudit 等号解析、vistate 伪元素解析与计算样式判据；同步 mutate_visguard / mutate_vis2 / mutate_vis3 锚点与可机读结果',
+            音频: '本轮无改动，回归确认 BGM 与音效链路不受影响',
+            测试: '分批重跑全量体检 34/34、刷新真实浏览器取证快照、变异验证与重复测试，确认并发锁与还原链有效',
+            运营: '排期权威源先改 config.js 再跑 rmsync，players 分支单独下发并线上真身核验' } },
     { v: 'V1.4.0', n: '社交深化', wk: '规划中', eta: '2026-12', tp: 'minor', c: '军团战、好友助战技能化、角色扩到20', ms: '有人一起玩', ok: '军团战可开', pr: 'P2', done: false, pub: true,
       hi: ['军团战：军团与军团之间开打', '好友助战升级为可选助战技能', '角色从 16 名扩充到 20 名'],
       dp: { 策划: '军团战规则、助战技能设计、4 名新角色设定', 美术: '军团战场景、4 名新角色立绘与技能特效', 程序: '军团战匹配与结算、助战技能系统', 音频: '军团战 BGM 与开战号角', 测试: '军团战并发与结算一致性', 运营: '军团战赛季与战力榜运营' } },
