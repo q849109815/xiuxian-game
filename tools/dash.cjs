@@ -37,7 +37,7 @@ const antiCheat=/antiCheat|cheat|哨兵|anomaly/i.test(R('js/main.js')+cfg);
 const adm=R('admin/index.html')+R('admin/js/core.js')+R('admin/js/pages.js');
 const funnel=/funnel|漏斗|dau_retention|留存/i.test(adm);
 
-const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs','uxdel.cjs','dashparse.cjs','dashcons.cjs','mutate_dashcons.cjs','mutrestore.cjs','mutate_mutrestore.cjs','vis2.cjs','flowguard.cjs','mutate_flowguard.cjs','_flowwalk.cjs','taskflow.cjs','mutate_taskflow.cjs','_flowwalk_v1386.cjs','taskflow2.cjs','mutate_taskflow2.cjs','_flowwalk_v1386b.cjs','redesign.cjs','mutate_redesign.cjs'];
+const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs','uxdel.cjs','dashparse.cjs','dashcons.cjs','mutate_dashcons.cjs','mutrestore.cjs','mutate_mutrestore.cjs','vis2.cjs','vis3.cjs','mutate_vis3.cjs','flowguard.cjs','mutate_flowguard.cjs','_flowwalk.cjs','taskflow.cjs','mutate_taskflow.cjs','_flowwalk_v1386.cjs','taskflow2.cjs','mutate_taskflow2.cjs','_flowwalk_v1386b.cjs','redesign.cjs','mutate_redesign.cjs'];
 const tOk=tools.filter(t=>ex('tools/'+t)).length;
 
 /* 【玩家可感知交叉验证】—— 进度表固定项，每轮必跑
@@ -179,6 +179,14 @@ A('测试','上传清单覆盖',pc&&pc.f===0?`PASS${pc.p}/0`:`未过${pc?pc.f:'�
 const lg=(()=>{try{const r=require('child_process').spawnSync('node',['tools/layoutguard.cjs','360'],{cwd:__dirname+'/..',encoding:'utf8',timeout:300000});
   const m=(r.stdout||'').match(/\[layoutguard\] PASS (\d+) \/ FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
 A('测试','布局越界守卫',lg&&lg.f===0?`PASS${lg.p}/0`:`未过${lg?lg.f:'未跑通✗'}项`);
+/* 【视觉精细化守卫】—— 进度表固定项（V1.3.88 新增）
+ * 事故：战斗语义变量掉出 :root 作用域，top 回退 0，状态带/侧键全塌到顶栏压住关卡名；
+ * 换弹盘 <img> 无 src 只剩空方框；7 个面板下半屏裸黑 283~612px。
+ * 而 redesign / layoutguard 全绿——它们只问越界与报错，不问信息层次与盒子高度。
+ * 本项每轮必跑：静态源码 7 项 + 真实 Chrome 量盒子 7 项，未过直接显示「玩家可见未过」。 */
+const v3=(()=>{try{const r=require('child_process').spawnSync('node',['tools/vis3.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:180000});
+  const m=(r.stdout||'').match(/vis3: PASS (\d+) \/ FAIL (\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','视觉精细化守卫',v3&&v3.f===0?`PASS${v3.p}/0`:`未过${v3?v3.f:'未跑通✗'}项`);
 /* 【战斗布局守卫】—— 进度表固定项（V1.3.72111111 事故后新增）
  * 玩家连续两轮反馈「战斗界面打着打着出屏幕」，而既有守卫只覆盖主界面/面板/三选一，
  * 战斗态长期是盲区。本项每轮必跑：战斗中 HUD / 三选一 / 视口变化 / 画布比例，
