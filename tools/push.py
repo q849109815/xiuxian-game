@@ -358,6 +358,8 @@ FILES = [
     'tools/sceneTheme.cjs',
     'tools/v121.cjs',
     'tools/ver.cjs',
+    'tools/verconst.cjs',
+    'tools/mutate_verconst.cjs',
     'tools/v123.cjs',
     'tools/chapterStar.cjs',
     'tools/synccheck.py',
