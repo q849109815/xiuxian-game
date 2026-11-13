@@ -259,6 +259,8 @@ FILES = [
     'tools/visualgrid.py',
     'tools/vis2.cjs',
     'tools/mutate_vis2.cjs',
+    'tools/vis3.cjs',
+    'tools/mutate_vis3.cjs',
     'tools/interop.cjs',
     'tools/interop2.cjs',
     'tools/mutate_interop2.cjs',
