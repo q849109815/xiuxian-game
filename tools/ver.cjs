@@ -255,6 +255,40 @@ const d = syncAImgV(next);
 changelog(cur, next, kind, note);
 writeVer(next);
 
+/* 【全量回读校验 V1.3.90】立规原因：版本脚本曾被中途打断，留下
+ * 「index/config 已升版、IMG_V / AIMG_V / 发布基线仍停在旧值」的半同步状态，
+ * 玩家与后台图标缓存刷不掉，而脚本尾部照常打印「已同步」——报了没落地。
+ * 判据：8 处版本戳逐一读回，任一不等于 next 即 exit 2 并点名具体文件。 */
+(function verifyAll(v) {
+  const R = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const idx = R('index.html'), adm = R('admin/index.html');
+  const cfg = R('js/config.js'), ui = R('js/ui.js'), core = R('admin/js/core.js');
+  const log = R('CHANGELOG.md');
+  const base = JSON.parse(fs.readFileSync(VER_FILE, 'utf8')).v;
+  const allV = s => [...s.matchAll(/\?v=([\w.\-]+)/g)].map(x => x[1]);
+  const idxV = allV(idx), admV = allV(adm);
+  const cfgV = (cfg.match(/HOT_UPDATE:\s*\{[\s\S]*?version:\s*'([^']+)'/) || [])[1];
+  const manV = [...cfg.matchAll(/ver\s*:\s*'([^']+)'/g)].map(x => x[1]);
+  const heads = [...log.matchAll(/^## V([\d.]+)/gm)].map(x => x[1]);
+  const checks = [
+    ['index.html ?v=', idxV.length > 0 && idxV.every(x => x === v)],
+    ['admin/index.html ?v=', admV.length > 0 && admV.every(x => x === v)],
+    ['config.js HOT_UPDATE.version', cfgV === v],
+    ['config.js manifest ver', manV.length > 0 && manV.every(x => x === v)],
+    ['ui.js IMG_V', (ui.match(/const\s+IMG_V\s*=\s*'([^']+)'/) || [])[1] === v],
+    ['admin/core.js AIMG_V', (core.match(/const\s+AIMG_V\s*=\s*'([^']+)'/) || [])[1] === v],
+    ['发布基线 .version.json', base === v],
+    ['CHANGELOG 最新条目', heads.length > 0 && heads[heads.length - 1] === v],
+  ];
+  const bad = checks.filter(x => !x[1]);
+  if (bad.length) {
+    bad.forEach(x => console.error('[FAIL] 版本回读不一致：' + x[0] + '（期望 ' + v + '）'));
+    console.error('[FAIL] 发布处于半同步状态，缓存冲刷不可信；修复后重跑，不得上报已发布。');
+    process.exit(2);
+  }
+  console.log('[回读校验] 8 处版本戳全部 = V' + v + '（含 IMG_V / AIMG_V / 基线 / CHANGELOG）');
+})(next);
+
 console.log(`[递增校验] V${cur} -> V${next} 严格递增 OK（缓存必刷新）`);
 console.log(`版本发布： V${cur}  ->  V${next}  (${kind})`);
 console.log(`  index.html / admin  ?v= 戳同步 ${a} 处`);
