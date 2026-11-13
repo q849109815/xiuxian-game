@@ -2832,3 +2832,54 @@ b { font-weight: var(--fw-semibold) !important; }
 #choice .ch-head{padding:0 var(--sp-1)}
 #choice .ch-arrow{height:34px;padding:0;border-radius:10px;background:linear-gradient(180deg,var(--c-amber-100),var(--c-amber-400));
   opacity:.92;font-size:var(--fs-md)}
+
+/* =========================================================================
+ * V1.3.88 全站视觉精细化（真实 Chrome 逐屏复核后重做，非凭猜测）
+ * 立规原因：24 个面板里 7 个下半屏是裸黑（实测空白 283~612px），战斗顶栏
+ *   关卡名/波次/血条横排挤成一条；界面看不懂、不好看，靠加说明文字是治标，
+ *   本轮只重做布局与层次，不新增任何标语、说明、次要标签。
+ * 判据：作用域限定 #battle / #panel / #home；不删 id、不改 data-p、不动 canvas；
+ *   全部走既有令牌，无新增 #hex。由 tools/vis3.cjs 独立守卫复核。
+ * ========================================================================= */
+
+/* ① 战斗顶栏：关卡名与波次/计时/等级分两层，不再横排挤成一坨 */
+#battle .btb-mid{flex-direction:column;align-items:center;justify-content:center;gap:0;text-align:center}
+#battle .btb-lv{font-size:var(--fs-md);line-height:1.25;max-width:100%}
+#battle .btb-sub{font-size:var(--fs-xs);line-height:1.25;opacity:.92;margin:0}
+#battle .btb-sub span{white-space:nowrap}
+
+/* ② 战斗换弹盘：图标缺失时由 JS 兜底真实图片，这里只统一圆形质感与可读层级 */
+#battle .bt-reload{border:2px solid var(--c-amber-350);
+  box-shadow:var(--shadow-2),0 0 0 1px rgba(255,183,60,.18) inset}
+#battle .bt-reload .gun-ic{filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
+
+/* ③ 面板内容区：内容少时以层次承接留白，不再是半屏裸黑 */
+#panel .pn-body{background:
+  radial-gradient(140% 48% at 50% 0%,rgba(255,183,60,.05),transparent 72%),
+  linear-gradient(180deg,rgba(255,255,255,.012),transparent 36%)}
+#panel .pn-body>.empty,#pnBody>.empty{
+  min-height:min(62vh,520px);margin:var(--sp-3);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-radius:var(--radius-lg);border:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(255,183,60,.06),rgba(255,183,60,.015))}
+#panel .pn-body>.empty::before,#pnBody>.empty::before{
+  font-size:var(--fs-4xl);opacity:.42;margin-bottom:var(--sp-2)}
+/* 邮件/公告等空状态包在 .card 里（不是 .pn-body 直接子元素），
+ * 历史只给 280px 仍留半屏空白，这里按同一口径铺满且居中。 */
+#panel .card>.empty{min-height:min(62vh,520px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-radius:var(--radius-lg);border:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(255,183,60,.06),rgba(255,183,60,.015))}
+
+/* ④ 面板内卡片/标题栏/页签收口为同一套圆角与描边（只作用于通用面板） */
+#panel .card{border-radius:var(--radius-lg);border:1px solid var(--border)}
+#panel .pn-hd{border-bottom:1px solid var(--border)}
+#panel .pt.on{border-radius:var(--radius-md)}
+
+/* ⑤ 主界面身份条：玻璃质感 + 底部描边，把信息与场景图分层 */
+#home .hm-top{background:linear-gradient(180deg,rgba(8,6,4,.88),rgba(8,6,4,.52));
+  border-bottom:1px solid var(--border);border-radius:0 0 var(--radius-lg) var(--radius-lg);
+  backdrop-filter:blur(4px)}
+#home .hm-cur .cu{border-radius:var(--radius-pill);border:1px solid var(--border);
+  padding:var(--sp-half) var(--sp-2)}
+#home .hmg .hmb i{border-radius:var(--radius-md);border:1px solid var(--border)}
