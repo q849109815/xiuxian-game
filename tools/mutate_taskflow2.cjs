@@ -71,4 +71,6 @@ const fin = run();
 console.log('MUTATE_TASKFLOW2 CAPTURE=' + cap + '/' + total +
   ' RESTORE=' + (clean ? 'MD5_OK' : 'FAIL') + ' FINAL_GREEN=' + (fin.status === 0));
 bad.forEach(x => console.log('  BAD ' + x));
+const fails = bad.length + (cap !== total ? 1 : 0) + (clean ? 0 : 1) + (fin.status !== 0 ? 1 : 0);
+console.log('RESULT: PASS=' + cap + ' FAIL=' + fails);
 process.exit(bad.length || cap !== total || fin.status !== 0 ? 1 : 0);
