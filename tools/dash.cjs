@@ -150,6 +150,15 @@ A('测试','缓存冲刷守卫',cg&&cg.f===0?`PASS${cg.p}/0`:`未过${cg?cg.f:'�
 const vct=(()=>{try{const r=require('child_process').spawnSync('node',['tools/verconst.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:60000});
   const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
 A('测试','版本一致性守卫',vct&&vct.f===0?`PASS${vct.p}/0`:`未过${vct?vct.f:'未跑通✗'}项`);
+/* 【云端版本三次取样】—— 进度表固定项（V1.3.92 新增受控铁律）
+ * 立规原因：V1.3.91 验证时单次取样撞上发布半同步窗口，
+ * 三轮结果分别是全旧 / 半新半旧 / 全新。只取一次就判「一致」会把
+ * 发布中途状态当成最终状态，玩家仍可能拿到旧 ?v= 文件。
+ * 本项每轮必跑：恰好 3 份快照、两两一致、版本文字长度一致、
+ * 崩溃显式判失败；守卫自身由 mutate_ver3.cjs 5 组变异证明抓得住。 */
+const v3s=(()=>{try{const r=require('child_process').spawnSync('node',['tools/ver3.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
+  const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','云端版本三次取样',v3s&&v3s.f===0?`PASS${v3s.p}/0`:`未过${v3s?v3s.f:'未跑通✗'}项`);
 /* 【发布流程守卫】—— 进度表固定项（V1.3.721 新增）
  * 铁律：每次发布版本号必须在末尾 +1（1.3.72 -> 1.3.721），否则玩家缓存不刷新，
  * 表现为「明明修了还是坏的」直接招投诉。本项每轮必跑：
