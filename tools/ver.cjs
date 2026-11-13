@@ -58,6 +58,9 @@ const CHANGELOG = path.join(ROOT, 'CHANGELOG.md');
 const TARGETS = [
   { f: 'index.html', pat: /\?v=[\w.\-]+/g },
   { f: 'admin/index.html', pat: /\?v=[\w.\-]+/g },
+  /* V1.3.92：CSS 内也曾写死 ?v=20270122a，换背景图玩家缓存永远刷不掉。
+   * 纳入同步范围，patch 时一并推进。 */
+  { f: 'css/style.css', pat: /\?v=[\w.\-]+/g },
 ];
 
 function readVer() {
