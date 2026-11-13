@@ -217,3 +217,13 @@
 - 清理 CHANGELOG 测试残留段，基线按 CHANGELOG 最新真实版本校正为 1.3.89，再 PATCH 递增到 1.3.90；一条命令同步 index/admin ?v=、config version 与 13 项 manifest ver、IMG_V、AIMG_V、发布基线 8 处。
 - ver.cjs 新增 8 处全量回读校验：任一处不等于新版本即 exit 2 并点名，杜绝脚本被打断留下半同步状态却照常打印「已同步」。
 - 三体验：UX 玩家拿到的资源戳必变、缓存真冲刷；DX 版本同步单命令化且回读可机读；AX 崩溃/半同步显式判失败，不静默报绿。玩法、数值、canvas 未动。
+
+## V1.3.91（修 BUG / 小幅优化） · 2026-11-14
+- 变异验证退出兜底加固：遗留实例残留污染已还原，8处版本戳统一
+
+- **交叉验证先查自己**：开工实测本地与线上分裂（本地 index/config 停在 1.3.74、权威 .version.json 1.3.73、CHANGELOG 末尾残留 reset 测试段），而线上真身已是 1.3.90 且 615 文件全量一致。上一轮遗留发布任务已把 8 处版本戳统一到 1.3.90 并上传，本轮不重复发布，只收口其余欠账。
+- **污染还原**：mutguard 遗留实例结束后，admin/index.html 的 nav_set.png 被注入成 __mut_missing.png 未还原（线上干净）。已按开工快照逐字节还原，本地=线上，哨兵 3/0。根因是退出钩子 emergencyRestore 只认 ACTIVE，ACTIVE 清空即全盲。
+- **加固**：mutguard 任何退出路径（exit / SIGTERM / SIGINT）在 emergencyRestore 之外，再按开工快照 BASE0 逐文件校验并从 _mutsnap 写回；mutrestore 新增 R13，并把 R3 改为截取「含清锁动作的 rel 块」逐项检查（旧单行正则在改成多行后失明，报了假 FAIL）。
+- **验证**：mutrestore 19/0；三变异 3/3 捕获（删 emergencyRestore→R3、兜底条件改 false→R13、删写回语句→R13），还原 md5 一致；真实跑 mutguard deadcfg.cjs 4/4 捕获、15 文件与开工快照一致；哨兵 3/0；体检 34/34 COMPLETE；taskflow2 真实 Chrome 取证刷新后 13/0。
+- **三体验**：UX 本轮零玩家可见改动，资源戳统一为 1.3.91 保证缓存真冲刷；DX 排期先改 config.js 权威源再 rmsync，退出兜底单处实现不改调用方式；AX 崩溃/半同步显式判失败，判据可机读且自身可被变异证伪。玩法、数值、canvas 未动。
+- 参考链接：用户附的 11 条资源解析服务仍全部失败，未假装对标。
