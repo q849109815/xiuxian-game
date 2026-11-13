@@ -935,22 +935,22 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '1.3.87',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '1.3.88',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/tokens.css', ver:'1.3.87', size: 0 },
-      { p: 'css/style.css', ver:'1.3.87', size: 0 },
-      { p: 'js/net.js', ver:'1.3.87', size: 0 },
-      { p: 'js/config.js', ver:'1.3.87', size: 0 },
-      { p: 'js/ops.js', ver:'1.3.87', size: 0 },
-      { p: 'js/engine.js', ver:'1.3.87', size: 0 },
-      { p: 'js/chibi.js', ver:'1.3.87', size: 0 },
-      { p: 'js/juice.js', ver:'1.3.87', size: 0 },
-      { p: 'js/battle.js', ver:'1.3.87', size: 0 },
-      { p: 'js/ui.js', ver:'1.3.87', size: 0 },
-      { p: 'js/user.js', ver:'1.3.87', size: 0 },
-      { p: 'js/main.js', ver:'1.3.87', size: 0 },
-      { p: 'js/audio.js', ver:'1.3.87', size: 0 },
+      { p: 'css/tokens.css', ver:'1.3.88', size: 0 },
+      { p: 'css/style.css', ver:'1.3.88', size: 0 },
+      { p: 'js/net.js', ver:'1.3.88', size: 0 },
+      { p: 'js/config.js', ver:'1.3.88', size: 0 },
+      { p: 'js/ops.js', ver:'1.3.88', size: 0 },
+      { p: 'js/engine.js', ver:'1.3.88', size: 0 },
+      { p: 'js/chibi.js', ver:'1.3.88', size: 0 },
+      { p: 'js/juice.js', ver:'1.3.88', size: 0 },
+      { p: 'js/battle.js', ver:'1.3.88', size: 0 },
+      { p: 'js/ui.js', ver:'1.3.88', size: 0 },
+      { p: 'js/user.js', ver:'1.3.88', size: 0 },
+      { p: 'js/main.js', ver:'1.3.88', size: 0 },
+      { p: 'js/audio.js', ver:'1.3.88', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -1263,6 +1263,21 @@ const EX = {
             音频: '本轮无改动',
             测试: '真实 Chrome 四屏取证（越界/破图/报错/热区/抽屉/Tab/技能卡）、redesign 15 项常驻守卫、变异 7/7 捕获且逐字节还原、三体验与错题本复核',
             运营: '排期权威源登记、rmsync 双源同步、players 分支下发与线上真身核验' }
+    },
+    { v: 'V1.3.88', n: '全站视觉精细化与战斗HUD层叠修复', wk: '已发布', eta: '2026-11-13', tp: 'patch',
+      c: '承接上一轮未收口：真实 Chrome 逐屏复核查出 V1.3.87 遗留的层叠塌陷根因——6 个战斗语义变量写在 :root 闭合花括号之后，裸声明被整段忽略，top:var(--bt-status-top) 回退 0，状态带/侧键全部塌到顶栏压住关卡名。收回 :root 后状态带 y=58、侧键 y=612；顶栏改两层；换弹盘补默认武器图消除空框；24 面板中 7 个下半屏裸黑改为铺满空状态与渐层底纹；主界面身份条玻璃质感、后台内容区补层次。全程未加一句标语/说明/次要标签，canvas 与 battle.js 一行未动。',
+      ms: '战斗信息一眼分层、换弹盘不再空框、空面板不再半屏黑',
+      ok: 'vis3 14/0、变异 4/4 全捕获且还原 md5 一致；redesign 15/0、btlayout 18/0、layoutguard 168/0、roadmap 115/0、archguard 247/0、static 10/0、ux3 10/0、vis2 12/0、cacheguard 8/0、releaseguard 17/0、pushcov 7/0；真实 Chrome 24 前端 + 15 后台 0 报错',
+      pr: 'P0', done: true, pub: true,
+      hi: ['战斗顶栏关卡名与波次/计时/等级分两层，血条与资源独立成胶囊，不再叠成一条',
+           '换弹盘显示真实武器图标，不再是一个空方框；右侧功能键回到下方不压顶栏',
+           '邮件/公告/芯片等空状态铺满内容区，面板下半屏不再是裸黑'],
+      dp: { 策划: '复核 24 面板与战斗 HUD 的信息层级，判定哪些靠布局解决、哪些是必须保留的有效信息；本轮零文案新增',
+            美术: '统一面板卡片圆角描边、内容区渐层底纹、身份条玻璃质感、后台大屏层次；不新增素材、不改配色',
+            程序: '把 --bt-* 变量收回 :root 作用域（根因修复）、顶栏两层 flex、换弹图默认资源 + dataset 一次性替换；CSS 全部限定作用域且走既有令牌',
+            音频: '本轮无改动，回归确认 BGM 与 16 个角色专属音效链路不受影响',
+            测试: '新建 vis3 14 项常驻守卫（7 静态 + 7 真实 Chrome 量盒子）并接入看板固定项；变异 4/4 全部捕获且逐字节还原；全量回归与 24+15 屏真实渲染 0 报错',
+            运营: '排期权威源先改 config.js 再跑 rmsync，players 分支单独下发并线上真身核验，防止双分支分叉复发' }
     },
     { v: 'V1.4.0', n: '社交深化', wk: '规划中', eta: '2026-12', tp: 'minor', c: '军团战、好友助战技能化、角色扩到20', ms: '有人一起玩', ok: '军团战可开', pr: 'P2', done: false, pub: true,
       hi: ['军团战：军团与军团之间开打', '好友助战升级为可选助战技能', '角色从 16 名扩充到 20 名'],
