@@ -91,7 +91,7 @@ function parseCounts(out) {
   const grab = (keys) => {
     for (const k of keys) {
       /* 数字在后：PASS 70 / PASS:70 / 通过 70 */
-      let m = t.match(new RegExp(k + '\\s*[:：]?\\s*(\\d+)', 'i'));
+      let m = t.match(new RegExp(k + '\\s*[=:：]?\\s*(\\d+)', 'i'));
       if (m) return { n: parseInt(m[1], 10), fmt: k + '(后)' };
       /* 数字在前：70 passed / 70 项通过 */
       m = t.match(new RegExp('(\\d+)\\s*(?:项|个)?\\s*' + k, 'i'));
