@@ -193,5 +193,3 @@
 - 验证：vis3 14/0、变异 4/4 全捕获且还原 md5 逐字节一致、redesign 15/0、btlayout 18/0、layoutguard 168/0、roadmap 115/0、archguard 247/0、static 10/0、ux3 10/0、vis2 12/0、cacheguard 8/0、releaseguard 17/0、pushcov 7/0；真实 Chrome 24 前端面板 + 15 后台页 0 报错。
 - 参考链接：用户附的 11 条（官网 / GAMEUI / 花瓣 / 百度图片 / B站 / 抖音×2 / scgame / 百科 / 豆包表 / 4399）资源解析服务仍全部失败，未假装对标；本轮判断全部来自自有真实渲染取证。
 
-## V1.3.88（修 BUG / 小幅优化） · 2026-11-14
-- V1.3.88 全站视觉精细化与战斗HUD层叠修复
