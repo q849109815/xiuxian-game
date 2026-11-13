@@ -37,6 +37,7 @@ const BASELINE = path.join(TOOLS, '_toolaudit_base.json');
 /* 常驻守卫清单：这些是「每轮都要报数」的工具，必须全部可信 */
 const GUARDS = [
   'vis2.cjs',
+  'vis3.cjs',
   /* V1.3.86 的 taskflow / V1.3.86b 的 taskflow2 此前从未进体检清单：
    * 上轮周报称「三处已登记」但实际只登记了 flowguard，两个判据守卫一直裸奔。 */
   'taskflow', 'taskflow2',
