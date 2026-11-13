@@ -335,3 +335,14 @@ pre.json{margin:0;padding:15px;background:var(--bg2);border:1px solid var(--bd);
 
 /* V1.3.82：带图形锚点的空状态不再叠加默认圆圈 */
 .empty:has(>span)::before{display:none}
+
+/* =========================================================================
+ * V1.3.88 后台视觉精细化：1440 大屏上内容只占左上小块、其余整片裸黑。
+ * 只加层次与质感，不加任何说明文字、不改结构、不动事件绑定。
+ * ========================================================================= */
+.main{background:
+  radial-gradient(90% 55% at 18% 0%,rgba(47,129,247,.055),transparent 72%),
+  linear-gradient(180deg,rgba(255,255,255,.012),transparent 44%)}
+#body>.card{box-shadow:0 6px 20px rgba(0,0,0,.22);border-radius:var(--r2)}
+#body tr:hover{background:rgba(47,129,247,.06)}
+.empty{border-radius:var(--r2)}
