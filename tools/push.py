@@ -22,6 +22,13 @@ FILES = [
     'index.html',
     'tools/redesign.cjs',
     'tools/mutate_redesign.cjs',
+    # V1.3.92 受控铁律：三次取样验证器 / 常驻守卫 / 变异验证
+    'tools/cloudver.cjs',
+    'tools/ver3.cjs',
+    'tools/mutate_ver3.cjs',
+    'tools/artharmonize.cjs',
+    'css/v1392.css',
+    'assets/scene/home_v1392.jpg',
     # 美术资源：章节 CG 过场图。历史上清单只含代码，导致美术交图后从未入库、
     # 线上引用 404。新增资源必须显式登记，否则「本地有、线上无」。
     'assets/cg/cg01_horde.jpg', 'assets/cg/cg02_defense.jpg', 'assets/cg/cg03_rebuild.jpg',
