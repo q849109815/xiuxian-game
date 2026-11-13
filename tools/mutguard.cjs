@@ -250,24 +250,54 @@ function inCommentOrString(s, i) {
    * 状态机撞上就把那个引号当成字符串起点，此后 q 永远不闭合，
    * 2038 行之后的所有代码全被判成「在字符串里」。
    * 后果：有效注入点被误判为[注入点无效]而跳过 —— 用例从没被证明过，
-   * 而报出来的措辞像是锚点的错，真正的缺陷反而藏起来了。 */
+   * 而报出来的措辞像是锚点的错，真正的缺陷反而藏起来了。
+   *
+   * 【V1.3.89 修复】不识别模板字符串的 ${...} 插值：ui.js 商城渲染把整段 JS
+   * （goods.map((g)=>{...})）写在 `${}` 里，插值内部又有反引号模板。状态机把
+   * 插值里的代码当字符串内容，从第 2677 行起 q 停在 '`' 永不闭合，此后所有
+   * 真实代码都被判「在字符串里」。flowguard 的真注入点（第 2708 行 const
+   * _period）因此被误判 [注入点无效] 跳过，一条能证伪守卫的用例从没被证明过。
+   * 修法：反引号态遇 ${ 压栈进表达式态（正常解析代码/引号/注释/正则），
+   * 花括号配平后弹栈回模板态，支持嵌套模板。其余判据一字未动。 */
   let ln = false, blk = false, q = null, rx = false;  // 行注释/块注释/引号/正则
+  const tpl = [];   // ${} 插值栈：每项保存外层表达式的花括号深度
+  let depth = 0;    // 栈顶表达式还需匹配的 } 数
   for (let k = 0; k < i; k++) {
     const c = s[k], n = s[k + 1];
     if (ln) { if (c === '\n') ln = false; continue; }
     if (blk) { if (c === '*' && n === '/') { blk = false; k++; } continue; }
-    if (q) { if (c === '\\') { k++; continue; } if (c === q) q = null; continue; }
+    if (q) {
+      if (c === '\\') { k++; continue; }
+      if (q === '`' && c === '$' && n === '{') {
+        tpl.push(depth); depth = 1; q = null; k++; continue;
+      }
+      if (c === q) q = null;
+      continue;
+    }
     if (rx) {
       if (c === '\\') { k++; continue; }
       if (c === '/' || c === '\n') rx = false;   // 正则不能跨行
       if (c === '[') { k++; while (k < i && s[k] !== ']') { if (s[k] === '\\') k++; k++; } continue; }
       continue;
     }
+    /* 代码态且处于 ${} 插值里：先配平花括号，正则里的 {} 已在 rx 分支跳过 */
+    if (tpl.length) {
+      if (c === '{') { depth++; continue; }
+      if (c === '}') {
+        depth--;
+        if (depth === 0) { depth = tpl.pop(); q = '`'; }
+        continue;
+      }
+    }
     if (c === '/' && n === '/') { ln = true; k++; continue; }
     if (c === '/' && n === '*') { blk = true; k++; continue; }
     if (c === '/' && _rxStart(s, k)) { rx = true; continue; }
     if (c === '"' || c === "'" || c === '`') { q = c; continue; }
   }
+  /* 插值栈非空 = 正处于 ${} 里的**可执行代码**，不是字符串文本；
+   * 只有 q / 注释 / 正则态才意味着「改这里不会破坏功能」。
+   * 早期版本把 tpl.length 也算进返回值，等于把整段插值代码误判成字符串，
+   * 与不识别 ${} 是同一个错误的另一半。 */
   return ln || blk || !!q || rx;
 }
 
@@ -319,7 +349,35 @@ if (process.env.MUTGUARD_SELFTEST) {
   }
   console.log(bad === 0 ? '[判定自证] PASS 4/4（中文 FAIL 文案、纯 PASS、数字结论、混合）'
                         : `[判定自证] FAIL ${bad}/4`);
-  process.exit(bad === 0 ? 0 : 1);
+
+  /* 【V1.3.89】注入点有效性判据同样要自证：它曾把 ${} 插值里的真代码
+   * 判成「在字符串里」，直接让 flowguard 用例停摆。
+   * 用例覆盖：模板插值内=代码、嵌套模板、普通字符串内=真字符串、两类注释。 */
+  const BT = String.fromCharCode(96);
+  const icsCases = [
+    ['const s = ' + BT + 'a${f(1)}' + BT + '; const y = 1;', 'const y', false],
+    ['const s = ' + BT + 'x${ {a: ' + BT + 'y${g()}' + BT + '} }' + BT + '; const z = 1;', 'const z', false],
+    ["const s = 'abc';", 'abc', true],
+    ['// abc\nconst y = 1;', 'abc', true],
+    ['/* abc */\nconst y = 1;', 'abc', true],
+  ];
+  let icsBad = 0;
+  for (const [src, needle, want] of icsCases) {
+    const got = inCommentOrString(src, src.indexOf(needle));
+    if (got !== want) { console.log(`[注入点判据自证失败] want=${want} got=${got} :: ${src.split('\n')[0]}`); icsBad++; }
+  }
+  /* 真实文件级验证：ui.js 第 2708 行的 const _period 必须是可注入的真代码 */
+  try {
+    const u = fs.readFileSync(ROOT + '/js/ui.js', 'utf8');
+    const at = u.indexOf("const _period = { daily: '明日刷新'");
+    if (at < 0 || inCommentOrString(u, at)) {
+      console.log('[注入点判据自证失败] ui.js 的 _period 锚点仍被判为字符串/注释');
+      icsBad++;
+    }
+  } catch (e) { console.log('[注入点判据自证失败] ui.js 读取异常 ' + e.message); icsBad++; }
+  console.log(icsBad === 0 ? '[注入点判据自证] PASS 6/6（含真实 ui.js 锚点）'
+                           : `[注入点判据自证] FAIL ${icsBad}/6`);
+  process.exit(bad === 0 && icsBad === 0 ? 0 : 1);
 }
 
 /* ---------------------------------------------------------------------------
