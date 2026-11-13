@@ -12,7 +12,7 @@ const md5 = s => crypto.createHash('md5').update(s).digest('hex');
 const M = [
   { n: 'M1 拆掉登录公告过滤', f: 'js/ui.js', from: 'this.pubSafe(this.noticeUnread())', to: 'this.noticeUnread()' },
   { n: 'M2 清空辱骂词表', f: 'js/ui.js', from: "['傻逼', '煞笔'", to: "['', '煞笔'" },
-  { n: 'M3 删空状态样式', f: 'css/style.css', from: ".empty::before{content:'○';font-size:26px;line-height:1;opacity:.35}", to: '' },
+  { n: 'M3 删空状态样式', f: 'css/style.css', from: ".empty::before{content:'';display:block;width:44px;height:44px;border-radius:13px;", to: '' },
   { n: 'M4 加回登录副标语', f: 'index.html', from: '    <div class="lg-t">向 僵 尸 开 炮</div>', to: '    <div class="lg-t">向 僵 尸 开 炮</div>\n    <div class="lg-s">末 日 尸 潮 · 守 住 最 后 防 线</div>' },
 ];
 let cap = 0, bad = 0;
