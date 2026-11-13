@@ -1,7 +1,7 @@
 {
   "tag": "v1386b_fix",
   "ready": true,
-  "srcHash": "9fa7212e57c5b71b30e96ade055631c0",
+  "srcHash": "6671c6cab5939797fc60ec9934b001eb",
   "steps": {
     "H1_直达落点与目标控件可见性": [
       {
