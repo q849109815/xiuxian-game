@@ -54,4 +54,5 @@ for (const c of CASES) {
   }
 }
 console.log('\n变异验证：捕获 ' + pass + '/' + CASES.length + '，失败 ' + fail);
+console.log('RESULT: PASS=' + pass + ' FAIL=' + fail);
 process.exit(fail ? 1 : 0);
