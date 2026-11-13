@@ -40,11 +40,17 @@ function collectStates() {
       const last = parts[parts.length - 1];
       // 形如 .x.on / .x.cur（也可能是 .x.on > i 之类，跳过带后代的）
       if (/>|\+|~/.test(s)) return;
-      const cls = [...last.matchAll(/\.([A-Za-z0-9_-]+)/g)].map((x) => x[1]);
+      /* V1.3.89 根因：状态选择器带伪元素时（.tab.on::before），
+       * 旧代码把 '.tab.on::before' 整个当类名塞进 className，
+       * 浏览器永远匹配不上 CSS → 恒报「0 差异」的假红。
+       * 先把伪元素后缀剥离，只拿核心类名建元素，伪元素另由计算样式单独量。 */
+      const pm = last.match(/(::?[A-Za-z-]+)$/i);
+      const core = pm ? last.slice(0, -pm[1].length) : last;
+      const cls = [...core.matchAll(/\.([A-Za-z0-9_-]+)/g)].map((x) => x[1]);
       if (cls.length < 2) return;
       if (!STATES.includes(cls[cls.length - 1])) return;
       const baseParts = parts.slice();
-      baseParts[baseParts.length - 1] = last.replace(new RegExp('\\.' + cls[cls.length - 1] + '$'), '');
+      baseParts[baseParts.length - 1] = core.replace(new RegExp('\\.' + cls[cls.length - 1] + '$'), '');
       const parents = parts.slice(0, -1);
       const key = s;
       if (!out.has(key)) out.set(key, {
@@ -144,6 +150,21 @@ function skip(reason) {
       PROPS.forEach((p) => {
         const x = sa.getPropertyValue(p), y = sz.getPropertyValue(p);
         if (x !== y) diff[p] = x + ' -> ' + y;
+      });
+      /* V1.3.89：状态变化常落在伪元素与子元素上（如 .tab.on::before 横条、
+       * .tab.on .ti 底色、.tab.on span 字色），只量元素本身会把「肉眼看得见」
+       * 误判成「0 差异」。补量伪元素 + 两个真实子元素，判据与画面一致。 */
+      ['::before','::after'].forEach((ps) => {
+        const pa = getComputedStyle(a, ps), pz = getComputedStyle(z, ps);
+        PROPS.forEach((p) => { const x = pa.getPropertyValue(p), y = pz.getPropertyValue(p);
+          if (x !== y) diff[ps + ':' + p] = x + ' -> ' + y; });
+      });
+      ['i','span'].forEach((sel) => {
+        const ca = a.querySelector(sel), cz = z.querySelector(sel);
+        if (!ca || !cz) return;
+        const xa = getComputedStyle(ca), xz = getComputedStyle(cz);
+        PROPS.forEach((p) => { const x = xa.getPropertyValue(p), y = xz.getPropertyValue(p);
+          if (x !== y) diff[sel + ':' + p] = x + ' -> ' + y; });
       });
       out.push({ sel: c.state, n: Object.keys(diff).length, diff });
     });
