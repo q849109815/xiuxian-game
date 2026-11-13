@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.87';
+const IMG_V = '1.3.88';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -4924,10 +4924,16 @@ r_tavern(p, tab) {
     const bpw = $('#btPower'); if (bpw) bpw.textContent = E.fmt(E.power(this.P));
     const bd = $('#btDia'); if (bd) bd.textContent = E.fmt(this.P.diamond || 0);
     /* 武器图标（底部 + 右上） */
+    /* V1.3.88：武器图缺失时必须给真实资源兜底。
+     * 原写法 g.img 为空就整个不赋 src，底部换弹盘只剩一个空方框（真实截图取证：
+     * gunSrc=null / naturalWidth=0），玩家看不到弹药图标也分不清这是什么按钮。 */
+    const g1 = E.gun(this.P), gimg = ((g1 && g1.img) || 'assets/icon/nav_gun.png') + '?v=' + IMG_V;
+    /* HTML 已给默认武器图，首帧不再空框；这里只在首次 HUD 更新时换成当前武器，
+     * 之后靠 dataset 标记锁住，避免每帧重设 src 造成重复请求与闪烁。 */
     const gi = $('#btGunImg');
-    if (gi && !gi.src) { const g = E.gun(this.P); if (g && g.img) gi.src = g.img + '?v=' + IMG_V; }
+    if (gi && !gi.dataset.gunSet) { gi.src = gimg; gi.dataset.gunSet = '1'; }
     const gi2 = $('#btGunImg2');
-    if (gi2 && !gi2.src) { const g2 = E.gun(this.P); if (g2 && g2.img) gi2.src = g2.img + '?v=' + IMG_V; }
+    if (gi2 && !gi2.dataset.gunSet) { gi2.src = gimg; gi2.dataset.gunSet = '1'; }
     /* 右上弹药 30/30 */
     const mg2 = $('#btMag2'), mgm = $('#btMagMax');
     if (mg2) mg2.textContent = r.mag != null ? r.mag : 30;
