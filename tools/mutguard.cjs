@@ -485,8 +485,29 @@ function acquireLock() {
   /* 【V1.3.78 真事故】信号中断时进程可能正处在「注入态」。
    * 旧 handler 只清锁就 exit(143)，try/finally 根本没机会执行 —— 注入的缺陷
    * 永久留在源码里。本轮实测：tools/push.py 的 c01_jack.jpg 上传条目被删后
-   * 没还原，若发布即线上破图。记录当前注入文件与原文，任何退出路径先写回。 */
-  const rel = () => { emergencyRestore(); try { fs.unlinkSync(LOCK); } catch (e) {} };
+   * 没还原，若发布即线上破图。记录当前注入文件与原文，任何退出路径先写回。
+   * 【V1.3.91 真事故】上一轮遗留实例结束后，admin/index.html 的 nav_set.png
+   * 被改成 __mut_missing.png 未还原：emergencyRestore 只认 ACTIVE，一旦 ACTIVE
+   * 被清空或错乱就全盲。故任何退出路径再按「开工快照」逐文件兜底写回。 */
+  const rel = () => {
+    emergencyRestore();
+    try {
+      /* BASE0 = 开工时拍的干净 md5，takeSnapshot 已把原文写入 _mutsnap。
+       * typeof 守卫：进程若在拍快照前就被中断，此时还没注入，不动作。 */
+      if (typeof BASE0 !== 'undefined' && BASE0 && Object.keys(BASE0).length) {
+        let fixed = 0;
+        for (const f of Object.keys(BASE0)) {
+          try {
+            if (!fs.existsSync(ROOT + '/' + f) || md5f(f) === BASE0[f]) continue;
+            const sp = snapPath(f);
+            if (fs.existsSync(sp)) { fs.writeFileSync(ROOT + '/' + f, fs.readFileSync(sp)); fixed++; }
+          } catch (e) {}
+        }
+        if (fixed) console.log(`[中断全量兜底] 已按开工快照写回 ${fixed} 个文件`);
+      }
+    } catch (e) { console.log('[中断全量兜底异常] ' + (e && e.message || e)); }
+    try { fs.unlinkSync(LOCK); } catch (e) {}
+  };
   process.on('exit', rel);
   process.on('SIGTERM', () => { rel(); process.exit(143); });
   process.on('SIGINT', () => { rel(); process.exit(130); });
