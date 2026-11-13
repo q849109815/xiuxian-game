@@ -935,22 +935,22 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '1.3.90',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '1.3.91',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/tokens.css', ver:'1.3.90', size: 0 },
-      { p: 'css/style.css', ver:'1.3.90', size: 0 },
-      { p: 'js/net.js', ver:'1.3.90', size: 0 },
-      { p: 'js/config.js', ver:'1.3.90', size: 0 },
-      { p: 'js/ops.js', ver:'1.3.90', size: 0 },
-      { p: 'js/engine.js', ver:'1.3.90', size: 0 },
-      { p: 'js/chibi.js', ver:'1.3.90', size: 0 },
-      { p: 'js/juice.js', ver:'1.3.90', size: 0 },
-      { p: 'js/battle.js', ver:'1.3.90', size: 0 },
-      { p: 'js/ui.js', ver:'1.3.90', size: 0 },
-      { p: 'js/user.js', ver:'1.3.90', size: 0 },
-      { p: 'js/main.js', ver:'1.3.90', size: 0 },
-      { p: 'js/audio.js', ver:'1.3.90', size: 0 },
+      { p: 'css/tokens.css', ver:'1.3.91', size: 0 },
+      { p: 'css/style.css', ver:'1.3.91', size: 0 },
+      { p: 'js/net.js', ver:'1.3.91', size: 0 },
+      { p: 'js/config.js', ver:'1.3.91', size: 0 },
+      { p: 'js/ops.js', ver:'1.3.91', size: 0 },
+      { p: 'js/engine.js', ver:'1.3.91', size: 0 },
+      { p: 'js/chibi.js', ver:'1.3.91', size: 0 },
+      { p: 'js/juice.js', ver:'1.3.91', size: 0 },
+      { p: 'js/battle.js', ver:'1.3.91', size: 0 },
+      { p: 'js/ui.js', ver:'1.3.91', size: 0 },
+      { p: 'js/user.js', ver:'1.3.91', size: 0 },
+      { p: 'js/main.js', ver:'1.3.91', size: 0 },
+      { p: 'js/audio.js', ver:'1.3.91', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -1303,6 +1303,13 @@ const EX = {
             音频: '本轮无改动，回归确认 BGM 与音效链路不受影响',
             测试: '新建 verconst 8 项常驻守卫并接入看板固定项，变异 3/3 全捕获；V8 允许历史基线重设的合法回落，其余乱序条目一律报红',
             运营: '排期权威源先改 config.js 再跑 rmsync，双分支单独下发并线上真身核验' } },
+    { v: 'V1.3.91', n: '变异验证退出兜底加固', wk: '已发布', eta: '2026-11-14', tp: 'patch',
+      c: '收口上一轮遗留：体检残快照重跑 34/34、真实 Chrome 取证刷新；mutguard 遗留实例结束后 admin/index.html 的 nav_set.png 被注入成 __mut_missing.png 未还原（线上干净，本地已按开工快照还原）。根因是退出钩子只认 ACTIVE，ACTIVE 清空即全盲，已加按开工快照逐文件兜底写回。',
+      ms: '检测工具被中断也不把脏代码留在工作区',
+      ok: 'mutrestore 19/0、三变异 3/3 捕获且还原 md5 一致、mutguard 单条真实用例 4/4 捕获、哨兵 3/0',
+      pr: 'P1', done: true, pub: true,
+      hi: ['后台首页图标不再有破图风险', '玩家刷新后资源戳统一为 1.3.91，缓存真冲刷'],
+      dp: { 策划: '本轮零文案新增、玩法数值与 canvas 不动', 美术: '回归确认 240 资源与界面质感不受影响', 程序: 'mutguard 退出钩子按开工快照全量兜底，不依赖 ACTIVE', 音频: '无改动，回归确认链路不受影响', 测试: 'mutrestore 新增 R13 并修正 R3 判据，三变异全部捕获；体检快照恢复 34/34', 运营: '排期权威源先改 config.js 再跑 rmsync，双分支单独下发并线上真身核验' } },
     { v: 'V1.4.0', n: '社交深化', wk: '规划中', eta: '2026-12', tp: 'minor', c: '军团战、好友助战技能化、角色扩到20', ms: '有人一起玩', ok: '军团战可开', pr: 'P2', done: false, pub: true,
       hi: ['军团战：军团与军团之间开打', '好友助战升级为可选助战技能', '角色从 16 名扩充到 20 名'],
       dp: { 策划: '军团战规则、助战技能设计、4 名新角色设定', 美术: '军团战场景、4 名新角色立绘与技能特效', 程序: '军团战匹配与结算、助战技能系统', 音频: '军团战 BGM 与开战号角', 测试: '军团战并发与结算一致性', 运营: '军团战赛季与战力榜运营' } },
