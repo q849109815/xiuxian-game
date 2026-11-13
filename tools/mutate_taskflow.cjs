@@ -71,4 +71,6 @@ const fin = spawnSync(process.execPath, [path.join(ROOT, 'tools/taskflow.cjs')],
 console.log('MUTATE_TASKFLOW CAPTURE=' + cap + '/' + M.length +
   ' RESTORE=' + (clean ? 'MD5_OK' : 'FAIL') + ' FINAL_GREEN=' + (fin.status === 0));
 bad.forEach(x => console.log('  BAD ' + x));
+const fails = bad.length + (cap !== M.length ? 1 : 0) + (clean ? 0 : 1) + (fin.status !== 0 ? 1 : 0);
+console.log('RESULT: PASS=' + cap + ' FAIL=' + fails);
 process.exit(bad.length || cap !== M.length || fin.status !== 0 ? 1 : 0);
