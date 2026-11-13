@@ -110,6 +110,9 @@ if (REG.length === 0) {
      * 数值类注入（ATK_PER: 0.015 → ATK_PER: 0）A 证抓不到——
      * from 完好无损，只是值被改了。这类必须靠 to 残留来发现。
      * 只查长度 >= 4 的注入串，避免过短文本误报。 */
+    /* V1.3.90 提醒：S1-B 判的是「注入串是否还在源码里」，
+     * 因此事故复盘/排期文案里不得原样抄写完整注入串 —— 文字本身会被当成残留。
+     * 完整串只写进 CHANGELOG 事故档案（不在 REG 扫描范围内）。 */
     const left = list.filter(r => r.to && r.to.length >= 4 && src.includes(r.to));
     if (gone.length) {
       miss += gone.length;
