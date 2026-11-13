@@ -37,7 +37,7 @@ const antiCheat=/antiCheat|cheat|哨兵|anomaly/i.test(R('js/main.js')+cfg);
 const adm=R('admin/index.html')+R('admin/js/core.js')+R('admin/js/pages.js');
 const funnel=/funnel|漏斗|dau_retention|留存/i.test(adm);
 
-const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs','uxdel.cjs','dashparse.cjs','dashcons.cjs','mutate_dashcons.cjs','mutrestore.cjs','mutate_mutrestore.cjs','vis2.cjs','vis3.cjs','mutate_vis3.cjs','flowguard.cjs','mutate_flowguard.cjs','_flowwalk.cjs','taskflow.cjs','mutate_taskflow.cjs','_flowwalk_v1386.cjs','taskflow2.cjs','mutate_taskflow2.cjs','_flowwalk_v1386b.cjs','redesign.cjs','mutate_redesign.cjs'];
+const tools=['gate.cjs','static.cjs','archguard.cjs','layout.cjs','compat.cjs','dirty.cjs','fuzz.cjs','ausnd.cjs','admperm.cjs','assetguard.cjs','deadcfg.cjs','offline.cjs','curve.cjs','vistate.cjs','flip.cjs','v110.cjs','ch1115.cjs','season.cjs','v110all.cjs','txtwire.cjs','realm.cjs','powerguard.cjs','sceneTheme.cjs','v121.cjs','ver.cjs','v123.cjs','chapterStar.cjs','synccheck.py','pxcheck.cjs','adminux.cjs','shopux.cjs','biguard.cjs','btprereq.cjs','uxdel.cjs','dashparse.cjs','dashcons.cjs','mutate_dashcons.cjs','mutrestore.cjs','mutate_mutrestore.cjs','vis2.cjs','vis3.cjs','mutate_vis3.cjs','flowguard.cjs','mutate_flowguard.cjs','_flowwalk.cjs','taskflow.cjs','mutate_taskflow.cjs','_flowwalk_v1386.cjs','taskflow2.cjs','mutate_taskflow2.cjs','_flowwalk_v1386b.cjs','redesign.cjs','mutate_redesign.cjs','verconst.cjs','mutate_verconst.cjs'];
 const tOk=tools.filter(t=>ex('tools/'+t)).length;
 
 /* 【玩家可感知交叉验证】—— 进度表固定项，每轮必跑
@@ -142,6 +142,14 @@ try {
 const cg=(()=>{try{const r=require('child_process').spawnSync('node',['tools/cacheguard.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
   const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
 A('测试','缓存冲刷守卫',cg&&cg.f===0?`PASS${cg.p}/0`:`未过${cg?cg.f:'未跑通✗'}项`);
+/* 【版本一致性守卫】—— 进度表固定项（V1.3.90 新增）
+ * 立规原因：上一轮报「V1.3.89 收尾已发布」，实测全站 8 处版本戳分裂
+ * （基线 1.3.73 / index 与 config 1.3.74 / IMG_V 与 AIMG_V 1.3.73），
+ * CHANGELOG 末尾还挂着 reset 测试残留段。版本脚本被打断留下半同步状态，
+ * 却没有任何一条检查独立问「8 处是否一致」。本项每轮必跑必报。 */
+const vct=(()=>{try{const r=require('child_process').spawnSync('node',['tools/verconst.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:60000});
+  const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','版本一致性守卫',vct&&vct.f===0?`PASS${vct.p}/0`:`未过${vct?vct.f:'未跑通✗'}项`);
 /* 【发布流程守卫】—— 进度表固定项（V1.3.721 新增）
  * 铁律：每次发布版本号必须在末尾 +1（1.3.72 -> 1.3.721），否则玩家缓存不刷新，
  * 表现为「明明修了还是坏的」直接招投诉。本项每轮必跑：
