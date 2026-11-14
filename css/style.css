@@ -142,7 +142,7 @@ html[data-kb] #login{justify-content:flex-start;padding:var(--sp-3)}
   radial-gradient(ellipse 130% 62% at 50% 4%, rgba(51, 47, 41, .17) 0%, rgba(51, 47, 41, 0) 62%),
   radial-gradient(ellipse 96% 52% at 14% 96%, rgba(51, 30, 8, .14) 0%, rgba(51, 30, 8, 0) 64%),
   linear-gradient(180deg,rgba(38, 27, 19, .44) 0%,rgba(38, 27, 19, .36) 45%,rgba(12, 7, 2, .50) 100%),
-  url(../assets/scene/main_bg.jpg?v=1.3.92) center/cover no-repeat,
+  url(../assets/scene/main_bg.jpg?v=1.3.93) center/cover no-repeat,
   linear-gradient(180deg,var(--c-ink-600) 0%,var(--c-ink-100) 45%,var(--c-amber-750) 100%)}
 .hm-bg{position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(ellipse at 50% 18%,rgba(51, 47, 41, .18),transparent 55%),
@@ -2803,7 +2803,7 @@ b { font-weight: var(--fw-semibold) !important; }
 /* 场景氛围承接剩余空间，内容不足也不留白板 */
 #home .hm-bg{z-index:0;opacity:.62;background:
   linear-gradient(180deg,rgba(13,9,6,.94) 0%,rgba(13,9,6,.62) 26%,rgba(13,9,6,.30) 62%,rgba(13,9,6,.88) 100%),
-  url('../assets/scene/home_v1392.jpg?v=1.3.92') center 70%/cover no-repeat}
+  url('../assets/scene/home_v1392.jpg?v=1.3.93') center 70%/cover no-repeat}
 #home>*:not(.hm-bg){z-index:1}
 
 /* 菜单吃掉剩余高度并内部滚动，TabBar 因此永远贴底常驻 */
@@ -2887,3 +2887,24 @@ b { font-weight: var(--fw-semibold) !important; }
 #home .hm-cur .cu{border-radius:var(--radius-pill);border:1px solid var(--border);
   padding:var(--sp-half) var(--sp-2)}
 #home .hmg .hmb i{border-radius:var(--radius-md);border:1px solid var(--border)}
+
+/* ==================== V1.3.93 人物模型展示整改（真实截图逐屏复核） ====================
+ * 立规原因：角色页 16 张 512px 人物立绘被压成 60px 细线，玩家根本看不清人物模型；
+ *   全局 .gcell img{max-height:64px;flex:0 1 auto} 允许图片被 flex 压缩。
+ * 判据：立绘固定 84px 方形、不可压缩、顶部对齐（半身像脸在上）、选中态金边光晕。
+ * 不改 ui.js 渲染与 data-chsel 绑定，只调展示层，功能零破坏。 */
+.chr-grid .gcell img{width:84px;height:84px;min-height:84px;max-height:84px;
+  flex:0 0 84px;aspect-ratio:1/1;object-fit:cover;object-position:top center;
+  border-radius:12px;border:1px solid rgba(255,214,140,.22);
+  box-shadow:0 3px 10px rgba(0,0,0,.38)}
+.chr-grid .gcell.sel img{border-color:var(--gold);
+  box-shadow:0 0 0 2px rgba(255,199,92,.30),0 4px 14px rgba(255,180,60,.22)}
+
+/* V1.3.93 复证修正：84px 立绘虽已不再被压成细线，但暗调立绘叠在深色卡片上
+ * 几乎看不见；且历史 .gcell.sel img{filter:grayscale(.7) brightness(.68)}
+ * 把「选中/使用中」的角色反而压暗（选中应高亮）。补亮底衬 + 提亮 + 反压暗。 */
+.chr-grid .gcell img{max-width:none;object-position:50% 18%;
+  background:linear-gradient(160deg,var(--c-ink-250),var(--c-ink-600));
+  filter:brightness(1.16) contrast(1.07)}
+.chr-grid .gcell.sel img{filter:brightness(1.22) contrast(1.08);
+  border-color:var(--gold);box-shadow:0 0 0 2px rgba(255,199,92,.32),0 4px 14px rgba(255,180,60,.24)}
