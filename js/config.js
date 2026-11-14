@@ -935,23 +935,23 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '1.3.94',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '1.3.95',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/tokens.css', ver:'1.3.94', size: 0 },
-      { p: 'css/style.css', ver:'1.3.94', size: 0 },
-      { p: 'css/v1392.css', ver:'1.3.94', size: 0 },
-      { p: 'js/net.js', ver:'1.3.94', size: 0 },
-      { p: 'js/config.js', ver:'1.3.94', size: 0 },
-      { p: 'js/ops.js', ver:'1.3.94', size: 0 },
-      { p: 'js/engine.js', ver:'1.3.94', size: 0 },
-      { p: 'js/chibi.js', ver:'1.3.94', size: 0 },
-      { p: 'js/juice.js', ver:'1.3.94', size: 0 },
-      { p: 'js/battle.js', ver:'1.3.94', size: 0 },
-      { p: 'js/ui.js', ver:'1.3.94', size: 0 },
-      { p: 'js/user.js', ver:'1.3.94', size: 0 },
-      { p: 'js/main.js', ver:'1.3.94', size: 0 },
-      { p: 'js/audio.js', ver:'1.3.94', size: 0 },
+      { p: 'css/tokens.css', ver:'1.3.95', size: 0 },
+      { p: 'css/style.css', ver:'1.3.95', size: 0 },
+      { p: 'css/v1392.css', ver:'1.3.95', size: 0 },
+      { p: 'js/net.js', ver:'1.3.95', size: 0 },
+      { p: 'js/config.js', ver:'1.3.95', size: 0 },
+      { p: 'js/ops.js', ver:'1.3.95', size: 0 },
+      { p: 'js/engine.js', ver:'1.3.95', size: 0 },
+      { p: 'js/chibi.js', ver:'1.3.95', size: 0 },
+      { p: 'js/juice.js', ver:'1.3.95', size: 0 },
+      { p: 'js/battle.js', ver:'1.3.95', size: 0 },
+      { p: 'js/ui.js', ver:'1.3.95', size: 0 },
+      { p: 'js/user.js', ver:'1.3.95', size: 0 },
+      { p: 'js/main.js', ver:'1.3.95', size: 0 },
+      { p: 'js/audio.js', ver:'1.3.95', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -1332,6 +1332,13 @@ const EX = {
       pr: 'P1', done: true, pub: true,
       hi: ['前瞻里能看到最新版本'],
       dp: { 策划: '无改动', 美术: '无改动', 程序: '流程规范补登步骤', 音频: '无改动', 测试: '排期守卫拦截复发', 运营: '补登并双分支同步' } },
+    { v: 'V1.3.95', n: '云端真身三次取样与发布后改动收口', wk: '已发布', eta: '2026-11-14', tp: 'patch',
+      c: 'V1.3.94 发布后 css/style.css 又改了 274 行，云端已传但八处版本戳未升，玩家命中旧缓存；同时把三次取样铁律从本地副本补齐到云端真身。',
+      ms: '玩家缓存真冲刷 + 云端八受控锚点值一致',
+      ok: '云端真身三次取样 PASS8/0、全量复核一致、排期双分支同步',
+      pr: 'P0', done: true, pub: true,
+      hi: ['刷新后样式与图标为 V1.3.95', '设置→前瞻能看到最新版本'],
+      dp: { 策划: '零玩法数值改动', 美术: '三张模型图像素复核、洋红残留 0', 程序: '八处版本戳同步与缓存冲刷', 音频: '无改动', 测试: '云端取样 8/0、变异 4/4 捕获', 运营: '排期补登并双分支同步' } },
     { v: 'V1.4.0', n: '社交深化', wk: '规划中', eta: '2026-12', tp: 'minor', c: '军团战、好友助战技能化、角色扩到20', ms: '有人一起玩', ok: '军团战可开', pr: 'P2', done: false, pub: true,
       hi: ['军团战：军团与军团之间开打', '好友助战升级为可选助战技能', '角色从 16 名扩充到 20 名'],
       dp: { 策划: '军团战规则、助战技能设计、4 名新角色设定', 美术: '军团战场景、4 名新角色立绘与技能特效', 程序: '军团战匹配与结算、助战技能系统', 音频: '军团战 BGM 与开战号角', 测试: '军团战并发与结算一致性', 运营: '军团战赛季与战力榜运营' } },
