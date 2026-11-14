@@ -26,6 +26,9 @@ FILES = [
     'tools/cloudver.cjs',
     'tools/ver3.cjs',
     'tools/mutate_ver3.cjs',
+    # V1.3.95 云端真身三次取样：常驻守卫 + 变异验证
+    'tools/onlinerver.cjs',
+    'tools/mutate_onlinerver.cjs',
     'tools/artharmonize.cjs',
     'css/v1392.css',
     'assets/scene/home_v1392.jpg',
