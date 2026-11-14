@@ -159,6 +159,14 @@ A('测试','版本一致性守卫',vct&&vct.f===0?`PASS${vct.p}/0`:`未过${vct?
 const v3s=(()=>{try{const r=require('child_process').spawnSync('node',['tools/ver3.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
   const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
 A('测试','云端版本三次取样',v3s&&v3s.f===0?`PASS${v3s.p}/0`:`未过${v3s?v3s.f:'未跑通✗'}项`);
+/* 【云端真身三次取样】—— 进度表固定项（V1.3.95 补齐铁律另一半）
+ * 立规原因：cloudver / ver3 取的是本地受控副本，本地永远自洽；用户要求验证的
+ * 是云端版本文字。发布后改了文件却不升版、线上半同步，本地三次取样一律全绿。
+ * 本项直连线上拉 8 受控文件、连取 3 次，另查锚点值一致、等于发布基线、
+ * CHANGELOG 取条目标题而非正文里引用的历史版本。前提未就绪显式 exit=2。 */
+const orv=(()=>{try{const r=require('child_process').spawnSync('node',['tools/onlinerver.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
+  const m=(r.stdout||'').match(/PASS=(\d+) FAIL=(\d+)\s*$/m);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','云端真身三次取样',orv&&orv.f===0?`PASS${orv.p}/0`:`未过${orv?orv.f:'未跑通✗'}项`);
 /* 【全量美术资源】—— 进度表固定项（V1.3.93 新增）
  * 立规原因：战斗贴图带 AI 水印/荧光描边、副武器十张同图、BOSS 背景割裂、
  * 角色立绘被压成细线，且 chibi/boss 整目录从未登记上传清单（改了传不上线）。
