@@ -36,8 +36,14 @@ function pickVersionTexts(text, file) {
     grab(/\b(?:IMG_V|AIMG_V)\s*=\s*['"](1\.3\.\d+)['"]/g);
   } else if (file === 'tools/.lastrelease.json') {
     grab(/["']v["']\s*:\s*["'](1\.3\.\d+)["']/g);
+  } else if (file === 'CHANGELOG.md') {
+    /* 口径修复（V1.3.95）：最新条目正文会引用历史版本，例如 V1.3.94 条目里
+     * 写「生效锚点集合是 {1.3.93}」，取「最后一个数字」会拿到旧值 1.3.93。
+     * 改为取最后一个 `## V1.x.x` 条目标题，才是真正的最新发布版本。 */
+    const heads = [...text.matchAll(/^##\s*V(1\.3\.\d+)/gm)].map(x => x[1]);
+    if (heads.length) out.push(heads[heads.length - 1]);
   } else {
-    // CHANGELOG / 排期表：只取最后一条（最新发布版本），历史条目按口径排除
+    // 排期表：只取最后一条（最新发布版本），历史条目按口径排除
     const all = [...text.matchAll(/1\.3\.\d+/g)].map(x => x[0]);
     if (all.length) out.push(all[all.length - 1]);
   }
