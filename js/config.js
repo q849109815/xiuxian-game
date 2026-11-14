@@ -935,23 +935,23 @@ const EX = {
      *   同理 OPS.curVer() 返回的也是这个陈旧值，后台「版本管理」显示的版本号
      *   与实际线上版本对不上，运营无法判断玩家拿到的是哪一版。
      * 现在同步为当前版本号；以后改 index.html 的 ?v= 时必须同步改这里。 */
-    version: '1.3.92',      /* 主版本号，改这个会强制全量刷新缓存 */
+    version: '1.3.93',      /* 主版本号，改这个会强制全量刷新缓存 */
     /* 资源清单：path / ver / size(KB) */
     manifest: [
-      { p: 'css/tokens.css', ver:'1.3.92', size: 0 },
-      { p: 'css/style.css', ver:'1.3.92', size: 0 },
-      { p: 'css/v1392.css', ver:'1.3.92', size: 0 },
-      { p: 'js/net.js', ver:'1.3.92', size: 0 },
-      { p: 'js/config.js', ver:'1.3.92', size: 0 },
-      { p: 'js/ops.js', ver:'1.3.92', size: 0 },
-      { p: 'js/engine.js', ver:'1.3.92', size: 0 },
-      { p: 'js/chibi.js', ver:'1.3.92', size: 0 },
-      { p: 'js/juice.js', ver:'1.3.92', size: 0 },
-      { p: 'js/battle.js', ver:'1.3.92', size: 0 },
-      { p: 'js/ui.js', ver:'1.3.92', size: 0 },
-      { p: 'js/user.js', ver:'1.3.92', size: 0 },
-      { p: 'js/main.js', ver:'1.3.92', size: 0 },
-      { p: 'js/audio.js', ver:'1.3.92', size: 0 },
+      { p: 'css/tokens.css', ver:'1.3.93', size: 0 },
+      { p: 'css/style.css', ver:'1.3.93', size: 0 },
+      { p: 'css/v1392.css', ver:'1.3.93', size: 0 },
+      { p: 'js/net.js', ver:'1.3.93', size: 0 },
+      { p: 'js/config.js', ver:'1.3.93', size: 0 },
+      { p: 'js/ops.js', ver:'1.3.93', size: 0 },
+      { p: 'js/engine.js', ver:'1.3.93', size: 0 },
+      { p: 'js/chibi.js', ver:'1.3.93', size: 0 },
+      { p: 'js/juice.js', ver:'1.3.93', size: 0 },
+      { p: 'js/battle.js', ver:'1.3.93', size: 0 },
+      { p: 'js/ui.js', ver:'1.3.93', size: 0 },
+      { p: 'js/user.js', ver:'1.3.93', size: 0 },
+      { p: 'js/main.js', ver:'1.3.93', size: 0 },
+      { p: 'js/audio.js', ver:'1.3.93', size: 0 },
     ],
   },
   /* 取资源带版本号的 URL（热更新核心：改 ver 即失效浏览器缓存） */
@@ -1305,7 +1305,7 @@ const EX = {
             测试: '新建 verconst 8 项常驻守卫并接入看板固定项，变异 3/3 全捕获；V8 允许历史基线重设的合法回落，其余乱序条目一律报红',
             运营: '排期权威源先改 config.js 再跑 rmsync，双分支单独下发并线上真身核验' } },
     { v: 'V1.3.91', n: '变异验证退出兜底加固', wk: '已发布', eta: '2026-11-14', tp: 'patch',
-      c: '收口上一轮遗留：体检残快照重跑 34/34、真实 Chrome 取证刷新；mutguard 遗留实例结束后 admin/index.html 的 nav_set.png 被注入成 __mut_missing.png 未还原（线上干净，本地已按开工快照还原）。根因是退出钩子只认 ACTIVE，ACTIVE 清空即全盲，已加按开工快照逐文件兜底写回。',
+      c: '收口上一轮遗留：体检残快照重跑 34/34、真实 Chrome 取证刷新；mutguard 遗留实例结束后 admin/index.html 的 nav_set.png 被注入成一个不存在的图片名且当时未还原（线上干净，本地已按开工快照还原）。根因是退出钩子只认 ACTIVE，ACTIVE 清空即全盲，已加按开工快照逐文件兜底写回。',
       ms: '检测工具被中断也不把脏代码留在工作区',
       ok: 'mutrestore 19/0、三变异 3/3 捕获且还原 md5 一致、mutguard 单条真实用例 4/4 捕获、哨兵 3/0',
       pr: 'P1', done: true, pub: true,
