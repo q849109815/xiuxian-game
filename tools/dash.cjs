@@ -159,6 +159,13 @@ A('测试','版本一致性守卫',vct&&vct.f===0?`PASS${vct.p}/0`:`未过${vct?
 const v3s=(()=>{try{const r=require('child_process').spawnSync('node',['tools/ver3.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:120000});
   const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
 A('测试','云端版本三次取样',v3s&&v3s.f===0?`PASS${v3s.p}/0`:`未过${v3s?v3s.f:'未跑通✗'}项`);
+/* 【全量美术资源】—— 进度表固定项（V1.3.93 新增）
+ * 立规原因：战斗贴图带 AI 水印/荧光描边、副武器十张同图、BOSS 背景割裂、
+ * 角色立绘被压成细线，且 chibi/boss 整目录从未登记上传清单（改了传不上线）。
+ * 本项每轮必跑：像素级水印扫描、贴图唯一性、背景色系、CSS 尺寸、清单全覆盖。 */
+const aw=(()=>{try{const r=require('child_process').spawnSync('node',['tools/artwork.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:180000});
+  const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','全量美术资源',aw&&aw.f===0?`PASS${aw.p}/0`:`未过${aw?aw.f:'未跑通✗'}项`);
 /* 【发布流程守卫】—— 进度表固定项（V1.3.721 新增）
  * 铁律：每次发布版本号必须在末尾 +1（1.3.72 -> 1.3.721），否则玩家缓存不刷新，
  * 表现为「明明修了还是坏的」直接招投诉。本项每轮必跑：
