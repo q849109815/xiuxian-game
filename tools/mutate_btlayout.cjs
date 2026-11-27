@@ -48,6 +48,13 @@ const M = [
     n: 'M4 注入 B5 技能栏真溢出（真缺陷不得洗成 PREREQ）', f: 'css/style.css', want: /X B5/,
     mut: (s) => s + '\n/*MUT*/ #btSkills .bs{width:300px !important;flex:0 0 300px !important}\n',
   },
+  {
+    /* V1.3.96 收口：B6 扫描口径收窄（排除战斗态下的 #home 后代）后，
+     * 必须证明【战斗 HUD 真越界仍会被 B6 点名报红】，
+     * 否则「修误报」就变成了「放宽守卫」，正是本项目反复踩的坑。 */
+    n: 'M5 注入 B6 战斗顶栏真越界（口径收窄后仍抓得住）', f: 'css/style.css', want: /X B6/,
+    mut: (s) => s + '\n/*MUT*/ #battle .bt-topbar{position:relative;left:-120px !important}\n',
+  },
 ];
 
 let captured = 0, dirty = 0;
