@@ -33,6 +33,15 @@ FILES = [
     'tools/_syncstable.py',
     'tools/mutate_syncstable.py',
     'tools/mutate_auditsave.cjs',
+    # V1.3.97 战斗视觉深化：特效模块 / CSS 层 / 取证与变异验证
+    'js/btfx.js',
+    'css/v1397.css',
+    'tools/btfxguard.cjs',
+    'tools/mutate_btfx.cjs',
+    '_vis/_fx_battle_shot.cjs',
+    '_vis/V1.3.97_after_战斗取证.json',
+    '_vis/V1.3.97_战斗美化_前后对照.png',
+    '_vis/V1.3.97_技能特效总览.png',
     # V1.3.96 全站特效美化：覆盖层 / CSS 链路守卫 / 真实取证
     'css/v1396.css',
     'tools/cssver.cjs',

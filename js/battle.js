@@ -3271,8 +3271,10 @@ const BT = {
     c.save();
     /* 1) 远景大气雾化：越靠近地平线越淡（纵深的关键） */
     const fog = c.createLinearGradient(0, hz - H * 0.05, 0, hz + (wall - hz) * 0.34);
-    fog.addColorStop(0, 'rgba(16,26,42,0.78)');
-    fog.addColorStop(1, 'rgba(16,26,42,0)');
+    /* V1.3.97 细致化：原冷蓝雾 rgba(16,26,42) 与废土棕褐场景割裂，
+     * 整片远景发青。改为深棕暖雾，与主界面营火同色系。 */
+    fog.addColorStop(0, 'rgba(38,26,20,0.76)');
+    fog.addColorStop(1, 'rgba(38,26,20,0)');
     c.fillStyle = fog;
     c.fillRect(0, hz - H * 0.05, W, (wall - hz) * 0.34 + H * 0.05);
 
@@ -3282,9 +3284,10 @@ const BT = {
       const y0 = hz + Math.pow(t0, 1.9) * (wall - hz);
       const y1 = hz + Math.pow(t1, 1.9) * (wall - hz);
       const a = 0.028 + t0 * 0.052;
+      /* V1.3.97：青/紫条带 → 琥珀/暗棕条带，纵深还在，不再像调试网格 */
       c.fillStyle = (i % 2)
-        ? 'rgba(90,225,255,' + (a * 1.5).toFixed(3) + ')'
-        : 'rgba(48,14,86,' + (a * 1.7).toFixed(3) + ')';
+        ? 'rgba(255,186,96,' + (a * 1.35).toFixed(3) + ')'
+        : 'rgba(74,36,18,' + (a * 1.7).toFixed(3) + ')';
       c.fillRect(0, y0, W, Math.max(1, y1 - y0));
     }
 
@@ -3293,7 +3296,8 @@ const BT = {
       const t = i / 14;
       const y = hz + Math.pow(t, 1.9) * (wall - hz);
       const a = 0.05 + t * 0.26;
-      c.strokeStyle = 'rgba(110,240,255,' + Math.min(0.55, a * 1.7).toFixed(3) + ')';
+      /* V1.3.97：冰蓝网格线 → 暖金能量线，透明度再降一档（原先 0.55 太抢眼） */
+      c.strokeStyle = 'rgba(255,196,116,' + Math.min(0.34, a * 1.15).toFixed(3) + ')';
       c.lineWidth = t < 0.25 ? 0.8 : (t < 0.6 ? 1.2 : 2.0);
       c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
     }
@@ -3302,16 +3306,18 @@ const BT = {
     for (let i = -8; i <= 8; i++) {
       const xT = vpx + i * 4;
       const xB = vpx + i * (W / 5.0);
-      c.strokeStyle = 'rgba(190,110,255,' + (0.16 + Math.min(0.16, Math.abs(i) * 0.016)).toFixed(3) + ')';
+      /* V1.3.97：紫色放射线 → 暖琥珀放射线，保留透视收敛但不再刺眼 */
+      c.strokeStyle = 'rgba(255,170,88,' + (0.10 + Math.min(0.10, Math.abs(i) * 0.011)).toFixed(3) + ')';
       c.lineWidth = 1.2;
       c.beginPath(); c.moveTo(xT, hz); c.lineTo(xB, wall); c.stroke();
     }
 
     /* 5) 消失点辉光：远处光源，强化纵深 */
     const gl = c.createRadialGradient(vpx, hz, 0, vpx, hz, Math.max(40, W * 0.55));
-    gl.addColorStop(0, 'rgba(120,235,255,0.30)');
-    gl.addColorStop(0.5, 'rgba(150,120,255,0.12)');
-    gl.addColorStop(1, 'rgba(150,200,255,0)');
+    /* V1.3.97：远景光源从冰蓝/紫改为营火暖光，战场与大厅一个色温 */
+    gl.addColorStop(0, 'rgba(255,196,110,0.26)');
+    gl.addColorStop(0.5, 'rgba(255,142,60,0.10)');
+    gl.addColorStop(1, 'rgba(255,170,90,0)');
     c.fillStyle = gl;
     c.fillRect(0, hz - H * 0.08, W, (wall - hz) * 0.55 + H * 0.08);
 
@@ -6119,7 +6125,7 @@ const BT = {
       if (rr > 0 && rr < Math.max(W, H) * 0.98) {
         c.save();
         c.setLineDash([5, 7]);
-        c.strokeStyle = 'rgba(120,220,255,0.16)';
+        c.strokeStyle = 'rgba(255,206,140,0.18)';
         c.lineWidth = 1.2;
         c.beginPath();
         c.ellipse(r.px, r.py, rr, rr * 0.34, 0, 0, Math.PI * 2);
@@ -7403,6 +7409,12 @@ const BT = {
      *   「战斗画面打着打着往一个方向漂，最后整个跑出屏幕」。
      *   战斗里暴击/击杀极频繁，故该漂移必然发生，且打越久偏得越多。
      *   必须与开头的 save 条件完全一致，否则同样的 bug 会再次出现。 */
+    /* V1.3.97 战斗视觉强化层：画在最顶层、restore 之前（跟着震屏一起动）。
+     * 只往 canvas 上叠加元素色光效与粒子，不读写任何战斗数值；
+     * window.BTFX 不存在时整句跳过，移除 js/btfx.js 即逐字节回退。 */
+    if (globalThis.BTFX && typeof globalThis.BTFX.frame === 'function') {
+      try { globalThis.BTFX.frame(c, r); } catch (e) {}
+    }
     if (_shk || _jsh) c.restore();
   },
 };

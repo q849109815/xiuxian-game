@@ -152,6 +152,13 @@ A('测试','版本一致性守卫',vct&&vct.f===0?`PASS${vct.p}/0`:`未过${vct?
 const cv=(()=>{try{const r=require('child_process').spawnSync('node',['tools/cssver.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:60000});
   const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
 A('测试','CSS版本戳与引入链',cv&&cv.f===0?`PASS${cv.p}/0`:`未过${cv?cv.f:'未跑通✗'}项`);
+/* 【战斗视觉深化层】—— 进度表固定项（V1.3.97 新增）
+ * 立规原因：新增特效涉及 7 处接线（引入链 / draw hook / 纯表现层 /
+ * 网格配色 / 闪光 CSS / 技能球 data-el / 清单登记），少一处玩家就看不到。
+ * 与 mutate_btfx.cjs 的 7 组变异互为证伪。 */
+const bfx=(()=>{try{const r=require('child_process').spawnSync('node',['tools/btfxguard.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:60000});
+  const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','战斗视觉深化层',bfx&&bfx.f===0?`PASS${bfx.p}/0`:`未过${bfx?bfx.f:'未跑通✗'}项`);
 /* 【云端版本三次取样】—— 进度表固定项（V1.3.92 新增受控铁律）
  * 立规原因：V1.3.91 验证时单次取样撞上发布半同步窗口，
  * 三轮结果分别是全旧 / 半新半旧 / 全新。只取一次就判「一致」会把

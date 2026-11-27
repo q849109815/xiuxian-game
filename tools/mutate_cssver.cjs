@@ -10,7 +10,11 @@ const fs = require('fs'), path = require('path'), cp = require('child_process'),
 const ROOT = path.join(__dirname, '..');
 const md5 = b => crypto.createHash('md5').update(b).digest('hex');
 const P = f => path.join(ROOT, f);
-const FILES = ['index.html', 'css/style.css', 'css/tokens.css', 'css/v1392.css', 'css/v1396.css', 'tools/.version.json'];
+/* V1.3.97 收口：备份清单补上新建的 css/v1397.css。
+ * V1.3.95 老事故就是备份清单漏了 style.css，强停后 finally 没还原干净；
+ * 每新增一个受检 css 都必须同步进这里，否则同类事故会复发。 */
+const FILES = ['index.html', 'css/style.css', 'css/tokens.css', 'css/v1392.css',
+  'css/v1396.css', 'css/v1397.css', 'tools/.version.json'];
 
 function backup() {
   const m = new Map();
@@ -37,10 +41,23 @@ const cases = [
       const re = /\n<link rel="stylesheet" href="css\/v1396\.css\?v=[\d.]+">/;
       if (!re.test(s)) return false;
       fs.writeFileSync(f, s.replace(re, '')); return true; } },
+  /* 【V1.3.97 收口 · 变异用例自身失效修复】
+   * 旧注入把 `css/v1396.css` 替换成 `css/v1397.css`，靠「v1397 当时不存在」
+   * 制造幽灵路径。但本轮真的新建了 css/v1397.css —— 幽灵不再幽灵：
+   * 替换后 C5 全绿，反倒让 v1396 变成「漏挂」触发 C4，exit=1 却没点名 C5，
+   * 于是报「捕获 3/4 漏网 1」。**不是守卫失效，是变异用例随项目演进失效了。**
+   * 修法：① 用固定探针名 `__ghost_probe__`，保证永远不存在；
+   *       ② 用「追加一行」而非「替换」，避免连带触发 C4 造成误判捕获；
+   *       ③ 探针带当前 ?v=，避免 C3 顺带报红；
+   *       ④ 注入前显式检查探针文件确实不存在，将来谁真建了它，用例会
+   *          显式报「注入失效」而不是悄悄退化成假漏网。 */
   { name: 'M3 挂了不存在的 css（幽灵路径）', tag: 'C5',
     inject() { const f = P('index.html'); const s = fs.readFileSync(f, 'utf8');
-      if (!s.includes('css/v1396.css')) return false;
-      fs.writeFileSync(f, s.replace('css/v1396.css', 'css/v1397.css')); return true; } },
+      if (fs.existsSync(P('css/__ghost_probe__.css'))) return false;
+      const m = s.match(/<link rel="stylesheet" href="css\/v1397\.css\?v=([\d.]+)">/);
+      if (!m) return false;
+      const ghost = '<link rel="stylesheet" href="css/__ghost_probe__.css?v=' + m[1] + '">';
+      fs.writeFileSync(f, s.replace(m[0], m[0] + '\n' + ghost)); return true; } },
   { name: 'M4 层叠顺序错：tokens 排到 style 之后', tag: 'C6',
     inject() { const f = P('index.html'); const s = fs.readFileSync(f, 'utf8');
       const t = /<link rel="stylesheet" href="css\/tokens\.css\?v=[\d.]+">\n/;

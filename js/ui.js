@@ -22,7 +22,7 @@ const $$ = (s) => Array.from(document.querySelectorAll(s));
  * 这里做统一兜底：任何 innerHTML 渲染完成后，给所有 src 以 assets/ 开头的
  *   <img> 补上 ?v= 查询串（已带 ? 的不重复追加），一处生效覆盖全部面板。
  * 改美术时只需改这一个常量。 */
-const IMG_V = '1.3.96';
+const IMG_V = '1.3.97';
 
 /* 全局 emoji → 图片替换
  * ---------------------------------------------------------------------
@@ -4980,8 +4980,10 @@ r_tavern(p, tab) {
         const d = EX.skills.find((x) => x.id === id); if (!d) return '';
         const cd = r.cd[id] || 0;
         const el = EX.elements.find((x) => x.k === d.el) || { c: '#ffd76a' };
-        return `<div class="bs ${cd > 0 ? 'cd' : ''}" data-cast="${id}"
-          style="border-color:${el.c}66">
+        /* V1.3.97：把元素语义输出到 data-el / --elc，技能球才能按火冰电毒
+         * 分色发光（此前只有一条 40% 透明度的边框，实战里几乎看不见）。 */
+        return `<div class="bs ${cd > 0 ? 'cd' : ''}" data-cast="${id}" data-el="${d.el || ''}"
+          style="border-color:${el.c}66;--elc:${el.c}">
           ${d.img ? `<img src="${d.img}" style="width:26px;height:26px;border-radius:6px;object-fit:cover">`
                   : d.icon}<b>${r.skills[id]}</b>
           <u style="width:${cd > 0 ? Math.min(100, cd / (d.cd || 5) * 100) : 0}%"></u></div>`;

@@ -1,0 +1,241 @@
+/* =========================================================
+ * V1.3.97 战斗视觉深化层（在 v1396.css 之后最后加载）
+ *
+ * 立规原因：真实 Chrome 战斗态逐屏取证暴露四个短板 ——
+ *   ① 画面整体发灰发暗，冷青紫透视网格与废土主色割裂（网格已在 battle.js 改暖）；
+ *   ② 技能球只有一条 40% 透明边框，火/冰/电/毒放一起分不出谁是谁；
+ *   ③ 技能释放没有全屏级冲击，锚在玩家脚下的大招还被底部 HUD 盖住；
+ *   ④ 三选一卡片三张一个样，参考图里「齿轮圆底 + 元素色 + 金光」的辨识度全无。
+ *
+ * 本层只改视觉属性（filter / box-shadow / background / border / transform /
+ * opacity），不写 width/height/position/display/flex/padding/margin，
+ * 不动任何布局盒子与点击热区，不新增文字或 DOM。整段移除即可回退。
+ * 全局 !important 主题层会锁 .bs/.ccard 的 shadow 与 background，
+ * 故关键处使用同等权重（V1.3.96 已踩过「写了没生效」的坑）。
+ * prefers-reduced-motion 下全部持续动画停用。
+ * ========================================================= */
+:root{
+  --f97-fire:255,122,56;
+  --f97-ice:92,216,255;
+  --f97-volt:192,140,255;
+  --f97-wind:123,232,160;
+  --f97-poison:143,209,79;
+  --f97-phys:255,215,106;
+}
+
+@keyframes f97Cast{
+  0%{opacity:0}
+  12%{opacity:1}
+  100%{opacity:0}
+}
+@keyframes f97Orbit{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(360deg)}
+}
+@keyframes f97Pulse{
+  0%,100%{opacity:.45;transform:scale(.94)}
+  50%{opacity:1;transform:scale(1.08)}
+}
+@keyframes f97Flow{
+  0%{background-position:0% 50%}
+  100%{background-position:200% 50%}
+}
+@keyframes f97Sheen{
+  0%{transform:translateX(-140%) skewX(-18deg)}
+  60%,100%{transform:translateX(240%) skewX(-18deg)}
+}
+
+/* ==========================================================
+ * ① 战斗画面整体：提饱和 / 提亮 / 轻微对比，摆脱「灰蒙蒙」
+ *    只作用于 canvas，不影响 HUD 文字可读性。
+ * ========================================================== */
+#battle #C{
+  filter:saturate(1.22) brightness(1.07) contrast(1.035);
+}
+
+/* ==========================================================
+ * ② 技能释放全屏冲击（由 js/btfx.js 切 .fx-cast 类触发）
+ *    canvas 会被底部 HUD 盖住，这层用 fixed 覆盖整个战斗界面，
+ *    是「大招一亮」真正能被玩家看见的关键。
+ * ========================================================== */
+#battle.fx-cast::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:30;
+  background:
+    radial-gradient(ellipse 26% 18% at 50% 46%,rgba(255,255,255,.42) 0%,transparent 100%),
+    radial-gradient(ellipse 82% 62% at 50% 52%,
+      rgba(var(--fx-cast-rgb,255,215,106),.46) 0%,
+      rgba(var(--fx-cast-rgb,255,215,106),.18) 42%,transparent 74%),
+    linear-gradient(180deg,rgba(var(--fx-cast-rgb,255,215,106),.16),transparent 24%,
+      transparent 76%,rgba(var(--fx-cast-rgb,255,215,106),.20));
+  box-shadow:inset 0 0 110px rgba(var(--fx-cast-rgb,255,215,106),.34);
+  animation:f97Cast .52s ease-out forwards;
+}
+
+/* ==========================================================
+ * ③ 技能球：按元素分色 + 就绪能量环 + 冷却扫光 + 点击爆闪
+ *    data-el / --elc 由 ui.js 输出，六种元素各自可辨识。
+ * ========================================================== */
+#battle .bt-skills .bs[data-el="火"]{--ec:var(--f97-fire)}
+#battle .bt-skills .bs[data-el="冰"]{--ec:var(--f97-ice)}
+#battle .bt-skills .bs[data-el="电"]{--ec:var(--f97-volt)}
+#battle .bt-skills .bs[data-el="风"]{--ec:var(--f97-wind)}
+#battle .bt-skills .bs[data-el="毒"]{--ec:var(--f97-poison)}
+#battle .bt-skills .bs[data-el="物"]{--ec:var(--f97-phys)}
+#battle .bt-skills .bs{--ec:var(--f97-phys)}
+
+#battle .bt-skills .bs:not(.cd){
+  border-color:rgba(var(--ec),.85) !important;
+  background-image:radial-gradient(120% 100% at 50% 110%,rgba(var(--ec),.24),transparent 72%) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),
+             inset 0 0 14px rgba(var(--ec),.30),
+             0 0 0 1px rgba(var(--ec),.42),
+             0 0 18px rgba(var(--ec),.42) !important;
+}
+#battle .bt-skills .bs:not(.cd) img{
+  filter:drop-shadow(0 0 7px rgba(var(--ec),.85)) brightness(1.12);
+}
+/* 就绪态：外圈缓慢旋转的能量环（覆盖 v1396 的金色固定环） */
+#battle .bt-skills .bs:not(.cd)::after{
+  content:'';position:absolute;inset:-5px;border-radius:inherit;pointer-events:none;
+  border:1px solid rgba(var(--ec),.55);
+  box-shadow:0 0 12px rgba(var(--ec),.40),inset 0 0 10px rgba(var(--ec),.22);
+  animation:f97Pulse 2.1s ease-in-out infinite;
+}
+/* 第二道旋转虚线环，用 ::before，技能球内部图标之外不占布局 */
+#battle .bt-skills .bs:not(.cd)::before{
+  content:'';position:absolute;inset:-9px;border-radius:50%;pointer-events:none;
+  border:1px dashed rgba(var(--ec),.38);
+  animation:f97Orbit 6s linear infinite;
+}
+#battle .bt-skills .bs:not(.cd):hover{
+  transform:translateY(-4px) scale(1.07);
+  filter:brightness(1.22);
+  box-shadow:0 0 0 1px rgba(var(--ec),1),0 0 26px rgba(var(--ec),.72) !important;
+}
+#battle .bt-skills .bs:not(.cd):active{
+  transform:scale(.9);
+  box-shadow:0 0 0 3px rgba(var(--ec),.9),0 0 34px rgba(var(--ec),.9) !important;
+}
+/* 冷却中：灰阶 + 一道自上而下的扫光，让玩家看得见「快好了」 */
+#battle .bt-skills .bs.cd{
+  background-image:linear-gradient(180deg,rgba(var(--ec),.10),transparent 60%) !important;
+}
+#battle .bt-skills .bs.cd>u{
+  background:linear-gradient(180deg,rgba(var(--ec),.20),rgba(0,0,0,.62)) !important;
+}
+
+/* ==========================================================
+ * ④ 技能三选一：齿轮圆底 + 元素色描边 + 卡片流光 + 新卡金光
+ * ========================================================== */
+#chCards .ccard{
+  border-color:rgba(255,206,142,.28) !important;
+  background-image:
+    radial-gradient(130% 70% at 50% 0%,rgba(255,214,150,.10),transparent 68%),
+    linear-gradient(180deg,rgba(255,255,255,.018),transparent 40%) !important;
+}
+/* 图标底：圆形齿轮环 + 内凹高光（对应参考图的技能徽章） */
+#chCards .ccard>i{
+  border-radius:50% !important;
+  border:2px solid rgba(255,214,150,.55) !important;
+  box-shadow:inset 0 2px 8px rgba(0,0,0,.50),
+             inset 0 -2px 6px rgba(255,220,160,.20),
+             0 0 0 3px rgba(0,0,0,.26),
+             0 0 16px rgba(255,183,60,.26);
+  overflow:visible;
+}
+#chCards .ccard>i::before{
+  content:'';position:absolute;inset:-7px;border-radius:50%;pointer-events:none;
+  border:2px dashed rgba(255,206,142,.42);
+  animation:f97Orbit 9s linear infinite;
+}
+#chCards .ccard>i img{
+  border-radius:50% !important;
+  box-shadow:0 0 12px rgba(255,214,150,.35);
+}
+/* 三张按槽位分火 / 冰 / 电三色，覆盖 v1396 的静态辉光 */
+#chCards .ccard:nth-child(1){--cc:var(--f97-fire)}
+#chCards .ccard:nth-child(2){--cc:var(--f97-ice)}
+#chCards .ccard:nth-child(3){--cc:var(--f97-volt)}
+#chCards .ccard>i{
+  box-shadow:inset 0 2px 8px rgba(0,0,0,.50),
+             0 0 0 3px rgba(0,0,0,.26),
+             0 0 18px rgba(var(--cc),.55);
+  border-color:rgba(var(--cc),.72) !important;
+}
+#chCards .ccard>i::before{border-color:rgba(var(--cc),.55)}
+#chCards .ccard:hover{
+  border-color:rgba(var(--cc),.85) !important;
+  box-shadow:0 14px 28px rgba(0,0,0,.58),0 0 30px rgba(var(--cc),.62) !important;
+}
+/* 卡面流光：hover 时扫过一道，不新增任何文字 */
+#chCards .ccard::after{
+  content:'';position:absolute;top:0;bottom:0;left:0;width:36%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.20),transparent);
+  opacity:0;
+}
+#chCards .ccard:hover::after{opacity:1;animation:f97Sheen .85s ease-in-out}
+#chCards .ccard .cn>span:first-child{
+  text-shadow:0 0 10px rgba(var(--cc),.55),0 1px 2px rgba(0,0,0,.6);
+}
+/* 「新」标：金底呼吸 + 角标高光 */
+#chCards .cc-new{
+  box-shadow:0 0 0 1px rgba(255,214,150,.7),0 0 14px rgba(255,183,60,.7) !important;
+}
+/* 倒计时：数字到 5 秒内时由 JS 不改，这里只给整块更醒目的能量边框 */
+.ch-timer{
+  border:1px solid rgba(255,199,101,.42) !important;
+  background-image:linear-gradient(180deg,rgba(255,199,101,.16),rgba(255,199,101,.04)) !important;
+}
+
+/* ==========================================================
+ * ⑤ 战斗 HUD：关卡条元素流光 / 血条脉冲 / 状态带暖光
+ * ========================================================== */
+#battle .btb-prog i{
+  background-image:linear-gradient(90deg,#ffb347,#ffe6a8,#ff9430,#ffb347) !important;
+  background-size:200% 100%;
+  animation:f97Flow 2.2s linear infinite;
+  box-shadow:0 0 12px rgba(255,183,60,.65);
+}
+#battle .btb-lv{
+  text-shadow:0 0 12px rgba(255,199,101,.55),0 1px 2px rgba(0,0,0,.7);
+}
+#battle .bs-bar i{
+  background-image:linear-gradient(90deg,#4fd07a,#b6ff9c,#4fd07a) !important;
+  background-size:200% 100%;
+  animation:f97Flow 3s linear infinite;
+  box-shadow:0 0 12px rgba(120,230,140,.55);
+}
+#battle .bt-status{
+  background-image:linear-gradient(180deg,rgba(255,183,60,.07),transparent) !important;
+  border-bottom:1px solid rgba(255,199,101,.22) !important;
+}
+#battle .bt-reload{
+  border-color:rgba(255,199,101,.75) !important;
+  box-shadow:var(--shadow-2),0 0 0 1px rgba(255,183,60,.28) inset,
+             0 0 20px rgba(255,183,60,.34) !important;
+}
+#battle .bt-reload .gun-ic{
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.7)) drop-shadow(0 0 9px rgba(255,183,60,.75));
+}
+/* 炮台按钮悬浮也带元素感 */
+#battle .bt-turret button:hover{
+  filter:brightness(1.16);
+  box-shadow:0 0 16px rgba(255,183,60,.38) !important;
+}
+
+/* ==========================================================
+ * ⑥ 无障碍：减少动态效果偏好下停用全部持续动画与全屏闪光
+ * ========================================================== */
+@media (prefers-reduced-motion: reduce){
+  #battle.fx-cast::after,
+  #battle .bt-skills .bs:not(.cd)::after,
+  #battle .bt-skills .bs:not(.cd)::before,
+  #chCards .ccard>i::before,
+  #chCards .ccard:hover::after,
+  #battle .btb-prog i,#battle .bs-bar i{
+    animation:none !important;
+  }
+  #battle.fx-cast::after{display:none}
+  #battle .bt-skills .bs:not(.cd):hover,
+  #chCards .ccard:hover{transform:none !important}
+}

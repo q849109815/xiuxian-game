@@ -1,0 +1,167 @@
+{
+  "tag": "after",
+  "prep": {
+    "skills": 7,
+    "zombies": 10,
+    "wave": 1,
+    "px": 196.5,
+    "py": 794,
+    "hasBTFX": true
+  },
+  "evBase": {
+    "frameTick": 3.1,
+    "parts": 92,
+    "dust": 18,
+    "flash": {
+      "el": "火",
+      "life": 0.46
+    },
+    "castCount": 1,
+    "domHasCast": true,
+    "canvasFilter": "saturate(1.22) brightness(1.07) contrast(1.035)"
+  },
+  "results": [
+    {
+      "name": "温压弹",
+      "id": "wenyadan",
+      "ok": true,
+      "msg": "温压弹：命中 0 只",
+      "efx": 5,
+      "zones": 0,
+      "ev": {
+        "frameTick": 3.5,
+        "parts": 112,
+        "dust": 18,
+        "flash": {
+          "el": "冰",
+          "life": 0.43
+        },
+        "castCount": 3,
+        "domHasCast": true,
+        "canvasFilter": "saturate(1.22) brightness(1.07) contrast(1.035)"
+      }
+    },
+    {
+      "name": "干冰弹",
+      "id": "ganbingdan",
+      "ok": true,
+      "msg": "干冰弹：冻结 0 只（2.0s）",
+      "efx": 19,
+      "zones": 0,
+      "ev": {
+        "frameTick": 4.46,
+        "parts": 106,
+        "dust": 18,
+        "flash": {
+          "el": "电",
+          "life": 0.42
+        },
+        "castCount": 7,
+        "domHasCast": true,
+        "canvasFilter": "saturate(1.22) brightness(1.07) contrast(1.035)"
+      }
+    },
+    {
+      "name": "电磁穿刺",
+      "id": "diancichuan",
+      "ok": true,
+      "msg": "电磁穿刺：贯穿 3 只",
+      "efx": 39,
+      "zones": 0,
+      "ev": {
+        "frameTick": 5.44,
+        "parts": 31,
+        "dust": 18,
+        "flash": null,
+        "castCount": 8,
+        "domHasCast": false,
+        "canvasFilter": "saturate(1.22) brightness(1.07) contrast(1.035)"
+      }
+    },
+    {
+      "name": "高能射线",
+      "id": "gaonengshexian",
+      "ok": true,
+      "msg": "高能射线：贯穿 3 只",
+      "efx": 49,
+      "zones": 0,
+      "ev": {
+        "frameTick": 6.53,
+        "parts": 52,
+        "dust": 18,
+        "flash": {
+          "el": "电",
+          "life": 0.02
+        },
+        "castCount": 9,
+        "domHasCast": false,
+        "canvasFilter": "saturate(1.22) brightness(1.07) contrast(1.035)"
+      }
+    },
+    {
+      "name": "旋风加农",
+      "id": "xuanfengjianong",
+      "ok": true,
+      "msg": "旋风加农：生成旋风",
+      "efx": 49,
+      "zones": 1,
+      "ev": {
+        "frameTick": 7.73,
+        "parts": 0,
+        "dust": 18,
+        "flash": null,
+        "castCount": 9,
+        "domHasCast": false,
+        "canvasFilter": "saturate(1.22) brightness(1.07) contrast(1.035)"
+      }
+    },
+    {
+      "name": "制导激光",
+      "id": "zhidaojiguang",
+      "ok": true,
+      "msg": "制导激光：锁定目标",
+      "efx": 49,
+      "zones": 2,
+      "ev": {
+        "frameTick": 8.83,
+        "parts": 0,
+        "dust": 18,
+        "flash": null,
+        "castCount": 9,
+        "domHasCast": false,
+        "canvasFilter": "saturate(1.22) brightness(1.07) contrast(1.035)"
+      }
+    },
+    {
+      "name": "冰暴",
+      "id": "bingbao",
+      "ok": true,
+      "msg": "冰暴发生器：冰暴降临",
+      "efx": 49,
+      "zones": 3,
+      "ev": {
+        "frameTick": 9.86,
+        "parts": 0,
+        "dust": 18,
+        "flash": null,
+        "castCount": 9,
+        "domHasCast": false,
+        "canvasFilter": "saturate(1.22) brightness(1.07) contrast(1.035)"
+      }
+    }
+  ],
+  "evAll": {
+    "frameTick": 10.85,
+    "parts": 89,
+    "dust": 18,
+    "flash": {
+      "el": "电",
+      "life": 0.02
+    },
+    "castCount": 13,
+    "domHasCast": false,
+    "canvasFilter": "saturate(1.22) brightness(1.07) contrast(1.035)"
+  },
+  "errors": 0,
+  "errSamples": []
+}
