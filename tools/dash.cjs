@@ -150,6 +150,13 @@ A('测试','缓存冲刷守卫',cg&&cg.f===0?`PASS${cg.p}/0`:`未过${cg?cg.f:'�
 const vct=(()=>{try{const r=require('child_process').spawnSync('node',['tools/verconst.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:60000});
   const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
 A('测试','版本一致性守卫',vct&&vct.f===0?`PASS${vct.p}/0`:`未过${vct?vct.f:'未跑通✗'}项`);
+/* 【CSS 版本戳与引入链】—— 进度表固定项（V1.3.96 新增）
+ * 立规原因：V1.3.95 强停残留把 css 内 ?v= 推成 1.4.0 却无人常驻检查；
+ * 视觉覆盖层写好了忘挂 link、或挂了不存在的 css，玩家什么都看不到。
+ * 本项查 css 内部戳、页面资源戳、每个 css 都挂了、没有幽灵路径、层叠顺序。 */
+const cv=(()=>{try{const r=require('child_process').spawnSync('node',['tools/cssver.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:60000});
+  const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
+A('测试','CSS版本戳与引入链',cv&&cv.f===0?`PASS${cv.p}/0`:`未过${cv?cv.f:'未跑通✗'}项`);
 /* 【云端版本三次取样】—— 进度表固定项（V1.3.92 新增受控铁律）
  * 立规原因：V1.3.91 验证时单次取样撞上发布半同步窗口，
  * 三轮结果分别是全旧 / 半新半旧 / 全新。只取一次就判「一致」会把
