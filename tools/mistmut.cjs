@@ -94,7 +94,9 @@ const CASES = [
     guard: 'toolaudit.cjs',
     /* 只审计被注入的那一个工具：全量体检要数分钟，
      * 超时被杀时 finally 来不及还原 → 注入叠加 4 次污染 themeguard.cjs（已踩）。 */
-    args: ['themeguard.cjs'],
+    /* V1.3.96 收口：单工具体检必须带 --no-save，否则会把看板那份
+     * 34 行完整快照覆盖成 1 行残快照，dash 的「检测工具体检」随即假红。 */
+    args: ['themeguard.cjs', '--no-save'],
     file: 'tools/themeguard.cjs',
     inject: (s) => "throw new Error('MUT-BOOM');\n" + s,
     why: '守卫崩溃即假通过：历史上 vistate/adm 崩溃无人察觉，工具体检必须判不可信',
@@ -112,6 +114,10 @@ const CASES = [
     guard: 'synccheck.py',
     file: 'js/config.js',
     inject: (s) => s + '\n/* MUT-LOCAL-ONLY */\n',
+    /* V1.3.96 收口：这条用例会调 synccheck.py，注入态若落盘会把
+     * _scan/synclast.json 写成 consistent:false，fullscan D3 随后报假污染。
+     * 带 --no-save 只取判定与退出码，基准由发布流程串行重跑产生。 */
+    args: ['--no-save'],
     py: true, slow: true,
     why: '本地改了不上传 → 线上跑的还是旧代码，玩家侧等于没修'
   }
@@ -214,6 +220,11 @@ for (const c of list) {
   const fp = T(c.file);
   const bak = fp + '.bak_mistmut_' + c.id;
   const before = md5(fp);
+  /* V1.3.96 收口记档：曾试图在还原时用 fs.utimesSync 回退 mtime，
+   * 避免 dash 的体检时效证误报「已过期」。实测本沙盒对该调用报
+   * EPERM: operation not permitted，恢复不了。已改由判据端修：
+   * dashparse.taFresh 不再比较 GUARDS 文件 mtime，改查 rows 名字覆盖。
+   * 这里保持「内容逐字节还原」的既有口径，不做无效调用。 */
   fs.copyFileSync(fp, bak);
 
   let captured = false, crashed = false, detail = '', restored = false;
