@@ -7374,7 +7374,14 @@ const BT = {
         c.strokeText(f.v, f.x, f.y);
       }
       c.fillStyle = f.cls === 'crit' ? '#ff5a72' : f.cls === 'hurt' ? '#ff8fa4' : '#ffe9a8';
+      /* V1.3.96 特效增强：飘字带辉光，暴击再叠一圈暖色爆闪。
+         只改绘制观感，不动 f.life / f.y / 伤害数值与任何玩法逻辑；
+         shadow 用完立即复位，绝不污染后续帧的其它绘制。 */
+      c.shadowColor = f.cls === 'crit' ? 'rgba(255,120,80,.95)'
+        : f.cls === 'hurt' ? 'rgba(255,90,110,.72)' : 'rgba(255,205,110,.58)';
+      c.shadowBlur = (f.cls === 'crit' ? 18 : f.cls === 'hurt' ? 11 : 8) * fs * pop;
       c.fillText(f.v, f.x, f.y);
+      c.shadowBlur = 0; c.shadowColor = 'transparent';
       c.globalAlpha = 1;
     }
 
