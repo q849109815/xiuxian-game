@@ -19,7 +19,10 @@ const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
 const TMP = path.join(ROOT, '.mut_vernorm');
-/* 会被 ver.cjs 改动的文件，全部纳入备份 */
+/* 会被 ver.cjs 改动的文件，全部纳入备份。
+ * V1.3.95 事故：M7「PATCH 满 99 进位」把 css/style.css 内两处 ?v= 推成 1.4.0，
+ * 本清单却漏了 css/style.css，子进程被强停后 finally 只还原 7 个文件，
+ * 1.4.0 残留留在工作区，fullscan D3 当场报红。补上，杜绝同类复发。 */
 const FILES = [
   'tools/.version.json',
   'index.html',
@@ -27,6 +30,7 @@ const FILES = [
   'js/config.js',
   'js/ui.js',
   'admin/js/core.js',
+  'css/style.css',
   'CHANGELOG.md',
 ];
 
