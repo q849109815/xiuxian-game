@@ -91,18 +91,13 @@ const ta=(()=>{try{return JSON.parse(fs.readFileSync('tools/_toolaudit_last.json
 const taNames=(()=>{try{return ((fs.readFileSync('tools/toolaudit.cjs','utf8').match(/const GUARDS = \[([\s\S]*?)\]/)[1]||'')
   .replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'')
   .match(/'([A-Za-z0-9_.-]+)'/g)||[]).map(s=>s.replace(/'/g,''))}catch(e){return []}})();
-const taFresh=(()=>{
-  if(!ta||!ta.at) return false;
-  const snapMs = (()=>{try{return fs.statSync('tools/_toolaudit_last.json').mtimeMs}catch(e){return 0}})();
-  if(!snapMs) return false;
-  try{
-    for(const n of taNames){
-      const f='tools/'+n+'.cjs';
-      if(fs.existsSync(f) && fs.statSync(f).mtimeMs > snapMs) return false;
-    }
-  }catch(e){return false}
-  return true;
-})();
+/* V1.3.96 收口：旧判据逐个比较 GUARDS 文件 mtime，但 mistmut 的 M9
+ * 会注入→还原 themeguard.cjs，还原必然刷新 mtime（本沙盒 utimesSync 报
+ * EPERM 回不去），于是每跑一次看板就误报「已过期←需重跑」。
+ * 改用共享判据 DP.taFresh：年龄 30 分钟内 + rows 名字覆盖 GUARDS 全量。
+ * 「新工具没体检过」由名字覆盖证接住，不再依赖任何时间戳比较。 */
+const taFresh=DP.taFresh(ta, taNames,
+  (()=>{try{return fs.statSync('tools/_toolaudit_last.json').mtimeMs}catch(e){return 0}})(), Date.now());
 /* 【条数完整性证】—— V1.3.77 事故：批量体检被强杀，只跑完第一个工具
  * 就落了残快照（total=1，那一行 pass=0/fail=0 判「不可信」），
  * 看板却显示「可信0/1 不可信1」—— 把「根本没体检完」说成「体检过、全不合格」。
