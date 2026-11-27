@@ -10,6 +10,11 @@
 本工具改为一次 git trees API 拉全量树，与本地文件逐个比对 blob sha：
   python3 tools/synccheck.py          # 核对 FILES 清单（默认）
   python3 tools/synccheck.py --all    # 额外扫描本地全部非备份文件（找漏登记）
+  python3 tools/synccheck.py --no-save
+      变异/单工具复核专用：照常判定并给出退出码，但不写 _scan/synclast.json。
+      立规原因：mistmut 的 M2 用例会临时往 js/config.js 注入 MUT-LOCAL-ONLY
+      再调本工具验证「改了没传」能被抓到；若不跳过落盘，注入态会被写成
+      consistent:false 的实时基准，随后 fullscan D3 报假污染。
 退出码：0=全部一致  1=有不一致/线上缺失  2=取样前提未就绪（并发写入，需串行重跑）
 """
 import json, urllib.request, hashlib, sys, os, fnmatch
@@ -200,9 +205,12 @@ def main():
             'crossFail': bool(cross_fail),
             'at': _dt.datetime.utcnow().isoformat() + 'Z',
         }
-        open(_os.path.join(_d, 'diff.txt'), 'w').write('\n'.join(names))
-        open(_os.path.join(_d, 'synclast.json'), 'w').write(
-            _json.dumps(state, ensure_ascii=False))
+        if '--no-save' in sys.argv:
+            print('[no-save] 变异/单工具复核：跳过实时基准落盘，不把注入态写成结论')
+        else:
+            open(_os.path.join(_d, 'diff.txt'), 'w').write('\n'.join(names))
+            open(_os.path.join(_d, 'synclast.json'), 'w').write(
+                _json.dumps(state, ensure_ascii=False))
     except Exception as e:
         print('[FAIL] 实时基准落盘异常（D3/D5 将失效，不得静默跳过）：%s' % e)
         return 1
