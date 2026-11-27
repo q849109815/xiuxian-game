@@ -23,6 +23,12 @@
  *   node tools/toolaudit.cjs              全量体检（含 D 稳定证，慢）
  *   node tools/toolaudit.cjs --fast       跳过 D 稳定证
  *   node tools/toolaudit.cjs <name>       只体检指定工具
+ *   node tools/toolaudit.cjs <name> --no-save
+ *       单工具/变异场景专用：出报告但不写 _toolaudit_last.json。
+ *       立规原因（V1.3.96 收口）：mistmut 的 M9 用例只体检 themeguard.cjs，
+ *       不带此参数会把看板那份 34 行完整快照覆盖成 1 行残快照，
+ *       dash 的「检测工具体检」随即报「残快照←需重跑✗」——
+ *       不是工具坏了，是单工具跑批踩了看板的结论文件。
  * ==========================================================================*/
 const fs = require('fs');
 const path = require('path');
@@ -212,6 +218,7 @@ function main() {
   const args = process.argv.slice(2);
   const fast = args.includes('--fast');
   const append = args.includes('--append');
+  const noSave = args.includes('--no-save');
   const only = args.filter(a => !a.startsWith('--'));
   /* --skip=a,b：mutguard 全量要跑 29×3 次守卫，单次可达数分钟，
    * 会把整场体检拖到超时（实测挂满 5 分钟还没出第一条）。
@@ -398,6 +405,14 @@ function main() {
   if (skipN) console.log(`注意：${skipN} 条守卫本轮未真正运行，其「通过」不成立，不得计入交付依据。`);
 
   saveBaseline(base);
+  /* 【看板快照保护】单工具/变异体检不得覆盖完整结论。
+   * V1.3.96 收口实测：mistmut M9 只体检 themeguard.cjs，跑完把
+   * _toolaudit_last.json 从 34 行 complete:true 冲成 1 行 complete:false，
+   * dash 随即报「残快照←需重跑✗」。不落盘，出报告即可。 */
+  if (noSave) {
+    console.log('[no-save] 单工具/变异体检：已出报告，跳过落盘以保护看板完整快照');
+    process.exit(bad ? 1 : 0);
+  }
   /* 结果落盘：固定进度看板每轮要报「工具体检」这一项，
    * 与 .pxlast.json 同机制——不落盘就只能靠人手动抄，抄着抄着就会失真。
    *
