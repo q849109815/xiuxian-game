@@ -159,6 +159,15 @@ A('测试','CSS版本戳与引入链',cv&&cv.f===0?`PASS${cv.p}/0`:`未过${cv?c
 const bfx=(()=>{try{const r=require('child_process').spawnSync('node',['tools/btfxguard.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:60000});
   const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2]}:null}catch(e){return null}})();
 A('测试','战斗视觉深化层',bfx&&bfx.f===0?`PASS${bfx.p}/0`:`未过${bfx?bfx.f:'未跑通✗'}项`);
+/* 【强停残留清理证】—— V1.3.97 收口固定项
+ * 事故：mutate_btlayout 被 timeout 强杀在 M5，MUT 注入留在 css/style.css，
+ * 下一轮把污染当 orig，「还原校验 PASS」却把污染封进基线，
+ * btlayout 报 17 项越界、看板「战斗布局未过 15 项」。
+ * 这条固定项跑 mutate_btcleanup.cjs 的 5 组变异，证明落盘备份 /
+ * 启动清理 / 前提断言真的接上且抓得住缺陷。 */
+const btc=(()=>{try{const r=require('child_process').spawnSync('node',['tools/mutate_btcleanup.cjs'],{cwd:__dirname+'/..',encoding:'utf8',timeout:60000});
+  const m=(r.stdout||'').match(/RESULT: PASS=(\d+) FAIL=(\d+)/);return m?{p:+m[1],f:+m[2],ok:r.status===0}:null}catch(e){return null}})();
+A('测试','强停残留清理证',btc&&btc.f===0&&btc.ok?`PASS${btc.p}/0`:'未过✗');
 /* 【云端版本三次取样】—— 进度表固定项（V1.3.92 新增受控铁律）
  * 立规原因：V1.3.91 验证时单次取样撞上发布半同步窗口，
  * 三轮结果分别是全旧 / 半新半旧 / 全新。只取一次就判「一致」会把

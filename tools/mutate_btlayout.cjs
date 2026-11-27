@@ -57,14 +57,55 @@ const M = [
   },
 ];
 
+/* ------------------------------------------------------------------
+ * 【启动前残留清理】V1.3.97 收口 · 真实事故
+ * 本脚本曾被 `timeout 170` 强杀在 M5 执行期间，finally 没来得及跑，
+ *   `/*MUT*\/ #battle .bt-topbar{left:-120px}` 永久留在 css/style.css。
+ * 下一轮把这份污染当成 orig：还原校验 md5 照样 PASS（还原成污染的 orig），
+ * 于是污染被封进基线 —— btlayout 报 17 项越界、看板「战斗布局未过 15 项」，
+ * 而「捕获 5/5」看起来还是全绿。**内存备份挡不住强停。**
+ *
+ * 修法三条，缺一不可：
+ *   ① 每条用例先落盘 .bak_btlayout_N，强停也留得下；
+ *   ② 启动时先从备份还原，再显式扫 MUT 特征；
+ *   ③ 仍不干净就 exit=2「前提未就绪」，绝不拿污染版本当基线。
+ * 与 mistmut.cjs 的 startup cleanup 同类，但那份只剥 MUT-BOOM 前缀，
+ * 这里额外保留逐字节备份，避免「剥掉的内容其实是被改过的真代码」。
+ * ---------------------------------------------------------------- */
+const MUT_MARK = /\/\*MUT\*\//;
+const TARGETS = [...new Set(M.map((c) => c.f))];
+let cleaned = 0, blocked = false;
+M.forEach((c, i) => {
+  const fp = P(c.f), bak = fp + '.bak_btlayout_' + (i + 1);
+  if (fs.existsSync(bak)) {
+    try { fs.copyFileSync(bak, fp); fs.unlinkSync(bak); cleaned++; }
+    catch (e) { console.log('  ! 备份还原失败 ' + bak + ' :: ' + e.message); blocked = true; }
+  }
+});
+for (const f of TARGETS) {
+  if (MUT_MARK.test(fs.readFileSync(P(f), 'utf8'))) {
+    blocked = true; console.log('  x 前提未就绪：' + f + ' 仍有 MUT 残留（上次强停未还原）');
+  }
+}
+if (cleaned) console.log('[cleanup] 从落盘备份还原 ' + cleaned + ' 个文件');
+if (blocked) { console.log('[中止] 请先手动还原干净版本，禁止拿污染版本当基线'); process.exit(2); }
+/* 自检模式：只跑 cleanup + 前提检查，供 mutate_btcleanup.cjs 做变异证伪，
+ * 不必每次都等 5 组浏览器跑批（全套约 5 分钟）。 */
+if (process.argv.includes('--check-clean')) {
+  console.log('[check-clean] 洁净'); process.exit(0);
+}
+
 let captured = 0, dirty = 0;
-for (const c of M) {
-  const fp = P(c.f);
+M.forEach((c, ci) => {
+  const fp = P(c.f), bak = fp + '.bak_btlayout_' + (ci + 1);
   const orig = fs.readFileSync(fp, 'utf8');
   const h0 = md5(orig);
+  fs.writeFileSync(bak, orig);   /* ① 强停也留得下 */
   const bad = c.mut(orig);
   if (!bad || bad === orig) {
-    console.log('  × ' + c.n + ' :: 变异锚点未命中'); dirty++; continue;
+    console.log('  × ' + c.n + ' :: 变异锚点未命中'); dirty++;
+    try { fs.unlinkSync(bak); } catch (e) {}
+    return;
   }
   let verdict = '未捕获';
   try {
@@ -81,16 +122,33 @@ for (const c of M) {
   } catch (e) {
     verdict = '执行异常：' + e.message;
   } finally {
-    fs.writeFileSync(fp, orig);
-    if (md5(fs.readFileSync(fp, 'utf8')) !== h0) { dirty++; console.log('  × ' + c.n + ' 还原不一致'); }
+    /* 从落盘备份还原而不是只信内存 orig：注入中途若被强杀，orig 在下一轮
+     * 可能是污染版本，但 .bak 是这一轮真正开始前的干净快照。 */
+    if (fs.existsSync(bak)) { try { fs.copyFileSync(bak, fp); } catch (e) {} }
+    else fs.writeFileSync(fp, orig);
+    try { fs.unlinkSync(bak); } catch (e) {}
+    if (md5(fs.readFileSync(fp, 'utf8')) !== h0 ||
+        MUT_MARK.test(fs.readFileSync(fp, 'utf8'))) {
+      dirty++; console.log('  × ' + c.n + ' 还原不一致或仍有 MUT 残留');
+    }
   }
   console.log('  ' + (verdict.startsWith('捕获') ? '√' : '×') + ' ' + c.n + ' → ' + verdict);
-}
+});
+
+/* 基线前提：跑之前再确认目标文件干净。上一轮事故里「还原校验 PASS」
+ * 是拿污染的 orig 比出来的，基线照样 FAIL —— 这里把洁净检查前置，
+ * 让失败原因一眼可见，不再让人去猜是布局坏了还是文件没还原。 */
+const residue = TARGETS.filter((f) => {
+  if (MUT_MARK.test(fs.readFileSync(P(f), 'utf8'))) return true;
+  const d = path.dirname(P(f)), bn = path.basename(P(f));
+  return fs.readdirSync(d).some((n) => n.startsWith(bn + '.bak_btlayout_'));
+});
+if (residue.length) console.log('  x 基线前提未就绪，残留：' + residue.join(', '));
 
 const base = cp.spawnSync('node', ['tools/btlayout.cjs', '360x640'],
   { cwd: ROOT, encoding: 'utf8', timeout: 300000 });
 const baseOut = String(base.stdout || '');
-const baseOk = base.status === 0 && /FAIL 0/.test(baseOut);
+const baseOk = !residue.length && base.status === 0 && /FAIL 0/.test(baseOut);
 console.log('\n[mutate_btlayout] 本轮验证 ' + M.length + ' 条，捕获 ' + captured + '/' + M.length +
   '；还原校验 ' + (dirty ? 'FAIL ' + dirty : 'PASS') + '；基线 ' + (baseOk ? 'PASS' : 'FAIL'));
 process.exit(captured === M.length && dirty === 0 && baseOk ? 0 : 1);

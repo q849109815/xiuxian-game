@@ -38,6 +38,8 @@ FILES = [
     'css/v1397.css',
     'tools/btfxguard.cjs',
     'tools/mutate_btfx.cjs',
+    # V1.3.97 收口：强停残留清理的变异证伪（防污染被当成基线）
+    'tools/mutate_btcleanup.cjs',
     '_vis/_fx_battle_shot.cjs',
     '_vis/V1.3.97_after_战斗取证.json',
     '_vis/V1.3.97_战斗美化_前后对照.png',
@@ -539,6 +541,7 @@ FILES = [
     'CHANGELOG.md',
     'tools/.version.json',
     'tools/.lastrelease.json',
+    '制作人周报_V1.3.97_战斗视觉深化.md',
     '制作人周报_V1.3.86_操作流程补测与发布收尾.md',
     '制作人周报_V1.3.85_操作流程走查.md',
     '制作人周报_V1.3.82_前后台视觉复核整改.md',
