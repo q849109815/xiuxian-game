@@ -1,0 +1,75 @@
+{
+  "fx生效": {
+    "证据": {
+      "出击流光": true,
+      "图标能量底光": true,
+      "角色选中呼吸": true,
+      "三选一悬浮过渡": true,
+      "图标悬浮光晕": true
+    },
+    "hover阴影_before": "rgba(255, 235, 200, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 2px 6px 0px",
+    "hover阴影_after": "rgba(255, 225, 180, 0.22) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.42) 0px 8px 20px 0px, rgba(255, 183, 60, 0.22) 0px 0px 16px 0px",
+    "出击按钮动画_before": "none",
+    "出击按钮动画_after": "fxHalo",
+    "图标_before": {
+      "shadow": "rgba(255, 235, 200, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 2px 6px 0px",
+      "anim": "none",
+      "filter": "none",
+      "bg": "none"
+    },
+    "图标_after": {
+      "shadow": "rgba(255, 235, 200, 0.09) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.45) 0px 2px 6px 0px",
+      "anim": "none",
+      "filter": "none",
+      "bg": "linear-gradient(rgba(255, 214, 150, 0.1), rgba(0, 0, 0, 0) 46%)"
+    },
+    "导航_before": null,
+    "导航_after": null,
+    "角色选中动画_before": "none",
+    "角色选中动画_after": "fxHalo",
+    "三选一过渡_before": "0.12s",
+    "三选一过渡_after": "0.2s, 0.2s, 0.2s"
+  },
+  "布局零变化": true,
+  "home盒子": {
+    "go": [
+      238,
+      100,
+      103,
+      12
+    ],
+    "hmb": [
+      52,
+      80,
+      217,
+      20
+    ],
+    "top": [
+      393,
+      91,
+      0,
+      0
+    ]
+  },
+  "role盒子": [
+    114,
+    208,
+    156
+  ],
+  "choice盒子": [
+    114,
+    210,
+    306
+  ],
+  "页面报错": 0,
+  "资源失败": 0,
+  "截图": [
+    "V1.3.96_取证_before_主界面.png",
+    "V1.3.96_取证_after_主界面.png",
+    "V1.3.96_取证_before_角色页.png",
+    "V1.3.96_取证_after_角色页.png",
+    "V1.3.96_取证_before_技能三选一.png",
+    "V1.3.96_取证_after_技能三选一.png"
+  ],
+  "综合判定": "PASS"
+}
