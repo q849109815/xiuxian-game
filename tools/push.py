@@ -32,6 +32,7 @@ FILES = [
     # V1.3.96 收口：并发取样稳定证（防止瞬时态被写成假结论）
     'tools/_syncstable.py',
     'tools/mutate_syncstable.py',
+    'tools/mutate_auditsave.cjs',
     # V1.3.96 全站特效美化：覆盖层 / CSS 链路守卫 / 真实取证
     'css/v1396.css',
     'tools/cssver.cjs',
