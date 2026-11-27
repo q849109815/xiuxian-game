@@ -10,11 +10,14 @@
 本工具改为一次 git trees API 拉全量树，与本地文件逐个比对 blob sha：
   python3 tools/synccheck.py          # 核对 FILES 清单（默认）
   python3 tools/synccheck.py --all    # 额外扫描本地全部非备份文件（找漏登记）
-退出码：0=全部一致  1=有不一致/线上缺失
+退出码：0=全部一致  1=有不一致/线上缺失  2=取样前提未就绪（并发写入，需串行重跑）
 """
 import json, urllib.request, hashlib, sys, os, fnmatch
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# 取样稳定证：与变异工具并发跑批时，单次取样会把临时态写成假结论。
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _syncstable import stable_sha
 REPO = 'q849109815/xiuxian-game'
 TOKEN = open(os.path.join(ROOT, '..', '.ghtoken')).read().strip()
 H = {'Authorization': 'Bearer ' + TOKEN, 'Accept': 'application/vnd.github+json',
@@ -79,6 +82,25 @@ def main():
             miss.append(f)
         elif rs != ls:
             diff.append((f, ls, rs))
+
+    # 【取样稳定证】V1.3.96 收口：并发跑批时 mutate_* 会临时改写受控文件再还原，
+    # 单次取样撞进窗口就会把瞬时态写进基准，fullscan D3 随后报「确认污染」——
+    # 而真身其实分毫不差。这里对每个已判差异的文件再连续取样，等它稳定后
+    # 用最终 sha 重判；持续变化则显式判前提未就绪，不落盘、不写假结论。
+    diff2, unstable = [], []
+    for f, ls, rs in diff:
+        cur, ok = stable_sha(os.path.join(ROOT, f), ls)
+        if not ok:
+            unstable.append(f)
+            continue
+        if cur != rs:
+            diff2.append((f, cur, rs))
+    if unstable:
+        for f in unstable:
+            print('  ★取样不稳定 %s —— 文件在取样期间被并发改写' % f)
+        print('[RETRY] 实时基准不作数：检测到并发写入窗口，请串行重跑 synccheck（本次不落盘）')
+        return 2
+    diff = diff2
 
     print('核对 %d 个（登记清单）' % len(files))
     for f, ls, rs in diff:
