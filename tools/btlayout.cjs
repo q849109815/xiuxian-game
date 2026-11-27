@@ -172,10 +172,24 @@ function oobFn() {
     else ok('B2 战斗中三选一无越界（主动弹出' + (oc2 ? '已渲染' : '') + '，自然弹出' + choiceSeen + '次）');
     await pg.evaluate(() => { try { window.UI.hideChoice(); } catch (e) {} });
 
+    /* B6 前提（V1.3.96 收口）：B1 循环手动推进 14 轮可能触发结算 / 切屏。
+     * 真实 Chrome 取证：注入态下 B6 开始时 #battle 已是 display:none、
+     * .bt-topbar rect 全 0，所有战斗 HUD 被 `r.width<1` 跳过 → 扫描空转
+     * 却报「无越界」（假绿），连 M5 的真越界注入都抓不住。
+     * 修的是前提：先确认仍在战斗态，退出了就重新进去再量。 */
+    const scrB6 = await pg.evaluate(() => (document.querySelector('.screen.on') || {}).id);
+    if (scrB6 !== 'battle') {
+      const reB6 = await enterBattle(pg, '1-1');
+      await pg.waitForTimeout(300);
+      if (!reB6 || reB6.scr !== 'battle') pq('B6 战斗态未能恢复', JSON.stringify(reB6));
+    }
+
     /* B6 战斗中点击技能按钮（玩家「按技能选技能」的另一种读法）后不得越界 */
     const b6 = await pg.evaluate(() => {
       const box = document.getElementById('btSkills');
       if (!box) return 'no';
+      const battleEl = document.getElementById('battle');
+      if (!battleEl || getComputedStyle(battleEl).display === 'none') return 'notbattle';
       const keep = box.innerHTML;
       box.innerHTML = '';
       for (let i = 0; i < 4; i++) { const d = document.createElement('div'); d.className = 'bs'; d.dataset.cast = 'sk' + i; d.textContent = i + 1; box.appendChild(d); }
@@ -185,6 +199,15 @@ function oobFn() {
       btns.forEach((btn) => {
         try { btn.click(); } catch (e) {}
         document.querySelectorAll('#battle *, #app .on *').forEach((el) => {
+          /* V1.3.96 收口：B6 曾把 3 个主界面元素（DIV / SPAN#hmLv）判成
+           * 「点击技能按钮后越界」。真实 Chrome 逐元素取证：
+           *   home=true battle=false scrollY=0 oT=-1 oB=-579/-618
+           * 即 #home 顶部元素贴着视口上沿、top 约 -1px，属于主界面布局
+           * 边界；它们在战斗态仍留在 DOM 里，被 `#app .on *` 扫了进来。
+           * 这不是战斗 HUD 越界，是扫描口径过宽造成的 1px 假红。
+           * 只排除主界面后代，战斗层与所有浮层仍全量扫描；
+           * 真越界由 mutate_btlayout 的 M5 注入证明仍会被 B6 点名报红。 */
+          if (el.closest('#home')) return;
           const cs = getComputedStyle(el);
           if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return;
           if (cs.position === 'fixed') return;
@@ -198,6 +221,7 @@ function oobFn() {
       return out.slice(0, 6);
     });
     if (b6 === 'no') bad('B6 取不到技能栏');
+    else if (b6 === 'notbattle') pq('B6 战斗态已退出，量不到可见 HUD（前提未就绪，非游戏缺陷）');
     else if (Array.isArray(b6) && b6.length) bad('B6 点击技能按钮后越界', b6.slice(0, 3).join(' | '));
     else ok('B6 点击技能按钮后无越界');
     if (!b4) ok('B4 战斗实体无越界');
