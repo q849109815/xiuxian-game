@@ -53,12 +53,30 @@ eq('B3 行数不足注册数', DP.taComplete(
 eq('B4 完整快照判绿', DP.taComplete(
   { rows: fullRows, total: 30, complete: true, trust: 30 }, names), true);
 
+/* ---- B2 组：taFresh 真实执行（V1.3.96 收口新增） ---- */
+const NOW = 1795760000000;
+eq('B2-1 合法快照放行', DP.taFresh(
+  { at: 'x', rows: fullRows }, names, NOW - 1000, NOW), true);
+eq('B2-2 超过 30 分钟判过期', DP.taFresh(
+  { at: 'x', rows: fullRows }, names, NOW - 31 * 60 * 1000, NOW), false);
+eq('B2-3 名字缺一个判不新鲜', DP.taFresh(
+  { at: 'x', rows: fullRows.slice(0, 29) }, names, NOW - 1000, NOW), false);
+eq('B2-4 残快照判不新鲜', DP.taFresh(
+  { at: 'x', rows: [{ name: 'g0', pass: 0, fail: 0 }] }, names, NOW - 1000, NOW), false);
+eq('B2-5 未来时间戳不冒充新鲜', DP.taFresh(
+  { at: 'x', rows: fullRows }, names, NOW + 1000, NOW), false);
+/* 关键回归：GUARDS 文件 mtime 被变异还原刷新，不再影响判定。
+   taFresh 根本不接收 mtime 参数 —— 传旧快照年龄即可判绿。 */
+eq('B2-6 mtime 刷新不再误报过期', DP.taFresh(
+  { at: 'x', rows: fullRows }, names, NOW - 1000, NOW), true);
+
 /* ---- C 组：判据接线证（防止「改了模块、看板没用」） ---- */
 const dash = R('tools/dash.cjs');
 /require\(['"]\.\/dashparse\.cjs['"]\)/.test(dash)
   ? ok('C1 dash.cjs 引入共享判据模块') : ng('C1 dash.cjs 未引入 dashparse.cjs');
 /DP\.parseBI\(/.test(dash) ? ok('C2 埋点解析走共享模块') : ng('C2 埋点解析未走共享模块');
 /DP\.taComplete\(/.test(dash) ? ok('C3 体检完整性走共享模块') : ng('C3 体检完整性未走共享模块');
+/DP\.taFresh\(/.test(dash) ? ok('C3b 体检时效证走共享模块') : ng('C3b 体检时效证未走共享模块');
 /残快照←需重跑✗/.test(dash) ? ok('C4 残快照显式判失败（带✗，非中性词）') : ng('C4 残快照显示未带显式失败标记');
 
 /* ---- D 组：实时基准与 D3 修复接线证 ---- */
