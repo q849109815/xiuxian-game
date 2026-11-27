@@ -46,4 +46,25 @@ function taComplete(ta, names) {
   return true;
 }
 
-module.exports = { parseBI, taComplete };
+/* 工具体检时效证（V1.3.96 收口改写）。
+ * 旧判据拿「GUARDS 文件 mtime 是否早于快照 mtime」判断新鲜度，
+ * 但 mistmut 的 M9 用例会注入 tools/themeguard.cjs 再还原，
+ * 还原必然刷新 mtime；本沙盒 fs.utimesSync 报 EPERM 无法回退，
+ * 于是每跑一次看板就把「可信 32/34」误判成「已过期←需重跑」。
+ * mtime 不是内容——用它判断「工具变没变」本就不可靠。
+ *
+ * 新判据：① 快照年龄在 30 分钟内；② rows 名字覆盖 GUARDS 全量。
+ * 第 ② 条同时接住了旧判据真正想防的「新工具注册了却没体检过」：
+ * 新名字不在 rows 里，直接判不新鲜，不必比较任何时间戳。
+ */
+function taFresh(ta, names, snapMs, now) {
+  if (!ta || !ta.at || !snapMs) return false;
+  const age = (Number(now) || Date.now()) - snapMs;
+  if (age < 0 || age > 30 * 60 * 1000) return false;
+  if (!Array.isArray(ta.rows) || !Array.isArray(names) || !names.length) return false;
+  const bare = n => String(n).replace(/\.(cjs|py)$/, '');
+  const have = new Set(ta.rows.map(r => bare(r && r.name)));
+  return names.every(n => have.has(bare(n)));
+}
+
+module.exports = { parseBI, taComplete, taFresh };
