@@ -29,6 +29,15 @@ FILES = [
     # V1.3.95 云端真身三次取样：常驻守卫 + 变异验证
     'tools/onlinerver.cjs',
     'tools/mutate_onlinerver.cjs',
+    # V1.3.96 全站特效美化：覆盖层 / CSS 链路守卫 / 真实取证
+    'css/v1396.css',
+    'tools/cssver.cjs',
+    'tools/mutate_cssver.cjs',
+    '_vis/_fx_v1396.cjs',
+    '_vis/V1.3.96_特效取证.json',
+    '_vis/V1.3.96_特效美化_前后对照.png',
+    '_vis/V1.3.96_提案_主界面特效强化.png',
+    '_vis/V1.3.96_提案_角色页光效强化.png',
     'tools/artharmonize.cjs',
     'css/v1392.css',
     'assets/scene/home_v1392.jpg',
